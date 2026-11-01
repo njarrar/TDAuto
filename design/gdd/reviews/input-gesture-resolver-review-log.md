@@ -71,3 +71,26 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md a01044c2f537a73009c286
 Reviewed-Content-Hash: design/gdd/game-concept.md 5ce0c272e580a8869effd0883f9f43c6849a5fa7
 Reviewed-Content-Hash: design/gdd/systems-index.md f191e7ccfde2381f233fd2b4f4dc4a791ff13407
 Reviewed-Content-Hash: design/art/art-bible.md ff8234976852a8fc2333127c515cf19ab439e048
+
+## Review — 2026-11-01 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: L (producer should verify before sprint planning)
+Specialists: none (lean). Not independent: the second-round fixes were written in the same session as this review, and no specialist has seen the sink, tap_slop or queued-emission text.
+Blocking items: 1 | Recommended: 6
+Summary: Core model unchanged and unchallenged; the second-round fixes hold together. All 36 criteria were traced by hand against the rules and state table and agree. One inconsistency remains in the palm-replacement rule the user decided on: a Dead press that has only a sink winner (any press while a build arc is open) is not replaceable, though an unmoved one is. Fixed in this pass, one sentence plus one criterion, awaiting re-review.
+Prior verdict resolved: Yes — all 8 blockers of the second review
+Findings:
+- [BLOCKING] Core Rules (Rule 1) / States / Edge Cases: Dead replacement said "no winner at all"; with a sink winner (arc open) a drifting palm holds the pointer and locks the thumb out, contradicting the user's replacement decision — applied: Dead is replaceable when it has no real tap winner; criterion 37 added
+- [RECOMMENDED] Rule 1: "second press wins" cuts both ways: a second touch can replace an unmoved hero or burst press and then tap a tower — recorded as an Open Question for the phone test
+- [RECOMMENDED] Dependencies (Hero note): a hero DRAG radius of about 56 conflicts with art bible §3 (hero hit 72 px, radius 36); Hero GDD and art bible must be reconciled together
+- [RECOMMENDED] Rule 3: a sink-only press kills at drag_slop (15) but a ground press at tap_slop (28), so leniency differs while an arc is open; harmless, noted
+- [RECOMMENDED] Data & Config GDD says "world units" where this document says "field units"; label only
+- [RECOMMENDED] Cross-document: Game State, Hero, Tower, Battle HUD GDDs do not exist, so every interface stays provisional
+- [RECOMMENDED] Process: re-review in a fresh session with specialists, or accept; engine claims remain unverified for 4.7 (ADR items)
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md b00cf9abe930002c00eb0ec84d4875a874773725
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md a01044c2f537a73009c286da50160e13f5e94abf
+Reviewed-Content-Hash: design/gdd/game-concept.md fb783d19a70f043637feb7dddc161acdef4ecdd1
+Reviewed-Content-Hash: design/art/art-bible.md ff8234976852a8fc2333127c515cf19ab439e048
+Reviewed-Content-Hash: design/gdd/systems-index.md bdde32bd2e24d37db0ad44a7fa73149025d063d1
