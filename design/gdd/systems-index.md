@@ -164,7 +164,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 
 | System | Risk Type | Risk Description | Mitigation |
 |--------|-----------|-----------------|------------|
-| Input & Gesture Resolver | Design | Pin drag vs slot tap vs burst drag at fingertip size; untested on a phone (CD-PLAYTEST) | Hit-target registry; drag slop ~8–10 dp; phone test with a non-developer tester before Pillar 4 is claimed |
+| Input & Gesture Resolver | Design | Pin drag vs slot tap vs burst drag at fingertip size; untested on a phone (CD-PLAYTEST) | Hit-target registry; drag slop ~10–12 dp; phone test with a non-developer tester before Pillar 4 is claimed |
 | Combat & Damage | Technical | God object; attribution depends on `source` being on every DamageEvent | Four-piece decomposition in the GDD; one unit test per piece |
 | Hero System | Design | Hero share 39% (bot) vs 25–30% target; towers-only can win once upgrades exist | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
 | Stat & Modifier Resolution | Technical | Deferred to VS; retrofit cost if MVP code reads stats directly | Single stat accessor enforced from MVP day 1 |

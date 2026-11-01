@@ -37,3 +37,37 @@ Reviewed-Content-Hash: design/art/art-bible.md ff8234976852a8fc2333127c515cf19ab
 
 ### Revision — 2026-11-01 (same session, after the review above)
 Applied all 9 blocking items; user decision: burst is drag-only for MVP (concept Core Mechanic 2 and Pillar 4 test updated; Data & Config Input record gains `tap_slop` 16–34 under the extension rule). Not applied (left as Recommended / Hero notes): Dead-with-no-drag-winner feedback signal, hero DRAG radius, pin via offset function, snap-to-nearest, intent API, Player Fantasy and Tuning Knobs sections. Systems index set to In Review; a re-review decides Approved.
+
+## Review — 2026-11-01 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L (producer should verify before sprint planning)
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, godot-specialist, creative-director (senior)
+Blocking items: 8 | Recommended: 9
+Summary: The core model (two winners frozen at press, class isolation, sticky classification, host-driven cancel) is stable and untouched by all five specialists; the re-review is converging. The new blockers are precision defects introduced by the same-day rewrite: the queued-emission wording contradicts AC27 and defers `register` (which must return an id); the `hit` formula's `enabled` term contradicts AC26; `tap_slop` introduced an asymmetry where a roll on a tower with the hero parked on it becomes a hero re-pin (a mis-fire by Rule 13); the adapter contract omits the `canceled` flag; "reaches nothing beneath" the burst button is false; AC19 has an arithmetic error; AC34's miss/mis-fire definitions contradict Formulas L163 and Rule 13. One targeted pass with four user decisions (slop when both winners exist; resting-palm lock policy; per-gesture vs pooled; TAP sink vs layout constraint) should reach APPROVED.
+Prior verdict resolved: Yes — all 9 prior blockers were fixed; the fixes introduced the blockers above
+Findings:
+- [BLOCKING] States L111 / Edge L211, L213: queued emission defers `register` (must return an id) and drains before `idle()` on a literal read, contradicting AC27; registry calls never deferred, queue drains after the whole batch inside the outermost call
+- [BLOCKING] Formulas L135, L152 vs AC26, Edge L212/L216: `hit` includes `enabled` so a tap winner disabled mid-press cannot tap; split geometry from the enabled filter, snapshot centre+radius at press
+- [BLOCKING] Rule 3 L58: hero parked on a tower makes a 16-unit tower-tap roll a hero re-pin (Rule 13 mis-fire); user choice: tap_slop when a tap winner exists (recommended) / inner grab radius / accept and phone-test; add an AC
+- [BLOCKING] Dependencies L268 adapter contract: must check `canceled` before treating pressed=false as a release; deferred table needs pass conditions, not only owners
+- [BLOCKING] Interactions L121 / Edge L236: "reaches nothing beneath" the burst button is false (classes independent); register a TAP sink on the button Hero ignores, or correct the claim and make the slot-layout constraint a hard dependency
+- [BLOCKING] AC19: `validate(15, 15.5)` is false (15.5 below the 16 floor)
+- [BLOCKING] Rule 9 L64, L226: constructor cannot refuse in GDScript (factory returning null); radius must be finite and > 0; `set_centre` with NaN needs an outcome
+- [BLOCKING] Rule 13 / AC34: ground_tap on a prompted slot is a miss not a mis-fire; a voluntary burst in the unprompted segment is not a mis-fire; space tower-tap prompts beyond Tower's 1.5 s window; retries must not inflate the denominator; decide per-gesture vs pooled now; AC34 gates the Pillar 4 milestone, not this system's Done
+- [RECOMMENDED] Rule 1 L56: resting palm on a winning target (cooling burst button) holds the pointer; record a policy (extend replacement to an unmoved press with no tap winner, or document the lock and add it to the phone-test script)
+- [RECOMMENDED] AC fixtures: H placement missing in AC4,5,7,8,11,14,16,17,21,26; press positions; AC17 pointer index; AC15 exact positions; fixture B (470,880) breaks Rule 12's own 84-unit margin
+- [RECOMMENDED] Interactions L123 / Edge L247: HUD closes the arc on `pressed` only when best_tap is not an arc disc, else the arc closes before `tap(A)`
+- [RECOMMENDED] Rule 1 L56 "replaced silently" vs AC2/3 and row L88 which emit `idle()`
+- [RECOMMENDED] Rules 3/5 release-inside-disc: keep as the slide-off-to-abort affordance (not a mis-fire guard), tested against snapshotted geometry
+- [RECOMMENDED] Missing ACs: press(active) in Pressed/Dead; cancel_pointer(active) in Pressed/Dead and in Idle; second press while Pressed with drag-only winner; Dead stickiness; disabled drag winner mid-drag; register/unregister inside a handler; press from an idle handler; tower-over-hero lift and roll; non-finite release/set_centre/register centre; AC1 rewrite; AC23 replace tautology with first-id-is-1; AC32 registration order
+- [RECOMMENDED] Formulas L180 target_ok: specify floor/cast for float inputs
+- [RECOMMENDED] For Hero/HUD GDDs: drag-only burst MVP affordance and pressed-not-dragged response; cancel-band hysteresis and unaimable disc above the button; arc lifetime; spend-tap max hold; hero grab radius ≈56; near-miss cue; retained screenshots for leash, reticle, cancel state, ring, chip, arc
+- [RECOMMENDED] For the Input ADR: emulation settings vs HUD Controls (touch-only + emulate_touch_from_mouse suggested); get_display_safe_area covers cutouts not gesture zones; stretch mode decided before the ADR; gdUnit4 push_error setting pinned or an error-sink injected
+- [DISAGREEMENT] Hero-over-tower roll blocking (game-designer, creative-director) vs recommended (qa-lead); resting-palm lock blocking (game-designer) vs recommended (systems-designer, creative-director); AC34 gating (qa-lead: milestone gate; ux: ≥5 testers or label smoke-only; concept: MVP+ exit); release-inside-disc drop (game-designer) vs keep as abort affordance (creative-director)
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 6ef35bbf66306ffc1c056fec8065f60020ae901d
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md a01044c2f537a73009c286da50160e13f5e94abf
+Reviewed-Content-Hash: design/gdd/game-concept.md 5ce0c272e580a8869effd0883f9f43c6849a5fa7
+Reviewed-Content-Hash: design/gdd/systems-index.md f191e7ccfde2381f233fd2b4f4dc4a791ff13407
+Reviewed-Content-Hash: design/art/art-bible.md ff8234976852a8fc2333127c515cf19ab439e048
