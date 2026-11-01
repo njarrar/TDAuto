@@ -27,7 +27,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 |---|---|
 | Tower | `tags`; `levels[]`, each with absolute values (never deltas): `cost`, `damage`, `range`, `attack_interval`, `visual_key`, and role fields where relevant (`splash_radius`, `slow_strength`, `slow_duration`) |
 | Enemy | `max_hp`, `move_speed`, `bounty`, `lives_cost`, `visual_key`, `tags` |
-| Wave | `groups[]`, each with `enemy_id`, `count`, `spawn_interval`, `start_delay` |
+| Wave | `groups[]`, each with `enemy_id`, `count`, `spawn_interval`, `start_delay`; `intermission_duration`, the time before the next wave, ignored on the last wave |
 | Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `cooldown`, `telegraph_duration` |
@@ -48,6 +48,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `slow_strength` | float | above 0 | below 1 | Tower; meaning owned by Combat. 0 is dead data and 1 would freeze enemies |
 | `cost`, `bounty`, `starting_gold` | int | 0 | 100,000 | Tower, Enemy & Wave |
 | `lives_cost` | int | 0 | 1,000 | Enemy & Wave |
+| `intermission_duration` | float, seconds | 0 | 600 | Enemy & Wave |
 | `drag_slop` | float, world units | 8 | 30 | Input |
 | `tap_slop` | float, world units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
 | `edge_reject_margin` | float, world units | 0 | 48 | Input |
@@ -89,14 +90,14 @@ There is no separate economy record: gold values sit on the records that spend o
 2. **Identity.** IDs are lowercase snake_case (validated), unique across all record types, and never encode stats or tree position. Display names may change; IDs never change and are never reused.
 3. **References are by ID and typed.** A record refers to another record by its ID, never by file path, and the reference must resolve to the expected record type (`burst_id` must name a Burst). Only owned sub-data (a tower's levels, a wave's groups) nests inside a record.
 4. **Explicit manifest.** The catalogue loads from an explicit list of data files, never a runtime directory scan (exported builds rename and package files).
-5. **Load once, all or nothing.** The whole catalogue loads before the first scene. Either every record is present and valid, or the game does not start. This covers records only; stage scene content is covered by Rule 9.
+5. **Load once, all or nothing.** The whole catalogue loads before the first gameplay scene, triggered by the app root. Either every record is present and valid, or the game does not start. This covers records only; stage scene content is covered by Rule 9.
 6. **Read-only after load.** No system writes to a definition. Mutable state (current HP, cooldown, target, current level) lives on the runtime instance, which holds `def_id`, and level for Towers. The engine does not enforce this, so it is a rule with a test (see Acceptance Criteria).
 7. **Validate everything, collect all errors, then fail.** Every error has the structure `{code, source, record_id, field}`, where `source` is the file, or a label for code-built fixtures. Manifest and file errors stop before any record checks, since records from a broken manifest would only produce noise. A record type with no records is detected once every file is parsed and before any record is validated; it counts as a manifest-tier error and stops record checks the same way. An unknown tag suppresses that record's role checks, so one typo gives one error. Checks: ID format, duplicate IDs, dangling or wrong-type references, missing fields, unknown properties (a field no record type declares), unknown tags, a tower without exactly one role tag, role fields missing for or present without their tag, empty lists, fractional integers, and every number finite (checked first) and inside the field-domain table. From Vertical Slice, modifier stat keys are checked against the vocabulary. There are two tiers and no warning tier, since a solo developer learns to ignore warnings: these boot-fatal invariants, and the CI content test for everything else (Rule 9).
 8. **No fallbacks, in any build.** A silently defaulted value corrupts balance and the hero-share metric. A development run names every error by file, record and field. Content ships inside the build, with no mods or network, so the CI content test (Rule 9) and the exported-build check in Acceptance Criteria guard against shipping bad data; if it still happens, the player sees a generic fatal screen that uses no catalogue data, and saves are never opened.
 9. **Scene content is checked by the content test, not at boot.** A stage's path and slots live in its scene; checking them at load would mean instancing every stage. The CI content test opens each `scene_ref` and verifies the scene exists and has a path and build slots (slot counts per stage belong to Enemy & Wave). The same test enforces a non-empty `rationale` on every record and any balance range an owning GDD declares. Art-bible range and consecutive-stage checks join it at Vertical Slice. A stage scene that is still broken at runtime gives a fatal screen at stage start, naming the stage in a development run.
 10. **One stat accessor.** Any number a modifier could target (damage, range, cost, bounty, leash radius) is read through one accessor taking a **read context** and a stat key, and returning the type the stat-key table declares for that key. The context always holds `def_id`; for a Tower it also holds the level, since Towers are the only MVP record with levels. A level passed for an Enemy, Hero or Burst is a bad call. The context holds the live entity when one exists; a HUD cost preview has none and passes `def_id` and level alone. At MVP the accessor returns the base value for that context. The system also exposes each tower's level count, so callers never ask past the maximum. The context allows a live entity, not just a definition, because the first cross-buff ("towers near the hero") depends on instance and position; a definition-only form would mean rewriting every call site at Vertical Slice. Callers read at use time and never cache at spawn: when a spy accessor changes its value between uses, the consumer's next use reflects it (checked in the Tower, Hero and HUD stories). Structural data (a wave's groups) and every Stage field (`scene_ref`, `wave_ids`, `starting_gold`, `starting_lives`) are read directly, not through the accessor: Stage has no stat-key row. A modifier that targets a stage start value ("+50 starting gold") is a Stat GDD question and would add a Stage row then. A bad call (unknown key, key inapplicable to that record, out-of-range or unexpected level, unresolved `def_id`) calls an injected failure handler, naming the cause. **The handler is the contract:** in the game it reaches the fatal screen, and tests replace it. The value returned after a bad call is unspecified and no caller may use it, since typed GDScript cannot express "this returns a number or nothing". The check must survive release builds (mechanism in the ADR; the pinned engine reference does not cover assert behaviour).
 11. **Stat-key vocabulary.** This system owns the list of valid stat keys (the table above). An unknown key fails at the accessor (Rule 10) and, from Vertical Slice, in modifier validation.
-12. **Injection, not a global.** The catalogue is handed to consumers by the battle composition root (Game State & Stage Flow). Tests build small fixture catalogues in code with no file I/O; a separate integration suite validates the real data files.
+12. **Injection, not a global.** The app root (Game State & Stage Flow) holds the Ready catalogue across retries, and the battle builder hands it to consumers. Tests build small fixture catalogues in code with no file I/O; a separate integration suite validates the real data files.
 13. **Tuning loop.** Edit a value, save, run: the new value is in the game within 10 seconds (proposed), with no code touched. Changes apply on the next run; there is no live reload.
 
 **Not owned.** Event contracts (`enemy_killed`, `enemy_leaked`, `waves_complete`), DamageEvent, gold and lives state, modifier resolution, save schemas, and the justification of balance values. This system stores data and has no behaviour to emit signals from. Each emitter declares its own signals and the composition root wires them. Combat's DamageEvent and future modifiers must use two different field names for "who dealt this" and "who granted this" rather than overloading `source`.
@@ -111,7 +112,7 @@ No Formulas section: this system stores values and defines no tunable numeric ru
 
 | State | Meaning | Exits |
 |---|---|---|
-| Unloaded | Before the first scene | Loading |
+| Unloaded | Before the first gameplay scene | Loading |
 | Loading | Reading every manifest file and validating | Ready (no errors) · Failed (any error) |
 | Ready | Read-only; serves all lookups for the rest of the session | none |
 | Failed | Every error reported; no gameplay scene starts; saves untouched | none (restart after fixing data) |
@@ -122,7 +123,7 @@ There is no reload transition: a data change applies on the next run.
 
 | System | Reads | Interface owner |
 |---|---|---|
-| Game State & Stage Flow | Stage records; triggers load before the first scene; injects the catalogue | This system (load, lookup); Game State (injection) |
+| Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
 | Combat & Damage | Slow and splash values come via the tower record; damage arrives on DamageEvent, so its direct reads are narrow | This system |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
 | Tower System | Tower levels through the accessor | This system |

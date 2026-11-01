@@ -45,6 +45,7 @@ Implementation questions raised while framing this section, all deferred: which 
 | Owner | Target | Class | Priority |
 |---|---|---|---|
 | Hero System | burst button sink (a tap here does nothing, and reaches nothing beneath) | TAP, sink | 400 |
+| Battle HUD | Start/Call button (Build and Intermission only) | TAP | 350 |
 | Battle HUD | build-arc disc (only while an arc is open) | TAP | 300 |
 | Battle HUD | arc backdrop (only while an arc is open; one disc covering the field, so a press outside the arc discs only dismisses) | TAP, sink | 250 |
 | Tower System | tower, build slot (same tier; nearest centre wins) | TAP | 200 |
@@ -118,7 +119,7 @@ Registration calls (`register`, `unregister`, `set_centre`, `set_enabled`) are l
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Game State & Stage Flow | builds and injects | Constructs the resolver with the Input record, constructs the adapter node, hands the resolver to every owner; the adapter itself owns the lifecycle and OS-cancel wiring (`cancel()`, `cancel_pointer`) | Game State (composition); this system (API and adapter contract) |
+| Game State & Stage Flow | builds and injects | Constructs the resolver with the Input record, constructs the adapter node, hands the resolver to every owner; the adapter itself owns the lifecycle and OS-cancel wiring (`cancel()`, `cancel_pointer`), and forwards one lifecycle signal so Game State can enter Paused; resolver and adapter are rebuilt per battle | Game State (composition); this system (API and adapter contract) |
 | Data & Config Pipeline | reads | One Input record (`drag_slop`, `tap_slop`, `edge_reject_margin`), added under the extension rule with its domain rows and validator | Data & Config (catalogue); this system (field) |
 | Hero System | registers, listens | Registers hero (DRAG 100), burst button (DRAG 200) and its sink (TAP 400); updates the hero's centre on re-pin; listens to `pressed` for the leash and `drag_*` for pin and burst; owns the finger-to-aim-point offset function. Burst meaning: drag-only; a drag released on the button cancels (Hero hit-tests `drag_ended` itself), a drag released elsewhere fires there, and a press released in place does nothing. The button and its sink stay enabled while cooling and Hero ignores them, so a touch there fires nothing and, because the sink outranks every tap target and the button outranks the hero, reaches nothing beneath; Hero samples cooling at `pressed`, so a press stays dead even if cooling ends during it | Hero System |
 | Tower System | registers, listens | Registers towers and slots (both TAP 200); disables a slot once built; listens to `tap` for the chip and the second-tap commit, to `pressed` to close an open chip | Tower System |
@@ -372,7 +373,7 @@ A recording fake connects to every signal and appends `name(args)` to one Array;
 
 **Pillar 4 milestone gate (not this system's Done).** The phone test needs Hero, Tower, the HUD and the adapter, so it gates the MVP+ exit, per the concept, rather than this document. Until it passes, Pillar 4 is unverified.
 
-P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-developer testers (one left-handed if available), one phone of 360–400 dp width and one wider, Android gesture navigation on, **WHEN** each tester is prompted in a fixed scripted order for 20 attempts each of slot tap, tower tap, pin drag and burst drag (the burst Ready before every burst prompt, a tower prompt never inside Tower's second-tap window, and the next prompt coming whether or not the attempt succeeded, so each attempt counts once), **THEN** for each gesture separately, pooled over testers and devices, misses are at most 5% and mis-fires are zero. One bad gesture cannot hide in an average.
+P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-developer testers (one left-handed if available), one phone of 360–400 dp width and one wider, Android gesture navigation on, **WHEN** each tester is prompted in a fixed scripted order for 20 attempts each of slot tap, tower tap, Start/Call tap, pin drag and burst drag (the burst Ready before every burst prompt, a tower prompt never inside Tower's second-tap window, and the next prompt coming whether or not the attempt succeeded, so each attempt counts once), **THEN** for each gesture separately, pooled over testers and devices, misses are at most 5% and mis-fires are zero. One bad gesture cannot hide in an average.
 - *Miss:* a prompted gesture with no signal for the prompted action before the next prompt, including a `ground_tap` on a prompted slot.
 - *Mis-fire:* during a prompt, a signal for a different action or a different target than the one prompted, any burst not prompted, or any upgrade commit not prompted.
 - *Unprompted segment:* five minutes of play under wave pressure, then the tester flags any action they did not intend. Prompts cannot classify free play, so voluntary bursts do not count; flagged actions are counted as mis-fires against the gate and reviewed against the log.

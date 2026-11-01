@@ -176,7 +176,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Lives and wave.** Lives are a dash row at top-left, one 16×3 dp dash each; a lost dash fades in 200 ms, with urgency carried by the in-field chevrons. Waves are pips at top-centre: filled done, outlined current, dotted upcoming (the tree-node grammar). Gold is the number at top-right.
 
-**Panel placement.** Screen-space panels sit only in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane.
+**Panel placement.** Screen-space panels sit only in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane. One exception: the Start/Call button may sit in the bottom band during Build and Intermission only, when the lower lane is empty, clear of the burst button and build slots.
 
 **Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls (make them rounded squares if that reads as a stretch). The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
 

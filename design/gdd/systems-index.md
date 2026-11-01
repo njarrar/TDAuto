@@ -26,7 +26,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | Not Started | — | Data & Config |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | Designed | design/gdd/game-state-stage-flow.md | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Not Started | — | Data & Config |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Not Started | — | Enemy & Wave, Combat, Input, Data & Config, Game State |
@@ -91,7 +91,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Core Layer
 
-1. Game State & Stage Flow — depends on: Data. **TD note:** owns the one battle composition root (the battle scene script) that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
+1. Game State & Stage Flow — depends on: Data. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
 2. Combat & Damage — depends on: Data. **TD note:** God-object risk; the GDD defines four pieces: DamageEvent (carries `source` from day one), Health, StatusEffect (slow), ProjectileSpawner. Hit flashes live here (PR-SCOPE).
 3. Stat & Modifier Resolution — depends on: Data. **TD/PR note:** VS tier, but every MVP stat read goes through one accessor so the resolver drops in behind it. Pure function base → flat adds → % multipliers (additive within the bucket). No overrides until something needs them. Stat-source tags reserved now for synergies.
 
@@ -177,10 +177,10 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 22 |
-| Design docs started | 2 |
+| Design docs started | 3 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 2/8 |
+| MVP systems designed | 3/8 |
 | Vertical Slice systems designed | 0/11 |
 
 ---
