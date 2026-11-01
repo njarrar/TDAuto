@@ -93,14 +93,14 @@ _yaml_helper_resolve_python() {
 
 get_yaml_key() {
   local file="$1"
-  local path="$2"
-  if [ -z "$file" ] || [ -z "$path" ]; then return 0; fi
+  local key_path="$2"
+  if [ -z "$file" ] || [ -z "$key_path" ]; then return 0; fi
   if [ ! -f "$file" ]; then return 0; fi
   if ! _yaml_helper_resolve_python; then
     echo "yaml-helper: no python interpreter found (tried python, python3, py)" >&2
     return 0
   fi
-  "$_yaml_helper_python" - "$file" "$path" <<'PYEOF'
+  "$_yaml_helper_python" - "$file" "$key_path" <<'PYEOF'
 import sys, re
 
 path_file, dotted = sys.argv[1], sys.argv[2]
@@ -220,14 +220,14 @@ PYEOF
 
 get_yaml_array() {
   local file="$1"
-  local path="$2"
-  if [ -z "$file" ] || [ -z "$path" ]; then return 0; fi
+  local key_path="$2"
+  if [ -z "$file" ] || [ -z "$key_path" ]; then return 0; fi
   if [ ! -f "$file" ]; then return 0; fi
   if ! _yaml_helper_resolve_python; then
     echo "yaml-helper: no python interpreter found (tried python, python3, py)" >&2
     return 0
   fi
-  "$_yaml_helper_python" - "$file" "$path" <<'PYEOF'
+  "$_yaml_helper_python" - "$file" "$key_path" <<'PYEOF'
 import sys, re
 
 path_file, dotted = sys.argv[1], sys.argv[2]
@@ -501,28 +501,28 @@ validate_local_yaml_base() {
 # specific leaves.
 get_effective_yaml_key() {
   _yaml_helper_set_root
-  local path="$1"
-  if [ -z "$path" ]; then return 0; fi
+  local key_path="$1"
+  if [ -z "$key_path" ]; then return 0; fi
   local val=""
   if [ -f "$_YH_ROOT/project.local.yaml" ]; then
-    val=$(get_yaml_key "$_YH_ROOT/project.local.yaml" "$path")
+    val=$(get_yaml_key "$_YH_ROOT/project.local.yaml" "$key_path")
   fi
   if [ -z "$val" ] && [ -f "$_YH_ROOT/project.yaml" ]; then
-    val=$(get_yaml_key "$_YH_ROOT/project.yaml" "$path")
+    val=$(get_yaml_key "$_YH_ROOT/project.yaml" "$key_path")
   fi
   printf '%s' "$val"
 }
 
 get_effective_yaml_array() {
   _yaml_helper_set_root
-  local path="$1"
-  if [ -z "$path" ]; then return 0; fi
+  local key_path="$1"
+  if [ -z "$key_path" ]; then return 0; fi
   local val=""
   if [ -f "$_YH_ROOT/project.local.yaml" ]; then
-    val=$(get_yaml_array "$_YH_ROOT/project.local.yaml" "$path")
+    val=$(get_yaml_array "$_YH_ROOT/project.local.yaml" "$key_path")
   fi
   if [ -z "$val" ] && [ -f "$_YH_ROOT/project.yaml" ]; then
-    val=$(get_yaml_array "$_YH_ROOT/project.yaml" "$path")
+    val=$(get_yaml_array "$_YH_ROOT/project.yaml" "$key_path")
   fi
   printf '%s' "$val"
 }
@@ -610,12 +610,12 @@ features.read_guard_kb
 updates.check"
 
 is_locally_overridable() {
-  local path="$1"
-  [ -z "$path" ] && return 1
+  local key_path="$1"
+  [ -z "$key_path" ] && return 1
   local whitelisted
   while IFS= read -r whitelisted; do
     [ -z "$whitelisted" ] && continue
-    if [ "$path" = "$whitelisted" ]; then return 0; fi
+    if [ "$key_path" = "$whitelisted" ]; then return 0; fi
   done <<EOF
 $_yaml_helper_locally_overridable
 EOF
@@ -1256,9 +1256,9 @@ full::modes.workflow=full,docs.density=thorough,qa.level=full,modes.story_granul
 # front that key. Never consulted for modes.rigor itself — that would recurse.
 _yaml_helper_rigor_value() {
   _yaml_helper_set_root
-  local path="$1" level="" line pair
-  [ -z "$path" ] && return 0
-  [ "$path" = "modes.rigor" ] && return 0
+  local key_path="$1" level="" line pair
+  [ -z "$key_path" ] && return 0
+  [ "$key_path" = "modes.rigor" ] && return 0
 
   # Resolve rigor WITHOUT resolve_setting, to keep the recursion impossible.
   [ -f "$_YH_ROOT/project.yaml" ] && level=$(get_yaml_key "$_YH_ROOT/project.yaml" modes.rigor)
@@ -1271,7 +1271,7 @@ _yaml_helper_rigor_value() {
     [ "${line%%::*}" = "$level" ] || continue
     local oldIFS="$IFS"; IFS=','
     for pair in ${line##*::}; do
-      if [ "${pair%%=*}" = "$path" ]; then IFS="$oldIFS"; printf '%s' "${pair#*=}"; return 0; fi
+      if [ "${pair%%=*}" = "$key_path" ]; then IFS="$oldIFS"; printf '%s' "${pair#*=}"; return 0; fi
     done
     IFS="$oldIFS"
   done <<EOF
@@ -1310,11 +1310,11 @@ project.stage::production/stage.txt"
 _yaml_helper_local_read_scope="$_yaml_helper_locally_overridable"
 
 _yaml_helper_in_local_read_scope() {
-  local path="$1" entry
-  [ -z "$path" ] && return 1
+  local key_path="$1" entry
+  [ -z "$key_path" ] && return 1
   while IFS= read -r entry; do
     [ -z "$entry" ] && continue
-    [ "$path" = "$entry" ] && return 0
+    [ "$key_path" = "$entry" ] && return 0
   done <<EOF
 $_yaml_helper_local_read_scope
 EOF
@@ -1322,11 +1322,11 @@ EOF
 }
 
 _yaml_helper_legacy_file_for() {
-  local path="$1" line
-  [ -z "$path" ] && return 0
+  local key_path="$1" line
+  [ -z "$key_path" ] && return 0
   while IFS= read -r line; do
     [ -z "$line" ] && continue
-    if [ "${line%%::*}" = "$path" ]; then printf '%s' "${line##*::}"; return 0; fi
+    if [ "${line%%::*}" = "$key_path" ]; then printf '%s' "${line##*::}"; return 0; fi
   done <<EOF
 $_yaml_helper_legacy_files
 EOF
@@ -1335,11 +1335,11 @@ EOF
 
 # Documented terminal default for a key, or '' when it has none.
 get_yaml_default() {
-  local path="$1" line
-  [ -z "$path" ] && return 0
+  local key_path="$1" line
+  [ -z "$key_path" ] && return 0
   while IFS= read -r line; do
     [ -z "$line" ] && continue
-    if [ "${line%%::*}" = "$path" ]; then printf '%s' "${line##*::}"; return 0; fi
+    if [ "${line%%::*}" = "$key_path" ]; then printf '%s' "${line##*::}"; return 0; fi
   done <<EOF
 $_yaml_helper_defaults
 EOF
@@ -1351,9 +1351,9 @@ EOF
 # and a `tr -d '[:space:]'` reader collapsed it to "SystemsDesign", which
 # matched none of the phase keys downstream. Skips leading blank lines.
 get_legacy_key() {
-  local path="$1" file
-  [ -z "$path" ] && return 0
-  file=$(_yaml_helper_legacy_file_for "$path")
+  local key_path="$1" file
+  [ -z "$key_path" ] && return 0
+  file=$(_yaml_helper_legacy_file_for "$key_path")
   [ -z "$file" ] && return 0
   _yaml_helper_set_root
   file="$_YH_ROOT/$file"
@@ -1372,28 +1372,28 @@ get_legacy_key() {
 # nonsense mode into every skill. resolve_config surfaces what was rejected.
 resolve_setting() {
   _yaml_helper_set_root
-  local path="$1"
-  if [ -z "$path" ]; then printf '\tunset'; return 0; fi
+  local key_path="$1"
+  if [ -z "$key_path" ]; then printf '\tunset'; return 0; fi
   local val="" src="" legacy=""
 
-  if _yaml_helper_in_local_read_scope "$path" && [ -f "$_YH_ROOT/project.local.yaml" ]; then
-    val=$(get_yaml_key "$_YH_ROOT/project.local.yaml" "$path")
-    if [ -n "$val" ] && ! validate_enum_value "$path" "$val" 2>/dev/null; then val=""; fi
+  if _yaml_helper_in_local_read_scope "$key_path" && [ -f "$_YH_ROOT/project.local.yaml" ]; then
+    val=$(get_yaml_key "$_YH_ROOT/project.local.yaml" "$key_path")
+    if [ -n "$val" ] && ! validate_enum_value "$key_path" "$val" 2>/dev/null; then val=""; fi
     [ -n "$val" ] && src="project.local.yaml"
   fi
 
   if [ -z "$val" ] && [ -f "$_YH_ROOT/project.yaml" ]; then
-    val=$(get_yaml_key "$_YH_ROOT/project.yaml" "$path")
-    if [ -n "$val" ] && ! validate_enum_value "$path" "$val" 2>/dev/null; then val=""; fi
+    val=$(get_yaml_key "$_YH_ROOT/project.yaml" "$key_path")
+    if [ -n "$val" ] && ! validate_enum_value "$key_path" "$val" 2>/dev/null; then val=""; fi
     [ -n "$val" ] && src="project.yaml"
   fi
 
   if [ -z "$val" ]; then
-    legacy=$(_yaml_helper_legacy_file_for "$path")
+    legacy=$(_yaml_helper_legacy_file_for "$key_path")
     # Checked under the root; labelled with the short path the user knows.
     if [ -n "$legacy" ] && [ -f "$_YH_ROOT/$legacy" ]; then
-      val=$(get_legacy_key "$path")
-      if [ -n "$val" ] && ! validate_enum_value "$path" "$val" 2>/dev/null; then val=""; fi
+      val=$(get_legacy_key "$key_path")
+      if [ -n "$val" ] && ! validate_enum_value "$key_path" "$val" 2>/dev/null; then val=""; fi
       [ -n "$val" ] && src="$legacy"
     fi
   fi
@@ -1402,12 +1402,12 @@ resolve_setting() {
   # default. That ordering is the back-compat guarantee: a project.yaml that
   # already sets docs.density resolves exactly as it did before rigor existed.
   if [ -z "$val" ]; then
-    val=$(_yaml_helper_rigor_value "$path")
+    val=$(_yaml_helper_rigor_value "$key_path")
     [ -n "$val" ] && src="rigor:$(_yaml_helper_rigor_level)"
   fi
 
   if [ -z "$val" ]; then
-    val=$(get_yaml_default "$path")
+    val=$(get_yaml_default "$key_path")
     [ -n "$val" ] && src="default"
   fi
 
@@ -1499,10 +1499,10 @@ resolve_code_root() {
 # deliberately returns nothing for a mapping, so this is how the whole
 # workflow_overrides.system_overrides map gets enumerated in one shot.
 get_yaml_child_keys() {
-  local file="$1" path="$2"
-  if [ -z "$file" ] || [ -z "$path" ] || [ ! -f "$file" ]; then return 0; fi
+  local file="$1" key_path="$2"
+  if [ -z "$file" ] || [ -z "$key_path" ] || [ ! -f "$file" ]; then return 0; fi
   _yaml_helper_resolve_python || return 0
-  "$_yaml_helper_python" - "$file" "$path" <<'PYEOF'
+  "$_yaml_helper_python" - "$file" "$key_path" <<'PYEOF'
 import sys, re
 path_file, dotted = sys.argv[1], sys.argv[2]
 keys = dotted.split('.')

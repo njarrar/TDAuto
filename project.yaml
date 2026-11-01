@@ -7,6 +7,9 @@ framework:
   version: 1.2.0
   last_upgraded: 2026-10-19
 
+project:
+  stage: Systems Design
+
 # NOTE: this template ships with no `modes:` block, and the six knobs below must
 # never be added to one.
 #
@@ -25,3 +28,55 @@ framework:
 # here. `/settings --local <key>=<value>` writes there; `/settings <key>=<value>`
 # edits this file. See `.claude/docs/config-resolution.md` for the full
 # precedence order.
+
+modes:
+  rigor: full
+  automation: autonomous
+
+engine:
+  name: "Godot"
+  version: "4.7.2"
+  language: "GDScript"
+  rendering: "Mobile"
+  physics: "Godot Physics 2D"
+  path: "/Applications/Godot.app/Contents/MacOS/Godot"
+
+specialists:
+  code: "godot-gdscript-specialist"
+  shader: "godot-shader-specialist"
+  ui: "godot-specialist"
+  additional: ["godot-gdextension-specialist"]
+
+naming:
+  classes: PascalCase
+  variables: snake_case
+  constants: SCREAMING_SNAKE
+  signals: past_tense
+  files: snake_case
+  scenes: snake_case
+
+commands:
+  # TODO: build needs an export preset name; none exists until the Godot project has one.
+  build: "[TO BE CONFIGURED]"
+  test: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
+  run: '"/Applications/Godot.app/Contents/MacOS/Godot" --path . --windowed --resolution 540x960'
+  smoke: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless --quit-after 5'
+
+# MVP GDDs run at standard (PR-SCOPE 2026-11-01, user choice "Defer, merge, standard");
+# Vertical Slice and later systems inherit the project tier (full).
+workflow_overrides:
+  system_overrides:
+    data-config-pipeline: standard
+    input-gesture-resolver: standard
+    game-state-stage-flow: standard
+    combat-damage: standard
+    enemy-wave: standard
+    tower-system: standard
+    hero-system: standard
+    battle-hud: standard
+
+performance:
+  target_framerate: 60
+  frame_budget_ms: 16.6
+  draw_call_limit: 60        # art bible §8 proposal, Adreno 5xx class; verify on device
+  memory_ceiling_mb: 256     # textures <= 16 MB
