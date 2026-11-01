@@ -25,7 +25,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
-| 2 | Input & Gesture Resolver | Core | MVP | Designed | design/gdd/input-gesture-resolver.md | Data & Config |
+| 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Not Started | — | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Not Started | — | Data & Config |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |

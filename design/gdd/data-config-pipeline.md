@@ -31,7 +31,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `cooldown`, `telegraph_duration` |
-| Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `edge_reject_margin` |
+| Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD is expected to add routes, locomotion and armour or resist this way.
 
@@ -49,6 +49,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `cost`, `bounty`, `starting_gold` | int | 0 | 100,000 | Tower, Enemy & Wave |
 | `lives_cost` | int | 0 | 1,000 | Enemy & Wave |
 | `drag_slop` | float, world units | 8 | 30 | Input |
+| `tap_slop` | float, world units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
 | `edge_reject_margin` | float, world units | 0 | 48 | Input |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
