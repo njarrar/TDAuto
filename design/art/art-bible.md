@@ -195,7 +195,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Raster assets (PNG only).** One 1024×1024 atlas max, lossless PNG, VRAM compression off (ETC2 bleeds hard edges), mipmaps off, filter linear. Base 1x px = Section 3 visible sizes; ship a single 2x tier (covers 1080×1920), add 3x only if device tests show softness. Texture budget **≤ 16 MB**.
 
-**Naming** (`[category]_[name]_[variant]_[size].[ext]`, snake_case): `char_hero`, `tower_tri_l2`, `enemy_fast`, `slot_build`, `path_stage01`, `zone_leash`, `ui_btn_burst_ready`, `vfx_burst_ring`. Scenes use the stem only (`tower_tri.tscn`) with level and state as exported properties, never one scene per level. Size suffix omitted for code assets, required for PNG (`_2x`).
+**Naming** (`[category]_[name]_[variant]_[size].[ext]`, snake_case): `char_hero`, `tower_tri_l2`, `enemy_fast`, `slot_build`, `path_stage01`, `zone_leash`, `ui_btn_burst_ready`, `vfx_burst_ring`. Scenes use the stem only (`tower_tri.tscn`) with level and state as exported properties, never one scene per level. Size suffix omitted for code assets, required for PNG (`_2x`). A data record's `visual_key` (`design/gdd/data-config-pipeline.md`) holds this asset stem, e.g. `tower_tri_l2`, `enemy_fast`, `char_hero`.
 
 **Budgets (written to `project.yaml` → `performance`):** 60 fps, 16.6 ms frame (30 fps / 33 ms floor), **60 draw calls** per frame, **256 MB** memory ceiling, textures ≤ 16 MB, 300 particles. Target class: Adreno 5xx.
 

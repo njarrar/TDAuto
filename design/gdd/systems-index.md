@@ -24,8 +24,8 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Data & Config Pipeline (inferred) | Core | MVP | Not Started | — | — |
-| 2 | Input & Gesture Resolver | Core | MVP | Not Started | — | — |
+| 1 | Data & Config Pipeline (inferred) | Core | MVP | Designed | design/gdd/data-config-pipeline.md | — |
+| 2 | Input & Gesture Resolver | Core | MVP | Not Started | — | Data & Config |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Not Started | — | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Not Started | — | Data & Config |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |
@@ -86,7 +86,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 ### Foundation Layer (no dependencies)
 
 1. Data & Config Pipeline — every gameplay value is data-driven (coding standard); all other systems read it.
-2. Input & Gesture Resolver — **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority: skill drag > tower > slot > hero drag > ground (ground does nothing).
+2. Input & Gesture Resolver — depends on: Data (thresholds such as drag slop; both are Foundation, Data is designed first). **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority: skill drag > tower > slot > hero drag > ground (ground does nothing).
 3. Mobile Platform & Performance — safe areas, export, projectile pooling, particle caps. **TD note:** Combat spawns through a ProjectileSpawner interface so pooling slots in here later without touching callers.
 
 ### Core Layer
@@ -97,7 +97,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Feature Layer
 
-1. Enemy & Wave — depends on: Data, Combat, Game State. Event contracts above are defined in Combat/Data, consumed via the composition root.
+1. Enemy & Wave — depends on: Data, Combat, Game State. Each emitter declares its own signals (Data owns none, per the Data & Config GDD); the composition root wires them.
 2. Tower System — depends on: Enemy & Wave, Combat, Input, Data, Game State. Gold income from `enemy_killed(bounty)`.
 3. Hero System — depends on: Input, Combat, Enemy & Wave, Data. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
 4. Stage Progression & Stars — depends on: Game State, Enemy & Wave, Combat (per-source counters for the report), Data. **TD note:** stars are lives-based, not damage-based.
@@ -154,7 +154,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 
 ## Circular Dependencies
 
-- Gold ↔ Enemy ↔ Game State (kill rewards, lives, waves-complete) — **resolved** by defining the event contracts in Combat/Data and wiring them in the Game State composition root; no system imports another.
+- Gold ↔ Enemy ↔ Game State (kill rewards, lives, waves-complete) — **resolved** by each emitter declaring its own signals and wiring them in the Game State composition root; no system imports another.
 - Hero ↔ Burst — **resolved** by merging into one GDD with a one-way internal dependency (Burst → Hero).
 - Save ↔ progression — **resolved**: progression owns schemas and never calls Save.
 
@@ -177,10 +177,10 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 22 |
-| Design docs started | 0 |
+| Design docs started | 1 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 0/8 |
+| MVP systems designed | 1/8 |
 | Vertical Slice systems designed | 0/11 |
 
 ---
