@@ -1,0 +1,20 @@
+; PROTOTYPE - NOT FOR PRODUCTION (own project; the repo-root project.godot is separate)
+config_version=5
+
+[application]
+
+config/name="TowerRiot hero-pin prototype"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[display]
+
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/size/window_width_override=360
+window/size/window_height_override=640
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="mobile"
