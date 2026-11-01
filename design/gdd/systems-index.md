@@ -24,8 +24,8 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Data & Config Pipeline (inferred) | Core | MVP | Designed | design/gdd/data-config-pipeline.md | — |
-| 2 | Input & Gesture Resolver | Core | MVP | Not Started | — | Data & Config |
+| 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
+| 2 | Input & Gesture Resolver | Core | MVP | Not Started | — | — |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Not Started | — | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Not Started | — | Data & Config |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |
@@ -86,7 +86,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 ### Foundation Layer (no dependencies)
 
 1. Data & Config Pipeline — every gameplay value is data-driven (coding standard); all other systems read it.
-2. Input & Gesture Resolver — depends on: Data (thresholds such as drag slop; both are Foundation, Data is designed first). **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority: skill drag > tower > slot > hero drag > ground (ground does nothing).
+2. Input & Gesture Resolver — no dependencies yet; would add a Data record if its thresholds become data. **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority: skill drag > tower > slot > hero drag > ground (ground does nothing).
 3. Mobile Platform & Performance — safe areas, export, projectile pooling, particle caps. **TD note:** Combat spawns through a ProjectileSpawner interface so pooling slots in here later without touching callers.
 
 ### Core Layer
