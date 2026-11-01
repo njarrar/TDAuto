@@ -31,6 +31,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `cooldown`, `telegraph_duration` |
+| Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `edge_reject_margin` |
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD is expected to add routes, locomotion and armour or resist this way.
 
@@ -47,6 +48,8 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `slow_strength` | float | above 0 | below 1 | Tower; meaning owned by Combat. 0 is dead data and 1 would freeze enemies |
 | `cost`, `bounty`, `starting_gold` | int | 0 | 100,000 | Tower, Enemy & Wave |
 | `lives_cost` | int | 0 | 1,000 | Enemy & Wave |
+| `drag_slop` | float, world units | 8 | 30 | Input |
+| `edge_reject_margin` | float, world units | 0 | 48 | Input |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
 
@@ -123,7 +126,7 @@ There is no reload transition: a data change applies on the next run.
 | Enemy & Wave | Enemy, Wave, Stage | This system |
 | Tower System | Tower levels through the accessor | This system |
 | Hero System | Hero and Burst through the accessor | This system |
-| Input & Gesture Resolver | Nothing yet. No Input record exists until the Input GDD adds one under the extension rule | Input GDD |
+| Input & Gesture Resolver | The Input record, read directly | This system; Input GDD owns its meaning |
 | Battle HUD | Costs for the cost chip through the accessor | This system |
 | Stat & Modifier Resolution (VS) | Drops in behind the accessor with no call-site changes | Stat GDD owns the resolver; this system owns the key vocabulary |
 | Save/Load (VS) | Stable IDs; retired-ID list from Vertical Slice | Save/Load owns migration |
@@ -172,7 +175,7 @@ There is no reload transition: a data change applies on the next run.
 | Enemy & Wave | Enemy, Wave, Stage records |
 | Tower System | Tower levels via the accessor |
 | Hero System | Hero and Burst via the accessor |
-| Input & Gesture Resolver | None at present; adds its own record under the extension rule if thresholds are data |
+| Input & Gesture Resolver | The Input record |
 | Battle HUD & Build UI | Costs via the accessor |
 | Stat & Modifier Resolution (VS) | Key vocabulary; replaces the accessor's internals |
 | Skill Tree, Hero Weapons, Synergies (VS) | New record types reserved in Core Rules |

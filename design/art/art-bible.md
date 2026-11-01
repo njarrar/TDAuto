@@ -84,6 +84,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Tower | 56 px | 72 px |
 | Build slot | 56 px | 72 px |
 | Burst button | 84 px | 96 px |
+| Build-arc disc | 56 px | 72 px |
 | Enemy | 16 px (fast) to 30 px (armoured) | none |
 
 ## 4. Color System
@@ -163,9 +164,9 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Animation.** 120 ms for presses and state changes, 200 ms for panel in/out, ease-out on entry, ease-in on exit; the cooldown sweep is linear because it is a clock. Never animates: the leash (its dash density switches), panel opacity, counter values (digits swap, never bounce). Nothing in screen-space loops or glows. (UX, photosensitivity:) the 2 Hz danger pulse is capped at a 25% alpha swing or rendered as travelling chevrons; the 0.4 s burst field dip never chains (no re-dip within 1 s); a Reduce Motion setting freezes the pulse and skips the dip.
 
-**Burst button.** 84 px visible / 96 px hit, bottom corner on the dominant-hand side, 16 dp from the *safe-area* edges with the hit box ending at least 16 dp above the OS gesture inset (UX); left-handed mirror is a setting. Ready: gold fill and complete outer ring. Cooling: neutral outline with the gold fill returning behind it as a clockwise wedge, seconds digit in neutral (this is how Section 2's "outline only" cooling state should be read). Drag from it to aim.
+**Burst button.** 84 px visible / 96 px hit, bottom corner on the dominant-hand side, inside the safe area, with the hit box ending at least 24 dp from the side edge (Android back-swipe zone, unverified) and 16 dp above the OS gesture inset (UX); left-handed mirror is a setting. Ready: gold fill and complete outer ring. Cooling: neutral outline with the gold fill returning behind it as a clockwise wedge, seconds digit in neutral (this is how Section 2's "outline only" cooling state should be read). Drag from it to aim.
 
-**Reticle (UX).** Offset *away from the thumb*, default 60–80 dp above; clamped to the viewport and flipped below the finger when the pin is near the top. The aim vector stays finger-relative.
+**Reticle (UX).** Offset *away from the thumb*, default 60–80 dp above; clamped to the viewport and flipped below the finger when the pin is near the top. The aim vector stays finger-relative. While the finger is inside the burst button during an aim, the reticle dims and the radius preview hides, because releasing there cancels.
 
 **Leash over the path (UX).** Where any arc of the dashed leash crosses the lifted path, draw it in two tones (dark outer, light inner) or raise alpha to 0.7, so it clears 3:1. Still thin, still unfilled.
 
@@ -177,7 +178,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Panel placement.** Screen-space panels sit only in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane.
 
-**Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls (make them rounded squares if that reads as a stretch). The cooldown digit is hidden while the thumb is on the button; acceptable since the button cannot be pressed while cooling, but device-test it.
+**Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls (make them rounded squares if that reads as a stretch). The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
 
 ## 8. Asset Standards
 

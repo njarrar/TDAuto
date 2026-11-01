@@ -74,7 +74,7 @@ The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of 
 ### Core Mechanics
 
 1. **Tower placement and upgrade** on fixed build slots along a lane path; tap slot → pick a tower from an in-field arc; tap tower → cost chip, second tap commits (no modal popup; the chip is the mis-spend safeguard, per art bible §7).
-2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 world units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle, release on the button to burst at the pin. Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
+2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 world units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle; a tap on the button bursts at the pin, and a drag released back on the button cancels. Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
 3. **Wave system**: 8–12 waves per stage (MVP: 6) defined in data files; each stage varies path geometry and/or attack pattern (fast rushers, armoured, flying, splitters, lane-switchers).
 4. **Three skill trees** (Towers / Weapons / Hero), persistent, free respec between stages, one full tree, never two, at each tier's last stage (see Unique Hook). Modifiers carry a source tag, a target stat and an optional condition (the first cross-buff is an aura: towers near the hero), resolving in a fixed order: base → flat adds → percent multipliers → overrides, through one pure, unit-testable function. 
 5. **Stage progression**: 20 hand-authored stages, stage preview shows path + attack type, 1–3 stars per clear, hero weapons unlock by stage.
@@ -149,7 +149,7 @@ Path geometry or attack pattern changes each stage, so a solved build doesn't ca
 
 ### Pillar 4: Thumb-First
 Every action is one tap or one drag; no target under 44 pt (iOS) / 48 dp (Android).
-*Design test*: taps and drags are distinct gestures (drag slop ~8–10 dp). Input priority: burst-button drag > tower tap > slot tap > hero drag > ground, and a ground tap does nothing (a tiny rejection ring, no sound). A drag from a slot or tower is not a pin. The burst button sits in the bottom corner on the dominant-hand side, inside the safe area, with a left-handed mirror. **UNTESTED on a phone**: all evidence is one developer on a mouse (CD-PLAYTEST). A tap on the hero does nothing but show its leash. Pass/fail for the first phone build with a non-developer tester, 20 attempts each of slot tap, tower tap, pin drag and burst drag: a *miss* (gesture does nothing) is allowed on ≤5%; a *mis-fire* (gesture triggers a different action, including an accidental upgrade inside the cost-chip window) is allowed zero times. This test is the MVP+ exit criterion. A feature needing two thumbs → cut or redesigned.
+*Design test*: taps and drags are distinct gestures (drag slop ~10–12 dp on phones). Tap priority: burst > build arc > tower = slot (nearest wins). Drag priority: burst > hero. A ground tap does nothing (a tiny rejection ring, no sound). A drag from a slot or tower alone is not a pin. Minimum supported width: 360 dp. Full rules: `design/gdd/input-gesture-resolver.md`. The burst button sits in the bottom corner on the dominant-hand side, inside the safe area, with a left-handed mirror. **UNTESTED on a phone**: all evidence is one developer on a mouse (CD-PLAYTEST). A tap on the hero does nothing but show its leash. Pass/fail for the first phone build with a non-developer tester, 20 attempts each of slot tap, tower tap, pin drag, burst tap and burst drag: a *miss* (gesture does nothing) is allowed on ≤5%; a *mis-fire* (gesture triggers a different action, including an accidental upgrade inside the cost-chip window) is allowed zero times. This test is the MVP+ exit criterion. A feature needing two thumbs → cut or redesigned.
 
 Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplicity). That tension is intended.
 
@@ -263,7 +263,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 3. 1 hero: drag-to-pin with a ~90 world-unit leash, auto-attack inside the leash, 1 aimed burst dragged from one large button; placeholder telegraph and impact flash so the burst is visible
 4. 6 waves from a data file; gold, lives, win/lose screen
 5. Damage-by-source log at stage end (towers vs hero + burst), shown as plain text since the report screen is deferred
-6. Input priority: burst drag > tower > slot > hero drag > ground (ground does nothing); cost chip + second tap on build/upgrade, no modal popup
+6. Input priority per Pillar 4 (ground does nothing); cost chip + second tap on build/upgrade, no modal popup
 7. Bot acceptance modes: towers-only, hero-only, never-pinned, pinned-once; the lvl-2 upgrade changes the tower's shape within one wave
 
 Days 1–2: one map, one tower, hero pin + leash, one wave. Towers 2–3, the skill and the upgrade follow only once that runs.
