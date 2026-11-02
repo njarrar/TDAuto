@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: Revised after fourth design review (2026-11-02, NEEDS REVISION, 3 blocking items addressed; recommended items open in the review log); pending re-review
+> **Status**: Revised after fifth design review (2026-11-02, NEEDS REVISION, 1 blocking item and the carried gold bound addressed; recommended items open in the review log); pending re-review
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -117,7 +117,7 @@ Each wave's total HP is 1.26 to 1.64 times the last.
 | First spawn of a wave | At most 2 s | 0 s | The field is not empty after Start |
 | Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called early. This is Flow's cap on `start_delay`, measured where it matters |
 | `time_to_exit`, path length ÷ `move_speed` | 12 to 60 s | 15.5 to 44.8 s | Time for a burst; no stalled waves |
-| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration`, and at most 30 s | 15 s against 10.25 s and 30 s | Waiting always restores the burst. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02) |
+| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration`, and at most 30 s | 15 s against 10.25 s and 30 s | Waiting always restores the burst. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02). Tower's 10% bonus share binds first, at about 25 s across five calls (gold_upper_bound) |
 | First position's `lives_at_risk` | Below `starting_lives` | 8 against 10 | The first wave cannot be lost, with no runtime rule: an idle player still leaks and feels it |
 | Every wave's `lives_at_risk` | At least 1 | 8 to 38 | No decorative waves |
 | Stage's total `lives_at_risk` | At least `starting_lives` | 120 against 10 | Stronger than Flow's "some cost above 0", since one 1-cost enemy against 10 lives cannot lose |
@@ -312,7 +312,7 @@ The **gold_upper_bound** formula is defined as:
 | `bounty`, `count` | int | 0–100,000; 1–500 | data file | Per group |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and excludes the early-call bonus, which belongs to the Tower GDD, as does any bound on this value.
-**Example:** through wave 5: 456. Through wave 6: 630. A full board, all 5 slots built and at level 2, costs at least 550 at the Tower GDD's prices (all single). Gold before wave 6 is at most 496, with every call's bonus (Tower), so a player cannot have everything before the last wave, which is a source of decisions. Wave 6's 174 arrives during the last wave, so it buys only mid-wave upgrades, and after the last kill it buys nothing.
+**Example:** through wave 5: 456. Through wave 6: 630. A full board, all 5 slots built and at level 2, costs at least 550 at the Tower GDD's prices (all single). Gold before wave 6 is at most 496 at the starter 15 s intermissions, with every call's bonus (Tower). Over the legal range the bound is 526: every bonus arrives before wave 6, and Tower's bonus share rule (at most 10% of `max_final_gold`) caps it at 70, 14 a call, which binds before the 30 s intermission cap would pay 80. So the headroom against 550 is at least 24, and a player cannot have everything before the last wave at any legal value, which is a source of decisions. Wave 6's 174 arrives during the last wave, so it buys only mid-wave upgrades, and after the last kill it buys nothing.
 
 ## Edge Cases
 
@@ -445,7 +445,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 **CI: Integration**
 19. (Rules 1 to 3, content test) **GIVEN** the real stage as records, **WHEN** the content test runs, **THEN** L1 to L9, L12 and L13 pass, and so do the wave rules for first spawn, largest gap, `time_to_exit`, the first position's `lives_at_risk`, every wave's `lives_at_risk`, the stage's total, the `lives_cost` cap, the 30 s intermission cap, `spawn_interval` at least `dt`, and `starting_lives` at least 2 with at least 2 waves. L10, L11, the intermission floor and `peak_alive_ub` join when their data exists (Deferred criteria). Each rule has a stable ID used in its failure message: `L1` to `L13`, `first_spawn`, `max_gap`, `time_to_exit_min`, `time_to_exit_max`, `first_lives`, `wave_lives`, `stage_lives`, `lives_cost_cap`, `intermission_cap`, `interval_floor`, `min_lives_waves`, `intermission_min` and `peak_alive`.
-20. (content test) **GIVEN** one copy of the real stage per rule ID that 19 runs today (two for `time_to_exit`, one per bound), each with one field broken to violate that rule, **WHEN** the content test runs on each, **THEN** each copy fails and its failure message contains that rule's ID. Another rule may fail too.
+20. (content test) **GIVEN** one copy of the real stage per clause of each rule that 19 runs today, each with one field broken and each naming the exact set of rule IDs it must fail, **WHEN** the content test runs on each, **THEN** the set of IDs it reports equals that copy's set, and the set holds the rule the copy targets. A rule with several clauses gets one copy per clause: L1's x below 138, x above 402 and y below 304; L3's left and right hands; L5's first and last points; L13's interior point outside the field, entry by the top, exit by a side, a third boundary crossing and a doubled-back segment; `time_to_exit` below 12 s and above 60 s; and `min_lives_waves` with `starting_lives` 1 and with one wave. Where one broken field must break another rule too (`starting_lives` 1 also breaks `first_lives`), the set names both. The unbroken stage reports the empty set (19). So a validator that reports every ID, or the wrong one, fails.
 
 **Deferred criteria.** Done for this system means every criterion runnable today passes and each of these has its owner. Thresholds are proposed and set at the first baseline, the first time the Hero stories run the bots on the real game. "Mixed" means the four mixed builds and "mono-role" the three one-type builds (Single only, Splash only, Slow only) of Hero System, Simulated results; "mid-skill" is that section's bot. "Beat" and "below" compare lives left, then waves cleared. All the bots run on the fixed tick and the starter stage.
 

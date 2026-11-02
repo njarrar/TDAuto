@@ -130,3 +130,44 @@ Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b
 Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
 Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
 Reviewed-Content-Hash: design/gdd/battle-hud.md 215af862f7a01649cb10e1928084654fc667789a
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 1 | Recommended: 24
+Summary: All three fourth-review blockers are fixed, and every core number reproduces. One blocker remains: C20 passes a validator that prints every rule ID, so each mutation must assert its exact set of failing IDs. The gold bound at line 315, carried through two reviews, should be fixed with it (526 under Tower's 10% share, headroom 24); wave 5's authored leak likely explains why both skilled bots end on 9 of 10.
+Prior verdict resolved: Yes
+Findings:
+- [BLOCKING] Acceptance Criteria, C20: "contains that rule's ID; another rule may fail too" passes a validator that reports every ID or the wrong one; list each copy's exact failing-ID set, assert equality, one copy per clause of L1, L3, L5, L13 and min_lives_waves.
+- [RECOMMENDED] Formulas, gold_upper_bound: "at most 496" holds only at 15 s; Tower's 10% bonus share binds first, so 526 and headroom 24; line 120 should say the share binds before the 30 s cap.
+- [RECOMMENDED] Formulas: the 68-gold leak cost overstates late leaks; wave 6's 174 gold is near unspendable.
+- [RECOMMENDED] Waves: wave 5's early leak coincides with fast group 2's spawn at 16 s; move it to +22 and rerun the sim.
+- [RECOMMENDED] Acceptance Criteria, Deferred: mid-skill and ceiling bots both end on 9 of 10; add a gate where they must differ.
+- [RECOMMENDED] Core Rules, line 129: say "narrowly" means 3 lives or fewer, as line 454 does.
+- [RECOMMENDED] Open Questions: decide whether stage 1, with one tower type, uses the tuned mixed builds.
+- [RECOMMENDED] Waves: say whether an idle player left on 2 lives after wave 1 is intended for onboarding.
+- [RECOMMENDED] Core Rules, Rule 14: corpses are in targets(); name the readers that exclude them (burst, Breathing, Burst fit) and add a criterion.
+- [RECOMMENDED] Core Rules: pin the advance slot as all moves then the leak loop, and assert frozen positions in C6.
+- [RECOMMENDED] Formulas, spawn_tick: apply interval_floor only when count is 2 or more.
+- [RECOMMENDED] States: no Off field to Dead transition for damage over time.
+- [RECOMMENDED] Wave rules: a lives_cost 0 group can hide in a non-decorative wave.
+- [RECOMMENDED] Open Questions, seams: add wave state and wave_tick, which C10 and C12 assert.
+- [RECOMMENDED] Acceptance Criteria: C12 sub-cases share state; C6 never ticks past a move or leak halt.
+- [RECOMMENDED] Acceptance Criteria: no criterion for got_through_by_type(), wave_index(), lives_cost 0, or a path shorter than one step.
+- [RECOMMENDED] Acceptance Criteria: C3's factor 0.5 clause has no fixture; C13 "member 3" means index 3; C15 names no script and needs a no-RNG code check.
+- [RECOMMENDED] Visual: danger has no test (240 against 241, the 1.5 s hold); the Game Feel danger check is circular, since a leak starts danger.
+- [RECOMMENDED] Acceptance Criteria, Deferred: Pillar 2 bots, Order and Catalogue unchanged lack a threshold or method; the code-review list has no procedure.
+- [RECOMMENDED] Handed to Hero: fast × telegraph is 34.1 against 35; add a content-test row.
+- [RECOMMENDED] Layout rules: slot coverage runs 223 to about 530, and slots 3 and 4 cover the same stretch; bound the spread or move them to about y 660.
+- [RECOMMENDED] Layout rules, L1: the arc panel top meets the next-wave line at inset 102 once the prompt hides; check the line height is 18 or less.
+- [RECOMMENDED] Layout rules: L8 per segment rejects baked curves; L13 needs a minimum turn angle and segment length.
+- [RECOMMENDED] Acceptance Criteria, C1: T2 (10, 950) is not on the bottom edge.
+- [RECOMMENDED] Manual checks: tester count and pixel size for types; a frame series for entry and exit.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 4109e5438ef53f41da96a0c73b1fcf27f93cf4e7
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
