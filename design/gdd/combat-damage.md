@@ -48,7 +48,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
 **Handed to owning GDDs.**
 - **Tower:** sets the splash-versus-burst gate (Rule 6, set), fires by slot index, holds range and timers, and passes role values in.
-- **Hero:** has no HP at MVP (user decision). Owns the burst's visual at MVP, the expanding gold ring of art bible §2, since it is the payoff, and it has no row in the table above. Reports `dealt_burst` separately in bot baselines. Needs no attack range field, since the leash is its whole reach. Runs its burst's telegraph in its tick slot and releases there. Counts bursts that hit 3 or more enemies.
+- **Hero:** has no HP at MVP (user decision). Owns the burst's visual at MVP, the expanding gold ring of art bible §2, since it is the payoff, and it has no row in the table above. Reports `dealt_burst` separately in bot baselines. Needs no attack range field, since the leash is its whole reach. Runs its burst's telegraph in its tick slot and releases there. Counts kills per burst, whose median is the mastery metric (Hero Rules 16 and 17); `bursts_hit_3` stays a counter only.
 - **Enemy & Wave:** battle-wide unique `spawn_id`, one position per enemy per tick (cached, because walking the path is the costly part), removing a leaked enemy at once, stopping its leak loop once a fatal leak ends the stage, the reap step, `enemy_killed`, and whether splitter children inherit a slow (Vertical Slice).
 
 **Deliberately not built for MVP.** Projectiles, damage types, armour, resist, falloff, splash caps, hero health, enemy attacks, damage numbers, critical hits, stacking status effects and targeting options.

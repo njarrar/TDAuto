@@ -1,6 +1,6 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
-> **Status**: In Review (fourth design review 2026-11-02 NEEDS REVISION; eight blockers and two user decisions applied, re-review pending)
+> **Status**: In Review (fifth design review 2026-11-02 NEEDS REVISION; five blockers and one user decision applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, now about 3 lives, and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -34,7 +34,7 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 
 1. **Nothing happens until the first pin.** The hero starts unpinned at the stage's `hero_start`. It fights nothing, and the burst is refused until it is pinned, so the button stays locked. It shows its grab ring, not its leash: `hero_start` is 80 from the path, so a leash of 90 would show enemies walking through a hero that does nothing. A never-pinned run is therefore identical to towers-only by rule (Combat's deferred gate), which is the prototype's pet test, and the first thing a player learns is the pin.
 2. **`pin(position)` sets the destination.** It runs between ticks, and returns `HALTED` (`halted()` is true), `BAD_POSITION` (not finite), `OUT_OF_BOUNDS` (outside `pin_rect`), `BUTTON_ZONE` (inside an active shape in Stage's `pin_exclusion`), or `OK`, checked in that order. A refusal changes nothing. `pin_exclusion` is a list of segments, each with a radius and a hand (right, left or both), a disc being a segment of no length: each hand's burst line, and Start/Call's centre for both hands, each at radius 60. Only shapes for both hands and the active hand count, so a right-handed player keeps the bottom-left corner (user decision, 2026-11-02). The hand comes from the left-hand data flag, is injected at build, and is fixed for the battle. The radius is the hero's grab radius 56 plus 4: no button's centre ever lies inside the hero's grab disc, and the hero's centre never lies inside a button's 48, so each can always be pressed at its centre. Where the discs overlap, the hero wins (Rule 15). Every distance test compares squared distances, inclusive, so exactly 60 is `OK`. In Build a pin applies at once and walking starts on the first tick (Flow Rule 10).
-3. **The hero walks in a straight line.** At `walk_speed`, 240 units per second, with no path-following, so "no pathfinding" stands. It does not attack while walking, and a new pin restarts from where it is. `hero_pinned` fires from the command, after the state is set. Signal handlers never issue commands. There is no re-pin cooldown. Crossing the starter hairpin takes about 2 s, so two fronts cost something, but it is not a chore.
+3. **The hero walks in a straight line.** At `walk_speed`, 240 units per second, with no path-following, so "no pathfinding" stands. It does not attack while walking, and a new pin restarts from where it is. `hero_pinned` fires from the command, after the state is set. Signal handlers never issue commands. There is no re-pin cooldown. Crossing the starter hairpin takes about 1.5 s, so two fronts cost something, but it is not a chore.
 4. **The leash is the hero's whole reach.** The hero stands at its pin and attacks the nearest enemy from `targets()` inside `leash_radius`. There is no separate range and no chasing inside the leash, so the leash means what the hero itself can hit, which is how the prototype's players read it. The burst's reach is a separate ring, shown only while aiming. This amends Combat Rule 10 and its criterion 11.
 5. **Auto-attack is deliberately small.** It exists to make the pin feel inhabited, at 4 damage per second against a level-1 single tower's 20. About 5% of a stage's damage comes from it, and 8% at the very most.
 
@@ -50,9 +50,10 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 
 11. **Arming.** A press on the button arms an aim only if the burst is Ready, the hero has been pinned and the phase is not Build. Otherwise the whole press is dead: a cooling press shows the seconds digit above the thumb, and an early thumb presses again. There is no queue.
 12. **Aim point.** `aim_point` is the finger plus (0, −100), clamped to the field, then to `reach − 0.01` from the hero, so exact comparison can never refuse it. It is recomputed every frame while the hero walks, so a still thumb's ring stays true. There is no flip, because no in-field path lies above y 174 (L6). This amends art bible §7 and Input's table. The offset is a presentation constant, since bots skip it.
-13. **Cancel has hysteresis.** Every aim starts cancelling. It stops once the finger is over 64 from the button's centre, and resumes at 48 or less, measured on `drag_started`, each `drag_moved` and the release. On `drag_ended` the burst fires unless cancelling, so a finger released at 55 that never passed 64 cancels. `drag_cancelled` and `idle` clear the aim. A result other than `OK` or `HALTED` from a command here is a development error. HeroInput hit-tests this itself (Input Rule 7).
-14. **Pin clamp.** `pin_point` is the finger plus (0, −`pin_offset`), with `pin_offset` 0 at MVP, passed through `PinGeometry.clamp`. `PinGeometry` is a plain class with no scene, used headless: `is_valid(point, rect, shapes)` returns `OUT_OF_BOUNDS`, `BUTTON_ZONE` or `OK` for `pin`, and `clamp(finger, rect, shapes, hold)` is the `clamp_pin` rule (Formulas), which HeroInput and the bots call with the active hand's shapes and the current `pin_target()`, or `hero_start` before a first pin, as `hold`. The ghost follows it and never refuses a person, so the drawn ring is always where the pin lands; only bots see the refusals. The ghost can jump where two valid edges are equally near. The UX proposal of a 105 offset waits for the phone test (Open Questions), and raising it is one constant.
-15. **Hit target.** The hero's DRAG radius is 56, up from 36, so an occluded grab lands. A press inside the hero's grab disc is the hero's, over either button (user decision, 2026-11-02, from the UX review). The hero's DRAG priority is 200 and the burst button's 100, so a press inside both drags the hero, even while it walks over the button; a tap there still reaches the sink and does nothing. Start/Call is a tap target, so the HUD ignores its tap when the same press named the hero (Battle HUD Rule 10). The reason is cost: a hero grabbed by mistake is re-pinned in a moment, but a wave called or a burst spent cannot be undone, and every aim drags past 64 to reach a target. Tap targets still win a tap (Input Rule 3), though a hero within 92 of a slot now takes a thumb roll past `tap_slop` as a re-pin rather than a dead press, which is accepted and tested. The sink TAP 400 stays as in Input. The HUD places the button at the active hand's shape and HeroInput registers it. While walking, the target's centre updates every frame.
+13. **Cancel has hysteresis, measured from the press point.** Every aim starts cancelling. It stops once the finger is over 64 from where the press began, and resumes at 48 or less, measured on `drag_started`, each `drag_moved` and the release. The press point, not the button's centre, is the anchor, so a press near the button's edge still needs 64 of travel to arm: from the centre, one at 47 out would go Live after a roll of 17. On `drag_ended` the burst fires unless cancelling, so a finger released at 55 that never passed 64 cancels. `drag_cancelled` and `idle` clear the aim. A result other than `OK` or `HALTED` from a command here is a development error. HeroInput hit-tests this itself (Input Rule 7).
+14. **Pin clamp.** `pin_point` is the finger plus (0, −`pin_offset`), with `pin_offset` 0 at MVP, passed through `PinGeometry.clamp`. `PinGeometry` is a plain class with no scene, used headless: `is_valid(point, rect, shapes)` returns `OUT_OF_BOUNDS`, `BUTTON_ZONE` or `OK` for `pin`, and `clamp(finger, rect, shapes, hold)` is the `clamp_pin` rule (Formulas), which HeroInput and the bots call with the active hand's shapes and the current `pin_target()`, or `hero_start` before a first pin, as `hold`. The ghost follows it and never refuses a person, so the drawn ring is always where the pin lands, unless the drag is cancelling; only bots see the refusals. The ghost can jump where two valid edges are equally near. The UX proposal of a 105 offset waits for the phone test (Open Questions), and raising it is one constant.
+    **Pin cancel.** A hero drag has the same hysteresis as an aim, from its own press point: it starts Cancelling, goes Live once the finger is over 64 away, and is Cancelling again at 48 or less. On `drag_ended` while Cancelling, no `pin` is issued, and the hero keeps its old pin and its walk. So a press that lands on the hero by mistake is undone by dragging back to where it began and letting go (user decision, 2026-11-02, fifth review). A person therefore cannot pin less than 64 from the press point, which is accepted: a hop that short moves the leash of 90 by less than its own radius. `drag_cancelled` and `idle` also issue nothing.
+15. **Hit target.** The hero's DRAG radius is 56, up from 36, so an occluded grab lands. A press inside the hero's grab disc is the hero's, over either button (user decisions, 2026-11-02, from the UX review, kept in the fifth review with the pin cancel of Rule 14). The hero's DRAG priority is 200 and the burst button's 100, so a press inside both drags the hero, even while it walks over the button; a tap there still reaches the sink and does nothing. Start/Call is a tap target, so the HUD ignores its tap when the same press named the hero (Battle HUD Rule 10). The reason: every mistake inside the overlap can now be taken back. A hero grabbed by mistake shows its ghost and leash, not a reticle, and dragging back to the press point cancels it (Rule 14), as dragging back cancels an aim (Rule 13). A wave call has no take-back, so Start/Call never wins there. The overlap is not small: a hero that `clamp_pin` parks 60.01 from a button's centre covers a lens up to 44 deep, about 45% of the button's near side, which is the accepted cost. Tap targets still win a tap (Input Rule 3). On a slot within 92 of the hero, a thumb roll past `tap_slop` becomes a hero drag, which cancels unless it passes 64, so that press does nothing; this is accepted and tested. The sink TAP 400 stays as in Input. The HUD places the button at the active hand's shape and HeroInput registers it. While walking, the target's centre updates every frame.
 
 **Reading and logging.**
 
@@ -64,7 +65,7 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
    2. If `attack_left` is above 0, subtract 1. If still above 0, or not Pinned, go to 5.
    3. Read `leash_radius`, then `nearest_in(targets(), position, leash)`. None: hold at 0 and go to 5.
    4. Read `damage` and `attack_interval`. Set `attack_left = to_ticks(attack_interval)`, report the attack so Combat emits `attack_fired`, then `deliver`.
-   5. If Cooling: subtract 1 from `cooldown_left`; at 0, Ready. Nothing else touches the burst here, since `cooldown_left` is also 0 while Ready and Telegraphing.
+   5. If Cooling: subtract 1 from `cooldown_left`; at 0, Ready. Data floors `cooldown` at one tick (Data & Config), so release never sets Cooling at 0. Nothing else touches the burst here, since `cooldown_left` is also 0 while Ready and Telegraphing.
    6. Telegraphing: subtract 1 from `telegraph_left`. If still above 0, end.
    7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius`, report the attack with source kind BURST, the Burst's ID and the hero's position as origin, one `deliver` per victim, then the counters.
 
@@ -136,7 +137,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 **Handed to owning GDDs.**
 - **Combat:** Rule 10's leash check loses its separate range, `deliver` returns what it applied, and a read of remaining HP is added for the aim preview.
 - **Battle HUD:** done. It places the button at the active hand's `pin_exclusion` shape, draws the digit, keeps Start/Call clear of `hero_start`, and ignores a Start/Call tap whose press named the hero.
-- **Input:** the hero's DRAG priority rises to 200 and the burst button's falls to 100.
+- **Input:** the hero's DRAG priority rises to 200 and the burst button's falls to 100; Hero, not the resolver, cancels a pin or an aim released back near its press point (Rules 13 and 14).
 - **Data & Config:** each `pin_exclusion` shape carries a hand.
 - **Game State & Stage Flow:** injects `in_build()` beside `halted()`.
 - **Stage Progression (Vertical Slice):** reads the counters for the report.
@@ -159,7 +160,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 | Telegraphing | Aim fixed; no cancel | `NOT_READY` | Reaches 0 → release → Cooling |
 | Cooling | Timer running | `NOT_READY` | Reaches 0 → Ready |
 
-Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rules 11 and 13. The battle does not know a thumb is aiming.
+Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rules 11 and 13. A hero drag has the same three, per Rule 14. The battle does not know a thumb is aiming or dragging.
 
 ### Interactions with Other Systems
 
@@ -259,15 +260,16 @@ The **hero_share_bound** formula is defined as:
 
 ## Edge Cases
 
-- **If the player pins where the hero stands**: `OK`, a walk of 0 ticks, Pinned at once. A first pin there still counts as pinning.
+- **If the player pins where the hero stands**: a bot's `pin` there is `OK`, a walk of 0 ticks, Pinned at once, and a first pin there still counts as pinning. A person's drag released there is cancelling, so it issues nothing (Rule 14).
+- **If a press meant for a button lands on the hero**: the ghost and leash show instead of a reticle; dragging back to within 48 of the press point and letting go cancels it, and the old pin and walk continue (Rule 14).
 - **If a pin lands on a slot or tower**: it is allowed. A hero on a slot never blocks building, and the tap winner gets taps (Input).
 - **If the player presses the button before any pin**: the press is dead, and the button shows Locked as it does in Build.
 - **If a pin is dragged off the field or under the button**: HeroInput clamps it, so the ghost shows where it will land. Bots get `OUT_OF_BOUNDS` or `BUTTON_ZONE`.
 - **If the hero is pressed while a burst aim runs**: impossible with one pointer (Input Rule 1).
 - **If `burst` is called during a telegraph**: `NOT_READY`. A burst cannot be queued.
 - **If an aim is held across a phase change**: it stays live (Flow Rule 10). An aim armed in Intermission can release in Wave.
-- **If the hero walks across Start/Call**: a walk may cross a no-pin shape, since only a destination is tested. A press inside the hero's grab disc is the hero's: a tap there calls nothing, and a drag re-pins (Battle HUD Rule 10). The rest of the button works throughout, and a pinned hero, 60 or more away, never covers its centre.
-- **If the hero walks over the burst button**: a press inside the hero's grab disc drags the hero, which outranks the button (Rule 15); the rest of the button still aims, and a tap anywhere on it reaches the sink. A crossing lasts at most 0.87 s.
+- **If the hero walks across Start/Call**: a walk may cross a no-pin shape, since only a destination is tested. A press inside the hero's grab disc is the hero's: a tap there calls nothing, a drag past 64 re-pins, and a drag back to the press point cancels (Battle HUD Rule 10, Rule 14). The rest of the button works throughout, and a pinned hero, 60 or more away, never covers its centre.
+- **If the hero walks over the burst button**: a press inside the hero's grab disc drags the hero, which outranks the button (Rule 15), and dragging back to the press point cancels it (Rule 14); the rest of the button still aims, and a tap anywhere on it reaches the sink. A crossing lasts at most 0.87 s.
 - **If the player is left-handed**: only the left burst line and Start/Call refuse pins, and the bottom-right corner is open. Handedness cannot change mid-battle.
 - **If the hero walks during an aim**: the reach ring moves with it, and the aim re-clamps each frame and on release, which runs between ticks, so `OUT_OF_REACH` never reaches a person.
 - **If a re-pin starts during a telegraph**: the burst still lands at its fixed `aim_point`. Reach is tested once, at command.
@@ -317,7 +319,8 @@ Primitives only. Nothing has been rendered and every value is unverified on a de
 |---|---|---|
 | Press hero | Dashed leash at the hero, on the first frame | §3 |
 | Drag | Leash and a 2 px unfilled, glowless kite ghost at `pin_point`. The leash carries it, since the thumb hides the ghost | §1 |
-| Release | Ground ring (2 px solid, radius 30) and leash snap to the pin | §5, amended |
+| Pin cancelling | Ghost at alpha 0.3, with the leash still at the hero, the same look as a cancelling aim | §7 |
+| Release | Ground ring (2 px solid, radius 30) and leash snap to the pin. Released while cancelling: no ring, and the leash returns to the old pin | §5, amended |
 | Walking | Tip locked on the pin, long axis +6%, no breathing | New |
 | Arrival | 6% smaller for 0.1 s, then returns | §5 |
 | Aim | Reticle with no flip, and a solid 2 px radius preview | §3 |
@@ -346,9 +349,9 @@ The pin commits on release: the ground ring lands first, and the hero follows, s
 
 Battle HUD draws these, and this system supplies the state.
 
-- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. Before a first pin, the nudge also repeats the prompt.
+- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. Before a first pin, the nudge also pulses the prompt line once, which stays up until the pin (Battle HUD Rule 13).
 - Prompt until the first pin: "Drag the hero", one line on panel, the first of three the Battle HUD owns (Rule 13 there). None needs an Onboarding system.
-- Ready press: a thin ring at radius 64, which is the cancel boundary and shows beyond the fingertip, plus a cancelling reticle, as the drag affordance.
+- Ready press: a thin ring at radius 64 around the press point, which is the cancel boundary and shows beyond the fingertip, plus a cancelling reticle, as the drag affordance.
 - Cooling press: the digit above the thumb, on panel.
 - Left hand mirrors the button and digit only, and never the kite or the aim offset.
 
@@ -385,9 +388,9 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 10. (Rule 10, burst_total) Six at HP 125: 630, 0 kills. HP 105: 630, 6 kills. One at 40: 40.
 11. (Rule 11) Ready and pinned: `aim_state()` is Cancelling. Build, Cooling or unpinned: Idle through release, and no command. Cooling: `cooldown_digit()` 1 with `cooldown_left` 1.
 12. (Rule 12) **GIVEN** a finger grid, **WHEN** for each point, from a fresh Ready, pinned state in Wave, with the hero at its pin and again mid-walk, `burst(aim_point())` is called, **THEN** `OK` every time. **GIVEN** a still finger beyond reach and a walking hero, **WHEN** `update()`, **THEN** `aim_point()` has changed and is within `reach` of the new position.
-13. (Rule 13) From Cancelling: 64.0 stays, 64.01 goes Live. From Live: 48.01 stays, 48.0 goes Cancelling. A release at 55 that never passed 64 cancels. `drag_cancelled` and `idle` fire nothing and give Idle.
+13. (Rules 13, 14) Distances from the press point. From Cancelling: 64.0 stays, 64.01 goes Live. From Live: 48.01 stays, 48.0 goes Cancelling. A release at 55 that never passed 64 cancels. A press 47 from the button's centre, moved 20 straight away from it, stays Cancelling. `drag_cancelled` and `idle` fire nothing and give Idle. The same values hold for a hero drag: released while Cancelling, no `pin`, and the old pin and walk continue; released while Live, one `pin`.
 14. (Rule 14, clamp_pin) For each hand: **GIVEN** a finger grid, **THEN** `pin` is `OK` at the ghost. **GIVEN** fingers at each active shape's endpoints and on a 20-unit grid over x 0 to 540 and y 660 to 960, edges included, **THEN** the result is no more than 0.03 further from the finger than the nearest of the valid samples, taken every 0.5 along each active circle, parallel line and rect edge. Within 0.02, right hand: (492, 888) gives (395.99, 888); (480, 850) gives (492, 767.99); (200, 800) gives (246.01, 800). Left hand: (84, 850) gives (144.01, 850). A tie: (186, 800) gives (186, 739.99), the smaller y. **GIVEN** shapes covering the whole rect, **THEN** `clamp` returns `hold`.
-15. (Rule 15) Hero DRAG priority 200 radius 56, button DRAG priority 100 radius 48, sink TAP 400 radius 48; a walking centre updates on `update()`. **GIVEN** the hero walking 30 from the button's centre, **WHEN** a press lands between them and moves 15, **THEN** the hero is dragged and no aim arms.
+15. (Rule 15) HeroInput registers hero DRAG priority 200 radius 56, button DRAG priority 100 radius 48, sink TAP 400 radius 48; a walking centre updates on `update()`. The overlap cases run through the real resolver in criterion 32.
 16. (Rule 16) **GIVEN** one script, with and without listeners, **THEN** identical state; bursts on 0, 3 and 5 set the counters, "at least".
 17. (Rule 17) The median of an even count is the mean of the middle two, and an empty list has none. Kills 3, 0, 2: median 2. Kills 5, 0, 3, 2: median 2.5.
 18. (Step 1) The last walk tick: Pinned with `position()` equal to the pin, and attacking that tick.
@@ -402,10 +405,11 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 27. (Phase) An aim armed in Intermission fires in Wave.
 
 **CI: Integration**
-28. (Equivalence) A tick-indexed gesture script, unclamped, with finger = aim + (0, 100), through the real resolver and HeroInput, and the same script through direct commands: after every tick, HeroSim's fields, counters and logs are equal. A thumb roll past `tap_slop` on a slot within 92 re-pins.
+28. (Equivalence) A tick-indexed gesture script, unclamped, with finger = aim + (0, 100), through the real resolver and HeroInput, and the same script through direct commands: after every tick, HeroSim's fields, counters and logs are equal. Its pins travel over 64 from the press point, so none cancels. Separately, a press on a slot within 92 of the hero, rolled past `tap_slop` and released under 64, issues nothing; rolled past 64, it pins once.
 29. (Never pinned) A fixed script on the starter stage to Won or Lost, with HeroSim never pinned and with HeroSim absent: per-tick lives, gold, enemies, towers, the `deliver` and `attack_fired` logs and the accessor read log are equal, and HeroSim's fields keep their initial values.
 30. (Content) Real records pass; each rule fails on its own broken fixture, watched failing once.
 31. (Flow, Combat) Build runs no T; a fatal leak lands nothing; Paused resumes exactly.
+32. (Rule 15, real resolver) Button centre B, Ready and pinned, the hero walking with its centre at B + (30, 0), and no tick during each gesture. A press at B + (15, 0) moved to B + (15, −80) and released: one `pin` and no `burst`. The same press moved to B + (15, −80), then back to B + (15, 10), and released: no command, and the old pin and walk continue. A press at B + (−40, 0), outside the hero's disc, moved to B + (−40, −80) and released: one `burst`. A press at B + (15, 0) released in place: no command. Start/Call at C with the hero's centre at C + (30, 0): a press at C + (15, 0) released in place calls nothing, and a press at C calls.
 
 **Deferred criteria.** Bots per Simulated results. Done for this system means every criterion runnable today passes and each of these has its owner.
 
@@ -427,7 +431,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Waves | Hero stories | Burst fit, two fronts and empty field, per Enemy & Wave |
 | Bypass, burst state | Hero stories | Combat's invariant `I` holds; the bonus ignores burst state |
 | HeroInput wiring | Hero UI story | With a fake resolver, gestures reach the commands |
-| Pins near a button | User, first phone build | A pin drag ending in the bottom third lands within 40 of the finger on at least 90% of attempts, and no press meant for the hero calls a wave or arms an aim (game-designer review, 2026-11-02) |
+| Pins near a button | User, first phone build | A pin drag ending in the bottom third, with the finger inside `pin_rect` and outside the active hand's shapes, lands within 40 of the finger on at least 90% of attempts; fingers elsewhere are clamped further by geometry and are not counted, and no press meant for the hero calls a wave or arms an aim (game-designer review, 2026-11-02) |
 
 **Manual** (retained in `production/qa/evidence/`): unpinned prompt and leash; ghost; reach ring; cooling digit; cancelling state; kill preview in greyscale; telegraph and spokes; Ready ticks at quarter scale.
 

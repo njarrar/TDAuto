@@ -191,3 +191,8 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md cc7be8f00ae5d16f5fefd3
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
 Reviewed-Content-Hash: design/gdd/tower-system.md e36b8c7a04b724ebf610ebfcedbda7f839e66f87
 Reviewed-Content-Hash: design/gdd/battle-hud.md 1b140d9f6ac912e83e0fdad2caf8f19b63d8e187
+
+## Revision — 2026-11-02 — Five blockers and one user decision applied, re-review pending
+User decision: option C for Rule 15. The hero keeps priority over both buttons, and a hero drag gains the aim's cancel: it starts Cancelling, goes Live past 64 from its press point, and cancels again at 48 or less, so a press meant for a button is undone by dragging back. Rule 15's reason is rewritten, and the 44-unit dead lens is stated as the accepted cost.
+Blockers: Rule 13 measures from the press point, not the button's centre, with a criterion for a press 47 out; UI Requirements pulse the prompt rather than repeat it; the "Pins near a button" row counts only fingers inside pin_rect and outside the active shapes; combat-damage.md's Hero row counts kills per burst. Criterion 15 keeps registration only, and new criterion 32 runs the overlap cases through the real resolver; criteria 13 and 28 cover the pin cancel.
+Also amended: Input Rule 7, its Hero row and its sticky-drag note; Battle HUD Rule 10 and criterion 9. Two small fixes from the recommended list: the hairpin takes 1.5 s, and tick step 5 cites Data's one-tick floor on cooldown. Other recommended items stay open.
