@@ -145,7 +145,7 @@ Four blocking issues: C1, C2 and C3 are text fixes, one with a design choice (C1
 
 ---
 
-## Resolution — 2026-11-02 — Four blockers applied, re-run pending
+## Resolution, 2026-11-02: Four blockers applied, re-run pending
 
 - **C1:** Data & Config owns a new Options record (`left_hand`, `reduce_motion`, bools defaulting to false, read directly). Settings & Accessibility (Alpha) writes the player's choice over them. Hero's Interactions row and Battle HUD's Dependencies row now cite it. Chosen in autonomous mode as the smallest change that gives the flags one owner.
 - **C2:** `game-concept.md` Pillar 4 now reads hero > burst, citing the user decision of 2026-11-02, so `input-gesture-resolver.md:43` holds again.

@@ -145,7 +145,7 @@ Two blocking issues, both caused by today's fixes: B1, the Rule 18 text added in
 1. B1: split Flow Rules 15 and 18 into a mid-tick latch and an after-tick commit, emit and cancel request; state which transitions emit `phase`.
 2. B2: add `wave_index` and an attempt sequence number to every Battle HUD Rule 19 record (or change Hero's pass mark to compare per attempt), and make Hero's row name the fields it compares.
 
-## Resolution — 2026-11-02 — Both blockers and the consistency warnings applied, re-run pending
+## Resolution, 2026-11-02: Both blockers and the consistency warnings applied, re-run pending
 
 - **B1:** Flow Rules 15 and 18 now give the same two steps: an outcome is latched mid-tick, so `halted()` turns true at once; after the tick returns, Flow stops the clock, emits `phase`, and asks for `cancel()` at the end of the frame. Every phase change emits `phase`; only outcomes and Paused stop the clock and request a cancel; resume emits `phase` with the phase it returns to. Flow criterion 8 matches.
 - **B2:** Battle HUD Rule 19 records carry `attempt_seq`, per-wave records carry `wave_index`, and a quit attempt's per-wave records are kept and grouped by `attempt_seq`. Hero's "Always-call, humans" row names those fields and leaves out a wave index with no waited wave.

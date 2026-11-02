@@ -191,7 +191,7 @@ One blocking issue: G1. The D1 resolution added a contradiction to the concept a
 
 ---
 
-## Resolution — 2026-11-02 — G1 and G5 applied, re-run pending
+## Resolution, 2026-11-02: G1 and G5 applied, re-run pending
 
 User decisions: option (a) for G1, and "clearly lose" in Pillar 2 means ending the stage with fewer lives (G5).
 
@@ -202,7 +202,7 @@ User decisions: option (a) for G1, and "clearly lose" in Pillar 2 means ending t
 
 The other warnings stay open.
 
-## Resolution — 2026-11-02 — Warning batch applied, re-run pending
+## Resolution, 2026-11-02: Warning batch applied, re-run pending
 
 Applied across all ten design files: R1 to R18 (except R6's ownership is marked, values kept), X1 to X4, X6 to X8, X10 and X12, the first run's C4, C5 and C7 to C14, and S1 to S4. Choices made in autonomous mode, logged: "fired" means `burst_started`; each consumer reads `left_hand` directly at build; outcomes and Pause ask for `cancel()` at the end of the frame, never inside a tick; hit radii are structural constants, not catalogue values; `edge_reject_margin` caps at 36; Combat sits downstream of Flow and takes Data as a soft upstream; a pin in Build keeps its ground ring until the hero walks.
 
