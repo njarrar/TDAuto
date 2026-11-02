@@ -58,7 +58,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
 
-`path_points` holds at least 2 points with no repeated consecutive point, and `slot_positions` at least 1. Every coordinate, including `hero_start`, `pin_rect` and `pin_exclusion`, is finite and within −2,000 to 2,000, and `pin_rect`'s minimum is below its maximum. `pin_exclusion` is a list of shapes, each of two points and a radius above 0, checked per shape, and a disc has both points equal. These are boot-fatal, since a zero-length segment would divide by 0; layout rules are the content test's (Enemy & Wave GDD).
+`path_points` holds at least 2 points with no repeated consecutive point, and `slot_positions` at least 1. Every coordinate, including `hero_start`, `pin_rect` and `pin_exclusion`, is finite and within −2,000 to 2,000, and `pin_rect`'s minimum is below its maximum. `pin_exclusion` is a list of shapes, each of two points, a radius above 0 and a hand (right, left or both), checked per shape, and a disc has both points equal. These are boot-fatal, since a zero-length segment would divide by 0; layout rules are the content test's (Enemy & Wave GDD).
 
 **Tower levels and cost.** Levels are numbered from 1. `cost` at level N is the price of reaching N from N-1, so level 1's `cost` is the build price. The Tower GDD confirms this, with two levels and no selling at MVP.
 

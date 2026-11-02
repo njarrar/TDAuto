@@ -2,6 +2,7 @@
 
 shortcut: scripted bots in plain Python, not game code. Replace with the Hero stories' real bots.
 Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check)
+     python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
@@ -24,7 +25,10 @@ WAVES=[([('n',8,1.5,0)],15),([('n',6,.6,0),('n',6,.6,12)],15),([('n',12,.7,0),('
 ([('h',4,3,0),('n',12,.5,10),('f',10,.4,20),('n',8,.5,24)],15)]
 def tk(s): return int(math.floor(s/DT+.5))
 
-ZONES=[((456,816),(456,888),104.0),((84,816),(84,888),104.0),((186,800),(186,800),104.0)]
+# pin_exclusion: (a, b, radius, hand). Only the active hand's burst line counts, and Start/Call ("both").
+SHAPES=[((456,816),(456,888),60.0,'right'),((84,816),(84,888),60.0,'left'),((186,800),(186,800),60.0,'both')]
+HAND='right'
+def zones(): return [(a,b,r) for a,b,r,h in SHAPES if h in ('both',HAND)]
 RECT=(48.0,174.0,492.0,888.0)
 def _segd(p,a,b):
     ax,ay=a;bx,by=b;dx,dy=bx-ax,by-ay;L=dx*dx+dy*dy
@@ -32,13 +36,13 @@ def _segd(p,a,b):
     return (ax+t*dx,ay+t*dy)
 def valid_pin(p):
     if not(RECT[0]<=p[0]<=RECT[2] and RECT[1]<=p[1]<=RECT[3]): return False
-    return all(math.dist(p,_segd(p,a,b))>=r for a,b,r in ZONES)
-def clamp_pin(f,eps=.01):
+    return all((p[0]-q[0])**2+(p[1]-q[1])**2>=r*r for a,b,r in zones() for q in [_segd(p,a,b)])
+def clamp_pin(f,eps=.01,hold=START):
     """Hero GDD clamp_pin: nearest valid candidate, ties to smaller y then smaller x."""
     x0,y0,x1,y1=RECT
     c=[(min(x1,max(x0,f[0])),min(y1,max(y0,f[1]))),(x0,y0),(x1,y0),(x0,y1),(x1,y1)]
     circles=[];lines=[]
-    for a,b,r in ZONES:
+    for a,b,r in zones():
         R_=r+eps
         for e in {a,b}:
             circles.append((e,R_))
@@ -80,7 +84,7 @@ def clamp_pin(f,eps=.01):
         if not valid_pin(q): continue
         key=((q[0]-f[0])**2+(q[1]-f[1])**2,q[1],q[0])
         if best is None or key[0]<best[0][0]-1e-6 or (abs(key[0]-best[0][0])<=1e-6 and key[1:]<best[0][1:]): best=(key,q)
-    return best[1]
+    return hold if best is None else best[1]
 
 class E: pass
 def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,burst_cd=10.0,tele=.25,hero_dps=(4,1.0),log=False):
@@ -155,7 +159,7 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
                 tg=[e for e in tg if e.hp>0]
                 if hero['mode']=='driven' and hero.get('repin',True) and tick%tk(hero.get('cad',1.5))==0 and tg:
                     # re-pin to the most advanced enemy, a little ahead, clear of nothing else
-                    lead=max(tg,key=lambda e:e.d); ahead=pos(min(LEN,lead.d+60)); pin=clamp_pin(ahead); pinned=True
+                    lead=max(tg,key=lambda e:e.d); ahead=pos(min(LEN,lead.d+60)); pin=clamp_pin(ahead,hold=tuple(pin)); pinned=True
                 if hero['mode']!='none':
                     dx,dy=pin[0]-hx[0],pin[1]-hx[1]; m=math.hypot(dx,dy); st=240*DT
                     if m>st: hx[0]+=dx/m*st; hx[1]+=dy/m*st
@@ -260,7 +264,7 @@ def boundary_samples(step=.5):
     x0,y0,x1,y1=RECT;out=[]
     for i in range(int((x1-x0)/step)+1): out+=[(x0+i*step,y0),(x0+i*step,y1)]
     for i in range(int((y1-y0)/step)+1): out+=[(x0,y0+i*step),(x1,y0+i*step)]
-    for a,b,r in ZONES:
+    for a,b,r in zones():
         for e in {a,b}:
             for i in range(int(2*math.pi*r/step)):
                 t=i*step/r;out.append((e[0]+r*math.cos(t),e[1]+r*math.sin(t)))
@@ -269,22 +273,27 @@ def boundary_samples(step=.5):
                 for i in range(int((b[1]-a[1])/step)+1): out.append((a[0]+sx,a[1]+i*step))
     return [p for p in out if valid_pin(p)]
 def check_clamp():
-    """Hero GDD criterion 14: valid on an 8-unit grid; near against boundary samples at notches, centres and the bottom third."""
-    for fx in list(range(0,541,8))+[540]:
-        for fy in range(0,961,8):
-            f=(float(fx),float(fy));assert valid_pin(clamp_pin(f)),f
-    pts=boundary_samples()
-    F=[(100,860),(241,888),(188,888),(456,816),(456,888),(84,816),(84,888),(186,800)]
-    F+=[(x,y) for x in range(0,541,20) for y in range(660,961,20)]
-    worst=0.0;n=0
-    for f in F:
-        f=(float(f[0]),float(f[1]))
-        if valid_pin(f): continue
-        c=clamp_pin(f);worst=max(worst,math.dist(f,c)-min(math.dist(f,p) for p in pts));n+=1
-    assert worst<=.03,worst
-    for f,e in (((492,888),(351.99,888)),((480,850),(351.99,850)),((186,800),(186,695.99)),((270,800),(290.01,800))):
-        assert math.dist(clamp_pin(f),e)<.02,(f,clamp_pin(f))
-    print(f"clamp_pin ok: {n} fingers against {len(pts)} boundary samples, worst excess {worst:.3f}")
+    """Hero GDD criterion 14, for each hand: valid on an 8-unit grid; near against boundary samples at the shape ends and the bottom third."""
+    global HAND
+    EX={'right':(((492,888),(395.99,888)),((480,850),(492,767.99)),((200,800),(246.01,800)),((186,800),(186,739.99))),
+        'left':(((60,888),(144.01,888)),((84,850),(144.01,850)),((186,800),(186,739.99)))}
+    for HAND in ('right','left'):
+        for fx in list(range(0,541,8))+[540]:
+            for fy in list(range(0,961,8))+[960]:
+                f=(float(fx),float(fy));assert valid_pin(clamp_pin(f)),f
+        pts=boundary_samples()
+        F=[e for a,b,r in zones() for e in (a,b)]
+        F+=[(x,y) for x in list(range(0,541,20))+[540] for y in list(range(660,961,20))+[960]]
+        worst=0.0;n=0
+        for f in F:
+            f=(float(f[0]),float(f[1]))
+            if valid_pin(f): continue
+            c=clamp_pin(f);worst=max(worst,math.dist(f,c)-min(math.dist(f,p) for p in pts));n+=1
+        assert worst<=.03,worst
+        for f,e in EX[HAND]:
+            assert math.dist(clamp_pin(f),e)<.02,(HAND,f,clamp_pin(f))
+        print(f"clamp_pin ok, {HAND} hand: {n} fingers against {len(pts)} boundary samples, worst excess {worst:.3f}")
+    HAND='right'
 if __name__=='__main__':
     assert valid_pin(START) and valid_pin((270,480))
     check_clamp()
@@ -295,5 +304,7 @@ if __name__=='__main__':
         THUMB=860.0; table(grid=False); THUMB=None
         for lab,mm in (('react 1 s, exact',dict(react=1.0,off=0)),('react 3 s, 50 off',dict(react=3.0,off=50))):
             print(lab,[(b,fm(r:=run(F,o,hero=dict(MID,reach=160.0,**mm))),round(r['hs']*100)) for b,o in MIXED.items()])
+    elif '--left' in sys.argv:
+        HAND='left'; table()
     else:
         table()
