@@ -51,7 +51,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Retry.**
 
-16. **Rebuild, never reset.** Retry destroys the whole battle and builds a new one; no system has a reset function. The prototype's hand-listed reset of 22 fields is exactly how state leaks between attempts. The order is: stop the clock, cancel input, remove the old battle at once, build the new one. It happens between ticks, never inside a signal. The input resolver and adapter are rebuilt too, because their registrations belong to dying owners. A retried battle opens in Build, skipping the path's draw-in.
+16. **Rebuild, never reset.** Retry destroys the whole battle and builds a new one; no system has a reset function. The prototype's hand-listed reset of 22 fields is exactly how state leaks between attempts. The Retry button only sets a latch on the app root, whose frame acts on it, Fatal first. The order is: stop the clock, cancel input, remove the old battle at once, build the new one. It happens between ticks, never inside a signal. The input resolver and adapter are rebuilt too, because their registrations belong to dying owners. A retried battle opens in Build, skipping the path's draw-in.
 
 **Pause.**
 
@@ -105,7 +105,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | Tower System | wires | Forwards `wave_called_early(seconds_left)`; connects kills to gold | Tower (bonus value) |
 | Hero System | wires | Builds and ticks it | Hero |
 | Combat & Damage | wires, reads | Reads per-source counters for the result | Combat |
-| Battle HUD | listens | `lives_changed`, phase changes, countdown, result; sends Start/Call and Retry | HUD (drawing, button placement) |
+| Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
 | Bots and tests | call | `build`, `tick`, commands, read result; timeouts belong to the harness | Harness |
 
 ## Formulas
@@ -192,7 +192,7 @@ This system draws nothing but the fatal screen, and every other visual is trigge
 |---|---|---|
 | Stage opens | Path draws itself in; skipped on retry (HUD or stage scene) | §2 Build |
 | Lost | Hero dims to an outline; retry is the only filled shape (HUD, Hero) | §2 Defeat |
-| Won | Accretion elements brighten in sequence (Tower, HUD) | §2 Victory |
+| Won | Tower bodies brighten in sequence, deferred past MVP; a compact panel leaves the board in view (HUD) | §2 Victory |
 | Fatal | Generic text on the field colour, no catalogue data (this system) | — |
 
 Audio: none at MVP.
@@ -271,7 +271,6 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Exactly where in the bottom band does the Start/Call button sit, clear of the burst and slots? | Battle HUD GDD | Battle HUD GDD |
 | Does the always-call bot dominate? If so, the fallback is allowing overlapping waves | qa-lead + Tower GDD | First playable |
 | App Lifecycle & Composition ADR: tick rate and clamp, pause mechanism, lifecycle notifications, teardown. All engine behaviour here is from memory | technical-director | Before the first story |
 | Bots must be re-baselined on the fixed tick; the prototype's 10-vs-3 lives result does not transfer | qa-lead | First playable |

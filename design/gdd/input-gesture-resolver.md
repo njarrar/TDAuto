@@ -47,6 +47,7 @@ Implementation questions raised while framing this section, all deferred: which 
 | Hero System | burst button sink (a tap here does nothing, and reaches nothing beneath) | TAP, sink | 400 |
 | Battle HUD | Start/Call button (Build and Intermission only) | TAP | 350 |
 | Battle HUD | build-arc disc (only while an arc is open) | TAP | 300 |
+| Tower System | upgrade chip (only while a chip is open) | TAP | 300 |
 | Battle HUD | arc backdrop (only while an arc is open; one disc covering the field, so a press outside the arc discs only dismisses) | TAP, sink | 250 |
 | Tower System | tower, build slot (same tier; nearest centre wins) | TAP | 200 |
 | Hero System | burst button (drag: aim) | DRAG | 200 |
@@ -289,7 +290,7 @@ This system draws nothing and plays nothing. Every visual that answers a gesture
 | `drag_started` and `drag_moved` from the burst button | Offset reticle about 67 dp above the finger, clamped, with no flip (Hero System computes, HUD draws) | §7 Reticle |
 | Finger inside the burst button during an aim | Visible cancel state: reticle dimmed and radius preview hidden, so an aim that will cancel never looks live (Hero System decides from `drag_moved`, HUD draws) | §7 Reticle |
 | `drag_moved` from the hero | Leash preview at the finger (Hero System) | §5 Pinned pose |
-| `ground_tap` | Tiny unanimated dim ring, 150 ms fade-in, first few taps of a session only, no sound (Battle HUD) | §7 Ground tap |
+| `ground_tap` | Tiny unanimated dim ring, 150 ms fade-in, first three taps of a battle only, no sound (Battle HUD) | §7 Ground tap |
 | `tap` on a tower | Cost chip for 1.5 s (Tower System / HUD) | §7 Build/upgrade affordance |
 | `tap` on a slot | Build arc of three role discs above the slot (Battle HUD) | §7 |
 | `drag_cancelled` | Leash preview and reticle removed; nothing fires (owners) | — |
@@ -312,7 +313,7 @@ The quantitative feel criterion is the concept's phone test (the Pillar 4 gate),
 
 None owned. This system has no screen, panel or widget; it supplies gestures to the systems that do. Two constraints on UI that other systems must honour are recorded here because the resolver assumes them:
 
-- The burst button is a registered disc owned by Hero System and placed by the HUD, not a Control, so it competes in this system's priority order rather than the engine's Control ordering; the HUD's top-band panels and pause button are Controls that consume their own events before the adapter sees them (art bible §7 panel placement: bottom 30% holds only the button and the field).
+- The burst button is a registered disc owned by Hero System and placed by the HUD, not a Control, so it competes in this system's priority order rather than the engine's Control ordering; the HUD's top band ignores input, and its result and Paused screens are Controls that consume every event before the adapter sees them. There is no pause button at MVP.
 - No build slot may sit so close to the burst button that their hit discs overlap at any supported safe-area inset: the button's priority would make part of that slot untappable. Owner: the Enemy & Wave GDD's layout rule L3, enforced by the content test on the Stage record's `slot_positions`.
 
 ## Cross-References
@@ -399,7 +400,6 @@ P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-dev
 | Does a palm resting on a real tap target lock input often enough to matter? It holds by design (Rule 1). The reverse also needs watching: a second touch replaces an unmoved hero or burst press and can then tap a tower | qa-lead | First phone build |
 | Hero: pin at the finger position means the thumb covers the pin at release. If the phone test shows pin misses, does Hero route pins through its offset function too? | Hero GDD | First phone build |
 | Hero: should re-pinning be instant or a short walk? If "walk", the hero needs path-following and the concept's "no pathfinding" claim is revisited (concept Open Questions). The resolver is unaffected either way | Hero GDD | Hero GDD |
-| Battle HUD: how many ground-tap rejection rings per session (a dismissal is now `tap(backdrop)`, never `ground_tap`, so no suppression rule is needed) | Battle HUD GDD | Battle HUD GDD |
 | Settings & Accessibility: runtime slop setter ("steady hand" ×1.5) and hit-area scale; a two-tap alternative to dragging for players who cannot drag. Hooks are reserved in prose only; the owner API (target, press, release) already hides the physical gesture from owners | Settings & Accessibility GDD | Alpha |
 | Should the Input record gain `tap_max_ms` or anything else? Current answer: no; the no-timeout rule is the accessibility floor. Revisit only with phone evidence | ux-designer | First phone build |
 | Is the `drag_slop` floor of 8 (5.3 dp at 360 dp, below Android's 8 dp touch slop) worth keeping as a validation limit, or should the Data & Config domain floor rise to 12? Decided from measured phone data, not here | Data & Config GDD + first phone build | First phone build |

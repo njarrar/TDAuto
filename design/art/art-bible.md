@@ -41,7 +41,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Combat | Tactical calm with machine rhythm | base V, medium contrast, glow 1 | steady, ticking, busy-but-sorted, rhythmic | medium | Tower fire pulses: thin cyan lines, no glow, so "the machine working" reads |
 | Hero burst | "I did that" (Pillar 2) | Field dips base −3% for ~0.4 s; high contrast; glow 2 (hero + burst) | decisive, sudden, bright, brief, earned | peak | An expanding gold ring matching the radius preview exactly, so the preview becomes the payoff; hero stays on top |
 | Leak / danger | Urgent but fixable, not panic | base V, magenta chevron strip at the lane exit, no added glow | tense, pulsing, edge-driven, clear | high | 2 Hz pulsing downward chevrons at the exit plus a dash-count of lives; reads with sound off and the hero stays brightest |
-| Victory | Satisfied relief (Pillar 1: growth shown) | base +4%, soft contrast, glow 1 | warm, released, spacious, earned | low-medium | Tower bodies brighten in sequence (no glow), rewarding the build |
+| Victory | Satisfied relief (Pillar 1: growth shown) | base +4%, soft contrast, glow 1 | warm, released, spacious, earned | low-medium | Tower bodies brighten in sequence (no glow), rewarding the build; deferred past MVP |
 | Defeat | Disappointed but eager to retry; no shame | base −4%, desaturated 60%, low contrast, glow 0 | muted, still, hollow, brief | low | The hero dims to an outline; the retry button is the only filled shape |
 | Menu / skill tree | Considered anticipation (the unspent point is the hook) | base +2%, medium contrast, glow 1 | structured, browsable, quiet, hopeful | low | Node grammar: owned nodes filled, available nodes outlined and slowly pulsing |
 
@@ -101,7 +101,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 | Status / slow | #8E7CFF | 5.8:1 |
 | Neutral UI | #C8D0E0 | 12.2:1 |
 
-**Semantic vocabulary.** One hue, one gameplay fact: gold = hero only; cyan = towers and tower effects; orange = enemies; violet = a status effect on an enemy, never on a tower or its line; magenta = danger only; neutral = information. Magenta and orange are never used for the same fact.
+**Semantic vocabulary.** One hue, one gameplay fact: gold = hero only; cyan = towers and tower effects; orange = enemies; violet = a status effect on an enemy, never on a tower or its line; field-anchored polygons in the arc and chip stay cyan, and all other screen-space glyphs stay neutral; magenta = danger only; neutral = information. Magenta and orange are never used for the same fact.
 
 **Field rules per stage** (Pillar 3). Hue range 170–280 so it never approaches enemy orange or danger magenta; value capped at V 14%; path body lifted ~3% lighter than the field, its edge line +6%; grid lines at alpha 0.08. Identity is carried by path curve, path width and grid tilt (0°, 15°, 30°). Hue alone never separates two stages.
 
@@ -157,9 +157,9 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 *Art direction by art-director; required changes from the ux-designer alignment check are merged below and marked (UX).*
 
-**Diegetic vs screen-space.** Everything that answers "what is happening in the field" is drawn in the field: leash, reticle, radius preview, burst ring, tower cooldown rings, accretion, danger chevrons, and the build/upgrade affordance anchored to its slot. Only bookkeeping is screen-space: the burst button, the gold/lives/wave strip and pause. Rule: if a HUD element points at a position, it lives at that position.
+**Diegetic vs screen-space.** Everything that answers "what is happening in the field" is drawn in the field: leash, reticle, radius preview, burst ring, tower cooldown rings, accretion, danger chevrons, and the build/upgrade affordance anchored to its slot. Only bookkeeping is screen-space: the burst button and the gold/lives/wave strip. Rule: if a HUD element points at a position, it lives at that position.
 
-**Typography.** Geometric humanist sans, medium weight, no italics, no all-caps body; tabular lining numerals so counters never shift width. Three sizes: 24 dp for the wave number and the burst cooldown digit (UX floor for the digit: 18 dp); 16 dp for gold, lives, labels and costs; 14 dp (21 px) is the floor for any body text (UX; the art draft's 12 dp is rejected). Neutral #C8D0E0 text sits on panel only, never on the raw field at small sizes.
+**Typography.** Geometric humanist sans, medium weight, no italics, no all-caps body; tabular lining numerals so counters never shift width. Three sizes: 24 dp for the burst cooldown digit (UX floor for the digit: 18 dp); 16 dp for gold, lives, labels and costs; 14 dp (21 px) is the floor for any body text (UX; the art draft's 12 dp is rejected). Neutral #C8D0E0 text sits on panel only, never on the raw field at small sizes.
 
 **Iconography.** Flat, single-colour, 2 dp stroke, built from Section 3's primitives. A tower polygon appears in UI only to mean "that tower", never as decoration.
 
@@ -171,15 +171,15 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Leash over the path (UX).** Where any arc of the dashed leash crosses the lifted path, draw it in two tones (dark outer, light inner) or raise alpha to 0.7, so it clears 3:1. Still thin, still unfilled.
 
-**Build/upgrade affordance.** No modal popup. Slot tap opens three 56 px role-polygon discs in an arc above the slot (never below, where the thumb is); tapping one builds and the arc collapses in 120 ms. Tower tap shows a cost chip for 1.5 s; a second tap on the tower commits. Insufficient gold: the chip dims and the cost is struck through, no magenta (danger only). The chip-then-tap step is the mis-spend safeguard; the Tower GDD and its UX spec own the final call.
+**Build/upgrade affordance.** No modal popup. Slot tap opens three 56 px role-polygon discs in an arc above the slot (never below, where the thumb is); tapping one builds and the arc collapses in 120 ms. Tower tap shows a cost chip for 1.5 s, with a draining bar; a tap on the chip or a second tap on the tower commits. Insufficient gold: the chip dims and the cost is struck through, no magenta (danger only). The chip-then-tap step is the mis-spend safeguard; the Tower GDD and its UX spec own the final call.
 
-**Ground tap (UX).** No success feedback. For the first few taps of a session, a tiny unanimated dim ring fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. Motion-light so it never reads as a button (Principle 3).
+**Ground tap (UX).** No success feedback. For the first three taps of a battle, a tiny unanimated dim ring fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. Motion-light so it never reads as a button (Principle 3).
 
-**Lives and wave.** Lives are a dash row at top-left, one 16×3 dp dash each; a lost dash fades in 200 ms, with urgency carried by the in-field chevrons. Waves are pips at top-centre: filled done, outlined current, dotted upcoming (the tree-node grammar). Gold is the number at top-right.
+**Lives and wave.** Lives are two rows of five dashes at top-left, one 16×3 dp dash each; a lost dash fades to alpha 0.2 in 200 ms and stays countable, with urgency carried by the in-field chevrons. Waves are pills at top-centre, not discs, since discs would match enemy glyphs: filled done, outlined current, dotted upcoming (the tree-node grammar). Gold is the number at top-right.
 
-**Panel placement.** Screen-space panels sit only in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane. One exception: the Start/Call button may sit in the bottom band during Build and Intermission only, when the lower lane is empty, clear of the burst button and build slots.
+**Panel placement.** Screen-space panels sit in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The exceptions are the prompt line below the band, the cooling digit on a press, and the modal result and Paused screens. The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane. One exception: the Start/Call button may sit in the bottom band during Build and Intermission only, when the lower lane is empty, clear of the burst button and build slots.
 
-**Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls. The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
+**Flags against Sections 1–4.** The picker discs are in-field tower-role shapes, not UI controls, and the disc itself is a hit area that is not drawn. The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
 
 ## 8. Asset Standards
 

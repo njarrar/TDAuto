@@ -31,9 +31,9 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 | # | Rule | Starter stage |
 |---|---|---|
-| L1 | Slot x within 105 to 435, y at least 286: its hit disc and build arc stay in the field and below the band | Pass |
+| L1 | Slot x within 138 to 402, y at least 304: its hit disc and build arc stay in the field and below the band, with no flip code (Battle HUD) | Pass |
 | L2 | Slot to path centreline at least `path_width / 2 + 40`: a 56 px slot at any tilt stays off the path | 76 needed, 80 |
-| L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, until Battle HUD confirms them), at least 92: hit discs never touch | 144 |
+| L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, confirmed by Battle HUD), at least 92: hit discs never touch | 144 |
 | L4 | Slot to slot at least 72 | 160 |
 | L5 | First and last path points at least 16 outside the field, since the largest enemy's radius is 15: it enters and exits unseen | 40, 20 |
 | L6 | In-field path clear of the top band at the largest inset: `y − path_width / 2` at least 174 | 174, no margin |
@@ -71,7 +71,7 @@ L10 and L11 need tower range and burst radius, so they join the test in the Towe
 11. **Kills and clearing.** In the reap slot, dead enemies are handled in ascending `spawn_id` order: `bounty` is read through the accessor, `enemy_killed(bounty)` fires, and the corpse is removed. Then comes the clear check. **It runs every tick, not only on a kill**, or a wave whose last enemy leaks would never clear, and only while a wave is active, or an empty field would emit forever. A wave is clear when its schedule is exhausted and the roster is empty, with no separate counter that could disagree. By index, not ID, the last wave emits `waves_complete()` and any other emits `wave_cleared(intermission_duration)`, with the state committed first. Leak events therefore always precede the clear, as Flow Rule 13 requires.
 12. **Tick order confirmed.** Combat Rule 11 stands: Flow, then this system's advance slot (spawn, move, leak), Status countdown, towers by slot index, hero then burst, then this system's reap slot. So this system has two tick entries, and the battle's tick passes the roster to Combat's countdown, since Flow owns no roster. A corpse is reaped on the tick it dies, so it never moves.
 13. **Halting.** The builder injects Flow's `halted()`, true on Won, Lost and Fatal (Flow Rules 15 and 18), so this system needs no reference to Flow. It is checked immediately after every accessor read, before the value is used, and after every signal. Spawn, move, leak and reap return at once when it is true, so nothing follows a fatal leak, and a bad read can never persist a garbage value or emit one. Enemies left on the roster at an outcome freeze where they are.
-14. **Reading the enemies.** `roster()` is every enemy not yet removed, corpses awaiting the reap included, in `spawn_id` order. `targets()` is that list limited to those inside the field. Tower and Hero pass `targets()` to Combat's helpers, which skip the dead, and the burst uses it too. Both lists are read-only by rule and never kept past the reader's slot. An enemy exposes `spawn_id`, `def_id`, `distance` and `position`. How Health and Status attach is left to Combat's ADR.
+14. **Reading the enemies.** `roster()` is every enemy not yet removed, corpses awaiting the reap included, in `spawn_id` order. `targets()` is that list limited to those inside the field. Tower and Hero pass `targets()` to Combat's helpers, which skip the dead, and the burst uses it too. Both lists are read-only by rule and never kept past the reader's slot. An enemy exposes `spawn_id`, `def_id`, `distance` and `position`. Views also read `wave_index()` and `got_through_by_type()`, counts kept only for the result. How Health and Status attach is left to Combat's ADR.
 15. **Room for splitters, nothing built.** One add-enemy step serves the schedule, and the clear test looks only at the schedule and the roster. So splitter children at Vertical Slice can join atomically before the clear check, with new `spawn_id`s, with no fields or code added now.
 
 **Starter values.** These are fixtures, not balance. The Tower and Hero GDDs ran them through a scripted simulation with towers and a hero, and raised HP about 3 times, because at the first values a hero alone and towers alone both won, and set every intermission to 15 s, so that waiting restores the burst (Hero System, Simulated results). They replace the prototype's, whose top entry and 6 slots do not carry over.
@@ -122,7 +122,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 **Handed to owning GDDs.**
 - **Tower:** reads `slot_positions`; supplies DPS per type and level, and keeps its own gold bound using `gold_upper_bound`. It must ensure `starting_gold` buys its cheapest tower, or the stage soft-locks.
 - **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 2 s. Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.31 s at starter values), or fast enemies escape the burst. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
-- **Battle HUD:** confirms the burst button coordinates used by L3 and L7, and decides whether to show the next wave's enemies (Open Questions).
+- **Battle HUD:** done. It confirms the burst line, shows the next wave's enemies by glyph and count, and reports got-through by type.
 
 **Deliberately not built for MVP.** Forks and lanes, armour, flying, splitters, lane-switchers, per-wave HP scaling, bounty multipliers, randomness, enemy attacks, a spawn signal (views read the roster), and leaks per lane.
 
@@ -432,8 +432,6 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
 | The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
-| Should the HUD show the next wave's enemies during Build and Intermission? Recommended: one line of enemy glyphs and counts, drawn from the Wave records, with no timings. Without it, building and calling early are blind on a first attempt. Whether players read it is unproven | Battle HUD GDD | Battle HUD GDD |
-| With "leaks per lane" cut, the concept's "which lane leaked" has nothing to report. Recommended: report leaks by enemy type on the result, which also says what to build | Battle HUD GDD | Battle HUD GDD |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Tower GDD + bots | First playable |
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |

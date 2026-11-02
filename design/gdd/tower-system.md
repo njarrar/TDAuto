@@ -64,20 +64,21 @@ IDs and levels are checked before any accessor read, through a new non-fatal `is
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
 7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and does nothing. The arc belongs to the HUD, which calls `build`.
-8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. The HUD must draw the chip inside the tower's hit disc or register it as its own target, or the commit tap lands on nothing and closes it. Both durations are presentation constants, not catalogue values (Data Rule 1).
+8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`. Both durations are presentation constants, not catalogue values (Data Rule 1).
 
 | Event while a chip is open | Result |
 |---|---|
 | Same tower tapped under 200 ms | Ignored; the window keeps running |
 | Same tower tapped inside the window | Calls `upgrade`. On `NO_GOLD` it stays open and dimmed, and the window does not restart. Any other result closes it |
-| Window expires, then the tower is tapped | Opens a new chip; never commits |
+| Window expires, then the tower is tapped | Opens a new chip; never commits. The chip's disc unregisters, and a chip press held past expiry does nothing |
+| `pressed` naming the chip | Stays open |
 | `pressed` naming another tap target, or none | Closes. If it names another tower, that tap opens that tower's own chip |
 | `pressed` over the same tower with the hero beneath | Stays open (Input edge case) |
 | Phase changes among Build, Wave and Intermission | Stays open (Flow Rule 10) |
 | Paused, Won, Lost, Fatal | Closes on Flow's `phase` signal, which now names Paused and Fatal too, since `cancel()` emits nothing when input is idle. While `halted()` is true, TowerInput ignores every tap, so no chip or arc reopens |
 | Retry | Destroyed with the battle |
 
-A tower at its last level opens no chip. Only one chip is open at a time.
+A tower at its last level opens no chip, and emits `tower_inspected(slot_index)` for the range ring. Only one chip is open at a time.
 
 **Attacks.**
 
@@ -99,7 +100,7 @@ A tower at its last level opens no chip. Only one chip is open at a time.
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -139,7 +140,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 **Handed to owning GDDs.**
 - **Hero:** done. It sets the burst's values and owns the bot table.
-- **Battle HUD:** draws the arc, chip, cost, dimming and the range ring, and listens to `slot_tapped`.
+- **Battle HUD:** done. It draws the arc, chip, cost, dimming and the range ring (Battle HUD GDD).
 - **Enemy & Wave:** its starter HP is amended here, and its "550" gold example is now the all-single minimum.
 
 **Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.

@@ -124,7 +124,7 @@ Aim now counts for a lot, and share moves with it. At reach 200, reacting in 1 s
 
 **Handed to owning GDDs.**
 - **Combat:** Rule 10's leash check loses its separate range, `deliver` returns what it applied, and a read of remaining HP is added for the aim preview.
-- **Battle HUD:** places the button at `pin_exclusion`'s coordinates, draws the digit, and keeps Start/Call clear of `hero_start`.
+- **Battle HUD:** done. It places the button at `pin_exclusion`'s coordinates, draws the digit, and keeps Start/Call clear of `hero_start`.
 - **Game State & Stage Flow:** injects `in_build()` beside `halted()`.
 - **Stage Progression (Vertical Slice):** reads the counters for the report.
 
@@ -308,7 +308,7 @@ The pin commits on release: the ground ring lands first, and the hero follows, s
 Battle HUD draws these, and this system supplies the state.
 
 - Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. Before a first pin, the nudge also repeats the prompt.
-- Prompt until the first pin: "Drag the hero", one line on panel. It is the MVP's only tutorial text, and it needs no Onboarding system.
+- Prompt until the first pin: "Drag the hero", one line on panel, the first of three the Battle HUD owns (Rule 13 there). None needs an Onboarding system.
 - Ready press: a thin ring at radius 64, which is the cancel boundary and shows beyond the fingertip, plus a cancelling reticle, as the drag affordance.
 - Cooling press: the digit above the thumb, on panel.
 - Left hand mirrors the button and digit only, and never the kite or the aim offset.

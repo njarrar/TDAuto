@@ -200,7 +200,7 @@ Every hit lands the moment it fires, so a tower's rhythm reads as the machine wo
 
 ## UI Requirements
 
-None. The HUD shows the counters as plain text at stage end (Game State, UI Requirements). Hero share is shown without ranking or highlight, because it is a balance metric rather than a goal.
+None. The HUD shows the counters as plain text at stage end, as Towers, Hero and Burst, with no percentage, because hero share is a balance metric rather than a goal. The human log keeps the share (Battle HUD Rule 15).
 
 ## Cross-References
 
@@ -238,7 +238,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; a burst commanded between ticks leaves no moving corpse |
 | Pillar 2 bots | Hero stories | Hero-only fails; never-pinned is identical to towers-only; pinned-once loses to active play by a margin set at the first baseline; the always-call bot does not beat a driven hero |
-| Share shown | Battle HUD stories | Won and Lost show towers vs hero + burst, matching the counters; retained screenshot |
+| Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Tower, Hero stories | `burst_spike` is at least 2 in the content test, and `dealt_burst`'s share with splash is at least 75% of its share with none |
 
 **Manual** (frame-stepped screenshots retained in `production/qa/evidence/`): tower and hero hits distinct in greyscale; static splash ring at its true radius; slow drag lines; damaged core at 22 px and above; burst clearance, with no tower flash or ring. On the first phone build, a non-developer identifies hero kills from tower kills with sound off. This proves the hits are legible, not that they are satisfying, which only playtests can judge.

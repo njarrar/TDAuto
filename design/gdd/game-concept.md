@@ -105,7 +105,7 @@ Quantic Foundry lens: **Strategy** (planning, decision-making) and **Mastery** (
 - **Onboarding curve** (from Vertical Slice; the MVP's one stage offers all three towers): Stage 1 has one path, three slots, one tower type, and the hero; the first wave cannot be lost. Stage 2 introduces the slow tower; stage 3 the first skill point. No tutorial text beyond one-line prompts.
 - **Difficulty scaling**: each stage introduces one new variable (path shape *or* enemy type *or* attack pattern), never two. Skill-point income is tuned so a reasonable build clears with 1 star; 3 stars needs a build that fits the stage.
 - **Feedback clarity**: upgrades add geometry (visible level); the end-of-stage screen shows damage by source (towers vs hero vs each tower type), which is also the balance telemetry.
-- **Recovery from failure**: retry is instant; respec is free; a lost stage shows which wave broke and which lane leaked.
+- **Recovery from failure**: retry is instant; respec is free; a lost stage shows which wave broke and which enemy types got through.
 
 ---
 
