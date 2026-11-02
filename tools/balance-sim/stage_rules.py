@@ -144,7 +144,7 @@ def check(c):
         ids.add('L9')
     if not 3 <= len(S) <= 5:
         ids.add('L12')
-    bad = any(not (0 <= x <= W and 0 <= y <= H) for x, y in P[1:-1])
+    bad = len(P) < 3 or any(not (0 <= x <= W and 0 <= y <= H) for x, y in P[1:-1])
     entries, exits = [], []
     for a, b in segs:
         r = clip(a, b)
@@ -272,6 +272,9 @@ COPIES = [
     ('L13, entry by the top', set_path([(430, -40)] + B[2:]), {'L13', 'L6'}),
     ('L13, entry by the right passes', set_point(0, (580, 226)), set()),
     ('L13, exit by a side', set_path(B[:5] + [(580, 570)]), {'L13'}),
+    ('L13, entry by the bottom', set_path([(190, 1000), (190, 226), (350, 226), (350, 1000)]),
+     {'L13', 'L2'}),
+    ('L13, two points', set_path([(-40, 226), (270, 980)]), {'L13', 'L2', 'L9', 'time_to_exit_min'}),
     ('first_spawn', set_group(1, 0, 'start_delay', 3), {'first_spawn'}),
     ('max_gap', set_group(2, 1, 'start_delay', 17), {'max_gap'}),
     ('time_to_exit_min', set_enemy('fast', 'speed', 150), {'time_to_exit_min'}),

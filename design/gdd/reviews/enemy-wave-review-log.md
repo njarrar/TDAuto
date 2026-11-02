@@ -273,3 +273,50 @@ Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe719
 Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
 Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: S
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 2 | Recommended: 25
+Summary: Every core number reproduces again (HP, lives, gold, catch points, path length, all 33 C20 sets). Two blockers remained, both wording: L13 claimed the interior check covered the edge clause, which the checking script does not rely on, so a U through the bottom passed by the prose; and the manual entry-and-exit check failed any edge pixel, which Rule 4 allows. creative-director recommends approving after these and the economy numbers, and batching layout and Pillar 3 items into the stage 2 sketch pass.
+Prior verdict resolved: Yes; both review-7 blockers fixed
+Findings:
+- [BLOCKING] Layout rules, L13: "one check covers both clauses" false; the edge clause and a 3-point minimum need their own tests.
+- [BLOCKING] Manual checks, entry and exit: "no enemy pixel at the field edge" contradicts Rule 4's accepted partial visibility.
+- [RECOMMENDED] Header, Pillar 3: a mirrored starter passes L1 to L13, so the gate cannot fail (game-designer rated blocking; downgraded as a Vertical Slice claim).
+- [RECOMMENDED] Manual checks, path: "every path point" includes the two masked end points.
+- [RECOMMENDED] Acceptance Criteria, C15: names no script or seeds (qa-lead rated blocking; held at log 6's rating).
+- [RECOMMENDED] Acceptance Criteria, C4, C9, C10, C12: Health, wave state, `wave_tick` and add-enemy seams undefined (qa-lead rated blocking; the ADR owns them).
+- [RECOMMENDED] Edge Cases, fatal leak with a kill pending: no runnable criterion (qa-lead rated blocking; the Order row covers it).
+- [RECOMMENDED] Deferred criteria: bot version, seed, build and bot per row unnamed; "set at first baseline" against fixed numbers (qa-lead rated blocking; held at log 7's rating).
+- [RECOMMENDED] Wave rules, intermission: "about 25 s gives 14 gold" is wrong; 14 needs 25.2 s.
+- [RECOMMENDED] Formulas, gold_upper_bound: the real `starting_gold` ceiling is 141 for this wave set.
+- [RECOMMENDED] Wave rules, first_spawn and max_gap: compare in ticks; Tower's 10% share should compare in integers (70 sits on the line).
+- [RECOMMENDED] Economy: ignoring heavies is efficient, and neither `lives_cost` nor bounty can fix it within bounds.
+- [RECOMMENDED] Economy: "bounties follow count and `lives_cost`" does not match (gold per life 8, 4, 3); wave 6's 174 is decorative.
+- [RECOMMENDED] Layout rules, L8: pairing basis, exact 2.6131, "direction change" not "turn sharper".
+- [RECOMMENDED] Layout rules, L11: needs a bend of about 77°, so gentle bends and baked curves fail; search domain unstated.
+- [RECOMMENDED] Layout rules, L10: lowest range per stage or game, overlap, in-field only.
+- [RECOMMENDED] Layout rules: no `path_width` bounds, no union coverage rule (about 496 of 1,644 uncovered), starter margins of 4 on L2 and the L5 exit.
+- [RECOMMENDED] Layout rules: L7 and L13 force one central bottom exit on every stage.
+- [RECOMMENDED] Design: wave intents rest on starter geometry with no check; wave 6 catches at about 100 and 1,550 lie outside tower range; wave 3 fronts separate only past the hairpin.
+- [RECOMMENDED] Design: exit strip (about 148 uncovered) shorter than the 2 s re-pin for a fast.
+- [RECOMMENDED] Game Feel: Breathing met by lone-heavy tails in waves 4 and 5; danger criterion circular; build arcs over the hairpin.
+- [RECOMMENDED] Design: calling every wave gives 3.7 min, below the concept's 5; burst contention only in waves 3, 5 and 6.
+- [RECOMMENDED] Formulas: to_ticks ties and per_burst floor rely on float division at exact ratios; `peak_alive_ub` interval may be one tick short; wave 4 catch at 642.6 sits 1.4 from the hairpin edge.
+- [RECOMMENDED] Acceptance Criteria: split C4 and C6; C16 fixture wording; edge cases without criteria (short path, speed 2,000, `lives_cost` 0, view pool); Rule 14 parts untested; just-passes copies still absent.
+- [RECOMMENDED] Manual checks and deferred rows: counts, frames, `leash_radius`, stage length rounding at the 5.0 floor; `danger_until` untested.
+Disagreements: game-designer rated the Pillar 3 gate blocking; creative-director downgraded it, since it is a Vertical Slice claim and builds nothing wrong now. qa-lead rated six items blocking; creative-director kept one (entry and exit) and held the rest at the ratings earlier reviews gave. systems-designer's stacked-slow concern for `peak_alive_ub` is moot: Combat Rule 7 says slows do not stack (main review).
+Fixed in the same session: both blockers (L13 states its three clauses and a 3-point minimum, with copies "L13, entry by the bottom" and "L13, two points" added to C20 and to stage_rules.py, which reproduces all 35 sets; entry and exit rewritten as a heavy's frame series), plus the header's Pillar 3 claim with a Vertical Slice Open Question, manual "path" limited to in-field points, 25.2 s, the 141 ceiling, first_spawn and max_gap in ticks, L8's wording, L11's 77° in Open Questions, and ignoring heavies as an Open Question.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 08a0f1669fd19ed333982874aefe0c5485865e6a
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
