@@ -102,3 +102,31 @@ Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9
 Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
 Reviewed-Content-Hash: design/gdd/hero-system.md debf0092334099aea64b5ce771f798c7711d1452
 Reviewed-Content-Hash: design/gdd/battle-hud.md 2e4bd49127174290d01f7e829c096530820186fe
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 3 | Recommended: 9
+Summary: Commit 17e8927 closed all three third-review blockers, and every number and formula reproduces. The fix itself added a false Rule 4 claim, a fatal leak or final kill had no test that a missing halt guard would fail, and the moved prompt met slot 0's arc panel at the largest inset. All three are text and test edits with no design rework.
+Prior verdict resolved: Yes
+Findings:
+- [BLOCKING] Core Rules, Rule 4: "every lasting panel in the top band" is false; the Lost and Won panels cover the field. Reword to panels shown while enemies move, and align art bible §7.
+- [BLOCKING] Acceptance Criteria, C6: no case fails an unguarded clear after a fatal leak or a halting kill; add a one-entry single-`e` leak latch and a single-kill latch.
+- [BLOCKING] Cross-document, Battle HUD: at inset 102 the prompt (y 142 to 172) overlaps slot 0's top arc panel (to y 164) during the first build; hide the prompt while an arc is open.
+- [RECOMMENDED] Battle HUD Rule 13: a player who never pins keeps prompt 1 and loses the next-wave line all stage; limit prompts 1 and 2 to before the first Start or Call.
+- [RECOMMENDED] Core Rules, Rule 11: corpse removal and signal order unstated; remove first as Rule 10 does, and assert the first corpse in C6.
+- [RECOMMENDED] Acceptance Criteria, C6 cases 2 and 3: "criterion 5's fixture" should be "one `e`".
+- [RECOMMENDED] Acceptance Criteria, C14: swap the authoring order so a member-first scan fails.
+- [RECOMMENDED] Cross-document, Battle HUD: Play again (y 868 to 940) is not clamped to the bottom inset.
+- [RECOMMENDED] Acceptance Criteria, C20: one broken copy per clause of L1, L3, L5 and L13, not per rule ID.
+- [RECOMMENDED] Formulas: at the 30 s intermission cap, gold before wave 6 is 536, so the full-board guard has 14 gold headroom, not 54.
+- [RECOMMENDED] Game Feel: add a foresight survey item for wave 5's first fast front.
+- [RECOMMENDED] Acceptance Criteria, C4: the Health clause has no probe until Combat's ADR.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c924907b3d909870d357c27ab89c5a7a43e76a74
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/battle-hud.md 215af862f7a01649cb10e1928084654fc667789a
