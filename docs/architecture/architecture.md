@@ -30,7 +30,7 @@ Both director gates returned CONCERNS. Neither blocks ADR writing. Version 2 app
 | GF2 | TD, LP | API Boundaries 4.3: `Battle` exposes no route to its systems, which the HUD and the ADR-0004 harness need. | **Done**: API Boundaries 4.3 (typed `flow()`, `combat()`, `wave()`, `tower()`, `hero()` and `systems()`) |
 | GF3 | TD | The ADR Audit traceability table and the Technical Requirements Baseline disagree on several TR-to-ADR links (input-006, enemy-007, enemy-008, tower-001, hero-001). | **Done**: Technical Requirements Baseline (the source) and ADR Audit, Traceability coverage (derived from it row by row) |
 | GF4 | TD, LP | The HUD ADR's stretch and coordinate-space choice fixes the space the input ADR and `targets()` use, and High items A4 and M6 hang on it. | **Done**: Required ADRs (ADR-0006 is must-have, before ADR-0007; TR-hud-005 and TR-hud-008 go to the deferred Mobile Platform ADR) |
-| GF5 | TD, LP | Touch events, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export are NOT SOURCEABLE (A7). | **Open**: Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. |
+| GF5 | TD, LP | Touch events, the `canceled` flag, lifecycle notifications, safe-area APIs and catalogue export are NOT SOURCEABLE (A7). | **Open**: Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and JSON catalogue export (ADR-0001 V1) on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. |
 | GF6 | TD | Lifecycle has two owners (InputAdapter and BattleWrapper); the adapter is rebuilt on Retry. No GDD handles the Android back button. | **Decided**, ADR-0008 confirms: Module Ownership, Data Flow 3.2 and 3.5, API Boundaries 4.2 (one owner, the BattleWrapper; back is Pause in a battle) |
 | GF7 | TD, LP | Determinism should not depend on unverified engine event order, and the fixed tick has no clamp, catch-up cap or per-tick budget. | **Decided**, ADR-0003 confirms: Data Flow 3.1, API Boundaries 4.3 (command queue, at most 5 ticks per frame, 2 ms per tick proposed) |
 | GF8 | TD, LP | Data Flow 3.6's "check `halted()` after each accessor read and each signal" cannot be enforced or tested. | **Decided**, ADR-0008 confirms: Data Flow 3.6, API Boundaries 4.1 and 4.5 |
@@ -170,8 +170,8 @@ Format: Owns (sole writer), Exposes, Consumes, Engine APIs. Risk tags are from t
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| Catalogue | Every authored record (Tower, Enemy, Wave, Stage, Hero, Burst, Input, Options) as typed read-only records | Typed lookups by stable ID, `is_tower(id)`, level counts, Stage and Wave records, Input and Options records | Data files from an explicit manifest | `ResourceLoader` or `FileAccess` (HIGH, NOT SOURCEABLE for export) |
-| Validator | The error list `{code, source, record_id, field}` and the all-or-nothing load result | `validate(catalogue) -> Array[Dictionary]` | Catalogue records, field domain table | None |
+| Catalogue | Every authored record (Tower, Enemy, Wave, Stage, Hero, Burst, Input, Options) as typed read-only records | Typed lookups by stable ID, `is_tower(id)`, level counts, Stage and Wave records, Input and Options records | JSON data files from an explicit manifest (ADR-0001) | `FileAccess` and an instance `JSON` parser (HIGH, NOT SOURCEABLE for export: ADR-0001 V1) |
+| Validator | The error list `{code, source, record_id, field}` and the all-or-nothing load result | `validate(data: Dictionary, source_label: String) -> Array[CatalogueError]` (ADR-0001) | Plain parsed data, the schema table | None |
 | StatAccessor | The vocabulary of stat keys and their types | `get_int(ctx, key)`, `get_float(ctx, key)` | Catalogue, read context (`def_id`, level, optional live entity) | None |
 | GestureResolver | Target registry, one active pointer, the four-state machine, gesture log | Signals `pressed`, `tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `ground_tap`, `idle`; calls `register`, `unregister`, `set_centre`, `set_enabled`, `cancel`, `cancel_pointer` | Input record | None (pure) |
 | InputAdapter | Translation of engine events into the five resolver calls, including reporting a touch cancel; no lifecycle state | Nothing outward; owns the press-to-release guarantee | `GestureResolver`, engine input events | `Node._input`, touch and mouse events (HIGH, NOT SOURCEABLE), `Control.mouse_filter` (HIGH) |
@@ -350,6 +350,7 @@ tracked in Open Questions.
 ```gdscript
 class_name Catalogue extends RefCounted
 # Read-only after load. No setters. No fallbacks.
+static func from_data(data: Dictionary, source_label: String, on_failure: Callable) -> Catalogue  # ADR-0001
 # Records are typed read-only records, not Dictionaries (GF9; ADR-0001 confirms the type names).
 func tower(def_id: StringName) -> TowerDef
 func stage(stage_id: StringName) -> StageDef        # carries path_points, slot_positions, path_width (A3)
@@ -367,13 +368,13 @@ func get_int(ctx: ReadContext, key: StringName) -> int
 class_name ReadContext extends RefCounted
 var def_id: StringName
 var level: int          # Towers only
-var entity: Object      # optional live entity; a HUD cost preview passes none
+var entity: RefCounted = null  # live tower, hero or enemy; unused at MVP; null for a HUD cost preview (ADR-0001)
 ```
 
 Guarantees: every error carries `{code, source, record_id, field}`; the game does not start with an invalid catalogue; tests build fixture
 catalogues in code with no file I/O. Decided here (GF9), ADR-0001 confirms: catalogue records are typed read-only records, not Dictionaries,
-because a Dictionary can be written and so breaks TR-data-005. Engine-type flag: if records are typed `Resource` subclasses, a missing field may
-silently take a default (Data GDD). **NOT SOURCEABLE** from the pinned reference, so ADR-0001 tests missing-field defaults on 4.7.2.
+because a Dictionary can be written and so breaks TR-data-005. ADR-0001 (Accepted) stores the data as JSON listed in a manifest and checks it
+against a code schema, so missing-field detection does not rest on engine defaults; `Catalogue.from_data` builds fixtures with no file I/O.
 
 ### 4.2 Input resolver and adapter (Foundation)
 
@@ -647,7 +648,7 @@ Requirements Baseline. Where a decision cell says **decided here**, this documen
 
 | ADR | Layer | Decision to make | Covers | Engine risk |
 |---|---|---|---|---|
-| **ADR-0001 Catalogue Storage Format and Stat Accessor** | Foundation | Storage format (typed Godot Resources recommended, JSON as fallback); how a missing field, fractional integer and unknown property are detected; read-only enforcement; accessor signature and key format; file locations; storage form of `path_points` and `slot_positions`; export check on Android and iOS. **Decided here:** records are typed read-only records, not Dictionaries, with missing-field defaults tested on 4.7.2 (GF9); Catalogue returns are typed; path and slots live on the Stage record (A3) | TR-data-001 to 008, TR-enemy-008 | HIGH: Resource defaults, export packing NOT SOURCEABLE |
+| **ADR-0001 Catalogue Storage Format and Stat Accessor** | Foundation | Storage format (decided: JSON plus a code schema); how a missing field, fractional integer and unknown property are detected; read-only enforcement; accessor signature and key format; file locations; storage form of `path_points` and `slot_positions`; export check on Android and iOS. **Decided here:** records are typed read-only records, not Dictionaries (GF9); Catalogue returns are typed; path and slots live on the Stage record (A3) | TR-data-001 to 008, TR-enemy-008 | HIGH: JSON export packing NOT SOURCEABLE (V1) |
 | **ADR-0002 Signal Contracts and Wiring Conventions** | Foundation | Typed signal declarations, explicit connections in the builder, no event-bus autoload, the view allowlist and how the wiring test derives its set, canonical interface names (M4). **Decided here:** this ADR owns one table of canonical signal and read signatures, written before any story (GF10); `wave_called_early` carries `ticks_left: int` | TR-flow-010, TR-combat-007, TR-hud-006 | MEDIUM: lambda capture by value, GDScript 4.7 typing |
 | **ADR-0003 Frame Order: Command Queue, Ticks and View Update** | Core | Tick rate, accumulator and clamp; where TowerInput and HeroInput sit in the wrapper; input against the real-time chip feed and the per-frame hero centre update; the command type for `Battle.enqueue` and how a refused command reaches the HUD. **Decided here (GF7):** commands are queued from the input call stack and applied at the start of the next `battle.tick`, bots included; at most 5 catch-up ticks per frame, the rest dropped and logged in development builds; 2 ms per tick on the target phone (proposed; the phone spike measures it) | TR-flow-003, 004, TR-tower-005, TR-hero-008, TR-hud-003 | HIGH: frame order unverified (no longer load-bearing for determinism) |
 | **ADR-0004 Headless Battle Harness and Snapshot** | Foundation | How tests snapshot a battle (through `Battle.systems()`, in tick order), enumerate its systems and inject recording ones; bot commands through the builder and the command queue; gdUnit4 on 4.7.2 | TR-flow-011, TR-tower-007, TR-hero-005 | LOW: gdUnit4 6.2.2 runs on 4.7.2 per the reference |
@@ -711,7 +712,7 @@ Warnings M1 to M11 come from `design/gdd/gdd-cross-review-2026-11-02j.md`. They 
 | A2 | Does the technical director accept the composition root as a plain builder, and the HeroSim/HeroInput and TowerSim/TowerInput splits? | High | **Closed: decided.** Accepted: plain builder and both Sim/Input splits. ADR-0008 confirms (TR-tower-001, TR-hero-001) |
 | A3 | Does the technical director accept path and slots moving from the scene to the Stage record? | Medium | **Closed: decided.** Accepted: path and slots live on the Stage record. ADR-0001 confirms the storage form, ADR-0005 uses it |
 | A4 | Stretch mode and aspect are unset in `project.godot`; 4.7 new-project defaults may not apply to this file | High | ADR-0006 (now must-have, GF4) |
-| A5 | Scene checks run on the project, not on an export (the test runner cannot run on an exported build); is the manual export check enough? | Medium | ADR-0001 |
+| A5 | Scene checks run on the project, not on an export (the test runner cannot run on an exported build); is the manual export check enough? | Medium | **Closed: decided** by ADR-0001. Yes for MVP: CI checks scene content, the manual export check covers packing |
 | A6 | Tablet `drag_slop` is 22 dp wide at 800 dp; does it need a scale cap? | Low | ADR-0007 |
 | A7 | Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. | High | **Open** task (GF5); it also measures the 2 ms per-tick budget (GF7) |
 | A8 | Renderer: `project.godot` uses Mobile; the reference calls Forward+ desktop-focused and lists Compatibility as the widest. Confirm Mobile on the lowest target Android | Medium | ADR-0006; Vertical Slice device test |

@@ -107,11 +107,11 @@ There is no separate economy record: gold values sit on the records that spend o
 
 **Not owned.** Event contracts (`enemy_killed`, `enemy_leaked`, `waves_complete`), DamageEvent, gold and lives state, modifier resolution, save schemas, and the justification of balance values. This system stores data and has no behaviour to emit signals from. Each emitter declares its own signals and the composition root wires them. Combat's DamageEvent and future modifiers must use two different field names for "who dealt this" and "who granted this" rather than overloading `source`.
 
-**Deliberately not built for MVP.** Spreadsheet or JSON import pipelines, an autoload database, hot reload, schema versioning, inheritance between records, remote config, custom editor tools. Prototype constants are starter fixtures only: they were fitted to a bot and are not balance values (CD-PLAYTEST).
+**Deliberately not built for MVP.** Pipelines that convert JSON or spreadsheets into another format (ADR-0001 reads JSON directly), an autoload database, hot reload, schema versioning, inheritance between records, remote config, custom editor tools. Prototype constants are starter fixtures only: they were fitted to a bot and are not balance values (CD-PLAYTEST).
 
 No Formulas section: this system stores values and defines no tunable numeric rule; the validation bounds above are invariants, and owning GDDs define the rules.
 
-→ Becomes an ADR: storage format (recommended: typed Godot Resources, JSON as fallback if downloadable content or modding is ever wanted, since Resources can carry scripts), read-only enforcement, accessor signature and key format, file locations. **The ADR must choose a format that can detect a missing field, a fractional integer and an unknown property.** Typed resources may silently supply a default for a missing field, which would make Rule 8 meaningless, so if the format cannot detect these itself, the ADR must add a check that does. This GDD assumes only typed records keyed by stable ID behind one read-only lookup. Export behaviour is unverified until a real Android export runs.
+→ Decided in ADR-0001 (Accepted): JSON files from one manifest, checked against a code schema, served as typed read-only records. It covers the storage format, read-only enforcement, accessor signature and key format, file locations. **The ADR must choose a format that can detect a missing field, a fractional integer and an unknown property.** Typed resources may silently supply a default for a missing field, which would make Rule 8 meaningless, so if the format cannot detect these itself, the ADR must add a check that does. This GDD assumes only typed records keyed by stable ID behind one read-only lookup. Export behaviour is unverified until a real Android export runs.
 
 ### States and Transitions
 
@@ -252,13 +252,13 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Storage format and read-only enforcement (recommended: typed Resources), confirmed by a real Android export | technical-director, `/architecture-decision` | Technical Setup gate |
+| Storage format and read-only enforcement: **answered** by ADR-0001 (JSON plus a code schema). The real Android export (V1) stays open | technical-director, `/architecture-decision` | Technical Setup gate |
 | Preview data: `attack_type`, `display_name`, stage order | Stage Progression GDD | Vertical Slice |
-| Snapshot mechanics, integer representation | technical-director | Storage-format ADR |
+| Snapshot mechanics, integer representation: **answered** by ADR-0001 (`Catalogue.snapshot()`; ints stored as `int` after a whole-number check) | technical-director | Storage-format ADR |
 | Optional tooling, unscheduled: headless validate-only command (reuse the content test first), alternate manifest, DPS dump | producer | When tuning hurts |
 | The accessor returns numbers only: how does a tree node that visibly changes something (Pillar 1's "shots chain") reach the game? | Stat GDD | Stat GDD |
 | Both thresholds (10 s tuning loop, 1 s device load) are proposals; `project.yaml` has no load budget | producer + performance-analyst | First phone build |
-| Scene checks run on the project, not the export, because the test runner cannot run on an exported build: is the manual check enough? | technical-director | Storage-format ADR |
+| Scene checks run on the project, not the export, because the test runner cannot run on an exported build: is the manual check enough? **Answered** by ADR-0001: yes for MVP | technical-director | Storage-format ADR |
 | `tests/README.md` is stale: it says clones lack the class cache (now tracked) and that gdUnit4 is uninstalled (now in `addons/`) | gameplay-programmer | First test story |
 | Should the `drag_slop` floor rise from 8 to 12? Owned by Input's Open Question; see the Input GDD | Input GDD | See Input |
 

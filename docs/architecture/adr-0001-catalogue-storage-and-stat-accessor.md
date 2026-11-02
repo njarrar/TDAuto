@@ -1,7 +1,7 @@
 # ADR-0001: Catalogue Storage Format and Stat Accessor
 
 ## Status
-Proposed
+Accepted (2026-11-02, by njarrar on the technical director's recommendation; V1 stays open against the export story only)
 
 ## Date
 2026-11-02
