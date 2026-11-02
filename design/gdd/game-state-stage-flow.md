@@ -45,7 +45,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 11. **Lives.** Flow owns lives, starting at the stage's `starting_lives`. On `enemy_leaked(lives_cost)` it applies the lives formula and, if lives changed, emits `lives_changed(current)`.
 12. **Lost.** The first leak that takes lives to 0 ends the stage on that tick, as Lost.
 13. **Won.** Enemy & Wave's `waves_complete` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_complete`.
-14. **A tie is a loss.** If the last kill and the fatal leak land on one tick, the stage is Lost: the leak transitions first and `waves_complete` then arrives after the outcome and is ignored.
+14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_complete` still arrives after that, the stage stays Lost and the event is ignored.
 15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit; the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started, lives left and Combat's damage by source, shown as plain text at MVP.
 15a. **Events out of phase.** A `wave_cleared` or `waves_complete` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: development builds log an error and the event is ignored. An `enemy_leaked` in Intermission also logs an error but still applies, because losing a life must never be silently dropped.
 
@@ -211,7 +211,7 @@ All durations are proposed, untested and presentation only, so the wrapper runs 
 
 ## UI Requirements
 
-None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of 6" and damage by source.
+None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of 6"; Won and Lost both show damage by source.
 
 The Start/Call button is irreversible, so it must stay clear of the burst corner and of build slots. Art bible §7 now allows it in the bottom band in Build and Intermission only, when the lower lane is empty. It registers as an Input target, since it sits in the field rather than the top band.
 
@@ -275,7 +275,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Does the always-call bot dominate? If so, the fallback is allowing overlapping waves | qa-lead + Tower GDD | First playable |
 | How much is the early-call bonus, and does it scale with `seconds_left`? | Tower GDD (economy) | Tower GDD |
 | Does a retry reuse the seed or take a new one? A reused seed is fairer for learning a stage; a new one is more honest for bots | game-designer | Enemy & Wave GDD, if MVP waves use randomness at all |
-| Tick order, including whether leaks resolve before towers fire (the prototype did) | Enemy & Wave + Combat GDDs | Combat GDD |
+| Combat proposes the tick order (leaks before fire); does Enemy & Wave confirm it? | Enemy & Wave GDD | Enemy & Wave GDD |
 | App Lifecycle & Composition ADR: tick rate and clamp, pause mechanism, lifecycle notifications, teardown. All engine behaviour here is from memory | technical-director | Before the first story |
 | Bots must be re-baselined on the fixed tick; the prototype's 10-vs-3 lives result does not transfer | qa-lead | First playable |
 | How do tests take a battle snapshot, enumerate its systems and inject recording ones? The criteria assume all three | technical-director | App Lifecycle ADR |

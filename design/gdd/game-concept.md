@@ -43,7 +43,7 @@ Alternatives considered: *the lone hero who summons turrets* (Concept 2 alone �
 
 ## Unique Hook
 
-Like Kingdom Rush, **and also** your hero and your tower weapons level on separate trees that cross-buff each other — a Weapons node can change tower projectile behaviour, a Hero node can buff towers near the hero — so no two players' stage 12 looks the same.
+Like Kingdom Rush, **and also** your hero and your tower weapons level on separate trees that cross-buff each other — a Weapons node can change tower shot behaviour, a Hero node can buff towers near the hero — so no two players' stage 12 looks the same.
 
 The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of total tree cost, not a stage number: the constraint is **always one full tree, never two**: at the last stage of any tier with three trees, total points complete any single tree plus part of a second but never two whole trees (~60% of total tree cost is the illustration: ~9 of ~15 nodes at Small Ship stage 8, ~24 of ~40 at Full Vision stage 20; the GDD sets exact costs so the two-tree boundary is never crossed). Scarcity limits **breadth**, not depth. Vertical Slice has one tree and is exempt. Free respec between stages means a counter-stage is adapted to, not ground through. The first cross-buff ships at Vertical Slice (a Hero node that buffs nearby towers) and the full lattice at Small Ship, so the hook is tested before the content spend (see Scope Tiers).
 
@@ -55,7 +55,7 @@ The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of 
 
 | Aesthetic | Priority | How We Deliver It |
 | ---- | ---- | ---- |
-| **Challenge** | 1 | Stage layouts and attack patterns that counter a build; the hero under pressure; star ratings for replay |
+| **Challenge** | 1 | Stage layouts and attack patterns that counter a build; the player's attention under pressure; star ratings for replay |
 | **Expression** | 2 | Three trees under the one-full-tree-never-two rule; tower specialisation; build identity visible on screen |
 | **Sensation** | 3 | Tower auto-fire feedback; hero skill burst VFX (the one place VFX is allowed to escalate) |
 | **Discovery** | 4 | Cross-tree synergies found by experiment; stage previews that tease the next layout |
@@ -88,7 +88,7 @@ The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of 
 | Need | How This Game Satisfies It | Strength |
 | ---- | ---- | ---- |
 | **Autonomy** | Which tree, which tower to specialise, where the hero stands; free respec makes choices reversible but still meaningful per stage | Core |
-| **Competence** | Hero control under pressure; clearing a stage that countered your last build; stars | Core |
+| **Competence** | Positioning the hero under pressure; clearing a stage that countered your last build; stars | Core |
 | **Relatedness** | The hero as a character you grow; no social systems | Minimal |
 
 ### Player Type Appeal (Bartle Taxonomy)

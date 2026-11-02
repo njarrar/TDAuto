@@ -39,8 +39,8 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 
 | Field | Type | Min | Max | Balance owner |
 |---|---|---|---|---|
-| `attack_interval`, `spawn_interval`, `cooldown` | float, seconds | one tick (1/60) | 600 | Tower, Enemy & Wave, Hero |
-| `telegraph_duration`, `start_delay`, `slow_duration` | float, seconds | 0 | 600 | Hero, Enemy & Wave, Tower |
+| `attack_interval`, `spawn_interval`, `cooldown`, `slow_duration` | float, seconds | one tick (1/60) | 600 | Tower, Enemy & Wave, Hero |
+| `telegraph_duration`, `start_delay` | float, seconds | 0 | 600 | Hero, Enemy & Wave |
 | `damage` | float | 0 | 1,000,000 | Tower, Hero |
 | `range`, `leash_radius`, `radius`, `splash_radius` | float, world units | above 0 | 2,000 | Tower, Hero |
 | `move_speed` (as authored; slowed speed is Combat's) | float, units/s | above 0 | 2,000 | Enemy & Wave |
@@ -124,7 +124,7 @@ There is no reload transition: a data change applies on the next run.
 | System | Reads | Interface owner |
 |---|---|---|
 | Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
-| Combat & Damage | Slow and splash values come via the tower record; damage arrives on DamageEvent, so its direct reads are narrow | This system |
+| Combat & Damage | Nothing: callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
 | Tower System | Tower levels through the accessor | This system |
 | Hero System | Hero and Burst through the accessor | This system |
@@ -173,7 +173,7 @@ There is no reload transition: a data change applies on the next run.
 | System | Data interface |
 |---|---|
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
-| Combat & Damage | Narrow: role values via tower records |
+| Combat & Damage | None directly; callers pass values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
 | Tower System | Tower levels via the accessor |
 | Hero System | Hero and Burst via the accessor |
@@ -247,7 +247,6 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 | Question | Owner | Resolve by |
 |---|---|---|
 | Storage format and read-only enforcement (recommended: typed Resources), confirmed by a real Android export | technical-director, `/architecture-decision` | Technical Setup gate |
-| Does slow go through the accessor, or is it a second modifier path? | Combat GDD + Stat GDD | Combat GDD |
 | Can the hero die? No hero HP field exists until this is decided | Hero GDD | Hero GDD |
 | Routes and enemy behaviour: `path_id` or lanes, locomotion, armour and resist, splitter spawn reference, wave-to-wave timing, optional bounty multiplier, `introduces`, stage gold-budget test. Must be resolved before Vertical Slice | Enemy & Wave GDD | Enemy & Wave GDD |
 | Art bible §6 says one continuous path, but its previews show forks and parallel lanes | art-director + Enemy & Wave GDD | Enemy & Wave GDD |

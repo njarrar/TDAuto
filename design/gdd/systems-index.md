@@ -27,7 +27,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Designed | design/gdd/game-state-stage-flow.md | Data & Config |
-| 4 | Combat & Damage (inferred) | Gameplay | MVP | Not Started | — | Data & Config |
+| 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Not Started | — | Enemy & Wave, Combat, Input, Data & Config, Game State |
 | 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Not Started | — | Input, Combat, Enemy & Wave, Data & Config |
@@ -87,12 +87,12 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 1. Data & Config Pipeline — every gameplay value is data-driven (coding standard); all other systems read it.
 2. Input & Gesture Resolver — depends on: Data (its Input record; both are Foundation, Data is designed first). **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority table and gesture rules: `design/gdd/input-gesture-resolver.md`.
-3. Mobile Platform & Performance — safe areas, export, projectile pooling, particle caps. **TD note:** Combat spawns through a ProjectileSpawner interface so pooling slots in here later without touching callers.
+3. Mobile Platform & Performance — safe areas, export, tracer and effect pooling, particle caps. Hits are instant, so no projectiles are pooled (Combat GDD; technical-director to confirm).
 
 ### Core Layer
 
 1. Game State & Stage Flow — depends on: Data. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
-2. Combat & Damage — depends on: Data. **TD note:** God-object risk; the GDD defines four pieces: DamageEvent (carries `source` from day one), Health, StatusEffect (slow), ProjectileSpawner. Hit flashes live here (PR-SCOPE).
+2. Combat & Damage — no dependencies: callers read values and pass them in. **TD note:** God-object risk; the GDD defines three pieces: DamageEvent (dealer kind and id from day one), Health, Status (slow). ProjectileSpawner cut because hits are instant, pending technical-director confirmation. Hit flashes live here (PR-SCOPE).
 3. Stat & Modifier Resolution — depends on: Data. **TD/PR note:** VS tier, but every MVP stat read goes through one accessor so the resolver drops in behind it. Pure function base → flat adds → % multipliers (additive within the bucket). No overrides until something needs them. Stat-source tags reserved now for synergies.
 
 ### Feature Layer
@@ -177,10 +177,10 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 22 |
-| Design docs started | 3 |
+| Design docs started | 4 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 3/8 |
+| MVP systems designed | 4/8 |
 | Vertical Slice systems designed | 0/11 |
 
 ---
