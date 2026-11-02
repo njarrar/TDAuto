@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: ""
+last_updated: "2026-11-02"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -53,7 +53,17 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: game_catalogue
+    status: active
+    owner_system: data-config-pipeline
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    interface: "Catalogue typed lookups (tower, enemy, wave, stage, hero, burst, input, options) returning read-only RefCounted records; held by the app root, injected by the battle builder"
+    write_access: none-after-load
+    referenced_by:
+      - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -81,7 +91,22 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: stat_read
+    status: active
+    pattern: direct_call
+    producer: data-config-pipeline
+    consumers:
+      - tower-system
+      - hero-system
+      - enemy-wave
+      - battle-hud
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    signal_signature: "StatAccessor.get_float(ctx: ReadContext, key: StringName) -> float; get_int(ctx, key) -> int; bad call calls the injected handler and returns a typed zero no caller may use"
+    referenced_by:
+      - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -141,7 +166,17 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: catalogue_storage
+    status: active
+    api: "JSON text files under res://data/catalogue/ listed in manifest.json, read by FileAccess and an instance JSON parser, checked against a code schema table"
+    not: "custom Resource .tres files via ResourceLoader"
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    reason: "Missing-field detection (TR-data-004) cannot rest on Resource defaults, which the pinned reference does not cover"
+    referenced_by:
+      - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -167,7 +202,31 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: assert_for_runtime_checks
+    status: active
+    description: "Catalogue data and accessor calls must never be checked with assert; use if and the injected failure handler"
+    why: "The pinned reference does not say a release export keeps assert, and Data GDD Rule 10 needs the check in release"
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+  - pattern: catalogue_global_access
+    status: active
+    description: "No system reaches the catalogue or the stat accessor through an autoload or a global; both are injected by the battle builder"
+    why: "Data GDD Rule 12 and the architecture's no-autoload rule; tests build fixture catalogues in code"
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+  - pattern: mutable_catalogue_records
+    status: active
+    description: "Catalogue records are never Dictionaries and are never assigned to; collections leave a record only as a duplicate"
+    why: "Read-only after load (TR-data-005, GF9)"
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+  - pattern: data_directory_scan
+    status: active
+    description: "Data files load only from the explicit manifest, never by scanning a directory"
+    why: "Data GDD Rule 4: exported builds rename and package files"
+    adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
 
 # Example:
 #
