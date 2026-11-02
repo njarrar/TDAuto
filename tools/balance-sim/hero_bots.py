@@ -10,8 +10,8 @@ Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check
 import itertools
 import math,sys
 DT=1/60; BR=70; BLOG=[]; THUMB=None; START=(350.0,800.0)
-PATH=[(-40,210),(430,210),(430,400),(110,400),(110,570),(270,570),(270,980)]
-SLOTS=[(270,305),(190,485),(350,485),(170,700),(370,700)]
+PATH=[(-40,226),(430,226),(430,400),(110,400),(110,570),(270,570),(270,980)]
+SLOTS=[(270,320),(190,485),(350,485),(170,700),(370,700)]
 cum=[0]
 for a,b in zip(PATH,PATH[1:]): cum.append(cum[-1]+math.dist(a,b))
 LEN=cum[-1]
