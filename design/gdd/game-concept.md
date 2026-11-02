@@ -226,7 +226,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 ## Risks and Open Questions
 
 ### Design Risks
-- The hero may trivialise or be irrelevant to towers: towers-only won narrowly in hero-pin once one upgrade existed; the 25–30% target is unproven until measured from human runs (damage-by-source log from MVP).
+- The hero may trivialise or be irrelevant to towers: towers-only won narrowly in hero-pin once one upgrade existed, though on the MVP starter stage every towers-only bot now loses (Hero GDD, Simulated results); the 25–30% target is unproven until measured from human runs (damage-by-source log from MVP).
 - Pin drag, burst drag and slot tap may collide at fingertip size; the priority order needs the 20-attempt phone validation in Pillar 4 with a non-developer tester.
 - Cross-tree buffs may create a dominant build that makes the one-tree scarcity rule moot; the lattice waits for Small Ship for that reason, with one buff proven at Vertical Slice.
 - Signal Board may read as sterile without careful hero-burst VFX.

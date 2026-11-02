@@ -80,7 +80,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 | 1 | Broke on wave N of `wave_ids` size | Stage clear |
 | 2 | Next-try line, if any | Lives N of `starting_lives` |
 | 3 | Got through: glyph and count per enemy type | Same |
-| 4 | Damage: Towers, Hero, Burst, each rounded to a whole number | Same |
+| 4 | Damage: Towers, Hero, Burst, each rounded to a whole number, then Slowed N if a slow tower was built | Same |
 | 5 | Retry, the only filled shape | Play again, the same rebuild, since there is no next stage at MVP |
 
 Percentages, bars and highlights are not shown, because hero share is a balance metric rather than a goal (Pillar 2). This amends Combat's deferred row and UI note, which asked for hero share shown: the three rows are the raw counters, and the log keeps the share. Median kills stays in the log too, since a 0 can read as shame. Strings are exactly those in this table and Rule 16 (art bible §2).
@@ -101,7 +101,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **The human log.**
 
-19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
+19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied()`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units, 0 on desktop. 1.5 units is 1 dp at a 360 dp width.
 
@@ -173,7 +173,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Digit, wedge, ticks | `cooldown_left()`, `burst_state()` | Frame, comparing whole ticks | Hero |
 | Arc and chip costs, range rings | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
 | Next-wave line | Wave records directly | On phase change | Enemy & Wave |
-| Result | Flow result, Combat counters, `got_through_by_type()` | Once at the outcome | Flow, Combat, Enemy & Wave |
+| Result | Flow result, Combat counters, `got_through_by_type()`, `slows_applied()` | Once at the outcome | Flow, Combat, Enemy & Wave, Tower |
 | Prompts | `pin_state()`, `slot_state()`, `targets()`, burst counters | Frame | Hero, Tower, Enemy & Wave |
 
 | System | Direction | Interface | Owner |
@@ -271,7 +271,7 @@ The **chip_bar** formula is defined as:
 | System | Interface |
 |---|---|
 | Game State & Stage Flow | `phase`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
-| Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected` |
+| Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected`, `slows_applied()` |
 | Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
 | Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
 | Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly |
@@ -366,7 +366,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome.
 17. (Prompt states) Each act advances; None is final after the first burst.
 18. (Rule 14) Three rings, then none; a dismissal draws none; a rebuild resets.
-19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0.
+19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0; Slowed appears only with a slow tower built, and reads 0 if it never fired.
 20. (Rule 16) Each next-try line in order; a fixture where count and lives disagree; ties heavy, normal, fast; a built role gives no line.
 21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across the lifecycle signal does nothing. Paused resumes on release.
 22. (Rule 18) Retry twice: one latch; the handler frees nothing; Fatal first.
