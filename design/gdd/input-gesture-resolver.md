@@ -145,7 +145,7 @@ and a target is a **candidate** at press when `enabled AND inside(c, r, p)`. A t
 |----------|------|-------|--------|-------------|
 | `p` | Vector2, field units | inside the field | calculated | Press position |
 | `c` | Vector2, field units | inside the field | registered by owner | Target centre |
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP | registered by owner | Target hit radius |
 | `enabled` | bool | true or false | set by owner | Target participates in hit tests |
 
 **Output Range:** true or false, inclusive of the boundary. With at most about 15 MVP discs the cost is irrelevant, and squared distances keep the boundary exact for the integer positions tests use (adapter-converted positions are fractional and sit on no boundary). Non-finite inputs never reach it (Rule 9).
@@ -192,7 +192,7 @@ The **target_ok** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP | registered by owner | Target hit radius |
 | `field_scale` | float | 0.667–1.481 | calculated | From field_scale |
 
 **Output Range:** true at every supported width for a radius of at least 36.
@@ -322,7 +322,7 @@ None owned. This system has no screen, panel or widget; it supplies gestures to 
 |---|---|---|---|
 | Priority order, slop range, 48 dp targets, phone test (0 mis-fires, ≤5% misses) | `design/gdd/game-concept.md` | Pillar 4, Core Mechanic 2, MVP item 6 | Rule dependency |
 | Registry-only scope; owners register themselves; Input never names a feature | `design/gdd/systems-index.md` | Foundation Layer TD note (item 2); High-Risk Systems row | Rule dependency |
-| Hit radii 36 / 48 units; 1.5 units per dp at 360 dp | `design/art/art-bible.md` | §3 Minimum sizes | Value dependency |
+| Hit radii 36 / 48 / 56 units; 1.5 units per dp at 360 dp | `design/art/art-bible.md` | §3 Minimum sizes | Value dependency |
 | Reticle offset, ground-tap ring, cost chip, build arc, panel band | `design/art/art-bible.md` | §7 | Ownership handoff |
 | Input record, added under the extension rule by this GDD | `design/gdd/data-config-pipeline.md` | Extension rule; Interactions (Input row); Dependencies | Rule dependency |
 | Injection by the composition root | `design/gdd/data-config-pipeline.md` | Rule 12 | Pattern reuse |
@@ -384,7 +384,7 @@ P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-dev
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Pin, aim and burst meaning, invalid pins, the equivalence test (Rule 11) | Hero stories | A drag released while cancelling cancels, otherwise fires there, a tap or cooling press does nothing; pins in rejected zones and under the button are clamped or refused; bot acceptance modes run only through the resolver |
+| Pin, aim and burst meaning, invalid pins, the equivalence test (Rule 11) | Hero stories | A drag released while cancelling cancels, otherwise fires there, a tap or cooling press does nothing; pins in rejected zones and under the button are clamped or refused; bots call the commands directly (Rule 11), and the equivalence test (Hero criterion 28) shows the resolver path gives identical state |
 | Chip window, hard bounce guard, upgrades | Tower stories | A second tap inside the bounce guard does not commit; one after it, inside the window, commits once |
 | Arc close, backdrop, ground ring, press response, visible cancel state | Battle HUD stories | Tapping an arc disc builds; a press outside only dismisses with no ring; the press response appears on the next frame; retained screenshots in `production/qa/evidence/` |
 | Injection of resolver and adapter | Game State stories | Every owner receives the one resolver, with no global |
@@ -396,10 +396,10 @@ P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-dev
 | Question | Owner | Resolve by |
 |---|---|---|
 | Adapter: which Godot path feeds the five calls, and how moves and releases of the active index survive a `mouse_filter = STOP` Control mid-drag (the adapter contract in Dependencies); touch event field names and `canceled`; emulation settings (one event family only); whether positions arrive in the stretched 540×960 space and which stretch mode; lifecycle notifications for `cancel()`; Control `mouse_filter` ordering. None is in the pinned reference | technical-director, `/architecture-decision` | Before the first input story |
-| Do the 15-unit slop and the 36/48-unit radii hold on a phone with a non-developer tester? All evidence is one developer on a mouse (CD-PLAYTEST) | producer + Hero/Tower stories | First phone build (Pillar 4 test) |
+| Do the 15-unit slop and the 36/48/56-unit radii hold on a phone with a non-developer tester? All evidence is one developer on a mouse (CD-PLAYTEST) | producer + Hero/Tower stories | First phone build (Pillar 4 test) |
 | Does a palm resting on a real tap target lock input often enough to matter? It holds by design (Rule 1). The reverse also needs watching: a second touch replaces an unmoved hero or burst press and can then tap a tower | qa-lead | First phone build |
 | Hero: pin at the finger position means the thumb covers the pin at release. If the phone test shows pin misses, does Hero route pins through its offset function too? | Hero GDD | First phone build |
-| Hero: should re-pinning be instant or a short walk? If "walk", the hero needs path-following and the concept's "no pathfinding" claim is revisited (concept Open Questions). The resolver is unaffected either way | Hero GDD | Hero GDD |
+| Closed: re-pinning is a straight-line walk with no path-following, so "no pathfinding" stands (Hero Rule 3). The resolver is unaffected | Hero GDD | Answered |
 | Settings & Accessibility: runtime slop setter ("steady hand" ×1.5) and hit-area scale; a two-tap alternative to dragging for players who cannot drag. Hooks are reserved in prose only; the owner API (target, press, release) already hides the physical gesture from owners | Settings & Accessibility GDD | Alpha |
 | Should the Input record gain `tap_max_ms` or anything else? Current answer: no; the no-timeout rule is the accessibility floor. Revisit only with phone evidence | ux-designer | First phone build |
 | Is the `drag_slop` floor of 8 (5.3 dp at 360 dp, below Android's 8 dp touch slop) worth keeping as a validation limit, or should the Data & Config domain floor rise to 12? Decided from measured phone data, not here | Data & Config GDD + first phone build | First phone build |

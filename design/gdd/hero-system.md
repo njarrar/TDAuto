@@ -142,7 +142,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 - **Game State & Stage Flow:** injects `in_build()` beside `halted()`.
 - **Stage Progression (Vertical Slice):** reads the counters for the report.
 
-**Deliberately not built for MVP.** Hero health, chasing, a range field, re-pin cooldown, finisher damage, cooldown reduction on kills, charges, aim queueing, aim snap, slow motion while aiming, haptics, audio, hit-count readouts, a walk-route line, recall, and handed aim offsets. Left-hand and Reduce Motion are data flags with no settings screen until Alpha.
+**Deliberately not built for MVP.** Hero health, chasing, a range field, re-pin cooldown, finisher damage, cooldown reduction on kills, charges, aim queueing, aim snap, slow motion while aiming, haptics, audio, hit-count readouts, a walk-route line, recall, and handed aim offsets. Left-hand and Reduce Motion are the Options record's `left_hand` and `reduce_motion` (Data & Config), with no settings screen until Alpha.
 
 → Becomes an ADR: where HeroInput sits in the wrapper, and input against the view's per-frame centre update.
 
@@ -166,7 +166,7 @@ Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rule
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Data & Config | reads | Hero and Burst through the accessor at use time; `hero_start`, `pin_rect`, `pin_exclusion` directly from Stage; the left-hand flag | Data (values); this system (meaning, balance) |
+| Data & Config | reads | Hero and Burst through the accessor at use time; `hero_start`, `pin_rect`, `pin_exclusion` directly from Stage; `left_hand` and `reduce_motion` directly from the Options record | Data (values); this system (meaning, balance) |
 | Input & Gesture Resolver | registers, listens | HeroInput registers hero (DRAG, priority 200, radius 56), button (DRAG, priority 100, radius 48) and sink (TAP, priority 400, radius 48); hears `pressed`, `drag_*`; updates the hero's centre | Input (API); HeroInput (meaning) |
 | Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `attack_fired`, `hp_left` for the preview | Combat (API); this system (when, whom, values) |
 | Enemy & Wave | reads | `targets()`; rules on `time_to_exit`, intermission and fast speed | Enemy & Wave |

@@ -285,7 +285,7 @@ The **chip_bar** formula is defined as:
 | Onboarding Prompts (Vertical Slice) | Replaces Rule 13 |
 | Menu & Screen Flow (Vertical Slice) | Replaces Play again |
 | Stage Progression (Vertical Slice) | Replaces the result screen with its report; uses the log's snapshot |
-| Settings & Accessibility (Alpha) | Left-hand and Reduce Motion flags; an alternative path to discs |
+| Settings & Accessibility (Alpha) | Writes the player's choice over Data's Options record (`left_hand`, `reduce_motion`), which the HUD reads directly until then; an alternative path to discs |
 | Mobile Platform (Vertical Slice) | Insets and stretch |
 
 Per the bidirectional rule, each must list this one when authored. Flow, Tower, Hero, Input, Enemy & Wave, Combat and Data already do.

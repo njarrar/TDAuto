@@ -142,3 +142,15 @@ Four blocking issues: C1, C2 and C3 are text fixes, one with a design choice (C1
 2. Amend `game-concept.md:152` to hero over burst, citing the 2026-11-02 decision, and fix `input-gesture-resolver.md:43` (C2).
 3. Reword `input-gesture-resolver.md:387` to the equivalence test (C3).
 4. Rule on D1: amend the concept's stage length and keep the deferral, or pick a call cost or a pacing change.
+
+---
+
+## Resolution — 2026-11-02 — Four blockers applied, re-run pending
+
+- **C1:** Data & Config owns a new Options record (`left_hand`, `reduce_motion`, bools defaulting to false, read directly). Settings & Accessibility (Alpha) writes the player's choice over them. Hero's Interactions row and Battle HUD's Dependencies row now cite it. Chosen in autonomous mode as the smallest change that gives the flags one owner.
+- **C2:** `game-concept.md` Pillar 4 now reads hero > burst, citing the user decision of 2026-11-02, so `input-gesture-resolver.md:43` holds again.
+- **C3:** Input's deferred row says bots call commands directly, and the equivalence test (Hero criterion 28) covers the resolver path.
+- **D1:** the deferral stands. The concept's Short-Term loop now gives the MVP stage's measured lengths (5.1 to 5.4 min uncalled, 3.7 to 3.8 always called), keeps 5 to 8 min for the full game's 8 to 12 waves, and names the first-playable measure and Flow's overlap fallback. Chosen in autonomous mode as the one option that needs no new rule or balance run; the user can overrule it.
+- Also fixed: C6 (Input's radius range, cross-reference and open question now include 56 and Hero Rule 3) and C15 (the concept's cancel wording).
+
+The other warnings stay open.

@@ -32,6 +32,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Hero | `damage`, `attack_interval`, `leash_radius`, `walk_speed`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `reach`, `cooldown`, `telegraph_duration` |
 | Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |
+| Options (one record, added for Hero and Battle HUD; read directly, not through the stat accessor) | `left_hand`, `reduce_motion`. Both default to false. They are development flags until Settings & Accessibility (Alpha) writes the player's choice over them; no system writes them during a battle |
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
@@ -55,6 +56,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
 | `path_width` | float, world units | above 0 | 2,000 | Enemy & Wave |
+| `left_hand`, `reduce_motion` | bool | false | true | Hero and Battle HUD (meaning); Settings & Accessibility (Alpha) writes them |
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
 
