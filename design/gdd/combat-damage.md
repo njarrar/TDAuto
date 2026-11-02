@@ -237,7 +237,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 |---|---|---|
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; a burst commanded between ticks leaves no moving corpse |
-| Pillar 2 bots | Hero stories | Hero-only fails; never-pinned is identical to towers-only; pinned-once loses to active play by a margin set at the first baseline; the always-call bot does not beat a driven hero |
+| Pillar 2 bots | Hero stories | Hero-only fails; never-pinned is identical to towers-only; pinned-once ends the stage with fewer lives than active play (Pillar 2, user ruling 2026-11-02); the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Tower, Hero stories | `burst_spike` is at least 2 in the content test, and `dealt_burst`'s share with splash is at least 75% of its share with none |
 

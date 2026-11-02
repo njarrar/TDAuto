@@ -417,14 +417,14 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 |---|---|---|
 | Hero alone, slow-only | Hero stories | Both lose |
 | Towers-only | Hero stories | On the mixed builds, the towers-only bot without calling ends with 3 lives or fewer, a loss being 0; mid-skill at least 4 above it on each |
-| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 5 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
+| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This meets Pillar 2's "clearly lose", which means ending the stage with fewer lives (user ruling 2026-11-02): today it is 1 to 5 lives lower. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
 | Share | Hero stories | Median of mixed builds 25% to 30%, none above 40%, at the mid-skill bot. It moves with skill, so ±1 s and ±25 aim are reported, not gated. Human logs replace it at first playable; if it cannot be held, the user decides whether to amend the pillar |
 | Burst outcome | Hero stories | On each mixed build, the median of `kills_on_hit_3` is at least 2; an empty list fails |
 | `dealt_burst` | Hero stories | 2, 2 and 1 share at least 75% of single-only's |
 | Dominant build | Hero stories | On mid-skill, at least two mixed builds within 2 lives of the best one |
 | Mono-role | Hero stories | Towers-only: every mono build loses. Mid-skill: every mono build ends below the best mixed build |
-| Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Single only gains 3 today, from the gold, and is not gated |
-| Always-call, humans | User, first playable | Log `seconds_left`, burst readiness and next-wave lives lost per call. If frequent callers lose no more than waiters, the user decides on Flow's overlap fallback |
+| Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Single only gains 3 today, from the gold, and is not gated. Breaking the mixed-build gate brings Flow's overlapping waves forward (Flow Rule 9) |
+| Always-call, humans | User, first playable | From Battle HUD Rule 19's log, lives lost in each wave started by a call and in each wave started after a full wait. Pass: over at least 10 attempts, called waves lose more lives on average than waited waves of the same index. Fail: Flow's overlapping waves come forward (Flow Rule 9; user decision 2026-11-02, cross-GDD review G1) |
 | First run (challenge) | User, first playable | A non-developer finds the pin unprompted beyond the one line, and wins within three attempts, with fewer than 8 lives on the first win. Target set by the user (2026-11-02) |
 | Radius 70 on a phone | User, MVP+ phone test | At most 25% of human bursts hit nobody (`bursts_hit_0` / `bursts_fired`), and median kills per burst is at least 2. Pass mark set by the user (2026-11-02). On a fail, the Open Questions fallback runs |
 | Best moment | User, first playable | A non-developer names whether the burst is still a best moment, and whether a radius of 70 feels satisfying or fiddly; if not, the Open Questions fallback runs |
@@ -446,7 +446,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Re-pinning at about 3 lives is accepted for MVP. Do humans agree it earns its place? A 3 s bot re-pins about 110 times a stage for it. Log `repins` for humans against lives. Fallback: Enemy & Wave's parallel lanes | Bots + human logs | First playable |
 | Is reach 160 felt as a clear limit or as the reticle getting stuck? Fallback: a wider reach, which weakens the pin | Playtest | First phone build |
 | One build sits at 33%, and a better player reaches 45%. Is a single band right for players who improve? If it cannot hold, the user rules on the pillar's target | Human logs | First playable |
-| Calling is nearly free for bots, against the concept's promised cost. Does a person feel preparation time? | Human logs | First playable |
+| Calling is nearly free for bots, against the concept's promised cost. Does it cost a person? The pass mark is the "Always-call, humans" row, and the fallback is overlapping waves | Human logs | First playable |
 | Should a pin use a finger offset? UX puts the top half out of a thumb's reach at 0 and proposes 100. MVP is on desktop, so 0 stands, and the phone test compares 0 and 100, including top-half pins | Pillar 4 phone test | First phone build |
 | A thumb's aim stops at y 860, so a burst reaches the path only to y 930, leaving its last 30 units, and more with an inset, out of reach. Limiting the bots this way barely moved them. Does a person feel it as a lost save? | Pillar 4 phone test | First phone build |
 | Can a thumb re-grab a hero pinned near the top? The offset extends a drop, not a grab | Pillar 4 phone test | First phone build |

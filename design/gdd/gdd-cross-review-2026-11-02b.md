@@ -188,3 +188,16 @@ One blocking issue: G1. The D1 resolution added a contradiction to the concept a
 
 1. Rule on G1: re-point Flow Rule 9's trigger at the mid-skill always-call bot and give the human check a pass mark; or strike "at the cost of" from the concept and Flow until a cost is measured; or adopt overlapping waves now.
 2. Remove the self-contradiction in `game-concept.md:120` to match that ruling.
+
+---
+
+## Resolution — 2026-11-02 — G1 and G5 applied, re-run pending
+
+User decisions: option (a) for G1, and "clearly lose" in Pillar 2 means ending the stage with fewer lives (G5).
+
+- **G1, Flow Rule 9:** the overlap fallback now comes forward if either check fails: the mid-skill always-call bot breaks Hero's Always-call gate (on mixed builds, at most 1 more burst and at most 2 lives gained over mid-skill), or first-playable logs show called waves losing no more lives than waited ones. The towers-only always-call mode stays a gate, and the mid-skill mode joins it. Flow's Deferred row and Open Question now point at Hero's rows.
+- **G1, human pass mark:** Hero's "Always-call, humans" row compares lives lost per wave, called against waited at the same wave index, over at least 10 attempts; called waves must lose more on average. Battle HUD Rule 19 now also logs each wave started after a full wait (`seconds_left` 0), so the comparison has data. Hero's Open Question cites the row.
+- **G1, concept:** `game-concept.md` Short-Term no longer says "no cost" beside "at the cost of": it calls the cost a target not yet shown and names the two checks. MVP item 7 adds the mid-skill always-call mode.
+- **G5:** Pillar 2, Hero's "Pinned once" row and Combat's Pillar 2 row now read "clearly lose" as fewer lives; the Hero row no longer says it may fall short.
+
+The other warnings stay open.

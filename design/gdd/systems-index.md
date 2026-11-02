@@ -26,7 +26,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | Needs Revision | design/gdd/game-state-stage-flow.md | Data & Config |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | In Review | design/gdd/game-state-stage-flow.md | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |

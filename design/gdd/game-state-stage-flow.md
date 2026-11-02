@@ -37,7 +37,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here.
 7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_complete` instead, so Flow needs no wave count.
 8. **Intermission.** After every wave but the last, a countdown runs. Enemy & Wave owns its duration and sends it as the payload of `wave_cleared`. The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
-9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback if the always-call bot below shows dominance. Bots do not call early unless a mode says so, and a **towers-only, always-call** mode joins the Pillar 2 bot gates.
+9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback, and it comes forward if either check fails: the **mid-skill, always-call** bot breaks Hero's Always-call gate (on mixed builds, at most 1 more burst and at most 2 lives gained over mid-skill), or the first-playable logs show waves started by a call losing no more lives than waves started after a full wait (Hero, Deferred criteria). Bots do not call early unless a mode says so. A **towers-only, always-call** mode and a **mid-skill, always-call** mode join the Pillar 2 bot gates; the towers-only one loses every build, so only the mid-skill one can trigger the fallback (user decision 2026-11-02, cross-GDD review G1).
 10. **Actions are never phase-locked.** Building, upgrading and re-pinning stay live in Build, Wave and Intermission, and a change of phase never cancels a gesture. In Build, towers and pins apply at once, while movement and timers begin on the first tick. The burst is the exception: Hero refuses it in Build, since a stopped clock would never let it recover.
 
 **Lives and outcome.**
@@ -258,7 +258,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Boot (Rules 1, 18) | Game State stories | A failed load and a broken scene both reach the fatal screen |
 | Clamp and tick order (Rules 4, 5) | App Lifecycle ADR | Ticks are capped, and the order matches the GDDs |
 | Bonus and live actions (Rules 9, 10) | Tower stories | A bonus is paid per real call only, regardless of burst state; actions work in all three phases; the burst is refused in Build (Hero) |
-| Always-call bot gate (Rule 9) | Hero stories | A towers-only, always-call bot must not beat a driven hero; re-baselined on the fixed tick |
+| Always-call bot gates (Rule 9) | Hero stories | A towers-only, always-call bot must not beat a driven hero, and the mid-skill, always-call bot passes Hero's Always-call gate, or the overlap fallback comes forward; re-baselined on the fixed tick |
 | Button arming | Battle HUD stories | A press begun before Start/Call or Retry arms does nothing |
 
 **Manual**
@@ -271,7 +271,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Does the always-call bot dominate? If so, the fallback is allowing overlapping waves | qa-lead + Tower GDD | First playable |
+| Does calling early cost a person anything? The pass mark is Hero's "Always-call, humans" row; on a fail, overlapping waves come forward (Rule 9) | Hero GDD, from human logs | First playable |
 | App Lifecycle & Composition ADR: tick rate and clamp, pause mechanism, lifecycle notifications, teardown. All engine behaviour here is from memory | technical-director | Before the first story |
 | Bots must be re-baselined on the fixed tick; the prototype's 10-vs-3 lives result does not transfer | qa-lead | First playable |
 | How do tests take a battle snapshot, enumerate its systems and inject recording ones? The criteria assume all three | technical-director | App Lifecycle ADR |
