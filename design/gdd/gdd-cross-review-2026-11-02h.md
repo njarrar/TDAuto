@@ -90,3 +90,11 @@ Blockers per run: 4, 1, 2, 3, 2, 1, 3, 4. The cross-system rule conflicts from t
 2. H2: name the Call prompt switch and log when it is on or shown.
 3. H3: correct Combat `:242`'s pointer.
 4. H4: give TowerInput a refusal flag or signal the HUD can read.
+
+## Resolution, 2026-11-02: the four blockers and every warning applied, re-run pending
+
+- **H1:** every Rule 19 record carries `instructed`, launch ID and `attempt_seq`.
+- **H2:** the Call prompt reads the Options record's `call_prompt_enabled` (default false; the user sets it after Hero's "Always-call, humans" row is read at first playable), shows only while Start/Call is Armed, and is final per launch; attempt and wave records carry `call_prompt_shown`, and Hero's human rows leave those attempts out.
+- **H3:** Combat's pointer names Tower's row "`burst_spike`, bypass".
+- **H4:** TowerInput emits `upgrade_refused(slot_index)` on a refused chip tap; the HUD answers it with the nudge, or the blink on the chip under Reduce Motion.
+- **J1 to J11:** applied. Rule 19 has three kinds (attempt, wave, fatal), with the call fields folded into each wave record's `start`; Wave N spending counts to wave N; the app root owns the log counters and the Fatal-at-`build` record; the prompt blink is on the text; `slot_positions` comes from Enemy & Wave only; Combat defines `apply_slow` and `is_dead` and the slow filter; Flow names its view allowlist; a swallowed Call tap shows the leash; citations, owners and interface names are aligned; the aim magnet re-runs every row it changes.

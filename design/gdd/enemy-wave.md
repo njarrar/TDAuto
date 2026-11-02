@@ -25,7 +25,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 1. **One path.** A stage has one continuous path, and an enemy's progress is one distance along it. MVP and Vertical Slice need nothing more, because Vertical Slice's "different paths" are shape changes. Forks, parallel lanes and flyer gaps wait until after Vertical Slice, and would need `path_id` on wave groups and an amended art bible §6. On one path, "the leaking lane" means the stretch the player's towers do not cover, so it depends on the build. Whether that makes players re-pin is unproven (Open Questions).
 2. **Stage geometry is data.** `path_points[]`, `slot_positions[]` and `path_width` are new fields on the Stage record. This amends Data & Config, which placed them in the stage scene. Path length sets time to leak and slots set tower coverage, so they are gameplay values (Data Rule 1), and the builder and tests run without a scene (Flow Rule 2). The scene keeps the look only: field hue, base value and grid tilt. A view draws the path from the same points, so the two cannot disagree. Curves, if ever wanted, are baked to points once at load.
-3. **Slots belong to the stage.** This GDD owns the layout rules below, the Stage record holds the positions, and the content test (Data Rule 9) enforces them. Tower reads `slot_positions` directly, and a slot's index is its identity, which is the order towers fire in. Hit radii come from the Input GDD: slot 36, burst 48.
+3. **Slots belong to the stage.** This GDD owns the layout rules below, the Stage record holds the positions, and the content test (Data Rule 9) enforces them. Tower reads `slot_positions` from this system, and a slot's index is its identity, which is the order towers fire in. Hit radii come from the Input GDD: slot 36, burst 48.
 
 **Layout rules, checked by the content test.** All numbers are proposed. Insets assumed are 0 to 48 dp at the bottom and 0 to 68 dp at the top, unverified on devices. These must be rechecked once the stretch mode is decided (Input Open Questions).
 
@@ -148,9 +148,9 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config | reads | Enemy through the accessor; Wave and Stage directly | Data (values); this system (meaning, balance ranges) |
-| Game State & Stage Flow | commanded, reads, emits | `start_next_wave()`; `halted()` (injected); `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Flow owns lives, the countdown and the wave count it reports | This system (signals); Flow (phases, wiring) |
-| Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`. Counts down Status from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
-| Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions` | This system (signals, list); Tower (gold, targeting) |
+| Game State & Stage Flow | commanded, reads, emits | `start_next_wave()`; `halted()` (injected); `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Tick slots; `to_ticks` (Rule 4). Flow owns lives, the countdown and the wave count it reports | This system (signals); Flow (phases, wiring) |
+| Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`; `spawn_id`; the reap; `deliver` for test kills. Counts down Status from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
+| Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions`; `gold_upper_bound` | This system (signals, list); Tower (gold, targeting) |
 | Hero System | serves | `targets()` for attack and burst | This system (list); Hero (targeting) |
 | Battle HUD and views | serves | Views read `roster()` and the path each frame; the HUD reads `wave_index()`, `got_through_by_type()` and `targets()`, and may read Wave records directly | This system (data); views (drawing) |
 | Bots and tests | call | Reach it through the builder and commands | Harness |

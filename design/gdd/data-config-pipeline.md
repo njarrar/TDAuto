@@ -32,7 +32,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Hero | `damage`, `attack_interval`, `leash_radius`, `walk_speed`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `reach`, `cooldown`, `telegraph_duration` |
 | Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |
-| Options (one record, added for Hero and Battle HUD; read directly, not through the stat accessor) | `left_hand`, `reduce_motion`. Both default to false. They are development flags until Settings & Accessibility (Alpha) writes the player's choice over them; no system writes them during a battle |
+| Options (one record, added for Hero and Battle HUD; read directly, not through the stat accessor) | `left_hand`, `reduce_motion`, `call_prompt_enabled`. All three default to false. `left_hand` and `reduce_motion` are development flags until Settings & Accessibility (Alpha) writes the player's choice over them. `call_prompt_enabled` is set by the user after Hero's "Always-call, humans" row is read at first playable; Battle HUD reads it for the Call prompt. No system writes any of them during a battle |
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
@@ -56,7 +56,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
 | `path_width` | float, field units | above 0 | 2,000 | Enemy & Wave |
-| `left_hand`, `reduce_motion` | bool | false | true | Hero and Battle HUD (meaning); Settings & Accessibility (Alpha) writes them |
+| `left_hand`, `reduce_motion`, `call_prompt_enabled` | bool | false | true | Hero and Battle HUD (meaning); Settings & Accessibility (Alpha) writes the first two; the user sets `call_prompt_enabled` |
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
 
@@ -242,8 +242,8 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 | Criterion | Owner |
 |---|---|
-| Rule 6 end to end: catalogue unchanged after a scripted fixed-tick battle in which at least one enemy spawned and died | Tower and Enemy & Wave stories |
-| Rule 10 never-cache: a spy accessor changes its value between two uses and the second use reflects it | Each consumer story (Tower, Hero, HUD) |
+| Rule 6 end to end: catalogue unchanged after a scripted fixed-tick battle in which at least one enemy spawned and died | Enemy & Wave stories (spawns and deaths). Tower's half: Tower criterion 28 |
+| Rule 10 never-cache: a spy accessor changes its value between two uses and the second use reflects it | Each consumer's own test: Enemy & Wave criterion 4, Tower's Deferred never-cache row, Battle HUD criterion 1, Hero's stories |
 | Rule 1: changing a fixture value changes the consumer's behaviour | Each consumer story |
 | Fatal screen shows on a broken stage scene or bad accessor call | Game State & Stage Flow |
 | Android export loads the catalogue (no path or packing assumption) | Storage-format ADR, Technical Setup |
@@ -253,7 +253,6 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 | Question | Owner | Resolve by |
 |---|---|---|
 | Storage format and read-only enforcement (recommended: typed Resources), confirmed by a real Android export | technical-director, `/architecture-decision` | Technical Setup gate |
-| Locomotion, armour and resist, splitter spawn reference, `introduces`. Answered for MVP by the Enemy & Wave GDD: none are needed yet | Vertical Slice GDDs | Vertical Slice |
 | Preview data: `attack_type`, `display_name`, stage order | Stage Progression GDD | Vertical Slice |
 | Snapshot mechanics, integer representation | technical-director | Storage-format ADR |
 | Optional tooling, unscheduled: headless validate-only command (reuse the content test first), alternate manifest, DPS dump | producer | When tuning hurts |
@@ -261,4 +260,6 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 | Both thresholds (10 s tuning loop, 1 s device load) are proposals; `project.yaml` has no load budget | producer + performance-analyst | First phone build |
 | Scene checks run on the project, not the export, because the test runner cannot run on an exported build: is the manual check enough? | technical-director | Storage-format ADR |
 | `tests/README.md` is stale: it says clones lack the class cache (now tracked) and that gdUnit4 is uninstalled (now in `addons/`) | gameplay-programmer | First test story |
-| Should the `drag_slop` floor rise from 8 to 12? Asked by Input | Data & Config GDD + first phone build | First phone build |
+| Should the `drag_slop` floor rise from 8 to 12? Owned by Input's Open Question; see the Input GDD | Input GDD | See Input |
+
+**Closed (kept for history).** Locomotion, armour and resist, splitter spawn reference, `introduces`: answered for MVP by the Enemy & Wave GDD. None are needed yet; Vertical Slice GDDs revisit them.

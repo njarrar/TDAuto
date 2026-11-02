@@ -210,7 +210,7 @@ The **target_ok** formula is defined as:
 
 ## Edge Cases
 
-"Dead" means the gesture emits nothing more than its `idle()` and the active pointer is ignored until it lifts. Cases the rules already settle (slop exactly equal is a drag; a press exactly on a disc edge hits; hero over slot taps the slot and drags the hero; a disabled target is simply absent; a press on a hero standing on a slot can become a hero drag (Hero Rules 14 and 15 decide pin or cancel)) are not repeated.
+"Dead" means the gesture emits nothing more than its `idle()` and the active pointer is ignored until it lifts. Cases the rules already settle (slop exactly equal is a drag; a press exactly on a disc edge hits; hero over slot taps the slot and drags the hero; a disabled target is simply absent; a press on a hero standing on a slot can become a hero drag (Hero Rules 13 and 14 decide pin or cancel)) are not repeated.
 
 **State machine**
 - **If `cancel()` is called while Idle**: no-op, empty log. The adapter may call it unconditionally on pause.
@@ -401,13 +401,13 @@ P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-dev
 | Hero: pin at the finger position means the thumb covers the pin at release. Deferred to Hero's Open Question on a pin finger offset: Hero owns it, and the phone test compares 0 and 100 | Hero GDD | First phone build |
 | Settings & Accessibility: runtime slop setter ("steady hand" ×1.5) and hit-area scale; a two-tap alternative to dragging for players who cannot drag. Hooks are reserved in prose only; the owner API (target, press, release) already hides the physical gesture from owners | Settings & Accessibility GDD | Alpha |
 | Should the Input record gain `tap_max_ms` or anything else? Current answer: no; the no-timeout rule is the accessibility floor. Revisit only with phone evidence | ux-designer | First phone build |
-| Is the `drag_slop` floor of 8 (5.3 dp at 360 dp, below Android's 8 dp touch slop) worth keeping as a validation limit, or should the Data & Config domain floor rise to 12? Decided from measured phone data, not here. Data's Open Questions carry a matching row | Data & Config GDD + first phone build | First phone build |
+| Is the `drag_slop` floor of 8 (5.3 dp at 360 dp, below Android's 8 dp touch slop) worth keeping as a validation limit, or should the Data & Config domain floor rise to 12? Decided from measured phone data. This row owns the question; Data's row points here | Data & Config GDD + first phone build | First phone build |
 | Is the 36-unit edge margin right on real Android and iOS devices? From memory, not sourced | gameplay-programmer | First phone build |
 | On a tablet `drag_slop` is 22 dp wide at 800 dp: acceptable, or do tablets need a scale cap? | technical-director | Input ADR |
+| Phone-test scope beyond P1 (five or more testers, iOS and Android, more widths) is a concept change; the test as written is the floor | producer | Before the first phone build |
 
 **Closed (kept for history).**
 
 | Question | Owner | Resolve by |
 |---|---|---|
 | Re-pinning is a straight-line walk with no path-following, so "no pathfinding" stands (Hero Rule 3). The resolver is unaffected | Hero GDD | Answered |
-| Phone-test scope beyond P1 (five or more testers, iOS and Android, more widths) is a concept change; the test as written is the floor | producer | Before the first phone build |

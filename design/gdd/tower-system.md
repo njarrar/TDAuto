@@ -69,7 +69,7 @@ IDs and levels are checked before any accessor read, through a new non-fatal `is
 | Event while a chip is open | Result |
 |---|---|
 | Same tower tapped under 200 ms | Ignored; the window keeps running |
-| Same tower tapped inside the window | Calls `upgrade`. On `NO_GOLD` it stays open and dimmed, and the window does not restart. Any other result closes it |
+| Same tower tapped inside the window | Calls `upgrade`. On `NO_GOLD` it stays open and dimmed, TowerInput emits `upgrade_refused(slot_index)` for the HUD's nudge or blink, and the window does not restart. Any other result closes it |
 | Window expires, then the tower is tapped | Opens a new chip; never commits. The chip's disc unregisters, and a chip press held past expiry does nothing |
 | `pressed` naming the chip | Stays open |
 | `pressed` naming another tap target, or none | Closes. If it names another tower, that tap opens that tower's own chip |
@@ -84,7 +84,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 9. **Tick.** Towers run in Combat Rule 11's slot, by ascending slot index, with `halted()` checked after every accessor read and every signal, returning at once:
    1. If `cooldown_left` is above 0, subtract 1. If it is still above 0, go to the next slot, with no reads.
-   2. Read `range`. Pick from Enemy & Wave's `targets()` with Combat's `first_in`. A `slow` tower asks first among enemies with `speed_factor` 1, then, if none of those is in range, among all of them. No target: hold at 0, emit nothing and read nothing more.
+   2. Read `range`. Pick from Enemy & Wave's `targets()` with Combat's `first_in`. A `slow` tower passes `first_in` the enemies in range whose `speed_factor` is 1, and falls back to all enemies in range if there are none (Combat Rule 10). No target: hold at 0, emit nothing and read nothing more.
    3. Read every other stat this attack needs, before changing anything. A bad read halts here with nothing half done.
    4. Set `cooldown_left = to_ticks(attack_interval)`, then report the attack so Combat emits `attack_fired`, then `deliver` one event per victim. A `slow` tower then calls `apply_slow` per victim, passing seconds, since Combat converts them. Its `damage` of 0 applies nothing and can kill nobody.
 10. **Ready and holding.** A timer counts on every tick that runs, Intermission included. A ready tower holds at 0, and it fires on the first tick that has a target, so a tower fires every N ticks exactly under constant fire.
@@ -100,7 +100,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `upgrade_refused(slot_index)` for the chip's refused tap (Rule 8), `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -168,13 +168,13 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
+| Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions`; `gold_upper_bound` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`; runs in the Towers-by-slot-index slot of the tick | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
-| Battle HUD | listens, calls | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
-| Hero System | none directly | Balanced against through bots | Bots |
+| Battle HUD | listens, calls | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `slot_tapped`, `upgrade_refused`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
+| Hero System | none directly | Balanced against through bots, `burst_spike` and Hero's Deferred gates | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
 
 ## Formulas
@@ -285,7 +285,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 
 | System | Interface |
 |---|---|
-| Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
+| Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` |
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`, tick slot |
 | Input & Gesture Resolver | Target registry (slots and towers TAP 200; upgrade chip TAP 300, Rule 8), `tap`, `pressed` (TowerInput only) |
@@ -295,7 +295,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 
 | System | Interface |
 |---|---|
-| Battle HUD & Build UI | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `tower_inspected` (Rule 17); calls `build` |
+| Battle HUD & Build UI | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `slot_tapped`, `upgrade_refused`, `tower_inspected` (Rule 17); calls `build` |
 | Hero System (soft) | Hero: none directly; balanced against through bots and `burst_spike` |
 | Stat & Modifier (Vertical Slice) | Reads through the same accessor |
 | Skill Tree, Synergy Hook (Vertical Slice) | Tags and accessor context with the live tower |
@@ -335,7 +335,7 @@ Battle HUD draws these; this system supplies the data.
 
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
-- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta. Under Reduce Motion the nudge becomes a 120 ms alpha blink, so every refused tap still answers on the next frame (Battle HUD).
+- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta. Under Reduce Motion the nudge becomes a 120 ms alpha blink, on the disc or button, never on a panel, so every refused tap still answers on the next frame (Battle HUD).
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
 📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: the chip's window has no visible clock (answered: Battle HUD Rule 9's draining bar), a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
