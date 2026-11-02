@@ -36,7 +36,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **What is on screen, and when.**
 
-4. **Always:** lives, pips, gold and the burst button. **Build and Intermission add:** Start/Call and the next-wave line. Nothing else. Damage numbers, HP bars, tower stats, spawn timings and hit counters are not shown. No pause button exists at MVP (Flow Rule 17), which corrects art bible §7 and Input.
+4. **Always:** lives, pips, gold and the burst button. **Build and Intermission add:** Start/Call and the next-wave line, which gives its row to a prompt while one shows (Rule 13). Nothing else. Damage numbers, HP bars, tower stats, spawn timings and hit counters are not shown. No pause button exists at MVP (Flow Rule 17), which corrects art bible §7 and Input.
 5. **Next-wave line.** "Next", then a glyph and a total count per enemy type, in fixed order, drawn from the Wave records. There are no timings or groups, so convergences must still be seen on the field. With no selling, blind buying is costly, and one wave ahead spoils little. This settles Enemy & Wave's question.
 
 **Build arc.**
@@ -60,7 +60,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Prompts.**
 
-13. **One prompt line, first match, for this battle only, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. Because conditions are read per battle, nothing has to survive a rebuild.
+13. **One prompt line, first match, for this battle only, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. Because conditions are read per battle, nothing has to survive a rebuild. The prompt sits in the top band, in the next-wave line's row, so it never covers the path or an enemy at any inset (Enemy & Wave Rule 4). Prompt 3 shows only in Wave, when that line is hidden anyway. Prompts 1 and 2 take the row from the line until the hero is pinned and a tower built, so a first Build shows the next wave only after those two acts, which is accepted, since wave 1 cannot be lost (design review fix, 2026-11-02, replacing a panel at `I_top + 104` that covered the top path row from an inset of 69).
     1. Hero unpinned: "Drag the hero"
     2. No tower built, in Build or Intermission: "Tap a slot to build"
     3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started`
@@ -111,10 +111,10 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 | Lives | 2 rows of 5 dashes, 24 × 4.5, x 24 to 156, row centres `I_top + 22` and `I_top + 34` |
 | Pips | 6 × 20, gap 10, x 185 to 355, row centre `I_top + 22` |
 | Gold | Right edge x 516, reserved from x 434 |
-| Next-wave line | x 165 to 395, row centre `I_top + 53` |
+| Next-wave line | x 165 to 395, row centre `I_top + 53`; hidden while a prompt shows |
 | Burst button | x 456, or 84 left-handed; `y = clamp(888 − I_bottom, 816, 888)` |
 | Start/Call | (186, 800), rect 88 × 72, corner 24, hit radius 48, for both hands |
-| Prompt | Panel 300 × 34, one line, centre (270, `I_top + 104`), above the path |
+| Prompt | Panel 300 × 30, one line, centre (270, `I_top + 55`), so y `I_top + 40` to `I_top + 70`: inside the band, clear of the lives rows (to `I_top + 36.25`) |
 | Lost panel | x 48 to 492, y 200 to 752; Retry 128 × 72 at (270, 700) |
 | Won panel | Compact, x 48 to 492, y 752 to 944, so the finished build stays visible above it (Pillar 1); Play again 128 × 72 at (270, 904) |
 
@@ -132,6 +132,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Next-wave line | At most 3 types at true size | 3 |
 | Waves in a stage, starting lives | At most 6, and at most 10, the pips and dashes that fit. Larger waits for a later stage's layout | 6, 10 |
 | Arc panels against the band | Clear at inset 0; a large inset is the Mobile GDD's, since the starter's top panel reaches y 164, 10 into the band at the largest top inset | Pass at inset 0 |
+| Prompt panel inside the band | Bottom at most `I_top + 72` at every inset, so L6 keeps it off the path | `I_top + 70` |
 
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.
@@ -363,7 +364,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 13. (Armed) A counted tap: one command; phase end Hidden.
 14. (Arc states) Closed: no targets. Open: all registered. An arc across Wave's end: Start/Call registers disabled, and enables on close.
 15. (Rule 12) Build, unpinned, Ready, Telegraphing and Cooling each map to their look; x 456, left 84.
-16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome.
+16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome. While prompt 1 or 2 shows in Build or Intermission, the next-wave line is hidden, and it shows again on the frame the prompt hides. The prompt panel's bottom is at most `I_top + 72` at inset 0 and at 102.
 17. (Prompt states) Each act advances; None is final after the first burst.
 18. (Rule 14) Three rings, then none; a dismissal draws none; a rebuild resets.
 19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0.
@@ -409,6 +410,6 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | Is the prompt at the top seen, while the eyes are on the lane? | First-run test | First playable |
 | Which font? Tabular figures and a licence must be checked | art-director | First render |
 | Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16 | technical-director | Mobile Platform |
-| At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
+| At a large top inset, the band meets the arc's top panel | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |
