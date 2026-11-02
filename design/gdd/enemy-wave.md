@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: Revised after fifth design review (2026-11-02, NEEDS REVISION, 1 blocking item and the carried gold bound addressed; recommended items open in the review log); pending re-review
+> **Status**: Revised after sixth design review (2026-11-02, NEEDS REVISION, 4 blocking items and 6 recommended addressed; other recommended items open in the review log); pending re-review
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -45,7 +45,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 | L10 | Each slot covers at least 200 of path at the lowest level-1 tower range | 223 at range 150 |
 | L11 | Some disc of burst radius, searched on a grid of 10, holds at least 2.5 × that radius of path, so a bend exists to burst. Every stage: a fully straight stage is not allowed, since the burst needs a bend (user, 2026-11-02) | 196 against 175, at radius 70 |
 | L12 | 3 to 5 slots, as in the concept | 5 |
-| L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice; no segment doubles back on the one before | Pass |
+| L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice; no segment doubles back on the one before, meaning no turn between consecutive segments is sharper than 135°. Since the field is convex and both end points lie outside it (L5), the path crosses exactly twice whenever every interior point is inside, so one check covers both clauses | Pass; every turn 90° |
 
 L10 and L11 need tower range and burst radius, so they join the test in the Tower and Hero stories. L9's 800 and L10's 200 are proposed from the starter stage, not derived from a constraint, so recheck them when stages 2 and 3 are sketched (Open Questions). A new stage must also pass Battle HUD's layout checks (Start/Call clearances and the arc rules), which the same content test runs.
 
@@ -69,7 +69,7 @@ L10 and L11 need tower range and burst radius, so they join the test in the Towe
 
 6. **Authored, with no randomness.** Waves are fixed so a stage can be learned. This settles Flow's retry question: a retry reuses the seed, which nothing here reads. Cosmetic jitter never uses the simulation seed.
 7. **Wave control.** Flow calls `start_next_wave()` with no argument. This system owns the index into `wave_ids` and resets its per-wave state on each start, storing nothing on the record, so repeated wave IDs work. A start during an active wave or past the last wave logs a development error and is ignored. The call commits at once: the wave is Active at `wave_tick` 0. Members due at tick 0 spawn in the next advance slot, and `wave_tick` rises at the end of that slot. So a countdown's end spawns in that same tick, since Flow's slot runs first, and an early call or Start Wave spawns on the next tick.
-8. **Spawning uses an absolute schedule.** Each member's whole tick is computed from wave start (Formulas), never by repeating a float countdown. Members spawn when `wave_tick` reaches their tick, with groups scanned in authored order and members in ascending order. Each takes the next battle-wide `spawn_id`, which also breaks ties, and gets its Health (seeded once from `max_hp`) and Status. `spawn_interval` has no effect when `count` is 1.
+8. **Spawning uses an absolute schedule.** Each member's whole tick is computed from wave start (Formulas), never by repeating a float countdown. Members spawn when `wave_tick` reaches their tick, with groups scanned in authored order and members in ascending order. Each takes the next battle-wide `spawn_id`, which also breaks ties, and gets its Health (seeded once from `max_hp`) and Status. A member joins the roster, and its `spawn_id` is used, only after its `max_hp` read passes the halt check (Rule 13); a halt during that read adds nothing and spends no ID. `spawn_interval` has no effect when `count` is 1.
 9. **Movement.** Each enemy reads `move_speed` through the stat accessor at use time, with a read context made once per enemy (the context is reused, not the value), and multiplies by Combat's `speed_factor`. An enemy moves on the tick it spawns, as in the prototype. Its position is computed once in the move step and kept for that tick's targeting and views, clamped to the path's end.
 10. **Leaks.** An enemy whose distance reaches the path length leaks. In ascending `spawn_id` order, its `lives_cost` is read through the accessor, it leaves the roster at once, and `enemy_leaked(lives_cost)` fires synchronously. A fatal leak ends the loop (Rule 13).
 11. **Kills and clearing.** In the reap slot, dead enemies are handled in ascending `spawn_id` order: `bounty` is read through the accessor, the corpse is removed, and `enemy_killed(bounty)` fires, as Rule 10 does for leaks. Then comes the clear check. **It runs every tick, not only on a kill**, or a wave whose last enemy leaks would never clear, and only while a wave is active, or an empty field would emit forever. A wave is clear when its schedule is exhausted and the roster is empty, with no separate counter that could disagree. By index, not ID, the last wave emits `waves_complete()` and any other emits `wave_cleared(intermission_duration)`, with the state committed first. Leak events therefore always precede the clear, as Flow Rule 13 requires.
@@ -108,7 +108,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 
 Each wave's total HP is 1.26 to 1.64 times the last.
 
-**Stage length comes from the scripted simulation**, `tools/balance-sim/hero_bots.py`, not from a hand model. With the mid-skill driven hero on the four mixed builds, a stage runs 5.0 to 5.3 minutes with nothing called early, at the floor of the concept's 5 to 8, and 3.7 to 3.8 minutes with every wave called. These figures come from a run on the stage as this revision moved it (top row at y 226, slot 0 at y 320). No human has played the stage, so an advisory criterion checks its length at first playable (Deferred criteria).
+**Stage length comes from the scripted simulation**, `tools/balance-sim/hero_bots.py`, not from a hand model. With the mid-skill driven hero on the four mixed builds, a stage runs 5.0 to 5.3 minutes with nothing called early, at the floor of the concept's 5 to 8, and 3.7 to 3.8 minutes with every wave called. These figures come from a run on the stage as this revision moved it (top row at y 226, slot 0 at y 320), and a rerun on 2026-11-02 reproduced them. Calling saves 1.3 to 1.6 minutes, more than the 75 s of skipped intermissions, because in the script each call also pays its bonus, which buys towers sooner and so ends later waves sooner. No human has played the stage, so an advisory criterion checks its length at first playable (Deferred criteria).
 
 **Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` and `peak_alive_ub` rows need Burst and Tower data, so they join in the Hero and Tower stories.
 
@@ -116,8 +116,8 @@ Each wave's total HP is 1.26 to 1.64 times the last.
 |---|---|---|---|
 | First spawn of a wave | At most 2 s | 0 s | The field is not empty after Start |
 | Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called early. This is Flow's cap on `start_delay`, measured where it matters |
-| `time_to_exit`, path length ÷ `move_speed` | 12 to 60 s | 15.5 to 44.8 s | Time for a burst; no stalled waves |
-| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration`, and at most 30 s | 15 s against 10.25 s and 30 s | Waiting always restores the burst. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02). Tower's 10% bonus share binds first, at about 25 s across five calls (gold_upper_bound) |
+| `time_to_exit`, total `path_length` ÷ `move_speed`, for each enemy type any wave of the stage uses | 12 to 60 s | 15.5 (fast) to 44.8 s (heavy) | Time for a burst; no stalled waves. A stage rule, reported as `time_to_exit_min` or `time_to_exit_max`, though a broken Enemy record can trip it. It bounds path length by the types used: with fasts at least 1,320, with heavies at most 2,280 (Open Questions) |
+| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration`, and at most 30 s | 15 s against 10.25 s and 30 s | Waiting always restores the burst. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02). Tower's 10% bonus share binds first, at about 25 s a call: 14 gold a call, 70 across five calls (gold_upper_bound) |
 | First position's `lives_at_risk` | Below `starting_lives` | 8 against 10 | The first wave cannot be lost, with no runtime rule: an idle player still leaks and feels it |
 | Every wave's `lives_at_risk` | At least 1 | 8 to 38 | No decorative waves |
 | Stage's total `lives_at_risk` | At least `starting_lives` | 120 against 10 | Stronger than Flow's "some cost above 0", since one 1-cost enemy against 10 lives cannot lose |
@@ -190,7 +190,7 @@ The **spawn_tick** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `i` | int | 0 to `count` − 1 | calculated | Member index |
 | `start_delay` | float, seconds | 0–600 | data file | Group offset from wave start |
-| `spawn_interval` | float, seconds | `dt`–600 | data file | Gap between members. Below one tick, two members would share a tick, so the validator rejects it; code-built fixtures are exempt |
+| `spawn_interval` | float, seconds | `dt`–600 | data file | Gap between members. Below one tick, two members would share a tick, so the validator rejects it when `count` is 2 or more; at `count` 1 it is unused and unchecked. Code-built fixtures are exempt |
 
 **Output Range:** 0 up to 18,000,000 at the domain's limits; the largest-gap check keeps real waves far below it. Error stays within half a tick and never accumulates. A member at tick 0 spawns on the wave's first slot.
 **Example:** interval 0.125 s gives 0, 8, 15, 23.
@@ -205,7 +205,7 @@ The **d_next** formula is defined as:
 | `d` | float, units | 0 to `path_length` | calculated | Distance travelled |
 | `move_speed` | float, units/s | above 0, up to 2,000 | data file via the accessor | Read at use time; Data's validator rejects 0 or less |
 | `speed_factor` | float | above 0, up to 1 | Combat | Slow; Combat keeps `slow_strength` below 1 |
-| `path_length` | float, units | above 0 | calculated | Sum of segment lengths; 1,704 on the starter stage, off-field ends included |
+| `path_length` | float, units | above 0 | calculated | Defined as `cum[last]`, the same running sum the position lookup uses, so the two can never differ by rounding; 1,704 on the starter stage, off-field ends included |
 
 **Output Range:** a step of above 0 to 33.33 units. Overshoot is discarded. The `time_to_exit` floor keeps a path from being crossed in one step.
 **Guard.** A catalogue stage cannot stall, because the validator and Combat keep both inputs above 0. A code-built fixture can. If `move_speed × speed_factor` is 0 or less, or not a finite number, the move step logs a development error and sets `d` to `path_length`, so the enemy leaks that tick through the normal leak path. The wave still clears, and position stays defined.
@@ -239,7 +239,7 @@ The **spacing** formulas are defined as:
 | `burst_radius` | float, units | 70 at starter values | Hero data | Burst reach; a disc spans two radii of path |
 | `splash_radius` | float, units | 75 at starter values | Tower data | Largest in the catalogue (splash level 2). Splash reaches one radius behind its impact, because its impact is the leader |
 
-**Output Range:** `spacing` above 0; `per_burst` and `per_splash` 1 and up. These measure how tightly a group packs, not how long it is, so they do not grow with `count`. They assume a straight stretch of path, so a bend packs more into a burst than they predict.
+**Output Range:** `spacing` above 0; `per_burst` and `per_splash` 1 and up, with no cap, since a strong slow packs a group tight. They are defined only for groups of `count` 2 or more: at `count` 1 the interval is unused and may be 0. These measure how tightly a group packs, not how long it is, so they do not grow with `count`. They assume a straight stretch of path, so a bend packs more into a burst than they predict.
 **Design target:** every group the wave table below calls a packet has `per_burst` at least 4, which matches the Burst fit gate, and `per_splash` below `per_burst`, so the burst catches what splash cannot. Groups called strings or fronts are exempt: their job is to spread out. This is a design aid for authoring waves, with no code behind it, as is `catch_up`. Whether uncapped splash and stacked slows erode packets is unproven (Open Questions).
 **Example:** normal at 0.6 s and speed 60: spacing 36, so a burst of radius 70 takes 4 and splash of radius 75 takes 3. **Normal at 1.5 s has spacing 90, so a burst takes 2: a string, not a packet.** A burst hits 3 or more whenever spacing is at most 70 and three are alive, so "3 or more" barely tests aim. The prototype's bursts hitting 3 or more every time likely reflect this, so the Burst fit gate asks for 4.
 
@@ -424,7 +424,7 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 A recording fake logs the four signals, and each THEN is the entire log. Factories build `stage()` with `dt` pinned at 0.25 s; a criterion that needs another `dt` states it. Path `P` is (−20, 950), (10, 950), (10, 980), length 60. Enemy `e` has speed 40 (a step of 10), bounty 4 and cost 1; enemy `h` is `e` with cost 2. Unless a criterion lists its own `wave_ids`, `stage()` has two wave positions and the criterion runs on the first, so its clear emits `wave_cleared`; every `intermission_duration` is 2.0 unless stated. `T` is advance then reap, counted from T0 of the wave under test, and kills use `deliver` between them. Development errors go to an injected sink the test reads. No scene, catalogue files or time assertions.
 
 **CI: Logic**
-1. (Rules 4, 14) **GIVEN** `e`, **WHEN** T0 to T4, **THEN** positions are (−10, 950), (0, 950), (10, 950), (10, 960), (10, 970) and `roster()` holds it on each. `targets()` is empty at T0, holds it at T1 (centre on the left edge), T2 and T3 (centre on the bottom edge), and is empty at T4.
+1. (Rules 4, 14) **GIVEN** `e`, **WHEN** T0 to T4, **THEN** positions are (−10, 950), (0, 950), (10, 950), (10, 960), (10, 970) and `roster()` holds it on each. `targets()` is empty at T0, holds it at T1 (centre on the left edge), T2 (inside) and T3 (centre on the bottom edge), and is empty at T4.
 2. (position) **GIVEN** path (0, 0), (5, 0), (5, 5), (25, 5), **THEN** `d` 10, 20, 30 give (5, 5), (15, 5), (25, 5).
 3. (Rule 9, d_next) **GIVEN** `e`, **WHEN** T0, **THEN** `d` is 10, so it moved on its spawn tick; at factor 0.5 the next step is 5.
 4. (Rules 5, 9, 10, 11) **GIVEN** a spy accessor doubling `move_speed` after T0, **THEN** T1 gives `d` 30. **GIVEN** a spy returning `bounty` 9 and `lives_cost` 3, and `e`×2 @0.25 with the first killed at T0, **THEN** the log is `enemy_killed(9), enemy_leaked(3), wave_cleared(2.0)`, the leak at T6. **GIVEN** a spy changing `max_hp` after T0, **THEN** that enemy's Health at T1 still holds its spawn value.
@@ -437,15 +437,49 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 11. (Rule 11) **GIVEN** `wave_ids` [a, b, a], each one `e`, with `intermission_duration` 2.0 on a and 3.0 on b, **WHEN** each wave is started and its enemy leaks, **THEN** the log is `enemy_leaked(1), wave_cleared(2.0), enemy_leaked(1), wave_cleared(3.0), enemy_leaked(1), waves_complete()`.
 12. (Rule 7) **GIVEN** a start and no tick, **THEN** Active at `wave_tick` 0 with nothing spawned; **WHEN** T0, **THEN** tick-0 members exist. **WHEN** a start during Active, **THEN** unchanged, and the sink holds one development error. **WHEN** a start in Finished, **THEN** unchanged, and the sink holds one more.
 13. (to_ticks, spawn_tick) Rounding is halves away from zero, as `to_ticks` states. **GIVEN** `dt` 1/60, in place of the factory's, **THEN** 0.9 s spawns at 0, 54, 108; 0.1 s has member 3 at 18; 0.125 s spawns at 0, 8, 15, 23; `to_ticks(5.0)` is 300. **GIVEN** the factory's `dt` 0.25, **THEN** `to_ticks(0.125)` is 1. No interval below the factory's tick is used as a `spawn_interval` here, since two members would share a tick; the validator rejects that in a real stage.
-14. (Rule 8) **GIVEN** group b = `h`×1 +0.5 authored before group a = `e`×2 @0.5, **THEN** T0 spawns a's first `e` (`spawn_id` 0), and T2 spawns b's `h` (1) then a's second `e` (2). **GIVEN** a second wave of `e`×1 +0, **THEN** its member takes `spawn_id` 3.
+14. (Rule 8) **GIVEN** group b = `h`×2 @0.5 +0 authored before group a = `e`×1 +0.5, **THEN** T0 spawns b's first `h` (`spawn_id` 0), and T2 spawns b's second `h` (1) then a's `e` (2). A scan by member index across groups would put `e` before the second `h`, so it fails. **GIVEN** that wave run to its clear and then a second wave of `e`×1 +0, **THEN** its member takes `spawn_id` 3.
 15. (Rule 6) **GIVEN** two seeds and one script through the builder, **THEN** identical logs and distances.
 16. (lives_at_risk) 2×2 + 8×1 gives 12. (gold_upper_bound) **GIVEN** `starting_gold` 120, wave 1 of `e`×8 and wave 2 of `e`×2 with bounty 16, **THEN** `w` 1 gives 152 and `w` 2 gives 184.
 17. (peak_alive_ub) **GIVEN** length 100, speed 40, `max_slow` 0.5 and three members, **THEN** interval 2.5 s gives 2, and 2.25 s gives 3.
 18. (d_next, Guard) **GIVEN** a code-built `e` with speed 0, **WHEN** T0, **THEN** the sink holds one development error, the log is `enemy_leaked(1), wave_cleared(2.0)`, and the enemy reference kept from spawn reads position (10, 980) after it leaves the roster. The same holds for speed −40, NaN and INF, and for speed 40 with a `speed_factor` of 0 from a stub.
 
 **CI: Integration**
-19. (Rules 1 to 3, content test) **GIVEN** the real stage as records, **WHEN** the content test runs, **THEN** L1 to L9, L12 and L13 pass, and so do the wave rules for first spawn, largest gap, `time_to_exit`, the first position's `lives_at_risk`, every wave's `lives_at_risk`, the stage's total, the `lives_cost` cap, the 30 s intermission cap, `spawn_interval` at least `dt`, and `starting_lives` at least 2 with at least 2 waves. L10, L11, the intermission floor and `peak_alive_ub` join when their data exists (Deferred criteria). Each rule has a stable ID used in its failure message: `L1` to `L13`, `first_spawn`, `max_gap`, `time_to_exit_min`, `time_to_exit_max`, `first_lives`, `wave_lives`, `stage_lives`, `lives_cost_cap`, `intermission_cap`, `interval_floor`, `min_lives_waves`, `intermission_min` and `peak_alive`.
-20. (content test) **GIVEN** one copy of the real stage per clause of each rule that 19 runs today, each with one field broken and each naming the exact set of rule IDs it must fail, **WHEN** the content test runs on each, **THEN** the set of IDs it reports equals that copy's set, and the set holds the rule the copy targets. A rule with several clauses gets one copy per clause: L1's x below 138, x above 402 and y below 304; L3's left and right hands; L5's first and last points; L13's interior point outside the field, entry by the top, exit by a side, a third boundary crossing and a doubled-back segment; `time_to_exit` below 12 s and above 60 s; and `min_lives_waves` with `starting_lives` 1 and with one wave. Where one broken field must break another rule too (`starting_lives` 1 also breaks `first_lives`), the set names both. The unbroken stage reports the empty set (19). So a validator that reports every ID, or the wrong one, fails.
+19. (Rules 1 to 3, content test) **GIVEN** the real stage as records, **WHEN** the content test runs, **THEN** L1 to L9, L12 and L13 pass, and so do the wave rules for first spawn, largest gap, `time_to_exit`, the first position's `lives_at_risk`, every wave's `lives_at_risk`, the stage's total, the `lives_cost` cap, the 30 s intermission cap, `spawn_interval` at least `dt` in groups of 2 or more, and `starting_lives` at least 2 with at least 2 waves. L10, L11, the intermission floor and `peak_alive_ub` join when their data exists (Deferred criteria). Each rule has a stable ID used in its failure message: `L1` to `L13`, `first_spawn`, `max_gap`, `time_to_exit_min`, `time_to_exit_max`, `first_lives`, `wave_lives`, `stage_lives`, `lives_cost_cap`, `intermission_cap`, `interval_floor`, `min_lives_waves`, `intermission_min` and `peak_alive`.
+20. (content test) **GIVEN** the copies below, each the real stage and its Enemy records with one field changed, **WHEN** the content test runs on each at `dt` 1/60, **THEN** the set of IDs it reports equals the copy's set exactly. Every rule 19 runs today has a copy, one per clause where a rule has several. The unbroken stage reports the empty set (19). So a validator that reports every ID, the wrong one, or misses a second rule a change also breaks, fails. Slots and path points are numbered from 0; "path …" lists the changed points, the rest as authored. Each set was checked with a script that implements these rules on the records.
+
+| Copy | Changed field = value | Exact ID set |
+|---|---|---|
+| L1, x low | slot 3 = (130, 700) | {L1} |
+| L1, x high | slot 4 = (410, 700) | {L1} |
+| L1, y low | slot 0 = (270, 303) | {L1} |
+| L2 | slot 1 = (180, 485) | {L2} |
+| L3, left hand | slot 3 = (150, 760) | {L3} |
+| L3, right hand | slot 4 = (390, 760) | {L3} |
+| L4 | slot 2 = (250, 485) | {L4} |
+| L5, first point | point 0 = (−10, 226) | {L5} |
+| L5, last point | point 6 = (270, 970) | {L5} |
+| L6 | points 0 and 1 = (−40, 200), (430, 200) | {L6} |
+| L7 | path ends (270, 570), (270, 780), (400, 980) | {L7} |
+| L8 | path starts (−40, 226), (500, 226), (500, 300), (430, 300), then (430, 400) on | {L8} |
+| L9 | path = (−40, 620), (270, 620), (270, 980) | {L9, time_to_exit_min} |
+| L12, too few | slots = slots 0 and 1 only | {L12} |
+| L12, too many | slots + (350, 630) | {L12} |
+| L13, interior point outside | path starts (−40, 226), (−20, 226), then (430, 226) on | {L13} |
+| L13, entry by the top | path = (430, −40), then (430, 400) on | {L13, L6} |
+| L13, exit by a side | path ends (110, 570), (580, 570) | {L13} |
+| L13, doubled back | path ends (270, 570), (270, 1000), (270, 980) | {L13} |
+| `first_spawn` | wave 1 group `start_delay` = 3 | {first_spawn} |
+| `max_gap` | wave 2 second group `start_delay` = 17 | {max_gap} |
+| `time_to_exit_min` | Enemy `fast.move_speed` = 150 | {time_to_exit_min} |
+| `time_to_exit_max` | Enemy `heavy.move_speed` = 25 | {time_to_exit_max} |
+| `first_lives` | `starting_lives` = 8 | {first_lives} |
+| `wave_lives` | Enemy `normal.lives_cost` = 0 | {wave_lives} |
+| `stage_lives` | `starting_lives` = 121 | {stage_lives} |
+| `lives_cost_cap` | Enemy `heavy.lives_cost` = 5 | {lives_cost_cap} |
+| `intermission_cap` | wave 1 `intermission_duration` = 31 | {intermission_cap} |
+| `interval_floor` | wave 1 group `spawn_interval` = 0.01 | {interval_floor} |
+| `min_lives_waves`, lives | `starting_lives` = 1 | {min_lives_waves, first_lives, lives_cost_cap} |
+| `min_lives_waves`, waves | `wave_ids` = wave 1 only | {min_lives_waves, stage_lives} |
 
 **Deferred criteria.** Done for this system means every criterion runnable today passes and each of these has its owner. Thresholds are proposed and set at the first baseline, the first time the Hero stories run the bots on the real game. "Mixed" means the four mixed builds and "mono-role" the three one-type builds (Single only, Splash only, Slow only) of Hero System, Simulated results; "mid-skill" is that section's bot. "Beat" and "below" compare lives left, then waves cleared. All the bots run on the fixed tick and the starter stage.
 
@@ -462,7 +496,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Stage length (advisory) | Hero stories | The mid-skill driven hero (Hero System, Simulated results) wins on each of the four mixed builds, and each run lasts 5 to 8 minutes with no early calls and at least 3.5 minutes with every wave called. Length is ticks × `dt` from the first Start to the Won tick, rounded to 0.1 minute. A lost run fails the row. A miss reopens wave counts and intermissions here; it does not block a story. The simulation gives 5.0 to 5.3 and 3.7 to 3.8, so one build sits on the floor with no margin |
 | Empty field | Hero stories | For the mid-skill bot, the longest run of consecutive Active ticks with empty `targets()`, from a wave's first spawn to its clear, is at most 5 s. Wave 2 counts; if it fails, wave 2's second packet moves earlier |
 | Game Feel (playtest) | User, first playable | The three checks under Game Feel pass |
-| L10, L11, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass |
+| L10, L11, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass, and each adds its broken copies to criterion 20's table, with exact ID sets |
 | Retry (Flow) | This system's stories | A retried battle's snapshot equals a fresh one, the old battle's `weakref` is null, and only the catalogue is shared |
 | Listener test (Flow) | This system's, Tower stories | Each of this system's four signals has a non-zero connection count, and removing one connection fails with a message naming that signal |
 | Order (Combat) | This system's stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; no corpse moves |
@@ -478,7 +512,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Question | Owner | Resolve by |
 |---|---|---|
 | On one path, does re-pinning matter, or does one good pin suffice? On the moved stage the script puts it at 1 to 4 lives, a median of 2 (Hero Rule 7), and the user accepted that for MVP. The two-front gate shows the geometry exists, not that humans use it. **Trigger** (user, 2026-11-02): parallel lanes come forward, ahead of more content, if human testers who re-pin end less than 2 lives above those who pin once, or the best-single-pin bot ends within 1 life of mid-skill on 3 of the 4 mixed builds (today 2 of 4) | qa-lead + Hero GDD | First playable |
-| Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
+| Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them. Two limits to weigh: `time_to_exit` holds a stage that uses fasts and heavies to a total path of 1,320 to 2,280, so L9's 800 binds only on a stage without fasts; and L3, L7 and L13 put every exit run in x 184 to 356 near the bottom | level-designer | Before Vertical Slice stages |
 | The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
 | Lives never come back, so an early leak's cost lasts the whole stage, and the lost bounty adds to it. The gold side is bounded: a surviving player leaks at most 9 lives, worth at most 68 gold (worst case 4 heavies and 1 normal), about one tower; typical early leaks are normals at 4 gold each (Tower System). That bound, not instant retry, is why the loss is accepted. The real cost is the tower that gold would have bought in harder waves, a loop that reinforces itself. Open: does a player who leaks in wave 2 still feel the stage can be won, or do they retry at once? Log the wave of first leak and whether the player retried before the outcome | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The spacing target assumes a splash radius of at most 75 and no stacked slows; a slow tightens a whole group only if it covers every member | Tower GDD + bots | First playable |

@@ -171,3 +171,58 @@ Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b
 Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
 Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
 Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 4 | Recommended: 30
+Summary: Every core number reproduces, and the gold bound and line 120 now agree. C20 was not closed: its one worked example was wrong (`starting_lives` 1 also breaks `lives_cost_cap`) and its ID sets could not be derived from the text. The `time_to_exit` rule's scope and Rule 8's roster-join order were undefined. All four blockers were fixed in the same session. Three game-designer blockers were overruled, since they reopen user-set MVP scope or an advisory section.
+Prior verdict resolved: Partly; the gold bound is fixed, C20 was not until this revision
+Findings:
+- [BLOCKING] Acceptance Criteria, C20: no copy named its field and value, L6 and L12 copies were missing, and "one wave" depended on which wave was kept; replace with a table of copy, field = value and exact ID set.
+- [BLOCKING] Acceptance Criteria, C20: the `starting_lives` 1 example gives {min_lives_waves, first_lives, lives_cost_cap}, not two IDs.
+- [BLOCKING] Wave rules, `time_to_exit`: say it is checked per enemy type the stage's waves use, on total path length, and reported as a stage rule.
+- [BLOCKING] Core Rules, Rule 8: say a member joins the roster only after its `max_hp` read passes the halt check, so C6's last case follows.
+- [RECOMMENDED] Acceptance Criteria, C14: the fixture cannot fail a scan by member index across groups.
+- [RECOMMENDED] Formulas, position: define `path_length` as `cum[last]`.
+- [RECOMMENDED] Formulas, spacing: per_burst divides by zero at count 1; define it for count 2 or more; apply interval_floor the same way.
+- [RECOMMENDED] Starter values, line 111: the 1.3 to 1.6 minute drop exceeds the 75 s of intermissions; explain it.
+- [RECOMMENDED] Wave rules, line 120: "about 25 s across five calls" is per call.
+- [RECOMMENDED] Acceptance Criteria, C1: T2 (10, 950) is not on the bottom edge.
+- [RECOMMENDED] Layout rules, L13: define "doubles back"; the crossing clause follows from the interior clause.
+- [RECOMMENDED] Formulas, to_ticks: half-tick ties fall to float noise; compute in whole milliseconds or reject start_delay on a half tick.
+- [RECOMMENDED] Formulas, catch_up: needs delay above 0; wave 4's "mostly" rests on 1.4 units (642.5 against 644) and assumes no slow.
+- [RECOMMENDED] Acceptance Criteria, C2: never hits the last segment's interior; add `d` 25.
+- [RECOMMENDED] Acceptance Criteria: C3 factor fixture, C4 Health clause needs Combat's ADR, split C6, C12 shared state, C13 wording, C15 names no script, C16 lives line has no GIVEN.
+- [RECOMMENDED] Acceptance Criteria: no criterion for got_through_by_type(), wave_index(), lives_cost 0, a short path, speed 2,000, a countdown-end spawn, a fatal leak beside a same-tick kill, cosmetic jitter, repeated points, or the starter 456 and 630.
+- [RECOMMENDED] Acceptance Criteria, Done: names no story IDs and omits Manual and code review; deferred rows lack thresholds or methods.
+- [RECOMMENDED] Open Questions, seams: add wave_tick, the wave-state reader, distance and the add-enemy signature.
+- [RECOMMENDED] Formulas, gold_upper_bound: "at any legal value" holds only given Tower's gold_before_last_wave row, since `starting_gold` 150 gives 556.
+- [RECOMMENDED] Formulas: 550, 1.8 s and 10% are Tower's values; cite or register them.
+- [RECOMMENDED] Bounties, line 96: normal and fast both cost 1 life but pay 4 and 3, so bounty does not follow `lives_cost`.
+- [RECOMMENDED] Economy: wave 6's 174 gold is 27.6% of all bounty and near unspendable; say it is intended or move some earlier.
+- [RECOMMENDED] Wave rules: the stage-total lives rule is near vacuous; `ceil(L/3)` allows cost 4 at 10 lives; use an integer compare for the 10% share.
+- [RECOMMENDED] Waves: wave 4 is a lull and wave 6 a cliff (HP steps 1.26 to 1.64); say whether intended.
+- [RECOMMENDED] Waves: wave 5's second fast group catches spread from 990 to 1,584; say which are meant to be burstable.
+- [RECOMMENDED] Waves: only 3 of wave 6's last 8 normals catch a heavy.
+- [RECOMMENDED] Layout: slots 3 and 4 cover the same stretch, slot 4 never sees a bend, no slot covers the first corner; require 2 slots to cover the L11 bend disc.
+- [RECOMMENDED] Layout: L3, L7 and L13 force every exit run into x 184 to 356; `time_to_exit` holds stages with fasts and heavies to 1,320 to 2,280, so L9's 800 rarely binds.
+- [RECOMMENDED] Design, game-designer: "wave shape alone creates decisions" is unproven on a fixed path; both skilled bots end on 9 of 10.
+- [RECOMMENDED] Design, game-designer: wave 1 teaches no burst, and "no planned lull" pulls against the Breathing check.
+- [RECOMMENDED] Design, game-designer: types differ only in numbers; say what wave 3's two fronts ask beyond slow or re-pin.
+- [RECOMMENDED] Player Fantasy: absent (advisory at standard); write a short one tied to a first-playable playtest.
+- [RECOMMENDED] Manual checks: types needs a tester count and pixel size; entry and exit need a frame series.
+- [RECOMMENDED] Hero handoff: fast × telegraph is 34.1 against 35, a 0.9 margin.
+Disagreements: game-designer rated Player Fantasy, decisions from wave shape, and hero need at MVP as blocking; creative-director overruled all three (advisory section; user decisions at lines 4 and 26). Level-designer counted 12 of 16 wave 4 catches in the hairpin; a script gives 13, as the GDD says. qa-lead rated C14 blocking; creative-director rated it recommended, since Rule 8's text is clear.
+Fixed in the same session: all 4 blockers (C20 table checked by a script that implements the rules; `time_to_exit` scope; Rule 8 join order), plus C14, `path_length` = `cum[last]`, spacing and interval_floor at count 2 or more, line 111 explained by a sim rerun, line 120, C1, L13's turn limit, the deferred row for L10 and L11 copies, and the layout Open Question.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 6fcfacd1dc871339c07713c91ffae2ba6f817f50
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
