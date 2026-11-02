@@ -28,7 +28,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Tower | `tags`; `levels[]`, each with absolute values (never deltas): `cost`, `damage`, `range`, `attack_interval`, `visual_key`, and role fields where relevant (`splash_radius`, `slow_strength`, `slow_duration`) |
 | Enemy | `max_hp`, `move_speed`, `bounty`, `lives_cost`, `visual_key`, `tags` |
 | Wave | `groups[]`, each with `enemy_id`, `count`, `spawn_interval`, `start_delay`; `intermission_duration`, the time before the next wave, ignored on the last wave |
-| Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives`, `early_call_seconds_per_gold`, `path_points[]`, `slot_positions[]`, `path_width`, `hero_start`, `pin_rect`, `pin_exclusion` |
+| Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives`, `early_call_seconds_per_gold`, `path_points[]`, `slot_positions[]`, `path_width`, `requires_bend` (bool, for layout rule L11), `hero_start`, `pin_rect`, `pin_exclusion` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `walk_speed`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `reach`, `cooldown`, `telegraph_duration` |
 | Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |

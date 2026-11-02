@@ -157,3 +157,6 @@ The script re-ran in both hands: every bot result is unchanged, and clamp_pin ma
 
 ## Revision — 2026-11-02 — Tower review's changes applied, re-review still pending
 Single's level 2 damage is now 21 (Tower System, user decision), so the bot table and results are refreshed and two gates are added, upgrade order and placement. `report_attack` names the call behind `attack_fired`, closing the logged gap. Every gate passes, with the share median at 25.1%, the band's floor.
+
+## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
+A `heavy` now costs 3 lives (Enemy & Wave, user decision), so the bot table, best pins and skill sweep are refreshed. Every gate passes, with the share median at 25.1%.

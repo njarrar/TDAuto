@@ -80,7 +80,7 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 | | `pin_rect` | x 48 to 492, y 174 to 888: a fixed worst case, so the sim needs no insets and every device agrees |
 | | `pin_exclusion` | Right hand: segment (456, 816) to (456, 888). Left hand: segment (84, 816) to (84, 888). These are the lines L3 and L7 test. Both hands: the point (186, 800). Each at radius 60. The HUD conforms to them |
 
-**Enemy & Wave and Tower are amended to fit.** Enemy HP is now `normal` 125, `fast` 60 and `heavy` 750, every `intermission_duration` is 15 s, and Tower's `early_call_seconds_per_gold` is 1.8, which keeps the bonus cap. Single's level 2 damage is 21, so upgrading competes with filling every slot (Tower System).
+**Enemy & Wave and Tower are amended to fit.** Enemy HP is now `normal` 125, `fast` 60 and `heavy` 750, every `intermission_duration` is 15 s, and Tower's `early_call_seconds_per_gold` is 1.8, which keeps the bonus cap. Single's level 2 damage is 21, so upgrading competes with filling every slot (Tower System), and a `heavy` costs 3 lives (Enemy & Wave).
 
 **Simulated results.** A throwaway script, `tools/balance-sim/hero_bots.py`, on the starter stage with the fixed tick and tick order, and scripted bots. It is not game code: the Hero stories build the real bots to this table, and the script decides any detail the table leaves out. All bots buy in the listed order as gold allows, level 1s first, in slot order 1, 0, 2, 3, 4 and then upgrades, and none is random.
 
@@ -95,15 +95,15 @@ During intermission the script runs only the cooldowns: the hero does not walk a
 
 | Build | Towers only | Pinned once, bursts | Mid-skill | Ceiling | Towers only, always calling | Mid-skill, always calling |
 |---|---|---|---|---|---|---|
-| Single only | Lost W3 | Lost W4 | Won, 7 | Won, 10 | Lost W3 | Won, 9 |
+| Single only | Lost W3 | Lost W4 | Won, 6 | Won, 10 | Lost W3 | Won, 9 |
 | Splash only | Lost W2 | Lost W3 | Won, 6 | Won, 7 | Lost W2 | Won, 6 |
 | Slow only | Lost W2 | Lost W4 | Lost W4 | Lost W5 | Lost W2 | Lost W4 |
-| 3 single, 1 splash, 1 slow | Lost W5 | Won, 6 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
-| 2 single, 2 splash, 1 slow | Lost W3 | Won, 5 | Won, 9 | Won, 10 | Lost W3 | Won, 9 |
-| 3 single, 2 splash | Lost W5 | Won, 4 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
-| 2 single, 1 splash, 2 slow | Lost W5 | Won, 6 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
+| 3 single, 1 splash, 1 slow | Lost W5 | Won, 5 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
+| 2 single, 2 splash, 1 slow | Lost W3 | Won, 3 | Won, 9 | Won, 10 | Lost W3 | Won, 9 |
+| 3 single, 2 splash | Lost W4 | Won, 2 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
+| 2 single, 1 splash, 2 slow | Lost W5 | Won, 5 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
 
-The pinned-once column stands at (270, 480). Searching for the best single pin on a grid of 40, per build, gives 8, 8, 7 and 6 lives on the four mixed builds, against mid-skill's 9 on each. Slow only cannot win at any skill, and it is a trap build by design, since a slow tower kills nothing.
+The pinned-once column stands at (270, 480). Searching for the best single pin on a grid of 40, per build, gives 8, 8, 7 and 5 lives on the four mixed builds, against mid-skill's 9 on each. Slow only cannot win at any skill, and it is a trap build by design, since a slow tower kills nothing.
 
 | Measure, mid-skill on mixed builds | Result | Gate |
 |---|---|---|
@@ -114,9 +114,9 @@ The pinned-once column stands at (270, 480). Searching for the best single pin o
 | Burst share in 2, 2 and 1 against single only | 30% against 25% | At least 75% of it: passes |
 | Stage length | 5.0 to 5.3 min; 3.6 to 3.8 with every call | Concept's 5 to 8: passes uncalled |
 
-Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect aim gave 29% to 44% and all 10 lives, and reacting in 3 s, 50 units off, gave 18% to 24% and 7 to 9 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 26% to 41%. Without the burst, the mid-skill bot lost on wave 5 or 6 on every mixed build, so the burst is what wins.
+Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect aim gave 29% to 44% and all 10 lives, and reacting in 3 s, 50 units off, gave 18% to 24% and 6 to 9 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 26% to 41%. Without the burst, the mid-skill bot lost on wave 5 or 6 on every mixed build, so the burst is what wins.
 
-**Calling is still close to free for a bot.** On mixed builds it changed no lives and fired at most 1 more burst, and it cuts the stage to under 4 minutes, below the concept's 5 to 8. Single only gains 2. Bots need no preparation, and enemies take many seconds to arrive. So whether a person pays a cost moves to logs at first playable (Acceptance Criteria), with Flow's overlapping waves as the fallback.
+**Calling is still close to free for a bot.** On mixed builds it changed no lives and fired at most 1 more burst, and it cuts the stage to under 4 minutes, below the concept's 5 to 8. Single only gains 3. Bots need no preparation, and enemies take many seconds to arrive. So whether a person pays a cost moves to logs at first playable (Acceptance Criteria), with Flow's overlapping waves as the fallback.
 
 **Content rules, added to the content test.** All bounds are proposed.
 
@@ -413,15 +413,15 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 |---|---|---|
 | Hero alone, slow-only | Hero stories | Both lose |
 | Towers-only | Hero stories | On the mixed builds, the towers-only bot without calling ends with 3 lives or fewer, a loss being 0; mid-skill at least 4 above it on each |
-| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 3 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
+| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 4 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
 | Share | Hero stories | Median of mixed builds 25% to 30%, none above 40%, at the mid-skill bot. It moves with skill, so ±1 s and ±25 aim are reported, not gated. Human logs replace it at first playable; if it cannot be held, the user decides whether to amend the pillar |
 | Burst outcome | Hero stories | On each mixed build, the median of `kills_on_hit_3` is at least 2; an empty list fails |
 | `dealt_burst` | Hero stories | 2, 2 and 1 share at least 75% of single-only's |
 | Dominant build | Hero stories | On mid-skill, at least two mixed builds within 2 lives of the best one |
-| Upgrade order | Hero stories | On mid-skill, over every placement of each mixed build, the median with upgrading in pairs is at least the median with filling first. Today 9, 9, 9 and 6 against 8, 8, 8.5 and 5 (Tower System) |
+| Upgrade order | Hero stories | On mid-skill, over every placement of each mixed build, the median with upgrading in pairs is at least the median with filling first. Today 9, 9, 9 and 6 against 7, 7, 8.5 and 4 (Tower System) |
 | Placement | Hero stories | On mid-skill, filling first, each mixed build's best placement ends at least 3 lives above its worst. Today 3 to 10 |
 | Mono-role | Hero stories | Towers-only: every mono build loses. Mid-skill: every mono build ends below the best mixed build |
-| Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Single only gains 2 today, from the gold, and is not gated |
+| Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Single only gains 3 today, from the gold, and is not gated |
 | Always-call, humans | User, first playable | Log `seconds_left`, burst readiness and next-wave lives lost per call. If frequent callers lose no more than waiters, the user decides on Flow's overlap fallback |
 | First run (challenge) | User, first playable | A non-developer finds the pin unprompted beyond the one line, and wins within three attempts, with fewer than 8 lives on the first win. Target set by the user (2026-11-02) |
 | Radius 70 on a phone | User, MVP+ phone test | At most 25% of human bursts hit nobody (`bursts_hit_0` / `bursts_fired`), and median kills per burst is at least 2. Pass mark set by the user (2026-11-02). On a fail, the Open Questions fallback runs |

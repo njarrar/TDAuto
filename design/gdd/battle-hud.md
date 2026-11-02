@@ -114,7 +114,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 | Next-wave line | x 165 to 395, row centre `I_top + 53` |
 | Burst button | x 456, or 84 left-handed; `y = clamp(888 − I_bottom, 816, 888)` |
 | Start/Call | (186, 800), rect 88 × 72, corner 24, hit radius 48, for both hands |
-| Prompt | Panel 300 × 34, one line, centre (270, `I_top + 104`), above the path |
+| Prompt | Panel 300 × 34, one line, centre (270, `I_top + 89`), between the band and the path, touching the path's edge at the largest inset (L6) |
 | Lost panel | x 48 to 492, y 200 to 752; Retry 128 × 72 at (270, 700) |
 | Won panel | Compact, x 48 to 492, y 752 to 944, so the finished build stays visible above it (Pillar 1); Play again 128 × 72 at (270, 904) |
 
@@ -126,6 +126,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 |---|---|---|
 | L1 (Enemy & Wave), tightened | Slot x 138 to 402, y at least 304, so every arc disc stays on the field and no flip code is needed | Pass, 170 to 370 and 305 |
 | Arc disc to the burst line, either hand | At least 84 | 155 |
+| Arc disc to Start/Call's hit disc | At least 16 clear, rechecked if `R` grows | 62 |
 | Start/Call to any slot's hit disc | At least 16 clear | 17.3 |
 | Start/Call to `hero_start` | At least 48 | 60 |
 | Start/Call to the path's edge | Rect clear of it | 4 |

@@ -52,3 +52,6 @@ User asked for all 14. Fill then upgrade was settled in the last revision. Rule 
 New: `slows_applied()` on Tower and Slowed N on the result, in Battle HUD Rules 15 and 19, so slow shows its value. The concept notes that towers-only now loses. The UX flag lists what `/ux-design` must specify; the ADR note lists what must be settled before TowerInput stories; the chip's disc-only commit is an Open Question.
 Acceptance Criteria are rewritten: 28 become 67, bundles split, missing rules covered, Integration moved, fixtures fixed, Manual made measurable.
 Decided without asking, in autonomous mode: the income bounds (cheapest cost, twice the dearest), accepting the dead zone, and the Slowed line. None changes a balance number, so the bots were not re-run. Whether Slowed fits Won's panel is unverified.
+
+## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
+A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are refreshed; single alone now wins with 6 lives. `burst_spike` no longer cites a gate of 5 hits, since Enemy & Wave's gates use 4.

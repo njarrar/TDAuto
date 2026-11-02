@@ -115,7 +115,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold at level 1: 0.57 on the two victims its radius reaches at 36 spacing, and 0.86 on three, against single's 0.40. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
 
-**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 7 or 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
+**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
 **Spending the whole opening has a price.** Single and splash, or slow and slow, leave 0 gold and at most 40 after wave 1, below the cheapest purchase of 50, so nothing new arrives until wave 2 pays. Single and single can reach 60, and single and slow 50. This is accepted, since it is what makes the first buy a real choice, and first playable will show whether it feels like a trap.
 
@@ -123,10 +123,10 @@ Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per g
 
 | Mix | Placements | Fill first: median, range | Upgrade in pairs: median, range |
 |---|---|---|---|
-| 3 single, 1 splash, 1 slow | 20 | 8, 2 to 9 | 9, 1 to 10 |
-| 2 single, 2 splash, 1 slow | 30 | 8, 2 to 10 | 9, 3 to 10 |
-| 3 single, 2 splash | 10 | 8.5, 6 to 9 | 9, 4 to 9 |
-| 2 single, 1 splash, 2 slow | 30 | 5, 0 to 10 | 6, 0 to 10 |
+| 3 single, 1 splash, 1 slow | 20 | 7, 0 to 9 | 9, 0 to 10 |
+| 2 single, 2 splash, 1 slow | 30 | 7, 0 to 10 | 9, 1 to 10 |
+| 3 single, 2 splash | 10 | 8.5, 6 to 9 | 9, 3 to 9 |
+| 2 single, 1 splash, 2 slow | 30 | 4, 0 to 10 | 6, 0 to 10 |
 
 Upgrading in pairs means build two, upgrade both, and repeat. A new single still offers more damage per gold, 0.40 against the upgrade's 0.25, but only while it stands where the enemies are. So the same towers can end anywhere from 0 to 10 lives, and placement matters more than order. These are scripted fixed orders, so whether people find this waits for first playable.
 
@@ -244,7 +244,7 @@ The **wave_income** formula is defined as:
 **Output Range:** 0 and up. `gold_before_wave` only rises, so the last-wave rows bound the total, and this bounds each step.
 **Example:** 40, 56, 80, 72 and 128 at starter values. The first wave's 40 is below the cheapest purchase, which is why the content row starts at the second wave.
 
-That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call. A surviving player can leak at most 9 lives, worth 68 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold, and instant retry is its answer until a playtest says otherwise.
+That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call. A surviving player can leak at most 9 lives, worth 48 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold, and instant retry is its answer until a playtest says otherwise.
 
 The **tower_dps** formula is defined as:
 
@@ -269,7 +269,7 @@ The **burst_spike** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `D_b`, `R` | float | above 0 | data file (Burst) | Burst damage and radius |
 | `d`, `r` | float | above 0 | data file (splash level) | Splash damage and radius. `r` counts one side, since the impact is the leading target |
-| `n` | int | at least 5 | data file | A group's count; smaller groups are not checked, matching the burst gate of 5 hits |
+| `n` | int | at least 5 | data file | A group's count; smaller groups are not checked, being too few to threaten the burst's spike |
 | `s` | float, units | above 0 | calculated | Unslowed spacing |
 
 **Output Range:** above 0. Below 2, one splash shot looks like half a burst. It ignores HP limits, kills, overlapping groups and hairpins, which change spacing, so it is a heuristic, not a bound.
