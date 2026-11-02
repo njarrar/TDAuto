@@ -161,7 +161,9 @@ The wrapper injects `adapter.set_input_blocked` into the HUD as a `Callable`. Th
 
 **Resume: the input route only.** A resume tap on PausedScreen queues a `ResumeCommand` through `Battle.enqueue`; it never calls StageFlow (ADR-0002 rule 5). That is this ADR's whole part, and it answers M6. **ADR-0008 owns the pause semantics:** the command and `StageFlow.resume()` with its result codes, the phase it returns to, Android back while Paused, and that regaining focus never resumes by itself (Flow Rule 17). ADR-0008 also formally amends ADR-0002's command table and ADR-0003's subclass list. When StageFlow emits the returned `phase`, the HUD unmounts PausedScreen and unblocks the adapter in that handler. A finger held across the pause stays dead: its press was closed by the step 1g `cancel()`, and the screen never saw it.
 
-ResultScreen's Retry and Play again call `AppRoot.request_retry()` (ADR-0002), which only sets a latch (HUD Rule 18).
+ResultScreen's Retry and Play again call `AppServices.request_retry()` (ADR-0002's name; AppRoot implements `AppServices`, ADR-0008), which only sets a latch (HUD Rule 18).
+
+**Family lock in modal screens.** A modal screen remembers the event family of the press it saw (touch or mouse) and accepts only a release of that family; the other family is ignored until the press ends. This mirrors ADR-0007's gate and keeps one touch from firing twice if emulation is ever on (D12) or if stock Controls stop answering touch with emulation off (ADR-0007 I6).
 
 ### 6. Safe area (TR-hud-004)
 ```gdscript
@@ -209,7 +211,7 @@ World 0         Stage | Towers | Hero | EnemyLayer (pool 48) | CombatView (ring 
 wrapper step 1a: advance_chip; hud.advance(min(delta_ms, 100))
 wrapper step 1b: forward `resized` + request cancel
 wrapper step 1f: views redraw from reads
-wrapper step 1g: resolver.cancel(); if resized: new FieldSpace, move layers, new FieldInsets
+wrapper step 1g: resolver.cancel(); gate.forget_open_presses(); if resized: new FieldSpace, move layers, new FieldInsets
 ```
 
 ### Key Interfaces
@@ -219,10 +221,10 @@ wrapper step 1g: resolver.cancel(); if resized: new FieldSpace, move layers, new
 - `project.godot` must carry the five display keys of section 1; no code may change stretch settings at runtime.
 - Every screen position must enter gameplay through `FieldSpace.to_field`; no other code may read an event position, a camera, or the viewport size for gameplay.
 - Simulation code must never hold a `FieldSpace` instance; it may read `FieldSpace.FIELD_RECT` and `FIELD_SIZE`.
-- The wrapper must replace `FieldSpace` only at step 1g, after `resolver.cancel()`.
+- The wrapper must replace `FieldSpace` only at step 1g, after `resolver.cancel()` and then `forget_open_presses()` (ADR-0007).
 - The adapter must not forward a press outside `FIELD_RECT`.
 - Every HUD Control other than PausedScreen and ResultScreen must have `mouse_filter = IGNORE`.
-- Modal screens must use `_gui_input` with class checks, never `Button`, and must fire only on a release whose press they saw while Armed.
+- Modal screens must use `_gui_input` with class checks, never `Button`, and must fire only on a release of the same event family as the press they saw while Armed.
 - The HUD must call `set_input_blocked(true)` on every modal mount and `false` on unmount, only from `phase` handlers.
 - The adapter's block must never call `cancel_pointer` or `cancel`; only step 1g cancels.
 - Both emulation keys must stay `false`.

@@ -70,6 +70,7 @@ Five questions are open:
 ### 1. Two pieces: a thin node and a pure gate
 - **`InputAdapter`** (`res://src/input/input_adapter.gd`, `extends Node`, not a Control) is the only code that reads an `InputEvent`. Its `_input(event)` calls one function, `_decode(event)`, which turns each event into at most one primitive call on the gate. Every NOT SOURCEABLE class and field name (I2, I3, I7) lives in `_decode` and nowhere else, so a spike answer changes one function.
 - **`PointerGate`** (`res://src/input/pointer_gate.gd`, `extends RefCounted`) holds every rule in this ADR. It takes primitives (index, position, pressed, canceled), never an `InputEvent`, so its tests run headless with no engine events and no scene tree.
+- **Who builds them.** `BattleWrapper.attach()` (ADR-0008) builds, in this order: the resolver, HeroInput, TowerInput, then `PointerGate.create(resolver, catalogue.input().edge_reject_margin, clock, log_sink)`, then `InputAdapter` with `setup(gate)`. `clock` is the injected `RealClock` (ADR-0003). `log_sink` is the debug log's sink in debug builds and a no-op Callable otherwise. Owners register before the gate exists, so no event can reach a resolver with an empty registry.
 
 ### 2. The engine path: `_input` (questions 1 and the GDD's STOP warning)
 The adapter reads events in `_input`. In Godot's long-standing order (I1, memory) `_input` runs before the GUI hands the event to Controls, so no Control, STOP or not, can swallow a move or release of an open press. The release guarantee then rests on the adapter's own bookkeeping, not on which Controls lie under the finger.
@@ -94,7 +95,7 @@ The gate keeps `open: Dictionary` of forwarded, not yet closed indexes, and the 
 | Release of open `i` with the cancel flag true | `cancel_pointer(i)` | Flag checked **before** a release is considered (GDD contract; I3). A cancel never emits `tap` or `drag_ended` |
 | Press of an `i` that is already open (its release was lost) | `cancel_pointer(i)`, then `press(i, p)` | Closes the old press before the new one; the resolver's "press again" row then never fires from the adapter |
 | Mouse motion while the mouse press is open but the left button is no longer held (I7) | `cancel_pointer(MOUSE_INDEX)` | A lost mouse release ends as a cancel, never a late release |
-| Wrapper step 1g ran `resolver.cancel()` | none; the wrapper then calls `forget_open_presses()`, which clears `open` | `cancel()` is the closer for every open index; a later release of that finger is dropped as "no open press" |
+| Wrapper step 1g ran `resolver.cancel()` | none; the wrapper then calls `forget_open_presses()`, which clears `open` and resets `family` to `NONE` | `cancel()` is the closer for every open index; a later release of that finger is dropped as "no open press" |
 
 `cancel()` comes only from the wrapper (Paused, outcome, Fatal, resize, focus loss: ADR-0003 step 1g, ADR-0008). The adapter never calls `cancel()`. On Retry the old adapter is freed with its state; a finger held across Retry meets a new gate with nothing open, so its moves and release are dropped.
 
@@ -110,7 +111,9 @@ While blocked, events still reach the modal screens through the GUI, which is no
 - `input_devices/pointing/emulate_mouse_from_touch = false`
 - `input_devices/pointing/emulate_touch_from_mouse = false`
 
-(Key names I5, memory, unverified; a wrong key name is inert and the family lock below still holds.) With both off, a phone touch arrives only as touch events and a desktop mouse only as mouse events, so neither the adapter nor a modal screen sees one physical press twice. **ADR-0006 must agree**: its modal screens accept both `InputEventScreenTouch` and `InputEventMouseButton` by class and, with emulation off, each physical press reaches them as one class only (Migration Plan). If the spike finds stock Controls stop answering touch with emulation off (I6), the project turns `emulate_mouse_from_touch` back on, the adapter stays correct through the family lock and the device filter below, and ADR-0006's modals must apply the same lock.
+(Key names I5, memory, unverified.) A misspelt key in `project.godot` is silently ignored and the engine default returns, so **debug builds read both values back from `ProjectSettings` at boot and log an error if either is not `false`**; the phone spike checks the same read-back on the device. The family lock below still holds if a key is wrong. With both off, a phone touch arrives only as touch events and a desktop mouse only as mouse events, so neither the adapter nor a modal screen sees one physical press twice.
+
+**ADR-0006 must agree, and its modals use the family lock now, not only as a fallback.** Its modal screens accept both `InputEventScreenTouch` and `InputEventMouseButton` by class, and each must accept a release only from the event family of the press it saw while Armed, dropping the other family until that press closes. I6 is likely to fail (stock `BaseButton`s may stop answering touch with mouse-from-touch off; memory, unverified). If it does, the project turns `emulate_mouse_from_touch` back on, and the adapter (family lock plus the device filter below) and the modals (same lock) are already correct (Migration Plan).
 
 **Desktop mouse-as-touch is the adapter's own mapping, not engine emulation.** `_decode` maps:
 - `InputEventMouseButton` with `button_index == MOUSE_BUTTON_LEFT` (sourced): `pressed` true to a press at `MOUSE_INDEX`, false to a release (with the cancel flag check). Other buttons are dropped (Rule 10).
@@ -172,7 +175,7 @@ static func create(resolver: GestureResolver, edge_reject_margin: float,
         clock: RealClock, log_sink: Callable) -> PointerGate
 func set_space(space: FieldSpace, insets: FieldInsets) -> void
 func set_input_blocked(blocked: bool) -> void   # ADR-0006 name; never calls the resolver
-func forget_open_presses() -> void              # wrapper only, right after resolver.cancel()
+func forget_open_presses() -> void              # wrapper only, right after resolver.cancel(); clears open, family = NONE
 func touch_button(index: int, pos: Vector2, pressed: bool, canceled: bool) -> void
 func touch_drag(index: int, pos: Vector2) -> void
 func mouse_button(pos: Vector2, pressed: bool, canceled: bool) -> void   # left button only
