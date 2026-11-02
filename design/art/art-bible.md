@@ -41,7 +41,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Combat | Tactical calm with machine rhythm | base V, medium contrast, glow 1 | steady, ticking, busy-but-sorted, rhythmic | medium | Tower fire pulses: thin cyan lines, no glow, so "the machine working" reads |
 | Hero burst | "I did that" (Pillar 2) | Field dips base −3% for ~0.4 s; high contrast; glow 2 (hero + burst) | decisive, sudden, bright, brief, earned | peak | An expanding gold ring matching the radius preview exactly, so the preview becomes the payoff; hero stays on top |
 | Leak / danger | Urgent but fixable, not panic | base V, magenta chevron strip at the lane exit, no added glow | tense, pulsing, edge-driven, clear | high | 2 Hz pulsing downward chevrons at the exit plus a dash-count of lives; reads with sound off and the hero stays brightest |
-| Victory | Satisfied relief (Pillar 1: growth shown) | base +4%, soft contrast, glow 1 | warm, released, spacious, earned | low-medium | Towers' accretion elements brighten in sequence (no glow), rewarding the build |
+| Victory | Satisfied relief (Pillar 1: growth shown) | base +4%, soft contrast, glow 1 | warm, released, spacious, earned | low-medium | Tower bodies brighten in sequence (no glow), rewarding the build |
 | Defeat | Disappointed but eager to retry; no shame | base −4%, desaturated 60%, low contrast, glow 0 | muted, still, hollow, brief | low | The hero dims to an outline; the retry button is the only filled shape |
 | Menu / skill tree | Considered anticipation (the unspent point is the hook) | base +2%, medium contrast, glow 1 | structured, browsable, quiet, hopeful | low | Node grammar: owned nodes filled, available nodes outlined and slowly pulsing |
 
@@ -50,7 +50,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | State | Non-colour channel |
 |---|---|
 | Ready | Solid fill plus complete outer ring |
-| Cooling down | Outline with the fill returning behind it as a clockwise sweep wedge; remaining-seconds digit on the burst button |
+| Cooling down | Burst button: outline with the fill returning behind it as a clockwise sweep wedge, and a remaining-seconds digit. Tower: the body stays solid and a thin ring regrows clockwise |
 | Damaged | Dark inner core disc growing from 0 to 60% of body radius |
 | Slowed | Two trailing parallel drag lines plus a 15% size-pulse wobble (tinted violet) |
 | Armoured | Thick 2 dp outer ring that breaks into an arc as armour is stripped |
@@ -60,15 +60,15 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 
 **Silhouette philosophy.** The shape family tells the player what kind of thing it is at quarter scale: a desaturated, shrunk screenshot must still sort into hero, towers and enemies. A fingertip covers about 100 reference px, so the hero and reticle never depend on interior detail; identity lives in the outer contour and in ring and notch features at the edge (Pillar 4).
 
-**Polygon vocabulary** (Pillar 2). Tower role to polygon is the art director's proposal and must be confirmed by the Tower GDD.
+**Polygon vocabulary** (Pillar 2). Tower role to polygon, confirmed by the Tower GDD, not yet rendered.
 - Triangle: precision, single-target.
-- Square: sustained rapid fire.
-- Hexagon: area and control, including slow.
+- Hexagon: area (splash).
+- Square: slow, at a 44 px side so it never reads as a slot. Rapid fire has no shape yet.
 - Enemies are circles only. Type is told by size and notch: fast = smallest with one forward V-notch; normal = plain; heavy = largest, plain; armoured = equally large with a thick outer ring; flying = an offset shadow ring that lags its body in motion (one feature; notches dropped per AD-ART-BIBLE); splitter = a centre seam in the field colour; lane-switcher = one flat chord edge on the side it will move toward.
 
 **Hero.** The only asymmetric shape: one long axis and one off-centre point so it never reads as a regular polygon; its facing is its long tip; the only persistent glow; never smaller than 44 px visible; no supporting shape may share its contour.
 
-**Accretion** (Pillar 1). Level 1 is the bare polygon; level 2 adds an inset concentric outline; level 3 adds a spike on each vertex and the outer ring. The base footprint never changes. Ranking two towers by level needs no digit.
+**Accretion** (Pillar 1). Level 1 is the bare polygon; level 2 adds an inset concentric outline at 60% scale, 3 px, knocked out in the field colour; level 3, after MVP, adds a spike on each vertex. The base footprint never changes. Ranking two towers by level needs no digit.
 
 **UI shape grammar.** Controls are rounded rectangles and discs, never tower polygons or enemy circles. Disc buttons are reserved for hero actions. Tree nodes use the role shape (polygon for tower, asymmetric for hero, circle for economy): owned filled, available outlined, locked dotted.
 
@@ -81,7 +81,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Element | Visible | Hit area |
 |---|---|---|
 | Hero | 44 px | 72 px |
-| Tower | 56 px | 72 px |
+| Tower | 56 px (square 44 px side) | 72 px |
 | Build slot | 56 px | 72 px |
 | Burst button | 84 px | 96 px |
 | Build-arc disc | 56 px | 72 px |
@@ -101,7 +101,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 | Status / slow | #8E7CFF | 5.8:1 |
 | Neutral UI | #C8D0E0 | 12.2:1 |
 
-**Semantic vocabulary.** One hue, one gameplay fact: gold = hero only; cyan = towers and tower effects; orange = enemies; violet = a status effect on an enemy; magenta = danger only; neutral = information. Magenta and orange are never used for the same fact.
+**Semantic vocabulary.** One hue, one gameplay fact: gold = hero only; cyan = towers and tower effects; orange = enemies; violet = a status effect on an enemy, never on a tower or its line; magenta = danger only; neutral = information. Magenta and orange are never used for the same fact.
 
 **Field rules per stage** (Pillar 3). Hue range 170–280 so it never approaches enemy orange or danger magenta; value capped at V 14%; path body lifted ~3% lighter than the field, its edge line +6%; grid lines at alpha 0.08. Identity is carried by path curve, path width and grid tilt (0°, 15°, 30°). Hue alone never separates two stages.
 
@@ -114,7 +114,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 | Danger magenta vs enemy orange | Protan/deutan confusion | Chevron shape plus 2 Hz pulse |
 | Slowed vs normal enemy | Tint-only | Drag lines plus size wobble |
 | Armoured vs damaged | Both read as "darker" | Outer ring vs inner core |
-| Ready vs cooling (tower, button) | Fill-level only | Outline vs filled plus sweep wedge |
+| Ready vs cooling (tower, button) | Fill-level only | Tower: complete ring vs regrowing ring. Button: outline vs filled plus sweep wedge |
 | Stage A vs stage B | Hue-only | Path curve and grid tilt |
 | Leash in-zone vs out-of-zone | Tint-only | Dash density 10-on to solid |
 
@@ -178,7 +178,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Panel placement.** Screen-space panels sit only in the top 48 dp band plus safe area, #141B30 at 85% opacity, and the lane is never routed under a panel (UX). The bottom 30% of the screen holds nothing but the burst button and the field, so the pinned thumb never hides the lower lane. One exception: the Start/Call button may sit in the bottom band during Build and Intermission only, when the lower lane is empty, clear of the burst button and build slots.
 
-**Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls (make them rounded squares if that reads as a stretch). The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
+**Flags against Sections 1–4.** Section 3 reserves discs for hero actions, so pause is a rounded rect; the picker discs are in-field tower-role shapes, not UI controls. The cooldown digit is hidden while the thumb is on the button; acceptable since pressing the button while cooling does nothing, but device-test it.
 
 ## 8. Asset Standards
 
@@ -205,9 +205,9 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 | Element | Source | Variants | States |
 |---|---|---|---|
 | Hero | code + halo PNG | 1 | glow, dimmed outline (defeat) |
-| Towers | code | 3 roles × 3 levels | ready, cooling |
+| Towers | code | 3 roles × 2 levels at MVP | ready, cooling |
 | Enemies | code (one batched drawer if > 40) | 7 types | damaged, slowed, armoured |
-| Build slot | code | 1 | free, blocked, selected |
+| Build slot | code | 1 | free, blocked, selected (outline alpha 0.6) |
 | Path | code (Line2D) | 1 per stage | draw-in entry |
 | Zones | code | leash, reticle, preview | in/out of zone |
 | UI | code + icon PNGs | panel, buttons, tree nodes | owned, available, locked |
