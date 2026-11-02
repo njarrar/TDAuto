@@ -62,7 +62,7 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 
 IDs and levels are checked before any accessor read, through a new non-fatal `is_tower(id)` on Data, so a bot's bad ID returns a refusal rather than reaching the fatal handler. Cost is read through the accessor at use time, never cached from when the arc or chip opened. On success, in one step and with nothing between: gold falls by the cost, the tower is created or its level raised, then `gold_changed` fires, then `tower_built` or `tower_upgraded`. A refusal changes nothing and emits nothing.
 
-6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
+6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check: the Paused Control takes every tap and only resumes (Battle HUD Rules 2 and 17, Input), and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
 7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and calls `build`, which returns `NO_GOLD`; the HUD nudges the disc (Battle HUD Rule 7). The arc belongs to the HUD, which calls `build`.
 8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`. Both durations are presentation constants, not catalogue values (Data Rule 1).
 
@@ -246,7 +246,7 @@ The **burst_spike** formula is defined as:
 **Output Range:** above 0. Below 2, one splash shot looks like half a burst. It ignores HP limits, kills and overlapping groups, so it is only a floor.
 **Example:** burst 130 at radius 70, level-2 splash 30 at radius 75, normal×6 @0.6: `s` 36, `V_s` 3, `V_b` 4, so 520 / 90 = 5.78, the lowest of the starter groups.
 
-**The gate Combat Rule 6 asked for has three parts, and none is the one it named.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
+**Combat Rule 6 compares one burst against one splash shot; this gate refines it into three parts.** A total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
 
 1. `burst_spike` of at least 2, for every splash level on every group of 5 or more, in the content test.
 2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated, burst only: 28% against 25%, a pass.
@@ -311,7 +311,7 @@ The MVP minimum, primitives only, drawn by one `_draw()` node for all towers. Al
 | `single_target` | Point-up triangle, 55 px wide, solid cyan | §3 |
 | `splash` | Flat-top hexagon, 56 px wide, solid cyan | §3 |
 | `slow` | Upright square, 44 px side, solid cyan, so it never reads as a 56 px hairline slot | §3 |
-| Level 2 | Inset outline at 60% scale, 3 px, field colour | §3 Accretion |
+| Level 2 | Inset outline at 60% scale, 3 px, field colour | §1 (Accretion) |
 | Ready | Complete 2 px ring, radius 34 | §2 |
 | Cooling | The ring regrows clockwise, linear; the body stays solid | §2, §4, amended |
 | Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms | §8 |
@@ -344,7 +344,7 @@ Battle HUD draws these; this system supplies the data.
 
 | This Document References | Target | Specific Element | Nature |
 |---|---|---|---|
-| Sustained DPS, spike, towers-only and hero-only tests; three towers, level 2; one-tower first stage | `design/gdd/game-concept.md` | Pillars 1 and 2; MVP Definition; Onboarding | Rule dependency; amended |
+| Sustained DPS, spike, towers-only and hero-only tests; three towers, level 2; one-tower first stage | `design/gdd/game-concept.md` | Pillars 1 and 2; MVP Definition; Flow State Design (onboarding) | Rule dependency; amended |
 | Tower fields, stat keys, never cache, level and cost meaning, sell and level questions | `design/gdd/data-config-pipeline.md` | Field domains; Tower levels and cost; Rule 10 | Value dependency; amended |
 | `deliver`, `apply_slow`, helpers, tick order, splash gate | `design/gdd/combat-damage.md` | Rules 2, 6, 7, 10, 11 | Rule dependency; Rule 6 amended |
 | Slots, `targets()`, `enemy_killed`, `to_ticks`, `gold_upper_bound`, L10, starter HP, bot gates | `design/gdd/enemy-wave.md` | Rules 3, 11, 14; Formulas; Starter values | Value dependency; amended |

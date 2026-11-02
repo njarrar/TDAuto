@@ -106,7 +106,7 @@ Each wave's total HP is 1.25 to 1.64 times the last. With nothing called early, 
 | Check | Bound | Starter | Reason |
 |---|---|---|---|
 | First spawn of a wave | At most 2 s | 0 s | The field is not empty after Start |
-| Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called early. This is Flow's cap on `start_delay`, measured where it matters |
+| Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called while another is running (Flow Rule 9). This is Flow's cap on `start_delay`, measured where it matters |
 | `time_to_exit`, path length ÷ `move_speed` | 12 to 60 s | 15.6 to 45.3 s | Time for a burst; no stalled waves |
 | `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration` | 15 s against 10.25 s | Waiting always restores the burst |
 | First position's `lives_at_risk` | Below `starting_lives` | 8 against 10 | The first wave cannot be lost, with no runtime rule: an idle player still leaks and feels it |
@@ -323,7 +323,7 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Tower System | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Hero System | `targets()`; `time_to_exit` and intermission rules against burst cooldown |
-| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records; `wave_index()`, `got_through_by_type()`, `targets()` |
+| Battle HUD & Build UI (soft) | Wave records; `wave_index()`, `got_through_by_type()`, `targets()`. The HUD places the burst button from Stage's `pin_exclusion`, and L3 and L7 here test those coordinates; this system does not provide them |
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules (soft) |
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
 
@@ -370,7 +370,7 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 | Instant hits, slow, tick order, targeting helpers, `spawn_id` | `design/gdd/combat-damage.md` | Rules 4, 7, 8, 10, 11; Handed to owning GDDs | Rule dependency; `to_ticks` amends its slow storage |
 | Wave signals, lives, intermission, halt, pause | `design/gdd/game-state-stage-flow.md` | Rules 4, 7, 8, 13, 14, 15, 15a, 17, 18 | Rule dependency; `to_ticks` and payload amend it |
 | Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | UI Requirements (slot and burst button discs never overlap) | Rule dependency; L3 enforces it |
-| Hero share, wave-design rule, stage length, slot count, first wave | `design/gdd/game-concept.md` | Pillar 2, Core Loop (Short-Term), MVP, Onboarding | Rule dependency |
+| Hero share, wave-design rule, stage length, slot count, first wave | `design/gdd/game-concept.md` | Pillar 2, Core Loop (Short-Term), MVP, Flow State Design (onboarding) | Rule dependency |
 | Enemy primitives, path, slots, chevrons, pools | `design/art/art-bible.md` | §2, §3, §5, §6, §7, §8 | Value dependency; amended |
 | Prototype path, wave values | `prototypes/hero-pin-concept/main.gd` | `PATH`, `SLOTS`, `WAVES` | Evidence; not reused |
 
@@ -405,11 +405,11 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Towers-only | Hero stories | The best of a fixed set of towers-only build scripts ends with 3 lives or fewer, a loss included (MVP). Waves are never tuned to stay beatable without the hero |
-| Driven margin | Hero stories | A driven hero ends at least 4 lives above that |
+| Towers-only | Hero stories | Hero's Deferred criteria, "Towers-only", hold the threshold (per mixed build, mid-skill at least 4 above) |
+| Driven margin | Hero stories | Hero's Deferred criteria, "Towers-only", hold the threshold (per mixed build, mid-skill at least 4 above) |
 | Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Hero's Deferred criteria. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
-| Mono-role | Tower stories | Every mono-role build ends below the best mixed build |
-| Always-call | Hero stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all. The gates are Flow Rule 9's |
+| Mono-role | Hero stories | Hero's Deferred criteria, "Mono-role" |
+| Always-call | Hero stories | Thresholds live in Hero's Deferred criteria, "Always-call, bots"; the gates are Flow Rule 9's |
 | Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
 | Two fronts | Hero stories | In waves 3, 5 and 6, two of `targets()` are over 2 × `leash_radius` apart at some tick |
 | No input | This system's stories | With only Start pressed, the run survives wave 1 |
@@ -429,7 +429,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content. Hero's Open Question owns it | qa-lead + Hero GDD | First playable |
+| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content. Hero's Open Question owns it | Hero GDD (this row points there) | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
 | Closed. The concept named bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Hero Rule 17 answers it: the metric is now kills per burst | Hero GDD | Closed |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |

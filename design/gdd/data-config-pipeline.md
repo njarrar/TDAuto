@@ -36,26 +36,26 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
-**Field domains.** These are invariants against typos and broken simulation, not balance. Balance ranges belong to the owning GDDs. All ceilings and the floor are proposed.
+**Field domains.** These are invariants against typos and broken simulation, not balance. Balance ranges belong to the owning GDDs. All ceilings and the floor are proposed. Lengths are in field units, on the 540 by 960 reference field, as in Input and Combat.
 
 | Field | Type | Min | Max | Balance owner |
 |---|---|---|---|---|
 | `attack_interval`, `spawn_interval`, `cooldown`, `slow_duration`, `early_call_seconds_per_gold` | float, seconds | one tick (1/60) | 600 | Tower, Enemy & Wave, Hero |
 | `telegraph_duration`, `start_delay` | float, seconds | 0 | 600 | Hero, Enemy & Wave |
 | `damage` | float | 0 | 1,000,000 | Tower, Hero |
-| `range`, `leash_radius`, `radius`, `reach`, `splash_radius` | float, world units | above 0 | 2,000 | Tower, Hero |
+| `range`, `leash_radius`, `radius`, `reach`, `splash_radius` | float, field units | above 0 | 2,000 | Tower, Hero |
 | `move_speed` (as authored; slowed speed is Combat's), `walk_speed` | float, units/s | above 0 | 2,000 | Enemy & Wave, Hero |
 | `max_hp` | float | above 0 | 1,000,000 | Enemy & Wave |
 | `slow_strength` | float | above 0 | below 1 | Tower; meaning owned by Combat. 0 is dead data and 1 would freeze enemies |
 | `cost`, `bounty`, `starting_gold` | int | 0 | 100,000 | Tower, Enemy & Wave |
 | `lives_cost` | int | 0 | 1,000 | Enemy & Wave |
 | `intermission_duration` | float, seconds | 0 | 600 | Enemy & Wave |
-| `drag_slop` | float, world units | 8 | 30 | Input |
-| `tap_slop` | float, world units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
-| `edge_reject_margin` | float, world units | 0 | 36 | Input; Rule 12 needs the burst button 48 inside it |
+| `drag_slop` | float, field units | 8 | 30 | Input |
+| `tap_slop` | float, field units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
+| `edge_reject_margin` | float, field units | 0 | 36 | Input; Rule 12 needs the burst button 48 inside it |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
-| `path_width` | float, world units | above 0 | 2,000 | Enemy & Wave |
+| `path_width` | float, field units | above 0 | 2,000 | Enemy & Wave |
 | `left_hand`, `reduce_motion` | bool | false | true | Hero and Battle HUD (meaning); Settings & Accessibility (Alpha) writes them |
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
@@ -91,7 +91,7 @@ There is no separate economy record: gold values sit on the records that spend o
 
 **Rules.**
 
-1. **All authored gameplay values live in the catalogue.** Each owning GDD's tunable values are catalogue fields, and changing a fixture value changes that consumer's behaviour (checked per consumer story). Engine constants and pure presentation timings are not gameplay values. Hit radii are structural constants owned by the Input GDD and art bible §3, not catalogue values.
+1. **All authored gameplay values live in the catalogue.** Each owning GDD's tunable values are catalogue fields, and changing a fixture value changes that consumer's behaviour (checked per consumer story). Engine constants and pure presentation timings are not gameplay values. Hit radii are structural constants each owning GDD declares, taken from art bible §3 (Input Rule 9); they are not catalogue values.
 2. **Identity.** IDs are lowercase snake_case (validated), unique across all record types, and never encode stats or tree position. Display names may change; IDs never change and are never reused.
 3. **References are by ID and typed.** A record refers to another record by its ID, never by file path, and the reference must resolve to the expected record type (`burst_id` must name a Burst). Only owned sub-data (a tower's levels, a wave's groups) nests inside a record.
 4. **Explicit manifest.** The catalogue loads from an explicit list of data files, never a runtime directory scan (exported builds rename and package files).
@@ -129,7 +129,7 @@ There is no reload transition: a data change applies on the next run.
 | System | Reads | Interface owner |
 |---|---|---|
 | Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
-| Combat & Damage | Nothing: callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
+| Combat & Damage | Nothing directly; Enemy & Wave passes `max_hp` in at spawn. Callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
 | Tower System | Tower levels through the accessor | This system |
 | Hero System | Hero and Burst through the accessor; Stage fields (`hero_start`, `pin_rect`, `pin_exclusion`) and the Options record directly | This system |
@@ -179,10 +179,10 @@ There is no reload transition: a data change applies on the next run.
 | System | Data interface |
 |---|---|
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
-| Combat & Damage | Reads `max_hp` at spawn (Combat's seed exception); callers pass other values in |
+| Combat & Damage (soft) | Reads `max_hp` at spawn (Combat's seed exception); callers pass other values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
 | Tower System | Tower levels via the accessor |
-| Hero System | Hero and Burst via the accessor |
+| Hero System | Hero and Burst via the accessor; `hero_start`, `pin_rect`, `pin_exclusion` and the Options record directly |
 | Input & Gesture Resolver | The Input record |
 | Battle HUD & Build UI | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly |
 | Stat & Modifier Resolution (VS) | Key vocabulary; replaces the accessor's internals |
@@ -209,7 +209,7 @@ None beyond the generic fatal screen, owned by Game State & Stage Flow. This sys
 |---|---|---|---|
 | Accessor takes instance context | `design/gdd/game-concept.md` | Core Mechanic 4, first cross-buff at Vertical Slice | Rule dependency |
 | Stable IDs | `design/gdd/game-concept.md` | Save versioning, Technical Considerations | Rule dependency |
-| Prototype values are not balance | `prototypes/hero-pin-concept/REPORT.md` | CD-PLAYTEST carry-forward 5 | Ownership handoff |
+| Prototype values are not balance | `prototypes/hero-pin-concept/REPORT.md` | Creative Director Review: CD-PLAYTEST, item 5 | Ownership handoff |
 | Composition root, injection | `design/gdd/systems-index.md` | TD notes, Dependency Map | Rule dependency |
 | `visual_key` meaning | `design/art/art-bible.md` | §3, §8 | Ownership handoff |
 

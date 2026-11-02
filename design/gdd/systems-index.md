@@ -26,12 +26,12 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | Needs Revision | design/gdd/game-state-stage-flow.md | Data & Config |
-| 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | In Review | design/gdd/game-state-stage-flow.md | Data & Config, Input |
+| 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | Game State; Data & Config (soft, `max_hp` passed in at spawn) |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
 | 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Needs Revision | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft) |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
@@ -91,8 +91,8 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Core Layer
 
-1. Game State & Stage Flow — depends on: Data. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
-2. Combat & Damage — no dependencies: callers read values and pass them in. **TD note:** God-object risk; the GDD defines three pieces: DamageEvent (dealer kind and id from day one), Health, Status (slow). ProjectileSpawner cut because hits are instant, pending technical-director confirmation. Hit flashes live here (PR-SCOPE).
+1. Game State & Stage Flow — depends on: Data, Input. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
+2. Combat & Damage — depends on: Game State; Data & Config (soft, `max_hp` passed in at spawn). Callers read values and pass them in. **TD note:** God-object risk; the GDD defines three pieces: DamageEvent (dealer kind and id from day one), Health, Status (slow). ProjectileSpawner cut because hits are instant, pending technical-director confirmation. Hit flashes live here (PR-SCOPE).
 3. Stat & Modifier Resolution — depends on: Data. **TD/PR note:** VS tier, but every MVP stat read goes through one accessor so the resolver drops in behind it. Pure function base → flat adds → % multipliers (additive within the bucket). No overrides until something needs them. Stat-source tags reserved now for synergies.
 
 ### Feature Layer
@@ -108,7 +108,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Presentation Layer
 
-1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input, Data & Config.
+1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft).
 2. Visual Feedback & VFX — depends on: Combat, Hero, Tower.
 3. Menu & Screen Flow — depends on: Stage Progression, Skill Tree, Save/Load.
 4. Onboarding Prompts — depends on: Game State, Battle HUD.
@@ -166,7 +166,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 |--------|-----------|-----------------|------------|
 | Input & Gesture Resolver | Design | Pin drag vs slot tap vs burst drag at fingertip size; untested on a phone (CD-PLAYTEST) | Hit-target registry; drag slop ~10–12 dp; phone test with a non-developer tester before Pillar 4 is claimed |
 | Combat & Damage | Technical | God object; attribution depends on `source` being on every DamageEvent | Four-piece decomposition in the GDD; one unit test per piece |
-| Hero System | Design | Hero share 39% (bot) vs 25–30% target; towers-only can win once upgrades exist | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
+| Hero System | Design | Hero share median 26.2% (bot, Hero GDD) vs 25–30% target, 33% on one build and up to 45% at ceiling skill; every MVP build loses without the hero | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
 | Stat & Modifier Resolution | Technical | Deferred to VS; retrofit cost if MVP code reads stats directly | Single stat accessor enforced from MVP day 1 |
 | Skill Tree / Synergies | Design | Scarcity rule (~60%) undefined per tier; dominant-build risk | Scarcity restated per tier in the concept revision; one cheap cross-buff at VS tests the hook early |
 

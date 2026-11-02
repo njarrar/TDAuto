@@ -39,7 +39,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 6. **Splash and burst.** Everyone within the radius of the impact point takes full damage, with no falloff and no cap, since falloff cannot be read at phone scale. A tower's impact point is its target's position at fire time, and the target is included once; a burst's is its aim point. Each victim is one event. A radius alone cannot protect the burst, because splash repeats while the burst waits on its cooldown, so the Tower GDD sets a measurable gate. It is not a total over the same cooldown, since towers must out-total a burst there or the wave is lost: it compares one burst against one splash shot, and measures in bots whether splash takes the burst's share (Tower System, Formulas; Pillar 2).
 7. **Slow.** One slot per enemy; slows do not stack. A stronger slow replaces the current one. An equal one keeps the longer time remaining. A weaker one is ignored. A slow on a dead enemy does nothing. Strength is the fraction of speed removed, so 0.4 removes 40%. Time is held in whole ticks, because repeated float subtraction can add a move (a 0.5 s slow at 1/60 counted 31 moves rather than 30).
 8. **Slow is not a stat.** It does not go through the stat accessor, which answers a Data & Config Open Question: the resolver is pure, and a slow is per-instance countdown state. Enemy & Wave reads `move_speed` through the accessor at use time, then multiplies by Combat's `speed_factor(enemy)`.
-9. **No catalogue.** Combat reads no data. Callers read through the stat accessor and pass values in, so Combat depends on nothing and needs only plain fixtures to test. The one value kept from spawn is HP: `max_hp` seeds Health once, an exception to Data & Config's "never cache at spawn", because current HP is state.
+9. **No catalogue.** Combat reads no catalogue data itself; Flow builds and ticks it, and Enemy & Wave passes `max_hp` in at spawn. Callers read through the stat accessor and pass values in, so Combat needs only plain fixtures to test. The one value kept from spawn is HP: `max_hp` seeds Health once, an exception to Data & Config's "never cache at spawn", because current HP is state.
 10. **Targeting helpers.** Combat exposes `hp_left(enemy)` for read-only previews, and owns three pure helpers over a list the caller passes, with ranges passed in: `first_in` (furthest along the path), `nearest_in` (nearest to the attacker) and `all_in_radius` (every victim of a splash or burst). They compare exact values, break ties by lowest `spawn_id`, scan rather than sort, and skip the dead. Attackers re-pick on every attack and hold no target, so no reference can dangle. Policies are fixed, with no upgrade or UI at MVP (Pillar 4): towers use first along the path, a slow tower prefers the first unslowed enemy so it does not waste slow on a slowed leader, and the hero uses nearest to itself. The hero stands at its pin, so its target must be inside the leash and nothing else; the prototype skipped the leash check, which let the hero hit far past it.
 11. **Tick order.** Flow, then Enemy & Wave (spawn, move, leak), Status countdown (the battle's tick passes it Enemy & Wave's roster), Towers by slot index, Hero then burst, then Enemy & Wave's reap (kills, then clear checks). Leaks resolve before fire, as in the prototype, so an enemy reaching the end leaks even if a tower could have killed it that tick, a fatal leak skips the rest of the tick and pays no bounty, and a slow first affects the next tick's move. Enemy & Wave confirms this.
 12. **Views listen, combat does not wait.** `attack_fired(source_kind, source_id, origin, impact, radius)` draws lines and rings, even for a zero-damage slow attack. `damage_applied(event, applied, position)` draws flashes. Both carry copied positions, because a killed target is reaped before its flash is drawn. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them; Visual Feedback & VFX takes it over at Vertical Slice.
@@ -77,6 +77,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
 | Battle HUD | listens, reads | `damage_applied` for hit marks; the per-source counters for the result | Combat (API); HUD (drawing) |
+| Data & Config | soft, through Enemy & Wave | `max_hp` at spawn | Data (values) |
 
 ## Formulas
 
@@ -158,7 +159,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 **Upstream (hard):** Game State & Stage Flow, which builds Combat, ticks it in its slot, reads its counters.
 
-**Upstream (soft):** Data & Config Pipeline, which reads `max_hp` at spawn (the seed exception, Rule 9). Combat reads no other data, which corrects the systems index (callers read and pass values in).
+**Upstream (soft):** Data & Config Pipeline: `max_hp` comes from Data's Enemy record, passed in by Enemy & Wave at spawn (Rule 9). Combat reads no other data, which corrects the systems index (callers read and pass values in).
 
 **Downstream (hard):**
 
@@ -167,7 +168,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 | Tower System | `deliver`, `apply_slow`, helpers |
 | Hero System | `deliver`, helpers |
 | Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
-| Battle HUD | `damage_applied`; the per-source counters for the result |
+| Battle HUD (soft) | `damage_applied`; the per-source counters for the result |
 | Visual Feedback & VFX (VS) | `damage_applied` |
 | Stage Progression & Stars (VS) | Counters (soft) |
 
@@ -242,7 +243,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; a burst commanded between ticks leaves no moving corpse |
 | Pillar 2 bots | Hero stories | Hero-only fails; never-pinned is identical to towers-only; pinned-once ends the stage with fewer lives than active play (Pillar 2, user ruling 2026-11-02); the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
-| Splash vs burst gate (Rule 6) | Tower, Hero stories | `burst_spike` is at least 2 in the content test, and `dealt_burst`'s share with splash is at least 75% of its share with none |
+| Splash vs burst gate (Rule 6) | Hero stories | `burst_spike` is at least 2 in the content test, and on the 2 single, 2 splash, 1 slow build, `dealt_burst`'s share is at least 75% of its share on single only (Hero Deferred, `dealt_burst`) |
 
 **Manual** (frame-stepped screenshots retained in `production/qa/evidence/`): tower and hero hits distinct in greyscale; static splash ring at its true radius; slow drag lines; damaged core at 22 px and above; burst clearance, with no tower flash or ring. On the first phone build, a non-developer identifies hero kills from tower kills with sound off. This proves the hits are legible, not that they are satisfying, which only playtests can judge.
 
@@ -254,7 +255,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 |---|---|---|
 | Does the technical director accept cutting ProjectileSpawner and the tick order? Both override existing notes | technical-director | App Lifecycle ADR |
 | Does the bots' hero share hold for humans? The Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, median 26.2% (Hero, Simulated results), which closes the bot question. The prototype's 39% (one tower type, bot-fitted values, a bug) is history only | qa-lead | First playable |
-| Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Hero GDD + bots | First playable |
+| Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Hero GDD + bots (Hero's Open Questions carry the row) | First playable |
 | Instant hits leave weapon upgrades a thin 100 ms line to show growth on (Pillar 1). What makes them visible? | Weapons GDD (Vertical Slice) | Vertical Slice |
 | Do full-strength hero flashes during a burst hold up on a device, and does the 0.6 tower flash read? | art-director | First phone build |
 | Art bible §8 budgets a hit-flash shader while saying zero shaders; this spec uses none | technical-artist | First phone build |

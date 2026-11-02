@@ -63,7 +63,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 13. **One prompt line, first match, for this battle only, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. Because conditions are read per battle, nothing has to survive a rebuild.
     1. Hero unpinned: "Drag the hero"
     2. No tower built, in Build or Intermission: "Tap a slot to build"
-    3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started`
+    3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started`. The latch holds for the whole battle across phase changes, so once set, prompt 3 can show in Intermission too, until `burst_started`
 
     These teach verbs only, never where or when, which leaves room for the user's first-run target. This amends the Hero GDD, which called the first the only tutorial text.
 
@@ -85,7 +85,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 Percentages, bars and highlights are not shown, because hero share is a balance metric rather than a goal (Pillar 2). This amends Combat's deferred row and UI note, which asked for hero share shown: the three rows are the raw counters, and the log keeps the share. Median kills stays in the log too, since a 0 can read as shame. Strings are exactly those in this table and Rule 16 (art bible §2).
 
-16. **Next-try line, first match, in the same order as Rule 13.** A burst counts as fired once it commits, that is on `burst_started`, as in Rule 13. It helps most when the player missed a verb, since the mid-skill bot loses every mixed build without the burst.
+16. **Next-try line, first match, in the same order as Rule 13.** A burst counts as started once it commits, on `burst_started`, as in Rule 13. The next-try test reads Hero's `bursts_started`, not `bursts_fired` (releases). The line text may say "fired"; its condition is no `burst_started` this attempt. It helps most when the player missed a verb, since the mid-skill bot loses every mixed build without the burst.
     1. Hero never pinned: "Next try: drag the hero"
     2. No tower built: "Next try: tap a slot to build"
     3. No `burst_started` this attempt: "Next try: drag from the big button"
@@ -101,7 +101,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **The human log.**
 
-19. **Debug builds append one record per finished attempt and one per call.** A Fatal attempt also writes one record, with outcome Fatal. Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. Per wave started after a full wait, the same record with `seconds_left` 0, so called and waited waves compare wave by wave (Hero, Deferred criteria). Wave 1, started from Build, has no record. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
+19. **Debug builds append one record per finished attempt and one per call.** A Fatal attempt also writes one record, with outcome Fatal. Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID, the build hash and `attempt_seq`, which counts from 1 per launch and rises each time a battle is built or rebuilt. Each per-wave record also holds `wave_index`. Attempt: towers built, lives, last wave, damage by source and kind, `repins`, burst counters with `bursts_started`, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. Per wave started after a full wait, the same record with `seconds_left` 0, so called and waited waves compare wave by wave (Hero, Deferred criteria). Wave 1, started from Build, has no record. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt writes no attempt record, which is accepted. Its per-wave records are kept, and since they group by `attempt_seq`, they never merge into the next attempt. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units, 0 on desktop. 1.5 units is 1 dp at a 360 dp width.
 
@@ -136,7 +136,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.
 - **Flow:** exposes reads of lives, phase, `intermission_left` and the result; the root takes the retry latch.
-- **Hero:** exposes the cooldown's total for the wedge; prompt text moves here.
+- **Hero:** no Hero change needed. The HUD reads Burst `cooldown` through the accessor at use time for the wedge; prompt text moves here.
 - **Tower:** Rule 8 gains the chip's target, `chip_state()` and `tower_inspected`.
 - **Technical director:** stretch mode. 540 × 960 is 9:16 and a 360 × 800 dp phone is taller, so insets must be converted to field space. MVP is on desktop at 540 × 960, so every inset here is 0 until the Mobile Platform GDD.
 
@@ -151,7 +151,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Hidden | Not registered | Its phase begins → Arming, registered and dimmed |
 | Arming | 300 ms running; a tap from a press now is dead | 300 ms → Armed. Its phase ends → Hidden. Paused: held, clock frozen |
 | Armed | A new press counts | A counted tap → command. Its phase ends → Hidden. Paused: held |
-| Disabled | Start/Call only: registered but disabled while a build arc is open (Rule 6); it ignores presses | Arc closes → enabled. Its arming does not run until it is enabled again |
+| Disabled | Start/Call only: registered but disabled while a build arc is open (Rule 6); it ignores presses | Arc closes → enabled. Its arming does not run until it is enabled again. Its phase ends → Hidden; an arc closing while Start/Call is Hidden changes nothing |
 
 A press held across two phase changes may name an old target ID. The HUD ignores a gesture for an ID it no longer holds (Input).
 
@@ -184,6 +184,9 @@ A press held across two phase changes may name an old target ID. The HUD ignores
 | Input & Gesture Resolver | registers, listens | Arc, backdrop, Start/Call discs; `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` | Input (API); HUD (meaning) |
 | Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
 | Hero System | reads | State and timers; `hero_target_id()`; HeroInput registers the button | Hero |
+| Data & Config Pipeline | reads | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly | Data |
+| Combat System | listens, reads | `damage_applied`; per-source counters for the result (soft) | Combat |
+| Enemy & Wave System | reads | `wave_index()`, `got_through_by_type()`, `targets()` (soft) | Enemy & Wave |
 | Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase` | Flow |
 
 Headless wiring tests are unaffected, since the HUD is absent, and `phase` and `lives_changed` join Flow's view allowlist.
@@ -279,7 +282,7 @@ The **chip_bar** formula is defined as:
 | Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
 | Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record (`left_hand`, `reduce_motion`) directly |
 
-**Soft:** Combat (`damage_applied` for hit marks; per-source counters for the result), Enemy & Wave (`wave_index()`, `got_through_by_type()`, `targets()`; burst button coordinates it tests in L3 and L7; Wave records).
+**Soft:** Combat (`damage_applied` for hit marks; per-source counters for the result), Enemy & Wave (`wave_index()`, `got_through_by_type()`, `targets()`; Wave records). The HUD places the burst button, and Enemy & Wave's L3 and L7 test the coordinates the HUD uses (from Stage's `pin_exclusion`), so the HUD does not receive them from Enemy & Wave.
 
 **Downstream (these have no GDD yet):**
 
@@ -359,7 +362,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 6. (Rule 7) Level 1 read on opening and `gold_changed`; dimming flips both ways; a newly affordable disc builds.
 7. (Rule 8; Input row) A press outside closes and unregisters; a later `tap(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
 8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.
-9. (Rule 10) "Start"; at 60 ticks a second and 1.8 s per gold, with 13 s left, "Call +7"; with 15 s, "Call +8"; bonus 0 "Call"; hidden in Wave; glyph matches burst state. With the hero 60 from its centre, a press inside both discs released in place calls nothing, moved 80 and released re-pins, and moved past `tap_slop` but released under 48 from the press point pins nothing; a press at the centre calls. With the hero walking across, a press outside the hero's disc calls. In Build at `hero_start`: calls.
+9. (Rule 10) "Start"; at 60 ticks a second and 1.8 s per gold, with 13 s left, "Call +7"; with 15 s, "Call +8"; bonus 0 "Call"; hidden in Wave; glyph matches burst state. With the hero 60 from its centre, a press inside both discs released in place calls nothing, moved 80 and released re-pins, and moved past `tap_slop` and released having never passed 64 from the press point (for example at 55) pins nothing; a press at the centre calls. With the hero walking across, a press outside the hero's disc calls. In Build at `hero_start`: calls.
 10. (Rule 11; Flow row) A press during Arming, released once Armed, does nothing; the next press commands once.
 11. (Hidden) Unregistered; its phase begins: registered and dimmed.
 12. (Arming) 299 no, 300 Armed; `advance(5000)` counts 100; phase end Hidden; Paused holds, and return does not restart it. Retry likewise.
@@ -411,7 +414,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | Do three prompts crowd a first run, or still leave room for the first-run target? | First-run test | First playable |
 | Is the prompt at the top seen, while the eyes are on the lane? | First-run test | First playable |
 | Which font? Tabular figures and a licence must be checked | art-director | First render |
-| Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16 | technical-director | Mobile Platform |
+| Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16. Tracked in Input's adapter row | technical-director | Before the first input story |
 | At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |

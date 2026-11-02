@@ -124,8 +124,8 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Pose language (no limbs, no faces).** Intent reads through orientation, scale and the glow envelope, each a single flat-shape transform.
 - *Idle (unpinned, in build):* slow 0.5 Hz breathing scale (±4%), tip drifting toward the nearest path, glow at rest.
-- *Pinned:* a 2 px solid ground ring snaps in under the hero (the pin lands); the body settles 6% smaller for 0.1 s then returns; the tip tracks targets inside the leash. The ground ring is the pin, the dashed leash is the territory.
-- *Walking:* tip locked on the pin, long axis +6%, no breathing. The ground ring lands on release, not arrival.
+- *Pinned:* a 2 px solid pin ring snaps in under the hero (the pin lands); the body settles 6% smaller for 0.1 s then returns; the tip tracks targets inside the leash. The pin ring is the pin marker, the dashed leash is the territory.
+- *Walking:* tip locked on the pin, long axis +6%, no breathing. The pin ring lands on release, not arrival.
 - *Attacking:* the tip stretches 10% toward the target on each shot and recoils; shots are thin white-gold lines with no glow (glow budget stays at 1).
 - *Bursting:* the body compresses to a near-circle for 0.15 s (wind-up, the one moment the hero loses its asymmetry), then snaps back at 1.3× as the gold ring expands (Section 2). Glow budget 2 for ~0.4 s.
 
