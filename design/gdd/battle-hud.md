@@ -51,7 +51,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Start/Call.**
 
-10. **One button, two jobs, hidden in Wave.** Build: "Start". Intermission: "Call +7" (bare "Call" when the bonus is 0), and under it the seconds left and a small burst glyph showing the same state as the button: full ring, wedge or dotted. Once armed, it has no pulse, warning or advice. It shows the numbers, and the bots show no cost the HUD could honestly claim. The bonus comes through Tower's formula. Each frame advances real-time models, then ticks, then refreshes views, and commands run before ticks, so what is shown is what is paid, subject to the ADR's check on that order.
+10. **One button, two jobs, hidden in Wave.** Build: "Start". Intermission: "Call +7" (bare "Call" when the bonus is 0), and under it the seconds left and a small burst glyph showing the same state as the button: full ring, wedge or dotted. Once armed, it has no pulse, warning or advice. It shows the numbers, and the bots show no cost the HUD could honestly claim. The bonus comes through Tower's formula. Each frame advances real-time models, then ticks, then refreshes views, and commands run before ticks, so what is shown is what is paid, subject to the ADR's check on that order. The target is also disabled while the hero's `position()` is strictly under 104 from its centre, on top of the arc's disable, so a tap meant for a hero crossing it cannot call a wave. The look does not change, since a crossing lasts at most 0.87 s. Build is unaffected, because the hero waits at `hero_start`, 164 away, and a test on `pin_state()` would never clear there, since no tick runs in Build (user decision, 2026-11-02).
 11. **Arming.** A button goes Hidden, Arming, Armed, over 300 ms of real time (Flow, Game Feel). It registers on appearing, not on arming, or an early press would land on what lies beneath. A tap from a press during Arming is dead, even if released once Armed (a drag from the hero beneath is still a drag), and a press begun before it appeared cannot win under Input Rule 2. The clock is `advance(ms)` from the wrapper's frame time, clamped to 100 per frame, so a hitch cannot arm an unseen button, and HudLogic ignores it while Paused. A return from Paused is not a new appearance. Retry uses the same model, starting when its text shows.
 
 **Burst button.**
@@ -272,7 +272,7 @@ The **chip_bar** formula is defined as:
 |---|---|
 | Game State & Stage Flow | `phase`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
 | Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected` |
-| Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `burst_started`, counters; Flow's `in_build()` |
+| Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
 | Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
 | Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly |
 
@@ -356,7 +356,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 6. (Rule 7) Level 1 read on opening and `gold_changed`; dimming flips both ways; a newly affordable disc builds.
 7. (Rule 8; Input row) A press outside closes and unregisters; a later `tap(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
 8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.
-9. (Rule 10) "Start"; "Call +7"; bonus 0 "Call"; hidden in Wave; glyph matches burst state.
+9. (Rule 10) "Start"; "Call +7"; bonus 0 "Call"; hidden in Wave; glyph matches burst state. Hero at 103.99 from its centre: disabled, so a tap on the overlap calls nothing and a drag there re-pins. At exactly 104: enabled. In Build at `hero_start`: enabled.
 10. (Rule 11; Flow row) A press during Arming, released once Armed, does nothing; the next press commands once.
 11. (Hidden) Unregistered; its phase begins: registered and dimmed.
 12. (Arming) 299 no, 300 Armed; `advance(5000)` counts 100; phase end Hidden; Paused holds, and return does not restart it. Retry likewise.

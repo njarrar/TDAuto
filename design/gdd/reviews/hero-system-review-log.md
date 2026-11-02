@@ -80,3 +80,38 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md ab70307efbff1830a433cc8f2056f805
 
 ## Revision — 2026-11-02 — Six blockers applied, re-review pending
 Applied in the authoring session: clamp_pin candidates, tolerances and degenerate directions, checked against a 2-unit brute force; PinGeometry named and headless; ACs 2, 12, 14 and 17 rewritten; median defined; results refreshed from the corrected simulation. Also: walk_ticks tolerance, reach dots to alpha 0.6, slow only stated as a trap build, always-call gate scoped to mixed builds. User decisions: re-pinning accepted at about 3 lives, the slowest bot's 5 to 7 lives accepted, simulation committed at tools/balance-sim/hero_bots.py.
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
+Blocking items: 2 | Recommended: 10
+Summary: Two short edits and no redesign; the pillars, the pin rule and the results hold. Criterion 14 cannot run as written, and a tap on a hero walking across Start/Call can call a wave. Run in the authoring session again, and the creative director asks for a focused check of the two edits rather than another specialist pass.
+Prior verdict resolved: Yes, all six; the clamp rule matched fine boundary sampling at 374 invalid fingers, worst excess 0.010.
+Findings:
+- [BLOCKING] Acceptance Criteria 14: validity on the 8-unit grid; nearness against boundary samples at 0.5 spacing at notches, circle centres and a 20-unit grid over the bottom third, tolerance 0.03; tie (186,800) gives (186,695.99).
+- [BLOCKING] Battle HUD Rule 10 and a criterion, with a Hero edge case: disable Start/Call while the hero's position is strictly under 104 from its centre; a test on pin_state() would deadlock in Build.
+- [RECOMMENDED] Data Rule on pin_exclusion: state it as a list of shapes, each of a, b and radius.
+- [RECOMMENDED] Simulated results: state median share as 26.2, or print the rounded form.
+- [RECOMMENDED] Deferred criteria: name the towers-only bot in the Towers-only row.
+- [RECOMMENDED] Simulated results: the script governs where the bot table differs; 6, 7, 4, 6 is a lower bound.
+- [RECOMMENDED] Simulated results: drop "from 4 to 5 hit" or print it.
+- [RECOMMENDED] Formulas, clamp_pin: at story level, Rect2 half-open, parallel test, tangents, tie in two passes, hero_start at r + 0.01.
+- [RECOMMENDED] Core Rule 16: digit has two owners; walk field names; non-finite input, at story level.
+- [RECOMMENDED] Deferred criteria: log time to first pin; re-pin pass number at first playable.
+- [RECOMMENDED] Visual/Audio: kill contour hex, slot (170,700) note, to /ux-design.
+- [RECOMMENDED] Core Rule 15: press nearer the hero than the button goes to the button; add a story test.
+Reviewed-Content-Hash: design/gdd/hero-system.md a1babd6e8d68732fca301bb6fbcef6138ef1ef7b
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9df110c0ac2
+Reviewed-Content-Hash: design/gdd/combat-damage.md 6752d513d2ea4eca4d31747a1087005417d40ee7
+Reviewed-Content-Hash: design/gdd/enemy-wave.md b54c78785944be6bfd376a6a80eca92dca9c770f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 69fea420a0dcb2eddbd3da3f53b05e166c3167e0
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md b3ade581d79c340adf236a11d85202bf8e764b77
+Reviewed-Content-Hash: design/gdd/tower-system.md e36b8c7a04b724ebf610ebfcedbda7f839e66f87
+Reviewed-Content-Hash: design/gdd/battle-hud.md ab70307efbff1830a433cc8f2056f80511a8f1f4
+
+## Revision — 2026-11-02 — Two blockers applied, re-review pending
+Applied in the authoring session: criterion 14 rewritten to a runnable check, which the script now performs; Start/Call disabled while the hero's centre is strictly under 104 from it (user decision), in Battle HUD Rule 10 and criterion 9, with a Hero edge case. Also: Data's pin_exclusion stated as a list of shapes, median share 26.2, towers-only bot named, script decides details the bot table omits, best pin a lower bound, "4 to 5 hit" dropped.

@@ -256,19 +256,35 @@ def table(reach=160.0,grid=True,**kw):
         if b in MIXED: sh.append(m['hs'])
         print(f"{b:27} towers {fm(a)} | once {fm(pn)} | mid {fm(m)} share {m['hs']*100:.0f} burst {m['bs']*100:.0f} kills3+ {median(hit3) if hit3 else 0} bursts {n} {m['mins']:.1f}m | ceil {fm(d)} {d['hs']*100:.0f} | towers call {fm(ac)} | mid call {fm(c)} bursts {nc} {c['mins']:.1f}m | no burst {fm(nb)}{bp}")
     print('median share of mixed builds %.1f'%(median(sh)*100))
-def check_clamp(step=8):
-    """The GDD rule against a 2-unit brute force, which it must match to within the grid's error."""
-    pts=[(float(x),float(y)) for x in range(48,493,2) for y in range(174,889,2) if valid_pin((x,y))]
+def boundary_samples(step=.5):
+    x0,y0,x1,y1=RECT;out=[]
+    for i in range(int((x1-x0)/step)+1): out+=[(x0+i*step,y0),(x0+i*step,y1)]
+    for i in range(int((y1-y0)/step)+1): out+=[(x0,y0+i*step),(x1,y0+i*step)]
+    for a,b,r in ZONES:
+        for e in {a,b}:
+            for i in range(int(2*math.pi*r/step)):
+                t=i*step/r;out.append((e[0]+r*math.cos(t),e[1]+r*math.sin(t)))
+        if a!=b:
+            for sx in (-r,r):
+                for i in range(int((b[1]-a[1])/step)+1): out.append((a[0]+sx,a[1]+i*step))
+    return [p for p in out if valid_pin(p)]
+def check_clamp():
+    """Hero GDD criterion 14: valid on an 8-unit grid; near against boundary samples at notches, centres and the bottom third."""
+    for fx in list(range(0,541,8))+[540]:
+        for fy in range(0,961,8):
+            f=(float(fx),float(fy));assert valid_pin(clamp_pin(f)),f
+    pts=boundary_samples()
+    F=[(100,860),(241,888),(188,888),(456,816),(456,888),(84,816),(84,888),(186,800)]
+    F+=[(x,y) for x in range(0,541,20) for y in range(660,961,20)]
     worst=0.0;n=0
-    for fx in list(range(0,541,step))+[540]:
-        for fy in list(range(0,961,step))+[960]:
-            f=(float(fx),float(fy));c=clamp_pin(f);assert valid_pin(c),(f,c)
-            if valid_pin(f) or fx%32 or fy%32: continue
-            bf=min(math.dist(f,p) for p in pts);worst=max(worst,math.dist(f,c)-bf);n+=1
-    assert worst<1.5,worst
-    for f,e in (((492,888),(351.99,888)),((480,850),(351.99,850)),((186,720),(186,695.99)),((270,800),(290.01,800))):
+    for f in F:
+        f=(float(f[0]),float(f[1]))
+        if valid_pin(f): continue
+        c=clamp_pin(f);worst=max(worst,math.dist(f,c)-min(math.dist(f,p) for p in pts));n+=1
+    assert worst<=.03,worst
+    for f,e in (((492,888),(351.99,888)),((480,850),(351.99,850)),((186,800),(186,695.99)),((270,800),(290.01,800))):
         assert math.dist(clamp_pin(f),e)<.02,(f,clamp_pin(f))
-    print(f"clamp_pin ok: {n} brute-force checks, worst excess {worst:.3f}")
+    print(f"clamp_pin ok: {n} fingers against {len(pts)} boundary samples, worst excess {worst:.3f}")
 if __name__=='__main__':
     assert valid_pin(START) and valid_pin((270,480))
     check_clamp()
