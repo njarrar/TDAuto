@@ -154,3 +154,40 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md 4eb1db4b0072cb030f6e13b8bf1c8dd4
 User decisions: (A) the UX rule replaces the Start/Call disable: a press inside the hero's grab disc is the hero's, decided at press, and only that overlap is dead; the same rule makes the hero outrank the burst button in Input. (B) the game designer's exclusion: only the active hand's burst line refuses pins, and every shape shrinks from 104 to 60, the hero's 56 plus 4, so no button's centre lies in the hero's disc.
 Blockers: tick step 5 acts only while Cooling; a walk over the burst button is an edge case with a criterion; the unpinned hero shows its grab ring, not its leash; clamp_pin returns the current pin when no candidate is valid and skips degenerate pieces; the bot table now matches the script's wait, ceiling and intermission; burst damage is at least normal and fast HP; OFF_FIELD cites Enemy & Wave Rule 4 and the grid reaches 540 and 960; the clamp examples are recomputed. Also amended: Battle HUD Rule 10, Rule 12, the layout note and criterion 9; Input's priority table, Hero row and criterion 28; Data's pin_exclusion rule.
 The script re-ran in both hands: every bot result is unchanged, and clamp_pin matches boundary sampling with a worst excess of 0.012. Recommended items from the review stay open.
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
+Blocking items: 5 | Recommended: 30
+Summary: No pillar concerns; every worked example recomputes and every amendment Hero hands to a sibling GDD is in place. Five short fixes remain; only the first changes behaviour, and it is the user's: Rule 15's reason for the hero outranking the burst button is wrong, since a mistaken aim can be cancelled and a mistaken re-pin cannot. QA's criterion rewrites go to story level, as earlier reviews decided.
+Prior verdict resolved: Yes; all eight blockers of the fourth review are applied.
+Findings:
+- [BLOCKING] Core Rule 15: user decides hero vs burst button priority (keep A with the 44-unit dead lens stated; button over hero at about 300, recommended by the creative director; or hero over both with a pin cancel); rewrite the reason, Input's priority table, the walk-over-button edge case and criterion 15 to match.
+- [BLOCKING] Core Rule 13: Live is measured from the button's centre, so a press at 47 fires after a 17-unit roll; measure travel from the press point (about 40) or raise the exit to about 84, with a criterion.
+- [BLOCKING] UI Requirements: "repeats the prompt" contradicts Battle HUD Rule 13 (the prompt never hides before the pin); pulse the prompt instead.
+- [BLOCKING] Deferred criteria, Pins near a button: the 40-unit, 90% gate cannot pass on geometry (about 13% of fingers clamp further); restrict to fingers inside pin_rect and outside the active shapes.
+- [BLOCKING] Cross-document, combat-damage.md:51: Combat's Hero row still counts "bursts that hit 3 or more" against Rule 17's kills per burst.
+- [RECOMMENDED] Core Rule 2: state the dead lens on Start/Call (up to 44 deep) and that "no button centre in the hero's disc" holds for a pinned hero only.
+- [RECOMMENDED] Tick step 5: cite Data's one-tick floor on cooldown; a cooldown of 0 ticks would never reach Ready.
+- [RECOMMENDED] Core Rule 3: the hairpin crossing is 1.5 s, not about 2 s.
+- [RECOMMENDED] Starter values: hero_start's disc is 3 units from the right button's; add a margin to the content rule.
+- [RECOMMENDED] Formulas, clamp_pin: hysteresis toward the last ghost; non-finite finger returns hold; tie scan against the running best; a fixture that reaches the hold fallback.
+- [RECOMMENDED] Formulas: walk_ticks range in general form; dps in ticks for hero_share_bound; burst_safe_distance range conditional on the content rule.
+- [RECOMMENDED] Summary: aim is the deciding skill; the pin sets where it can happen.
+- [RECOMMENDED] Content rules: say heavies are the towers' job; note armour would break the burst floor.
+- [RECOMMENDED] UX, to /ux-design: cancel feedback, a Telegraphing press response, drawn exclusion shapes, left-hand Start/Call clearance, Reduce Motion rows, table order, reach-ring contrast, edge gestures.
+- [RECOMMENDED] Acceptance Criteria, at story level: criteria 10, 12, 15, 27, 29 rewrites, a Start/Call crossing case, and about 13 splits and numbers.
+- [RECOMMENDED] Combat: a named call for "report the attack" (raised twice; put in the HeroInput ADR) and an is_dead read; pin sets walk_left and keeps attack_left.
+- [RECOMMENDED] Player Fantasy and Tuning Knobs: advisory at standard; add a short section and a knob table.
+Reviewed-Content-Hash: design/gdd/hero-system.md 33be01b73bfae6771218f1f0be47cf520d033e50
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9df110c0ac2
+Reviewed-Content-Hash: design/gdd/combat-damage.md 6752d513d2ea4eca4d31747a1087005417d40ee7
+Reviewed-Content-Hash: design/gdd/enemy-wave.md b54c78785944be6bfd376a6a80eca92dca9c770f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md cc7be8f00ae5d16f5fefd3430a328adf3dde22d7
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md e36b8c7a04b724ebf610ebfcedbda7f839e66f87
+Reviewed-Content-Hash: design/gdd/battle-hud.md 1b140d9f6ac912e83e0fdad2caf8f19b63d8e187
