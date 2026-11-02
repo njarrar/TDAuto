@@ -30,8 +30,8 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | Game State; Data & Config (soft, `max_hp` passed in at spawn) |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State, Tower (soft, bot gates and `burst_spike`) |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft) |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Needs Revision | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State, Tower (soft, bot gates and `burst_spike`) |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Needs Revision | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft) |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
