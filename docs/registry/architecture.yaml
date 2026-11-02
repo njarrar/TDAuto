@@ -148,7 +148,22 @@ interfaces:
 # Register a budget when an ADR explicitly claims a frame time allocation.
 # The registry lets /architecture-review verify the total doesn't exceed the target.
 
-performance_budgets: []
+performance_budgets:
+  - target_fps: 60
+    total_frame_budget_ms: 16.6
+    platform: Mobile
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+    revised: ""
+  - system: battle_tick
+    status: active
+    budget_ms: 10.0
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    notes: "Proposed: 2 ms per tick on the target phone, at most 5 catch-up ticks per frame; measured by the phone spike (GF5)"
+    referenced_by:
+      - docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -198,6 +213,16 @@ api_decisions:
     reason: "A derived set covers new signals with no edit; a hand list goes stale"
     referenced_by:
       - docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+    revised: ""
+  - purpose: frame_driver
+    status: active
+    api: "AppRoot._process calls BattleWrapper.step(delta): lifecycle and command drain, 0 to 5 fixed ticks of Battle.DT (1/60), outcome step, hero disc, views, late outcome, cancel; then AppRoot latches"
+    not: "per-node _process order, _physics_process, or tick(delta) with a real frame delta"
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    reason: "Node process order and input-versus-process order are NOT SOURCEABLE; one driver fixes the order"
+    referenced_by:
+      - docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
     added: 2026-11-02
     revised: ""
 
@@ -279,6 +304,30 @@ forbidden_patterns:
     description: "No battle system holds a reference to Battle; halted() reaches systems through the shared HaltLatch"
     why: "A RefCounted cycle would keep the old battle alive after Retry"
     adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+  - pattern: direct_sim_command_from_input
+    status: active
+    description: "Input handlers, views and bots never call a sim command directly; they build a BattleCommand and call Battle.enqueue"
+    why: "Determinism must not depend on unverified engine event order (GF7)"
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+  - pattern: real_delta_tick
+    status: active
+    description: "battle.tick is only called with Battle.DT; no code passes a frame delta to the simulation"
+    why: "Fixed-step determinism and identical replays (Flow Rules 4, 5)"
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+  - pattern: engine_time_outside_driver
+    status: active
+    description: "No sim object, input piece or HUD logic uses _process or reads engine time; real time for the chip comes from the injected RealClock"
+    why: "One frame driver; testable with a fake clock"
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+  - pattern: callbacks_in_command_log
+    status: active
+    description: "The command log holds only plain CommandRecord values, never a command object or a Callable"
+    why: "A stored callback points back at a view or input piece and breaks replays and Retry teardown"
+    adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
     added: 2026-11-02
 
 # Example:
