@@ -82,3 +82,11 @@ Blockers per run: 4, 1, 2, 3, 2, 1, 3, 4, 3, 3. Every blocker since run 5 has co
 1. L1: a per-attempt `call_prompt_shown` flag stamped on every later record.
 2. L2: Battle HUD sets `call_prompt_done` on the root, on the first call after the prompt has shown.
 3. L3: log the landed pin position for a hero drag.
+
+## Resolution, 2026-11-02: the three blockers applied; warnings tracked here
+
+User decision: fix L1 to L3 only and move on to `/create-architecture`, with M1 to M11 tracked in this report for the stories and ADRs to settle.
+
+- **L1:** the HUD keeps a per-attempt `call_prompt_shown` flag that, once the prompt first shows, is stamped on every later wave record and the attempt record (HUD Rule 19, criterion 23; Hero's "Always-call, humans" row).
+- **L2:** Battle HUD sets `call_prompt_done` on the app root, on the first call after the prompt has shown; a call before it ever shows does not set it (Flow Rule 1, HUD Rule 13, the prompt table, criterion 16).
+- **L3:** Input Rule 13's gesture log adds the landed pin position for a hero drag, and Hero's "Pins near a button" row measures from it.
