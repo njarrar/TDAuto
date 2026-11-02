@@ -39,3 +39,36 @@ Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe719
 Reviewed-Content-Hash: design/gdd/battle-hud.md 1b140d9f6ac912e83e0fdad2caf8f19b63d8e187
 Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 3 | Recommended: 10
+Summary: All 7 prior blockers are resolved, and the design, numbers and layout hold up when recomputed. What remains is two acceptance criteria that cannot pass or cannot fail as written (C6 case 2, C10), and three stale lines in Battle HUD and Hero left over from the stage move. About an hour of edits, with no design change.
+Prior verdict resolved: Yes
+Findings:
+- [BLOCKING] Acceptance Criteria, C6 case 2: expects position (10, 980), but Rule 13 halts on the `move_speed` read before use, so d stays 50 at (10, 970). Name the read that latches.
+- [BLOCKING] Acceptance Criteria, C10: both enemies pay bounty 4, so the order check cannot fail; the THEN also omits `wave_cleared(2.0)`.
+- [BLOCKING] Cross-document: Battle HUD line 127 still says slot y 305; line 134 claims arc panel clearance, but the panel now reaches y 164, 10 into the band at the largest inset; Hero line 4 still says re-pinning is worth about 3 lives.
+- [RECOMMENDED] Deferred criteria: Two fronts gate does not discriminate (a wave 1 string spans over 180); require a fast and a non-fast over 180 apart.
+- [RECOMMENDED] Layout rules, Manual: the masking rule has no criterion; add 9:19.5 and 4:3 screenshots; say whether insets apply over letterbox bars and what input on the bars does.
+- [RECOMMENDED] Deferred criteria: stage length floor of 5 minutes sits on the script's 5.0; define the measurement and require a win.
+- [RECOMMENDED] Formulas, Open Questions: define "full board" and compare it with gold before wave 6 (at most 496); 68 gold is a worst case, about one tower.
+- [RECOMMENDED] Waves: wave 6 "everything converges before the exit" is false for the tail group; add wave 4's 518 catch.
+- [RECOMMENDED] Header, Open Questions: Pillar 3 is enabled, not delivered; merge the two re-pin questions and add a numeric trigger for lanes.
+- [RECOMMENDED] Acceptance Criteria: C4, C5, C6, C12, C14, C16, C18, C19 and C20 need counts, values, IDs or an extra case; drop the file output from C20.
+- [RECOMMENDED] Economy: say bounties follow count and `lives_cost`, not HP; cap `intermission_duration`.
+- [RECOMMENDED] Layout rules: build-arc discs over the path are unstated; L9 to L11 are fitted to the starter stage, so later stages need a burst-bend rule.
+- [RECOMMENDED] Game Feel, Waves: no pass criteria; wave 1 is a pure string; no lull inside waves.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 4787fc0fcfe528357d441bf2be73cd3b741652d4
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9df110c0ac2
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/hero-system.md 71766f6b9722fd231212281a50efbece710a5ed3
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md af284f3429e50b681d9fec23fdf16d6c64627b57
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
