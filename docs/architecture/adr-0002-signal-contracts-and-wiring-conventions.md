@@ -45,7 +45,7 @@ The cross-review (warning M4) and the architecture gate (GF10) found the same in
 - No autoloads and no event bus (architecture layer rules; registry `catalogue_global_access`).
 - The simulation is `RefCounted` and runs headless; views exist only inside the BattleWrapper (Flow Rule 2).
 - Gameplay uses no `await`, no engine timers and no `_process` (Flow Rule 4).
-- Commands go through one queue applied at the start of `battle.tick` (architecture GF7, ADR-0003).
+- Commands go through one queue applied at the start of `battle.tick` (architecture GF7, ADR-0003) (refined by ADR-0003).
 - `halted()` is checked by each emitter (architecture GF8).
 - Project naming: signals are past tense (`project.yaml`).
 
@@ -134,7 +134,7 @@ Sources are the GDDs; where the architecture gate decided a change, the change w
 
 **Returned collections.** A read that returns an `Array` or `Dictionary` returns one the caller cannot write into the simulation: either a copy, or the owner's array after `make_read_only()` (memory, unverified on 4.7.2; if it is missing or costly, the owner returns `.duplicate()`). The first WaveSim story picks one and records it here.
 
-**Commands** (queued through `Battle.enqueue` and applied at the start of the next tick, GF7; bots call the same commands through the same queue). The result codes are each command's own contract and are what the command returns when the queue applies it. How a refusal reaches the HUD, given that `enqueue` does not return it, is ADR-0003's to decide (Open Question A11).
+**Commands** (queued through `Battle.enqueue` and applied at the start of the next tick, GF7 (refined by ADR-0003); bots call the same commands through the same queue). The result codes are each command's own contract and are what the command returns when the queue applies it. How a refusal reaches the HUD, given that `enqueue` does not return it, is ADR-0003's to decide (Open Question A11).
 
 | Command | Owner | Result codes |
 |---|---|---|
@@ -270,3 +270,4 @@ No code exists yet. **These edits are a condition of acceptance and land in the 
 - Cross-review warning M4: `design/gdd/gdd-cross-review-2026-11-02j.md`.
 - ADR-0001 (Accepted): record and ID names.
 - Reviews, 2026-11-02: godot-specialist found no blocking issues; nine minor notes folded in (inherited script signals, `String` names, typed dictionaries in 4.4, read-only returns, reference cycles, `waves_complete`). TD-ADR: CONCERNS, nine items; items 1 to 7 revised in this draft (outcome and cancel emit exceptions, the derived wrapper test, StageFlow owns the Flow signals, result codes and A11, the full migration list as a condition of acceptance, at-most-one sim listener, typed wiring variables); items 8 and 9 needed no change.
+- Refinement by ADR-0003: commands drain once per frame before the ticks (and inside `tick` for headless callers), instead of only "at the start of the next tick". The decision of this ADR is unchanged.

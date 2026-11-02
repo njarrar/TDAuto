@@ -99,7 +99,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **Commands.**
 
-18. **Between ticks.** All commands run from the input call stack, before the frame's ticks. That order is unverified, and the ADR must check it. Retry's handler runs inside input and would destroy its own caller, so it only sets a latch on the app root, and the root's frame then checks for Fatal first, and otherwise stops the clock, cancels input, frees the battle and builds a new one. It is idempotent, so a second tap does nothing.
+18. **Between ticks.** All commands are queued from the input call stack and applied once per frame before the frame's ticks (ADR-0003). The engine's input order is no longer load-bearing. Retry's handler runs inside input and would destroy its own caller, so it only sets a latch on the app root, and the root's frame then checks for Fatal first, and otherwise stops the clock, cancels input, frees the battle and builds a new one. It is idempotent, so a second tap does nothing.
 
 **The human log.**
 

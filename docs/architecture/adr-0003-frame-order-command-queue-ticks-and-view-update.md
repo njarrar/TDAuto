@@ -1,7 +1,7 @@
 # ADR-0003: Frame Order: Command Queue, Ticks and View Update
 
 ## Status
-Proposed
+Accepted (2026-11-02, by njarrar; the Migration Plan edits landed in the same change)
 
 ## Date
 2026-11-02
