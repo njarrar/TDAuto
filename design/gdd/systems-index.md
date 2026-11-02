@@ -24,13 +24,13 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
-| 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
+| 1 | Data & Config Pipeline (inferred) | Core | MVP | Needs Revision | design/gdd/data-config-pipeline.md | — |
+| 2 | Input & Gesture Resolver | Core | MVP | Needs Revision | design/gdd/input-gesture-resolver.md | Data & Config |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Designed | design/gdd/game-state-stage-flow.md | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Needs Revision | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
 | 8 | Battle HUD & Build UI (inferred) | UI | MVP | Designed | design/gdd/battle-hud.md | Game State, Tower, Hero, Input |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
