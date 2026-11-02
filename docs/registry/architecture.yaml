@@ -64,6 +64,56 @@ state_ownership:
       - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
     added: 2026-11-02
     revised: ""
+  - state: enemy_health_and_slow
+    status: active
+    owner_system: combat-damage
+    adr: docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    interface: "EnemyHealth and EnemyStatus on each EnemyInstance; read through Combat.hp_left, is_dead, speed_factor"
+    write_access: combat-only
+    referenced_by:
+      - docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    added: 2026-11-02
+    revised: ""
+  - state: enemy_roster
+    status: active
+    owner_system: enemy-wave
+    adr: docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    interface: "WaveSim.roster() and targets() return typed copies (duplicate), valid for the reader tick slot; spawn_id and position written only by WaveSim"
+    write_access: enemy-wave-only
+    referenced_by:
+      - docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    added: 2026-11-02
+    revised: ""
+  - state: field_space
+    status: active
+    owner_system: battle-wrapper
+    adr: docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    interface: "FieldSpace.to_field and to_canvas; rebuilt only at step 1g after cancel and forget_open_presses"
+    write_access: battle-wrapper-only
+    referenced_by:
+      - docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    added: 2026-11-02
+    revised: ""
+  - state: open_presses
+    status: active
+    owner_system: input-adapter
+    adr: docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    interface: "PointerGate holds the open-press set and the event family; cleared by forget_open_presses() at step 1g"
+    write_access: pointer-gate-only
+    referenced_by:
+      - docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    added: 2026-11-02
+    revised: ""
+  - state: app_root_values
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    interface: "AppRoot holds the catalogue, launch_id, attempt_seq, call_prompt_done and the FatalRelay across Retry; views reach it only through AppServices"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -118,6 +168,56 @@ interfaces:
     signal_signature: "Canonical table in ADR-0002 section 4; typed parameters; connected only in BattleBuilder.build or BattleWrapper with signal.connect(bound_method); each battle system declares const VIEW_SIGNALS"
     referenced_by:
       - docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+    revised: ""
+  - contract: system_snapshot
+    status: active
+    pattern: direct_call
+    producer: every battle system
+    consumers:
+      - headless harness
+      - replay tests
+    adr: docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    signal_signature: "snapshot() -> Dictionary with first key system; const SNAPSHOT_EXEMPT and SNAPSHOT_KEYS on every system; compared with SnapshotTool.diff, never =="
+    referenced_by:
+      - docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    added: 2026-11-02
+    revised: ""
+  - contract: battle_parts
+    status: active
+    pattern: direct_call
+    producer: BattleBuilder
+    consumers:
+      - Battle
+    adr: docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    signal_signature: "Battle built from BattleParts (typed nullable flow, combat, wave, tower, hero, latch, slots: Array[TickSlot])"
+    referenced_by:
+      - docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    added: 2026-11-02
+    revised: ""
+  - contract: input_block
+    status: active
+    pattern: direct_call
+    producer: Battle HUD, FatalScreen
+    consumers:
+      - PointerGate
+    adr: docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    signal_signature: "set_input_blocked(blocked: bool): forwards nothing while blocked and never cancels; step 1g cancel closes the open press"
+    referenced_by:
+      - docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    added: 2026-11-02
+    revised: ""
+  - contract: app_services
+    status: active
+    pattern: direct_call
+    producer: AppRoot
+    consumers:
+      - Battle HUD
+      - BattleWrapper
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    signal_signature: "AppServices.request_retry(), set_call_prompt_done(); ResumeCommand and StageFlow.resume() -> int (OK, HALTED, NOT_PAUSED)"
+    referenced_by:
+      - docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
     added: 2026-11-02
     revised: ""
 
@@ -225,6 +325,46 @@ api_decisions:
       - docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
     added: 2026-11-02
     revised: ""
+  - purpose: time_conversion
+    status: active
+    api: "TickConverter(dt), built first by the builder; StageFlow.to_ticks forwards to it"
+    not: "per-system float countdowns"
+    adr: docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    reason: "One seconds-to-ticks conversion; no reference cycle through StageFlow"
+    referenced_by:
+      - docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    added: 2026-11-02
+    revised: ""
+  - purpose: display_stretch
+    status: active
+    api: "canvas_items with expand at 540x960, bottom-anchored field, opaque curtains; both input emulation keys false"
+    not: "keep (letterbox), viewport mode, Camera2D"
+    adr: docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    reason: "Visible equals targetable on every aspect; no press outside the field"
+    referenced_by:
+      - docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    added: 2026-11-02
+    revised: ""
+  - purpose: input_path
+    status: active
+    api: "InputAdapter reads _input into a pure PointerGate, then the five resolver calls"
+    not: "_unhandled_input or Control _gui_input"
+    adr: docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    reason: "A STOP Control cannot swallow a release, so the one-closer contract holds"
+    referenced_by:
+      - docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    added: 2026-11-02
+    revised: ""
+  - purpose: pause_mechanism
+    status: active
+    api: "Paused is a StageFlow state; the clock stops; resume is a queued ResumeCommand"
+    not: "get_tree().paused"
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    reason: "Tree pause would stop the frame driver and the fatal path"
+    referenced_by:
+      - docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -328,6 +468,72 @@ forbidden_patterns:
     description: "The command log holds only plain CommandRecord values, never a command object or a Callable"
     why: "A stored callback points back at a view or input piece and breaks replays and Retry teardown"
     adr: docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md
+    added: 2026-11-02
+  - pattern: snapshot_equality
+    status: active
+    description: "No snapshot comparison with ==; use SnapshotTool.diff"
+    why: "Dictionary order and float typing make == unreliable"
+    adr: docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    added: 2026-11-02
+  - pattern: snapshot_in_gameplay
+    status: active
+    description: "Gameplay code never calls snapshot() or reads the command log"
+    why: "Test and replay tooling only"
+    adr: docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    added: 2026-11-02
+  - pattern: remove_while_iterating_roster
+    status: active
+    description: "Leak and reap never remove from the roster while iterating it; collect, then rebuild"
+    why: "Skips neighbours and breaks determinism"
+    adr: docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    added: 2026-11-02
+  - pattern: enemy_reference_members
+    status: active
+    description: "No class member of type EnemyInstance or Array[EnemyInstance] outside WaveSim and Combat"
+    why: "No system holds a target between attacks"
+    adr: docs/architecture/adr-0005-simulation-state-attachment-health-status-roster.md
+    added: 2026-11-02
+  - pattern: raw_screen_position
+    status: active
+    description: "No code outside FieldSpace reads an event position or the viewport size for gameplay"
+    why: "One coordinate space per gesture"
+    adr: docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    added: 2026-11-02
+  - pattern: per_enemy_nodes
+    status: active
+    description: "Enemy and effect views never create or free nodes per enemy or effect during a battle"
+    why: "Pooled records drawn in one _draw"
+    adr: docs/architecture/adr-0006-stretch-mode-coordinate-space-safe-area-hud-layering.md
+    added: 2026-11-02
+  - pattern: device_zero_check
+    status: active
+    description: "Never tell mouse from touch by device == 0; use the event class"
+    why: "Changed in 4.7 (deprecated-apis.md)"
+    adr: docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    added: 2026-11-02
+  - pattern: input_handled_in_input
+    status: active
+    description: "No node calls set_input_as_handled() in _input"
+    why: "It would hide events from the adapter"
+    adr: docs/architecture/adr-0007-input-adapter-and-gesture-path.md
+    added: 2026-11-02
+  - pattern: second_lifecycle_owner
+    status: active
+    description: "Only the BattleWrapper owns lifecycle states; nothing else maps OS notifications"
+    why: "One owner (GF6)"
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    added: 2026-11-02
+  - pattern: tree_pause_gameplay
+    status: active
+    description: "get_tree().paused is never used for gameplay pause"
+    why: "Pause is a StageFlow state (ADR-0008)"
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
+    added: 2026-11-02
+  - pattern: fatal_screen_loads_files
+    status: active
+    description: "The fatal screen is built in code and loads no file"
+    why: "It must show when data or scenes are broken"
+    adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
     added: 2026-11-02
 
 # Example:

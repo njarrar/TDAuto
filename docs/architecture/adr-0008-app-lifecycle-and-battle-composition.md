@@ -296,7 +296,7 @@ func _retry() -> void:
 ### Alternative 5: Keep the adapter as a lifecycle owner as well
 - **Description**: The adapter forwards focus and back; the wrapper keeps pause.
 - **Pros**: Matches the Input GDD text as it stands.
-- **Cons**: Two owners was finding GF6; the adapter is rebuilt on Retry, the wrapper is rebuilt too, and a state held in the old adapter is lost.
+- **Cons**: Two owners was finding GF6.
 - **Rejection Reason**: One owner (GF6).
 
 ## Consequences
@@ -321,7 +321,8 @@ func _retry() -> void:
 - **`free()` raises an error (L6).** Mitigation: the `queue_free()` fallback above.
 - **A Retry frame is long** (build, scene instantiate and view build in one frame). Mitigation: proposed budget 200 ms on the target phone; the spike measures it; if it fails, the rebuild splits across two frames behind a held "retrying" state, which is a change to this ADR.
 - **The fatal screen text does not draw on an export (L8).** Mitigation: it then shows as a solid colour, and the cause is in the debug log; a bundled font is a later change with a written reason.
-- **A Fatal and a quit in the same frame.** Quit wins; the Fatal record was already written at step d or f2 (or by the root before views).
+- **A Fatal and a quit in the same frame.** Fatal is handled first (the record is written), then the app quits.
+- **A resume tap queued in the same frame as a focus loss.** Step 1b discards queued resumes first (section 6), so the game stays Paused.
 - **Focus is lost during the rebuild frame.** The new gate starts with `_focused = true`; the next notification corrects it.
 
 ## GDD Requirements Addressed
@@ -359,10 +360,9 @@ Other edits that follow from this ADR:
 
 1. `docs/architecture/architecture.md` Data Flow 3.4 (lines 309 to 322): step 3 becomes "AppRoot calls `BattleBuilder.build`; the wrapper's `prepare()` loads the stage scene, then `attach()`"; item 3a (architecture 3.4a) drops `GestureResolver` (built by the wrapper through `InputAssembly`, not by the battle builder) and adds `HaltLatch`, `StatAccessor` and `TickConverter` first; step 4 names who calls the `phase(Build)` method.
 2. Same file, 3.5 (lines 324 to 329): replace "The timing of `free()` is unverified (ADR-0008)" with the section 9 sequence and its L6 fallback.
-3. Same file, 3.1 diagram line 272 and ADR-0003 section 2 step 2 (line 90): add the quit check ahead of Fatal and Retry.
-4. Same file, 4.3 (lines 427 to 473): the `build` comment says it returns a `Battle` that may be halted and never `null`; note that the builder, not `Battle`, creates the `HaltLatch`. ADR-0002 line 67 ("that `Battle` creates") is amended to match ADR-0004's `Battle._init(latch, slots, systems)`.
+3. Same file, 3.1 diagram line 272: "AppRoot end of frame: Fatal latch first, then the quit check, then the Retry latch".
+4. Same file, 4.3 (lines 427 to 473): the `build` comment says it returns a `Battle` built from a `BattleParts` record that may be halted and is never `null`; the builder creates the `HaltLatch`. Section 3.4 (and 3.4a) are rewritten as item 1 says, since AppRoot is the battle builder.
 5. Same file: Gate Findings GF6 and GF8 (lines 34, 36) become "Confirmed, ADR-0008"; Open Questions M1, M2 (lines 729, 730), A2 (741) and A10 (749) close; the Required ADRs row for ADR-0008 (line 687) is marked Done; the Document Status line 15 is brought up to date; the 3.2 table row for `lifecycle_changed` (line 296) records that the forward to AppRoot is `AppServices.on_lifecycle`, not a signal connection, and that `resized` does not pause.
-6. ADR-0002's canonical table row for `lifecycle_changed`: add the AppRoot recipient and the note on `resized`, if the row does not already list them. ADR-0003 line 76 loses "(ADR-0008 confirms)".
 7. `design/gdd/game-state-stage-flow.md`: Rule 1 (the root builds the battle and writes the Fatal record for every Fatal before the views connect, including the stage scene load); Rule 17 (add Android back as Pause, quit requested, and resized as a cancel without a pause); Rule 18 ("a broken stage scene" reaches the root path through `prepare()`); the line 71 text that the wrapper emits five states stands; line 75 "Becomes an ADR" is marked done.
 8. `design/gdd/input-gesture-resolver.md` (lines 66 and 123): `lifecycle_changed` is emitted by the wrapper, not the adapter. `design/gdd/battle-hud.md`: add the Android back rule (A10); the provisional record is written in the HUD's `lifecycle_changed` handler on `quit_requested`; the Fatal record before the views exist is the root's (near line 106 and Rule 19).
 9. `docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md`: line 242 requirement is met by `InputAssembly.build(battle, catalogue, clock)` and the line 224 sim directories are named in section 1 above.
@@ -373,7 +373,7 @@ Other edits that follow from this ADR:
 2. **Scene Fatal.** A `scene_ref` that does not load makes `prepare()` return `false`; the same single path runs with stage `scene`; no `phase(Build)` is emitted (Flow criterion 16 counts it exactly once on success).
 3. **Boot Fatal.** A failing manifest shows the screen with no catalogue data and no wrapper.
 4. **Retry.** After a Retry the weakref check over the old battle, every system and every wrapper node is empty (ADR-0004 section 9, extended to nodes); `attempt_seq` is one higher; `launch_id`, `call_prompt_done` and the catalogue are unchanged; the new battle opens in Build with one `phase(Build)`.
-5. **Retry ordering.** A test spy proves `_retry` ran with no wrapper method and no signal on the stack, and that Fatal wins when both latches are set.
+5. **Retry ordering.** A test spy proves `_retry` ran with no wrapper method and no signal on the stack, and that Fatal wins when both latches are set. With Fatal and quit in one frame, the Fatal record is written before the fake `_quit` runs.
 6. **Lifecycle.** The gate test feeds duplicate and reordered raw events and asserts one `focus_lost`, one `focus_gained`, order kept; `back` in Build, Wave and Intermission pauses; `back` in Paused, Won, Lost changes nothing; `resized` requests `cancel()` and does not pause; held states emit in step 1b before `apply_queued()`.
 7. **Quit.** With `quit_requested`, the HUD fake records its write before the fake `_quit` runs, in the same frame.
 8. **Wiring.** `WiringCheck.wrapper` passes for the resolver, `TowerInput`, `HeroInput` and the wrapper; the hero equivalence test (ADR-0004 section 11) calls the same `InputAssembly.build`.
