@@ -41,7 +41,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 | L8 | Non-adjacent path segments at least `path_width + 60` apart | 132 needed, 160 |
 | L9 | In-field length at least 800 | 1,660 |
 | L10 | Each slot covers at least 200 of path at the lowest level-1 tower range | 223 at range 150 |
-| L11 | Some disc of burst radius, searched on a grid of 10, holds at least 500 of path. Stage `stage_01` only, since a straight stage cannot pass | 644 (575 at the hairpin) |
+| L11 | Some disc of burst radius, searched on a grid of 10, holds at least 2.5 × that radius of path, so a bend exists to burst. Stage `stage_01` only, since a straight stage cannot pass | 196 against 175, at radius 70 |
 | L12 | 3 to 5 slots, as in the concept | 5 |
 | L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice; no segment doubles back on the one before | Pass |
 
@@ -74,7 +74,7 @@ L10 and L11 need tower range and burst radius, so they join the test in the Towe
 14. **Reading the enemies.** `roster()` is every enemy not yet removed, corpses awaiting the reap included, in `spawn_id` order. `targets()` is that list limited to those inside the field. Tower and Hero pass `targets()` to Combat's helpers, which skip the dead, and the burst uses it too. Both lists are read-only by rule and never kept past the reader's slot. An enemy exposes `spawn_id`, `def_id`, `distance` and `position`. How Health and Status attach is left to Combat's ADR.
 15. **Room for splitters, nothing built.** One add-enemy step serves the schedule, and the clear test looks only at the schedule and the roster. So splitter children at Vertical Slice can join atomically before the clear check, with new `spawn_id`s, with no fields or code added now.
 
-**Starter values.** These are fixtures, not balance. The Tower GDD ran them through a scripted simulation with towers and a placeholder hero, and raised all HP by 2.75 times, because at the first values a hero alone and towers alone both won (Tower System, Starter values). They replace the prototype's, whose top entry and 6 slots do not carry over.
+**Starter values.** These are fixtures, not balance. The Tower and Hero GDDs ran them through a scripted simulation with towers and a hero, and raised HP about 3 times, because at the first values a hero alone and towers alone both won, and set every intermission to 15 s, so that waiting restores the burst (Hero System, Simulated results). They replace the prototype's, whose top entry and 6 slots do not carry over.
 
 | Stage field | Value |
 |---|---|
@@ -84,22 +84,22 @@ L10 and L11 need tower range and burst radius, so they join the test in the Towe
 
 | Enemy | `max_hp` | `move_speed` | `bounty` | `lives_cost` | `visual_key` |
 |---|---|---|---|---|---|
-| `normal` | 110 | 60 | 4 | 1 | `enemy_normal` |
-| `fast` | 55 | 110 | 3 | 1 | `enemy_fast` |
-| `heavy` | 660 | 38 | 16 | 2 | `enemy_heavy` |
+| `normal` | 125 | 60 | 4 | 1 | `enemy_normal` |
+| `fast` | 60 | 110 | 3 | 1 | `enemy_fast` |
+| `heavy` | 750 | 38 | 16 | 2 | `enemy_heavy` |
 
 A group below is type × count @ `spawn_interval` + `start_delay`, in seconds from wave start.
 
 | Wave | Groups | Total HP | `intermission_duration` | Intent |
 |---|---|---|---|---|
-| 1 | normal×8 @1.5 +0 | 880 | 10 | Learn the path; cannot be lost |
-| 2 | normal×6 @0.6 +0; normal×6 @0.6 +12 | 1,320 | 12 | Two packets, one burst cooldown apart |
-| 3 | normal×12 @0.7 +0; fast×8 @0.5 +0 | 1,760 | 12 | First two fronts |
-| 4 | heavy×2 @3 +0; normal×8 @0.6 +8 | 2,200 | 12 | A packet catches the heavies, mostly in the hairpin |
-| 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,300 | 15 | An early leak, then a convergence |
-| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 5,390 | 15 (unused on the last wave) | Everything converges before the exit |
+| 1 | normal×8 @1.5 +0 | 1,000 | 15 | Learn the path; cannot be lost |
+| 2 | normal×6 @0.6 +0; normal×6 @0.6 +12 | 1,500 | 15 | Two packets, one burst cooldown apart |
+| 3 | normal×12 @0.7 +0; fast×8 @0.5 +0 | 1,980 | 15 | First two fronts |
+| 4 | heavy×2 @3 +0; normal×8 @0.6 +8 | 2,500 | 15 | A packet catches the heavies, mostly in the hairpin |
+| 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,710 | 15 | An early leak, then a convergence |
+| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Everything converges before the exit |
 
-Each wave's total HP is 1.25 to 1.63 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 4.4 minutes in simulation, or about 3.4 with every wave called, with 5.6 as the ceiling if every enemy reached the exit, which lives would never allow. That is below the concept's 5 to 8 minutes, which assumes 8 to 12 waves rather than the MVP's 6.
+Each wave's total HP is 1.25 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called.
 
 **Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` and `peak_alive_ub` rows need Burst and Tower data, so they join in the Hero and Tower stories.
 
@@ -108,7 +108,7 @@ Each wave's total HP is 1.25 to 1.63 times the last. With nothing called early, 
 | First spawn of a wave | At most 2 s | 0 s | The field is not empty after Start |
 | Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called early. This is Flow's cap on `start_delay`, measured where it matters |
 | `time_to_exit`, path length ÷ `move_speed` | 12 to 60 s | 15.6 to 45.3 s | Time for a burst; no stalled waves |
-| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration` | 10 s against 8 s plus telegraph | Waiting always restores the burst |
+| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration` | 15 s against 10.25 s | Waiting always restores the burst |
 | First position's `lives_at_risk` | Below `starting_lives` | 8 against 10 | The first wave cannot be lost, with no runtime rule: an idle player still leaks and feels it |
 | Every wave's `lives_at_risk` | At least 1 | 8 to 38 | No decorative waves |
 | Stage's total `lives_at_risk` | At least `starting_lives` | 120 against 10 | Stronger than Flow's "some cost above 0", since one 1-cost enemy against 10 lives cannot lose |
@@ -121,7 +121,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 
 **Handed to owning GDDs.**
 - **Tower:** reads `slot_positions`; supplies DPS per type and level, and keeps its own gold bound using `gold_upper_bound`. It must ensure `starting_gold` buys its cheapest tower, or the stage soft-locks.
-- **Hero:** decides whether a re-pin is instant, since an instant re-pin makes two fronts cost nothing and the prototype walked at 240. Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.68 s at starter values), or fast enemies escape the burst. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
+- **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 2 s. Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.31 s at starter values), or fast enemies escape the burst. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
 - **Battle HUD:** confirms the burst button coordinates used by L3 and L7, and decides whether to show the next wave's enemies (Open Questions).
 
 **Deliberately not built for MVP.** Forks and lanes, armour, flying, splitters, lane-switchers, per-wave HP scaling, bounty multipliers, randomness, enemy attacks, a spawn signal (views read the roster), and leaks per lane.
@@ -227,7 +227,7 @@ The **packet_length** formula is defined as:
 | `speed_factor` | float | above 0, up to 1 | Combat | Slow tightens a fully slowed group |
 
 **Output Range:** 0 for one enemy. The design target is `splash_radius < packet_length ≤ 2 × burst_radius`, so the burst catches what splash cannot. Splash reaches one radius rather than two, because its impact is the leader. Whether uncapped splash lets it hold is unproven.
-This is a design aid for authoring waves, with no code behind it, as is `catch_up`. **Example:** 6 at 0.6 s and speed 60: 180, inside a burst of radius 150. **A wave of 8 at 1.5 s and speed 60 has gaps of 90 and is a string, not a packet.** A burst hits 3 or more whenever the spacing is at most 150 and three are alive, with room to spare, so "3 or more" barely tests aim. The prototype's bursts hitting 3 or more every time likely reflect this, so the gates here use 5.
+This is a design aid for authoring waves, with no code behind it, as is `catch_up`. **Example:** 6 at 0.6 s and speed 60: 180, wider than a burst of radius 70, so a burst takes about 4 of 6. **A wave of 8 at 1.5 s and speed 60 has gaps of 90 and is a string, not a packet.** A burst hits 3 or more whenever the spacing is at most 70 and three are alive, with room to spare, so "3 or more" barely tests aim. The prototype's bursts hitting 3 or more every time likely reflect this, so the gates here use 5.
 
 The **catch_up** formula is defined as:
 
@@ -410,7 +410,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Combat. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
 | Mono-role | Tower stories | Every mono-role build ends below the best mixed build |
 | Always-call | Tower stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all |
-| Burst fit | Hero stories | In waves 2 to 6, at least 5 of `targets()` fit in one burst radius at some tick |
+| Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
 | Two fronts | Hero stories | In waves 3, 5 and 6, two of `targets()` are over 2 × `leash_radius` apart at some tick |
 | No input | This system's stories | With only Start pressed, the run survives wave 1 |
 | Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough |
@@ -432,7 +432,6 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
 | The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
-| Should re-pinning be instant? Instant makes two fronts cost nothing, and the prototype walked at 240 | Hero GDD | Hero GDD |
 | Should the HUD show the next wave's enemies during Build and Intermission? Recommended: one line of enemy glyphs and counts, drawn from the Wave records, with no timings. Without it, building and calling early are blind on a first attempt. Whether players read it is unproven | Battle HUD GDD | Battle HUD GDD |
 | With "leaks per lane" cut, the concept's "which lane leaked" has nothing to report. Recommended: report leaks by enemy type on the result, which also says what to build | Battle HUD GDD | Battle HUD GDD |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |

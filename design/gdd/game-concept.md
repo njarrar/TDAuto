@@ -74,7 +74,7 @@ The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of 
 ### Core Mechanics
 
 1. **Tower placement and upgrade** on fixed build slots along a lane path; tap slot → pick a tower from an in-field arc; tap tower → cost chip, second tap commits (no modal popup; the chip is the mis-spend safeguard, per art bible §7).
-2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 world units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle; a drag released back on the button cancels, and a tap on the button does nothing (the burst is drag-only, so a resting thumb never spends the cooldown; Input GDD review 2026-11-01). Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
+2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 world units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle, within reach of where the hero stands (Hero GDD); a drag released back on the button cancels, and a tap on the button does nothing (the burst is drag-only, so a resting thumb never spends the cooldown; Input GDD review 2026-11-01). Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
 3. **Wave system**: 8–12 waves per stage (MVP: 6) defined in data files; a stage waits for the player to start wave 1, then a timer runs between waves, which the player can beat by calling the next wave early for bonus gold; each stage varies path geometry and/or attack pattern (fast rushers, armoured, flying, splitters, lane-switchers).
 4. **Three skill trees** (Towers / Weapons / Hero), persistent, free respec between stages, one full tree, never two, at each tier's last stage (see Unique Hook). Modifiers carry a source tag, a target stat and an optional condition (the first cross-buff is an aura: towers near the hero), resolving in a fixed order: base → flat adds → percent multipliers → overrides, through one pure, unit-testable function. 
 5. **Stage progression**: 20 hand-authored stages, stage preview shows path + attack type, 1–3 stars per clear, hero weapons unlock by stage.
@@ -129,7 +129,7 @@ One stage: 8–12 waves. Between waves a timer runs: place, upgrade, re-pin the 
 - **Curiosity**: the next stage preview; untried tree branches; synergies hinted by node descriptions.
 - **Investment**: trees and stars are permanent; the hero you built.
 - **Social**: none (v1).
-- **Mastery**: 3-star clears; bursts that hit 3+ enemies as a personal metric (hero damage share is a balance metric, not a player goal: Pillar 2 caps it).
+- **Mastery**: 3-star clears; kills per burst as a personal metric (hero damage share is a balance metric, not a player goal: Pillar 2 caps it).
 
 ---
 
@@ -246,7 +246,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 - Store release work (devices, listing, certification) is not in any estimate yet.
 
 ### Open Questions
-- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? (add a pinned-once bot mode). Re-pin cadence: instant vs a short walk? (If "walk" wins, the hero needs path-following again, so the Technical claim "no pathfinding" must be revisited.) Does the drag model hold on a phone?
+- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? In simulation it is worth about 2 lives on one path, with burst reach limited to 160 units, which the user accepted for MVP (Hero GDD). Re-pin cadence: a straight-line walk at 240, which needs no pathfinding. Does the drag model hold on a phone?
 - Is one tree enough to feel the meta loop? — Vertical slice ships the Hero tree alone.
 - Portrait confirmed? — First phone build; check thumb coverage of the lower third.
 - Monetization — decide before Small Ship; affects store listing and nothing in the loop.

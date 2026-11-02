@@ -112,21 +112,9 @@ A tower at its last level opens no chip. Only one chip is open at a time.
 | `tower_slow` | 1 | 60 | 0 | 150 | 0.6 | `slow_strength` 0.4, `slow_duration` 2.0 |
 | | 2 | 70 | 0 | 165 | 0.6 | `slow_strength` 0.5, `slow_duration` 2.5 |
 
-Stage: `early_call_seconds_per_gold` 1.5. On a packet splash is worth more per gold, at 0.57 against single's 0.40 on three victims at level 1. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
+Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold, at 0.57 against single's 0.40 on three victims at level 1. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
 
-**This run changed the enemies.** Towers-only and hero-only both won at Enemy & Wave's original HP, including a hero alone with no towers, which breaks Pillar 2. So all enemy HP rose by 2.75 times, to `normal` 110, `fast` 55 and `heavy` 660, with bounties unchanged. Enemy & Wave's table is amended. Burst damage no longer kills a fresh normal, so the Hero GDD must decide what a burst's payoff is.
-
-| Build, simulated with `tower_*` above | Towers only | Pinned once | Driven hero | Towers only, always calling | Driven, always calling |
-|---|---|---|---|---|---|
-| Single only | Lost W3 | Lost W4 | Won, 10 lives | Lost W3 | Won, 10 lives |
-| Splash only | Lost W4 | Lost W4 | Won, 8 lives | Lost W4 | Won, 8 lives |
-| Slow only | Lost W2 | Lost W2 | Lost W4 | Lost W2 | Lost W5 |
-| 3 single, 1 splash, 1 slow | Won, 2 lives | Won, 5 lives | Won, 10 lives | Won, 4 lives | Won, 10 lives |
-| 2 single, 2 splash, 1 slow | Lost W6 | Lost W6 | Won, 10 lives | Lost W6 | Won, 10 lives |
-| 3 single, 2 splash | Lost W6 | Lost W6 | Won, 10 lives | Lost W6 | Won, 10 lives |
-| 2 single, 1 splash, 2 slow | Lost W6 | Lost W6 | Won, 10 lives | Lost W6 | Won, 10 lives |
-
-Hero alone: lost on wave 3. All of it assumes a placeholder hero of 3 damage per 0.5 s and a burst of 40 at radius 130 every 8 s, the smallest round radius that passes L11, at 544. With the prototype's stronger hero the shape holds: hero alone loses on wave 5, and towers-only never beats 2 lives without calling. Calling early helps a towers-only bot, because waiting costs it nothing, and a bonus of 1.0 s per gold turned a lost build into a win. At 1.5 s per gold no build flips, and the best gains 2 lives, so Enemy & Wave's always-call gate is reworded to match. The driven bot is a ceiling: it sees everything and always aims well. It took 36% to 43% of damage on mixed builds, above Pillar 2's 25% to 30%, and with the prototype's hero 43% to 51%. Whether the hero's values can bring that down is the Hero GDD's first job. A mid-skill bot, re-pinning every 3 s and bursting every 10 s, also won with 8 to 10 lives on every build except slow only, and took 31% to 37%, of which the burst alone was 24% to 30%. So cutting the auto-attack alone cannot reach the target. Calling every wave cost both hero bots no lives and cut about a minute, so calling is close to free with a hero too, which the always-call gate now checks. In every run the median burst hitting 3 or more enemies killed none. What this does not show is a human.
+**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 7 to 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 3 or 4 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
 **Content rules, added to the content test.** All bounds are proposed.
 
@@ -144,13 +132,13 @@ Hero alone: lost on wave 3. All of it assumes a placeholder hero of 3 damage per
 | `range` | At most 260 | 165 |
 | `attack_interval` | At least 0.2 | 0.6 |
 | `slow_strength` | At most 0.6 | 0.5 |
-| `burst_spike` | At least 2 at every splash level (Hero stories) | 2.67 |
-| `early_call_seconds_per_gold` | One tick at least (Data, boot-fatal), so the formula never divides by 0 | 1.5 |
+| `burst_spike` | At least 2 at every splash level (Hero stories) | 5.78 |
+| `early_call_seconds_per_gold` | One tick at least (Data, boot-fatal), so the formula never divides by 0 | 1.8 |
 
 Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest slot, and `peak_alive_ub` passes outright at 34. L11 and `burst_spike` wait for the Hero record.
 
 **Handed to owning GDDs.**
-- **Hero:** sets real values, knowing this table. Its first job is to solve share and payoff together, since more burst damage worsens share. A burst now kills no fresh enemy, not even a `fast`, so the "I did that" moment is missing at these values, and fixing it may mean changing tower or enemy values too. `intermission_duration` and L11 use the burst's real cooldown and radius, and a radius below about 125 fails L11 on the starter stage.
+- **Hero:** done. It sets the burst's values and owns the bot table.
 - **Battle HUD:** draws the arc, chip, cost, dimming and the range ring, and listens to `slot_tapped`.
 - **Enemy & Wave:** its starter HP is amended here, and its "550" gold example is now the all-single minimum.
 
@@ -200,8 +188,8 @@ The **early_call_bonus** formula is defined as:
 | `seconds_left` | float, seconds | above 0, up to `intermission_duration` | calculated (Flow) | Time given up; a whole number of ticks times `dt` |
 | `early_call_seconds_per_gold` | float, seconds | one tick to 600 | data file (Stage) | Seconds given up per gold |
 
-**Output Range:** 0 to 10 per call and 40 per stage at starter values. A call with less than one rate's worth left pays 0 and still starts the wave.
-**Example:** at 1.5 s, 90 ticks: 720 ticks left pays 8, 719 pays 7, 89 pays 0.
+**Output Range:** 0 to 8 per call and 40 per stage at starter values. A call with less than one rate's worth left pays 0 and still starts the wave.
+**Example:** at 1.8 s, 108 ticks: 900 ticks left pays 8, 863 pays 7, 107 pays 0.
 
 The **gold_before_wave** formula is defined as:
 
@@ -214,15 +202,15 @@ The **gold_before_wave** formula is defined as:
 | `intermission_duration` | float, seconds | as Wave | data file | The whole intermission, as if called at once |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and every call is instant. `gold_before_last_wave` is this at the last wave, and `max_final_gold` is that plus the last wave's bounties.
-**Example:** 158, 214, 294, 366 and 496 before waves 2 to 6; `max_final_gold` 670, of which the bonus is 40, or 6.0%.
+**Example:** 160, 216, 296, 368 and 496 before waves 2 to 6; `max_final_gold` 670, of which the bonus is 40, or 6.0%.
 
 | After wave | Bounties | `gold_upper_bound` | Before next wave, with bonus |
 |---|---|---|---|
 | Start | 0 | 120 | 120 |
-| 1 | 32 | 152 | 158 |
-| 2 | 48 | 200 | 214 |
-| 3 | 72 | 272 | 294 |
-| 4 | 64 | 336 | 366 |
+| 1 | 32 | 152 | 160 |
+| 2 | 48 | 200 | 216 |
+| 3 | 72 | 272 | 296 |
+| 4 | 64 | 336 | 368 |
 | 5 | 120 | 456 | 496 |
 | 6 | 174 | 630 | 670 at the end |
 
@@ -255,13 +243,13 @@ The **burst_spike** formula is defined as:
 | `s` | float, units | above 0 | calculated | Unslowed spacing |
 
 **Output Range:** above 0. Below 2, one splash shot looks like half a burst. It ignores HP limits, kills and overlapping groups, so it is only a floor.
-**Example:** burst 40 at radius 130, level-2 splash 30 at radius 75, normal×6 @0.6: `s` 36, `V_s` 3, `V_b` 6, so 240 / 90 = 2.67, the lowest of the starter groups.
+**Example:** burst 130 at radius 70, level-2 splash 30 at radius 75, normal×6 @0.6: `s` 36, `V_s` 3, `V_b` 4, so 520 / 90 = 5.78, the lowest of the starter groups.
 
-**The gate Combat Rule 6 asked for has three parts, and none is the one it named.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers about 3 times a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
+**The gate Combat Rule 6 asked for has three parts, and none is the one it named.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
 
 1. `burst_spike` of at least 2, for every splash level on every group of 5 or more, in the content test.
-2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated with the placeholder hero, burst only: 36% against 36%, a pass.
-3. In bots, the median burst hitting 3 or more enemies kills at least 2, measured on the mid-skill bot. `burst_spike` can pass on victim count alone, at only 1.33 times a level-2 splash per victim, so this measures the outcome. **It fails today, with a median of 0.** It is the Hero GDD's to fix.
+2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated, burst only: 33% against 25%, a pass.
+3. In bots, the median burst hitting 3 or more enemies kills at least 2, measured on the mid-skill bot. `burst_spike` can pass on victim count alone, so this measures the outcome. Simulated: 3 to 4, a pass.
 
 Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b` together, so bots rather than this formula measure it.
 
@@ -392,9 +380,9 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 21. (Rule 15) **GIVEN** gold 26 and a corpse worth 4, **THEN** `NO_GOLD` before the reap, `OK` after.
 22. (Rule 16, Flow row) **GIVEN** the builder, **WHEN** called twice, **THEN** one bonus, before the first spawn. Start in Build pays nothing.
 23. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; `slot_state` empty, then `A`, 1, 0.
-24. (early_call_bonus) `dt` 0.25, rate 1.0: 3.0, 2.75, 0.75 pay 3, 2, 0. `dt` 1/60, rate 1.5: 720, 719, 90, 89 ticks pay 8, 7, 1, 0.
-25. (gold_before_wave) A starter-shaped factory: 158, 214, 294, 366, 496; final 670.
-26. (burst_spike) 40, 130, 30, 75, interval 0.5, speed 72, `n` 6: 240 / 90. `n` 4 is unchecked.
+24. (early_call_bonus) `dt` 0.25, rate 1.0: 3.0, 2.75, 0.75 pay 3, 2, 0. `dt` 1/60, rate 1.8: 900, 863, 108, 107 ticks pay 8, 7, 1, 0.
+25. (gold_before_wave) A starter-shaped factory: 160, 216, 296, 368, 496; final 670.
+26. (burst_spike) 130, 70, 30, 75, interval 0.5, speed 72, `n` 6: 520 / 90. `n` 4 is unchecked.
 
 **CI: Integration**
 27. (Content) **GIVEN** real records, **THEN** every row with data passes, L10 and `peak_alive_ub` included; one broken copy per row fails naming it, watched failing once.
@@ -404,14 +392,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Towers-only, driven | Hero stories | The best non-calling script ends with 3 lives or fewer, a loss included; driven at least 4 above it |
-| Hero-only, slow-only | Hero stories | Both lose |
-| Mono-role | Hero stories | In the towers-only and pinned-once columns, every mono build loses and ends below the best mixed build. A driven bot can tie at full lives, so that column is not used |
-| Dominant build | Hero stories | On the mid-skill bot, at least two different mixed builds win within 2 lives of each other |
-| Share (Pillar 2) | Hero stories | On the mid-skill bot, hero + burst is 25% to 30% of damage. The ceiling bot cannot prove it, and a fixed bot is not a human, so human logs replace it at first playable. If it cannot be reached, the user decides whether to amend the pillar |
-| Burst outcome | Hero stories | The median burst hitting 3 or more kills at least 2, on the mid-skill bot |
-| Always-call | Hero stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat driven. With a hero, always calling loses at least one life on the mid-skill bot, or the concept's promised cost is not real. It fails today |
-| `dealt_burst` (Combat Rule 6) | Hero stories | The 2, 2 and 1 share is at least 75% of single-only's |
+| Bot gates | Hero stories | The Hero GDD's deferred table owns towers-only, hero-only, mono-role, dominant build, share, burst outcome, always-call and `dealt_burst`, with their current results |
 | `burst_spike`, L11, intermission, bypass | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
 | Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
@@ -427,12 +408,10 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Can hero and tower values together reach Pillar 2's 25% to 30%? The ceiling bot took 36% to 51% across two hero assumptions, and the mid-skill bot 31% to 37%. If not, the user decides whether to amend the pillar's target | Hero GDD + bots | Hero GDD |
-| What does a burst pay off, now it kills no fresh enemy? | Hero GDD | Hero GDD |
-| Calling early costs a hero bot nothing, though the concept promises a cost in recovery and preparation. Does a human feel one? Flow's fallback is overlapping waves | qa-lead + Hero GDD | First playable |
+| Calling early is nearly free for a hero bot, though the concept promises a cost (Hero GDD, Open Questions) | qa-lead + Hero GDD | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
-| Is 3 single, 1 splash, 1 slow the solved build? It was the only one to win towers-only, so a mix may be dominant | Bots + playtest | First playable |
-| Is the early-call bonus noticed at 1.5 s per gold? It pays 40 gold at most, which is below any tower's price on its own | Playtest | First playable |
+| Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
+| Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |
 | Does a wrong disc happen often enough to need undo? | Pillar 4 phone test | First phone build |
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |
 | Does the hexagon read apart from the square at quarter scale? | art-director | First render |

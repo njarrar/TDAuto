@@ -30,7 +30,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Not Started | — | Input, Combat, Enemy & Wave, Data & Config |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Designed | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
 | 8 | Battle HUD & Build UI (inferred) | UI | MVP | Not Started | — | Game State, Tower, Hero, Input |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
@@ -177,10 +177,10 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 22 |
-| Design docs started | 6 |
+| Design docs started | 7 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 6/8 |
+| MVP systems designed | 7/8 |
 | Vertical Slice systems designed | 0/11 |
 
 ---

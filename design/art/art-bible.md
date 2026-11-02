@@ -72,7 +72,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 
 **UI shape grammar.** Controls are rounded rectangles and discs, never tower polygons or enemy circles. Disc buttons are reserved for hero actions. Tree nodes use the role shape (polygon for tower, asymmetric for hero, circle for economy): owned filled, available outlined, locked dotted.
 
-**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Zones are always thinner than any entity.
+**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Reach ring: neutral, dotted 3 on and 13 off, 2 px, alpha 0.35. Pin ghost: 2 px unfilled kite. Ground ring: 2 px solid, radius 30. Ready ticks: four static 3 px, 8 long, radius 40 around the hero. Kill mark during aim: body knocked out, steady 2 px white contour. Zones are always thinner than any entity.
 
 **Hero vs supporting shapes.** Supporting shapes are flat and unlit. The hero's glow, asymmetry and white-gold fill are exclusive.
 
@@ -80,7 +80,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 
 | Element | Visible | Hit area |
 |---|---|---|
-| Hero | 44 px | 72 px |
+| Hero | 44 px | 112 px (drag) |
 | Tower | 56 px (square 44 px side) | 72 px |
 | Build slot | 56 px | 72 px |
 | Burst button | 84 px | 96 px |
@@ -125,6 +125,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 **Pose language (no limbs, no faces).** Intent reads through orientation, scale and the glow envelope, each a single flat-shape transform.
 - *Idle (unpinned, in build):* slow 0.5 Hz breathing scale (±4%), tip drifting toward the nearest path, glow at rest.
 - *Pinned:* a 2 px solid ground ring snaps in under the hero (the pin lands); the body settles 6% smaller for 0.1 s then returns; the tip tracks targets inside the leash. The ground ring is the pin, the dashed leash is the territory.
+- *Walking:* tip locked on the pin, long axis +6%, no breathing. The ground ring lands on release, not arrival.
 - *Attacking:* the tip stretches 10% toward the target on each shot and recoils; shots are thin white-gold lines with no glow (glow budget stays at 1).
 - *Bursting:* the body compresses to a near-circle for 0.15 s (wind-up, the one moment the hero loses its asymmetry), then snaps back at 1.3× as the gold ring expands (Section 2). Glow budget 2 for ~0.4 s.
 
@@ -164,9 +165,9 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Animation.** 120 ms for presses and state changes, 200 ms for panel in/out, ease-out on entry, ease-in on exit; the cooldown sweep is linear because it is a clock. Never animates: the leash (its dash density switches), panel opacity, counter values (digits swap, never bounce). Nothing in screen-space loops or glows. (UX, photosensitivity:) the 2 Hz danger pulse is capped at a 25% alpha swing or rendered as travelling chevrons; the 0.4 s burst field dip never chains (no re-dip within 1 s); a Reduce Motion setting freezes the pulse and skips the dip.
 
-**Burst button.** 84 px visible / 96 px hit, bottom corner on the dominant-hand side, inside the safe area, with the hit box ending at least 24 dp from the side edge (Android back-swipe zone, unverified) and 16 dp above the OS gesture inset (UX); left-handed mirror is a setting. Ready: gold fill and complete outer ring. Cooling: neutral outline with the gold fill returning behind it as a clockwise wedge, seconds digit in neutral (this is how Section 2's "outline only" cooling state should be read). Drag from it to aim.
+**Burst button.** 84 px visible / 96 px hit, bottom corner on the dominant-hand side, inside the safe area, with the hit box ending at least 24 dp from the side edge (Android back-swipe zone, unverified) and 16 dp above the OS gesture inset (UX); left-handed mirror is a setting. Ready: gold fill and complete outer ring. Cooling: neutral outline with the gold fill returning behind it as a clockwise wedge, seconds digit in neutral (this is how Section 2's "outline only" cooling state should be read). Locked, in Build or before a first pin: dotted neutral outline with no fill or digit. Drag from it to aim.
 
-**Reticle (UX).** Offset *away from the thumb*, default 60–80 dp above; clamped to the viewport and flipped below the finger when the pin is near the top. The aim vector stays finger-relative. While the finger is inside the burst button during an aim, the reticle dims and the radius preview hides, because releasing there cancels.
+**Reticle (UX).** Offset *away from the thumb*, 100 units above; clamped to the viewport and to the burst's reach, with no flip, since no in-field path lies above the band. The aim vector stays finger-relative. While cancelling, which ends over 64 from the button's centre and resumes at 48, the reticle dims and the radius preview hides, because releasing then cancels.
 
 **Leash over the path (UX).** Where any arc of the dashed leash crosses the lifted path, draw it in two tones (dark outer, light inner) or raise alpha to 0.7, so it clears 3:1. Still thin, still unfilled.
 
@@ -190,7 +191,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Batching rules.** Godot 2D batches consecutive CanvasItems sharing texture, material, blend mode and z-index (unverified). Batching breaks on per-node materials, z-index interleaving, CanvasLayer changes and Light2D; uniform `modulate` is fine. Max **3 distinct CanvasItem shaders** per scene (hit flash, chevron pulse, outline); everything else `null` material. The 2 Hz pulse uses one shared `TIME`-driven material, so all pulsing elements pulse in sync. Outline zones are a second, slightly larger Polygon2D behind each shape with the same material, not a shader. Drag lines for slowed enemies come from one `draw_multiline` call.
 
-**Pooling and particles.** Pool at scene load: 64 tracers (hits are instant, so nothing flies), 48 enemies, 8 glow bursts, 16 hit-flash markers, dropping the oldest flash if they run out; never `instantiate()` mid-wave, except when the enemy pool is empty: create one and log an error, since an invisible enemy is worse than a hitch. VFX are animated shapes, not particles: burst ring = one tweened arc matching the radius preview; hit flash = an 80 ms white disc over the body, at alpha 1.0 for hero hits and about 0.6 for tower hits, so towers never outshine the hero; chevrons = three drawn polygons; tower fire = a 100 ms fading segment drawn by the one tracer `_draw()` node, not a Line2D node per shot; tower splash = a static 2 px unfilled ring at the true radius for 100 ms, which never expands, so it cannot read as a burst. Particles only for the enemy death pop, **CPUParticles2D**, at most 32 per emitter and **300 live particles total** (GPUParticles2D on Android drivers is a known risk; ideal, re-test later).
+**Pooling and particles.** Pool at scene load: 64 tracers (hits are instant, so nothing flies), 48 enemies, 8 glow bursts, 16 hit-flash markers, dropping the oldest flash if they run out; never `instantiate()` mid-wave, except when the enemy pool is empty: create one and log an error, since an invisible enemy is worse than a hitch. VFX are animated shapes, not particles: burst ring = one tweened arc matching the radius preview; burst kill spokes use the tracer pool; hit flash = an 80 ms white disc over the body, at alpha 1.0 for hero hits and about 0.6 for tower hits, so towers never outshine the hero; chevrons = three drawn polygons; tower fire = a 100 ms fading segment drawn by the one tracer `_draw()` node, not a Line2D node per shot; tower splash = a static 2 px unfilled ring at the true radius for 100 ms, which never expands, so it cannot read as a burst. Particles only for the enemy death pop, **CPUParticles2D**, at most 32 per emitter and **300 live particles total** (GPUParticles2D on Android drivers is a known risk; ideal, re-test later).
 
 **Lines.** Godot 4.7 draws CanvasItem lines with no AA feather and they look thinner (`breaking-changes.md`): widen every line that relied on it by ~1 px. Line2D `antialiased` costs a second pass on Mobile (unverified): prefer width ≥ 2 px with AA off, or a 1 px feather baked into a 4×1 gradient texture. *Ideal:* `antialiased = true` everywhere, re-test.
 
@@ -204,12 +205,12 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 | Element | Source | Variants | States |
 |---|---|---|---|
-| Hero | code + halo PNG | 1 | glow, dimmed outline (defeat) |
+| Hero | code + halo PNG | 1 | glow, walking, dimmed outline (defeat) |
 | Towers | code | 3 roles × 2 levels at MVP | ready, cooling |
 | Enemies | code (one batched drawer if > 40) | 7 types | damaged, slowed, armoured |
 | Build slot | code | 1 | free, blocked, selected (outline alpha 0.6) |
 | Path | code (Line2D) | 1 per stage | draw-in entry |
-| Zones | code | leash, reticle, preview | in/out of zone |
+| Zones | code | leash, reticle, preview, reach (`zone_reach`) | in/out of zone |
 | UI | code + icon PNGs | panel, buttons, tree nodes | owned, available, locked |
 
 ## 9. Reference Direction
