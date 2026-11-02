@@ -42,7 +42,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 9. **No catalogue.** Combat reads no data. Callers read through the stat accessor and pass values in, so Combat depends on nothing and needs only plain fixtures to test. The one value kept from spawn is HP: `max_hp` seeds Health once, an exception to Data & Config's "never cache at spawn", because current HP is state.
 10. **Targeting helpers.** Combat exposes `hp_left(enemy)` for read-only previews, and owns three pure helpers over a list the caller passes, with ranges passed in: `first_in` (furthest along the path), `nearest_in` (nearest to the attacker) and `all_in_radius` (every victim of a splash or burst). They compare exact values, break ties by lowest `spawn_id`, scan rather than sort, and skip the dead. Attackers re-pick on every attack and hold no target, so no reference can dangle. Policies are fixed, with no upgrade or UI at MVP (Pillar 4): towers use first along the path, a slow tower prefers the first unslowed enemy so it does not waste slow on a slowed leader, and the hero uses nearest to itself. The hero stands at its pin, so its target must be inside the leash and nothing else; the prototype skipped the leash check, which let the hero hit far past it.
 11. **Tick order.** Flow, then Enemy & Wave (spawn, move, leak), Status countdown (the battle's tick passes it Enemy & Wave's roster), Towers by slot index, Hero then burst, then Enemy & Wave's reap (kills, then clear checks). Leaks resolve before fire, as in the prototype, so an enemy reaching the end leaks even if a tower could have killed it that tick, a fatal leak skips the rest of the tick and pays no bounty, and a slow first affects the next tick's move. Enemy & Wave confirms this.
-12. **Views listen, combat does not wait.** `attack_fired(source_kind, source_id, origin, impact, radius)` draws lines and rings, even for a zero-damage slow attack. `damage_applied(event, applied, position)` draws flashes. Both carry copied positions, because a killed target is reaped before its flash is drawn. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them; Visual Feedback & VFX takes it over at Vertical Slice.
+12. **Views listen, combat does not wait.** `attack_fired(source_kind, source_id, origin, impact, radius)` draws lines and rings, even for a zero-damage slow attack. `damage_applied(event, applied, position)` draws flashes. An attacker calls `report_attack` with those same five arguments, and it only emits `attack_fired`. Both signals carry copied positions, because a killed target is reaped before its flash is drawn. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them; Visual Feedback & VFX takes it over at Vertical Slice.
 
 **Not owned.** Who attacks whom and when: range, attack timers, burst cooldown and telegraph belong to Tower and Hero. Also the enemy roster, movement, gold, lives, and stat reads.
 
@@ -71,7 +71,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Tower System | calls | `deliver`, `apply_slow`, targeting helpers | Combat (API); Tower (when, whom, values) |
+| Tower System | calls | `deliver`, `apply_slow`, `report_attack`, targeting helpers | Combat (API); Tower (when, whom, values) |
 | Hero System | calls | `deliver` for attacks and burst, targeting helper | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
@@ -161,7 +161,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 | System | Interface |
 |---|---|
-| Tower System | `deliver`, `apply_slow`, helpers |
+| Tower System | `deliver`, `apply_slow`, `report_attack`, helpers |
 | Hero System | `deliver`, helpers |
 | Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
 | Game State & Stage Flow | Tick order, counters for the result |

@@ -4,8 +4,10 @@ shortcut: scripted bots in plain Python, not game code. Replace with the Hero st
 Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check)
      python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
+     python3 tools/balance-sim/hero_bots.py --orders (fill first against upgrading in pairs, every placement)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
+import itertools
 import math,sys
 DT=1/60; BR=70; BLOG=[]; THUMB=None; START=(350.0,800.0)
 PATH=[(-40,210),(430,210),(430,400),(110,400),(110,570),(270,570),(270,980)]
@@ -219,7 +221,7 @@ def res(d,g,tw,tick):
     return dict(gold=g,hs=(d['h']+d['b'])/tot,bs=d['b']/tot,tw=len(tw),up=sum(t['l'] for t in tw.values()),mins=tick/60/60)
 
 def L(c,dmg,rng,iv,**k): return dict(cost=c,dmg=dmg,range=rng,int=iv,**k)
-F={'single':[L(50,12,150,.6),L(60,18,165,.6)],
+F={'single':[L(50,12,150,.6),L(60,21,165,.6)],
    'splash':[L(70,20,150,1,radius=55),L(80,30,165,1,radius=75)],
    'slow':[L(60,0,150,.6,str=.4,dur=2),L(70,0,165,.6,str=.5,dur=2.5)]}
 NONE={r:[L(1,0,1,1)] for r in F}
@@ -294,6 +296,17 @@ def check_clamp():
             assert math.dist(clamp_pin(f),e)<.02,(HAND,f,clamp_pin(f))
         print(f"clamp_pin ok, {HAND} hand: {n} fingers against {len(pts)} boundary samples, worst excess {worst:.3f}")
     HAND='right'
+def pairs(a,s): return [x for i in (0,2) for x in (('b',a[i],s[i]),('b',a[i+1],s[i+1]),('u',s[i]),('u',s[i+1]))]+[('b',a[4],s[4]),('u',s[4])]
+def fill(a,s): return [('b',a[i],s[i]) for i in range(5)]+[('u',x) for x in s]
+def _lives(o):
+    r=run(F,o,hero=dict(MID,reach=160.0)); return r['lives'] if r['won'] else 0
+def orders():
+    # every placement of each mix: does upgrading early compete with filling, and does the slot matter
+    for lab,b in (('3 single, 1 splash, 1 slow',('single','single','single','splash','slow')),('2 single, 2 splash, 1 slow',('single','single','splash','splash','slow')),('3 single, 2 splash',('single','single','single','splash','splash')),('2 single, 1 splash, 2 slow',('single','single','splash','slow','slow'))):
+        ps=sorted(set(itertools.permutations(b)))
+        fl=[_lives(fill(p,ORD)) for p in ps]; pr=[_lives(pairs(p,ORD)) for p in ps]
+        print(f"{lab:27} placements {len(ps)} | fill first median {median(fl)} range {min(fl)}-{max(fl)} | upgrade in pairs median {median(pr)} range {min(pr)}-{max(pr)}")
+        assert median(pr)>=median(fl) and max(fl)-min(fl)>=3
 if __name__=='__main__':
     assert valid_pin(START) and valid_pin((270,480))
     check_clamp()
@@ -304,6 +317,8 @@ if __name__=='__main__':
         THUMB=860.0; table(grid=False); THUMB=None
         for lab,mm in (('react 1 s, exact',dict(react=1.0,off=0)),('react 3 s, 50 off',dict(react=3.0,off=50))):
             print(lab,[(b,fm(r:=run(F,o,hero=dict(MID,reach=160.0,**mm))),round(r['hs']*100)) for b,o in MIXED.items()])
+    elif '--orders' in sys.argv:
+        orders()
     elif '--left' in sys.argv:
         HAND='left'; table()
     else:
