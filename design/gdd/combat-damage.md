@@ -71,8 +71,8 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Tower System | calls | `deliver`, `apply_slow`, targeting helpers | Combat (API); Tower (when, whom, values) |
-| Hero System | calls | `deliver` for attacks and burst, targeting helper, `hp_left`, the Hero-and-burst tick slot | Combat (API); Hero (when, whom, values) |
+| Tower System | calls | `deliver`, `apply_slow`, targeting helpers, `speed_factor`; its shots raise `attack_fired` | Combat (API); Tower (when, whom, values) |
+| Hero System | calls | `deliver` for attacks and burst, targeting helper, `hp_left`, the Hero-and-burst tick slot; its attacks raise `attack_fired` | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
@@ -165,8 +165,8 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 | System | Interface |
 |---|---|
-| Tower System | `deliver`, `apply_slow`, helpers, the Towers-by-slot-index tick slot |
-| Hero System | `deliver`, helpers, `hp_left`, the Hero-and-burst tick slot |
+| Tower System | `deliver`, `apply_slow`, helpers, `speed_factor`, `attack_fired`, the Towers-by-slot-index tick slot |
+| Hero System | `deliver`, helpers, `hp_left`, `attack_fired`, the Hero-and-burst tick slot |
 | Enemy & Wave | Health, Status, `speed_factor`, `is_dead`, the reap, `spawn_id`, `deliver` for test kills; Rule 11's tick order |
 | Battle HUD (soft) | `damage_applied`; the per-source counters for the result |
 | Visual Feedback & VFX (VS) | `damage_applied` |

@@ -110,3 +110,11 @@ One blocking issue: R1, a single criterion in Hero whose press point sits inside
 ### Required actions before re-running
 
 1. R1: move the Start/Call press in Hero criterion 32 outside the hero's disc, or move the hero to 60, matching HUD criterion 9.
+
+## Resolution, 2026-11-02: the blocker and every warning applied
+
+- **R1:** Hero criterion 32's call case puts the hero's centre at C + (60, 0), matching Battle HUD criterion 9.
+- **R2 to R9:** applied. Hero and the HUD describe the halted button as the last tick's look; Start/Call re-arms when the arc closes; Flow emits `phase(Build)`, headless when `build` returns, and not when a Fatal latches during `build`; Input's ring, drag and centre wording match Hero and the art bible. Wave 1 opens a per-wave record without call fields; Wave seconds exclude Paused; attempt and Fatal records key on launch ID plus `attempt_seq`; the HUD caches the Fatal record's reads after every tick. The slow gate wording matches Hero's swapped-slow comparison. The two emptied counters are subsets of `bursts_hit_0`, with test cases. New criteria cover the Start/Call Disabled path, the halted look and Flow's before-first-slot check. Restated rows became pointers; Data criterion 3 tests the slop bounds; the missing interface names were added on both sides.
+- **S1 to S9 (recommended options):** instructed testers call at the first Intermission second and are analysed apart from free attempts; a second inconclusive result pools across indices, then the user rules; instructed attempts stay out of the never-call and First run gates; never-call counts only free attempts that reached a later wave; the Call prompt is a separate slot after the first burst, outside Rule 13's list; next-try lines are exempt from "never where" and the fast line has a fixture; the victim cap comes before any wider burst, and a Best moment fail goes to the user; wave 6 spend under 87 moves bounty; under Reduce Motion the nudge and prompt pulse become alpha blinks and the arc closes at once.
+
+Nothing from this report is left open.

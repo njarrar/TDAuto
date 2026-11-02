@@ -148,7 +148,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config | reads | Enemy through the accessor; Wave and Stage directly | Data (values); this system (meaning, balance ranges) |
-| Game State & Stage Flow | commanded, emits | `start_next_wave()`; `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Flow owns lives, the countdown and the wave count it reports | This system (signals); Flow (phases, wiring) |
+| Game State & Stage Flow | commanded, reads, emits | `start_next_wave()`; `halted()` (injected); `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Flow owns lives, the countdown and the wave count it reports | This system (signals); Flow (phases, wiring) |
 | Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`. Counts down Status from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
 | Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions` | This system (signals, list); Tower (gold, targeting) |
 | Hero System | serves | `targets()` for attack and burst | This system (list); Hero (targeting) |

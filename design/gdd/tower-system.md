@@ -169,9 +169,9 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
-| Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions` | Enemy & Wave |
+| Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions`; `gold_upper_bound` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired` | Combat (API); this system (when, whom, values) |
-| Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; forwards `wave_called_early(seconds_left)` | Flow (order); this system (bonus) |
+| Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
@@ -335,7 +335,7 @@ Battle HUD draws these; this system supplies the data.
 
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
-- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion.
+- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta. Under Reduce Motion the nudge becomes a 120 ms alpha blink, so every refused tap still answers on the next frame (Battle HUD).
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
 📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: the chip's window has no visible clock (answered: Battle HUD Rule 9's draining bar), a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
@@ -395,7 +395,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 |---|---|---|
 | Bot gates | Hero stories | The Hero GDD owns every row in Hero's Deferred table, with their current results |
 | `burst_spike`, L11, intermission, bypass | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
-| Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
+| Burst state (Flow) | Hero stories | Pointer: Hero's Deferred "Bypass, burst state" row owns this check |
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
 | TowerInput wiring | Tower UI story | With a fake resolver, taps reach `ChipWindow`, a built slot is disabled, `slot_tapped` fires, and `phase` closes the chip |
 | Arc, damage by source | Battle HUD stories | A disc builds once; an unaffordable one does nothing; counters are shown; screenshots retained |
@@ -409,11 +409,10 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Calling early is nearly free for a hero bot, though the concept promises a cost. The bonus is at most 8 per call and 40 per stage, under the cheapest tower; accepted for MVP. Hero's "Always-call, humans" row is the pass mark and decides whether calling needs a cost or a bigger reward. The fallback is Flow Rule 9's overlapping waves | Hero GDD ("Always-call, humans" row) | First playable |
+| Calling early is nearly free for a hero bot, though the concept promises a cost. The bonus is at most 8 per call and 40 per stage, under the cheapest tower; accepted for MVP. Hero's "Always-call, humans" row is the pass mark and decides whether calling needs a cost or a bigger reward. The fallback is Flow Rule 9's overlapping waves. Whether players notice the bonus at 1.8 s per gold is Battle HUD's "Do players find Call?" row | Hero GDD ("Always-call, humans" row); Battle HUD | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
 | Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
-| Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |
-| Wave 6 pays 174 of 510 bounty, when spending matters least, and gold does not carry over. Accepted for MVP; first-playable logs report gold left at Won, and if most of wave 6's bounty is never spent, bounty moves into waves 3 to 5 | Tower GDD + human logs | First playable |
+| Wave 6 pays 174 of 510 bounty, when spending matters least, and gold does not carry over. Accepted for MVP; if the median wave 6 spend at Won (Battle HUD Rule 19's gold spent per wave) is under 87, half of wave 6's 174, bounty moves into waves 3 to 5 | Tower GDD + human logs | First playable |
 | Does slow earn its slot? One slow ties zero slows on the mid-skill bot and two cost lives. The gate is Hero's Deferred "Slow value" row | Hero GDD + bots | First playable |
 | Does a wrong disc happen often enough to need undo? | Pillar 4 phone test | First phone build |
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |
