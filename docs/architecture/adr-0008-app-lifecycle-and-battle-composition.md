@@ -110,7 +110,7 @@ var _quit_requested: bool = false
 AppRoot never reads a gameplay value. It does not look inside the `Catalogue` except to pass it on.
 
 ### 3. AppServices: what the wrapper may call on the root
-The wrapper and HUD get no pointer to AppRoot. AppRoot hands them one `AppServices` (`RefCounted`) at setup:
+The wrapper and HUD get no pointer to AppRoot. AppRoot hands them one `AppServices` (`RefCounted`) at setup. AppRoot implements `request_retry()` and `set_call_prompt_done()` as methods and the `Callable` fields bind to them; those two names are the ones ADR-0002 fixes.
 
 ```gdscript
 class_name AppServices extends RefCounted
@@ -120,7 +120,7 @@ var launch_id: int
 var attempt_seq: int
 var request_retry: Callable          # sets AppRoot._retry_requested; the Retry handler calls only this
 var call_prompt_done: Callable       # () -> bool
-var mark_call_prompt_done: Callable  # () -> void
+var set_call_prompt_done: Callable   # () -> void
 var report_fatal: Callable           # (cause: String) -> void; same function as the builder's fatal_handler
 var on_lifecycle: Callable           # (state: StringName) -> void; the wrapper's forward to AppRoot
 ```
@@ -132,12 +132,12 @@ A test passes fake callables; no `AppRoot` is needed. This keeps "systems get ea
 func _process(delta: float) -> void:
     if _wrapper != null:
         _wrapper.step(delta)                  # ADR-0003 section 2, step 1
-    if _quit_requested: _quit.call(); return   # step 2a
-    if _relay.is_fatal(): _enter_fatal(); return   # step 2b: Fatal first
-    if _retry_requested: _retry()             # step 2c
+    if _relay.is_fatal(): _enter_fatal()      # step 2a: Fatal first (ADR-0003)
+    if _quit_requested: _quit.call(); return  # step 2b
+    if _retry_requested and not _fatal_shown: _retry()   # step 2c
 ```
 
-This keeps ADR-0003's order (Fatal first, else Retry) and adds one earlier check: a quit request, seen in step 1b and already handled by the HUD in step 1b (section 6), ends the process at the end of that frame. `_quit` is a `Callable` defaulting to `get_tree().quit`, so a test can replace it. Nothing in step 2 runs inside a signal handler or an input callback: the latches only record that something happened, and `_process` acts on them from a clean stack.
+This keeps ADR-0003's step 2 order: Fatal first (the Fatal record is taken there), then the quit check, then Retry. If a quit and a Fatal fall in one frame, the Fatal record is written, then the app quits. A quit request is seen and answered by the HUD in step 1b (section 6); the process ends here. `_quit` is a `Callable` assigned `get_tree().quit` in `_ready`, so a test can replace it. Nothing in step 2 runs inside a signal handler or an input callback: the latches only record that something happened, and `_process` acts on them from a clean stack.
 
 ### 5. Build order, Fatal during build, and the broken scene (M2)
 **Who builds.** AppRoot calls `BattleBuilder.build`, not the wrapper. This differs from architecture 3.4 step 3 (see Migration Plan). Reason: Flow Rule 18 says that if Fatal latches during `build`, the root discards the partial battle without ticking it and writes the record, since no HUD exists. If the wrapper called `build`, the wrapper would hold a half-built battle and the root would have to reach into it. With the root building, no wrapper exists until the sim is whole.
@@ -167,14 +167,16 @@ func _start_attempt() -> void:
     if not wrapper.prepare():                  # loads the stage scene; no node is in the tree yet
         _fatal_before_views(battle, "scene", wrapper); return
     add_child(wrapper)
-    wrapper.attach()                           # input pieces, adapter, views, HUD, then phase(Build)
+    wrapper.attach()                           # input pieces, gate, adapter, views, HUD, then phase(Build)
     _wrapper = wrapper
     get_tree().auto_accept_quit = false        # a wrapper now owns quit (section 6)
 ```
 
+The wrapper's `_ready` does not depend on `attach()`: it only creates the lifecycle gate. `auto_accept_quit` is set to `true` explicitly in `_fatal_before_views`, in `_enter_fatal` and at the start of `_retry`, so a path that ends with no wrapper never leaves the engine unable to quit.
+
 `_fatal_before_views(battle, stage, wrapper)` is the single path for every Fatal that latches before any view exists. It calls `battle.dispose()`, frees the unattached wrapper if there is one, writes the Fatal record through an injected `FatalRecordWriter` callable (fields: `launch_id`, `attempt_seq`, `cause`, `stage` one of `boot`, `build`, `scene`), and enters Fatal. It reads nothing else from the battle (Flow Rule 18).
 
-**Broken stage scene (M2).** `wrapper.prepare()` is the first wrapper call and the only runtime scene load. It reads `scene_ref` from the stage record through the battle's accessor path, calls `ResourceLoader.load`, checks that the result is a `PackedScene`, calls `instantiate()` and checks for `null` (L9). On any failure it calls `services.report_fatal("SCENE")` and returns `false`. The wrapper is not in the tree, has no adapter and no views, and `phase(Build)` has not been emitted. So the broken scene takes exactly the build-failure path: the root writes the record, discards the battle and shows the fatal screen. The answer to M2 is that the load is moved to before the views connect and joins the root-written path, and the scene load stays a Fatal source of the wrapper (architecture 3.6, three runtime sources).
+**Broken stage scene (M2).** `wrapper.prepare()` is the first wrapper call and the only runtime scene load. It reads `scene_ref` from the stage record through the battle's accessor path, calls `ResourceLoader.load`, checks that the result is a `PackedScene`, calls `instantiate()`, and checks that the result is not `null` **and** that its root is the stage script class (`is StageScene`), because a scene whose script fails may load without its script (L9). On any failure it calls `services.report_fatal("SCENE")` and returns `false`. The wrapper is not in the tree, has no adapter and no views, and `phase(Build)` has not been emitted. So the broken scene takes exactly the build-failure path: the root writes the record, discards the battle and shows the fatal screen. The answer to M2 is that the load is moved to before the views connect and joins the root-written path, and the scene load stays a Fatal source of the wrapper (architecture 3.6, three runtime sources).
 
 **`phase(Build)`.** After `attach()` has connected all views, the wrapper calls the single `StageFlow` method that emits `phase(Build)` once for a built battle (named `announce_build()` here; ADR-0005 owns the final name and ADR-0004's `BattleRig.make` calls the same one). `build` never calls it (Flow Rule 6). It is not called when any Fatal latched before the views connected.
 
@@ -185,7 +187,7 @@ The wrapper is the only lifecycle owner (GF6). The input adapter has no lifecycl
 
 **De-duplication, so the design does not depend on L1.** The gate keeps `_focused: bool` (true at attach). Any of the focus-out or paused notifications sets focus false and appends `focus_lost` only on a true-to-false change; any focus-in or resumed notification appends `focus_gained` only on false-to-true. If a platform sends both FOCUS_OUT and PAUSED on a home press, one `focus_lost` results; if it sends only one, one results. The set of notifications mapped is the single table in `lifecycle_gate.gd`; the spike edits that table, not the design.
 
-**Forwarding, in step 1b.** At step 1b of `wrapper.step`, before `apply_queued()`, the wrapper emits `lifecycle_changed(state)` for each held state in arrival order and clears the array. The wrapper's own signal reaches Flow and the HUD; the forward to AppRoot is the one callable `services.on_lifecycle(state)`, which is not a signal connection. Held states survive a frame where the app is suspended: if `_process` stops in the background (L7), the states wait and run first on return, in order, while the clock is still stopped.
+**Forwarding, in step 1b.** At step 1b of `wrapper.step`, before `apply_queued()`, the wrapper first discards queued resumes when a held state is `focus_lost`, `back` or `quit_requested`: `battle.discard_queued(&"resume")` (each `ResumeCommand` gets `on_result` DISCARDED and is logged), so a resume tap queued in the same frame cannot unpause a game that has just been backgrounded. Then it emits `lifecycle_changed(state)` for each held state in arrival order and clears the array. The wrapper's own signal reaches Flow and the HUD; the forward to AppRoot is the one callable `services.on_lifecycle(state)`, which is not a signal connection. Held states survive a frame where the app is suspended: if `_process` stops in the background (L7), the states wait and run first on return, in order, while the clock is still stopped.
 
 **What each state does.**
 
@@ -194,10 +196,10 @@ The wrapper is the only lifecycle owner (GF6). The input adapter has no lifecycl
 | `focus_lost` | enters Paused if in Build, Wave or Intermission; no effect in Paused or a terminal state (Flow Rule 17) | none | requests `cancel()` | none |
 | `focus_gained` | none: Paused ends only by the resume tap (`ResumeCommand`, ADR-0006) | none | none | none |
 | `back` | same as `focus_lost` (A10): Pause in a battle; no effect in Paused, Won or Lost, so back never exits the battle | none | requests `cancel()` | none |
-| `resized` | none (does not pause) | re-lays out | requests `cancel()`; replaces `FieldSpace` at step 1g after `resolver.cancel()` (ADR-0006) | none |
+| `resized` | none (does not pause) | re-lays out | requests `cancel()`; at step 1g runs `resolver.cancel()`, then `gate.forget_open_presses()` (ADR-0007), then `set_space` with the new `FieldSpace` (ADR-0006), in that order | none |
 | `quit_requested` | none | writes the provisional debug record now, in its handler | none | sets `_quit_requested`; the end-of-frame check calls `quit()` |
 
-**Quit (M1).** The quit waits for the write because the write is a synchronous call inside the HUD's `lifecycle_changed` handler, which runs in step 1b, and the quit runs at AppRoot step 2a, after `step` returned. While a wrapper exists, AppRoot sets `auto_accept_quit = false` so the engine does not quit before the record is written (L4). With no wrapper (boot, after Fatal, during a rebuild) it sets the value back to true, so the engine's default quit works and no second lifecycle owner exists. The one thing AppRoot does with no wrapper is treat a back request as a quit, because the project setting that keeps the engine from quitting on back (L3) would otherwise leave the fatal screen with no way out on Android.
+**Quit (M1).** The quit waits for the write because the write is a synchronous call inside the HUD's `lifecycle_changed` handler, which runs in step 1b, and the quit runs at AppRoot step 2b, after `step` returned and after any Fatal in the same frame has been handled. While a wrapper exists, AppRoot sets `auto_accept_quit = false` so the engine does not quit before the record is written (L4). With no wrapper (boot, after Fatal, during a rebuild) it sets the value back to true, so the engine's default quit works and no second lifecycle owner exists. The one thing AppRoot does with no wrapper is treat a back request as a quit, because the project setting that keeps the engine from quitting on back (L3) would otherwise leave the fatal screen with no way out on Android.
 
 **Resize (M1).** `resized` does not pause. A desktop window drag would otherwise pause the stage on every frame of the drag; on a phone, a resize follows rotation, split screen or a safe-area change, and the gesture in flight is cancelled by the existing `cancel()` request (ADR-0006 section 4). Flow Rule 17 lists "losing focus or backgrounding" only, so this is consistent with the rule and a GDD line states it (Migration Plan). A reviewer should check this choice: the alternative is to pause on resize, which is simpler to explain and worse to play.
 
@@ -210,9 +212,9 @@ The wrapper is the only lifecycle owner (GF6). The input adapter has no lifecycl
 **Pause is a Flow state, not the tree's pause.** The clock stops (Flow Rule 17) and `get_tree().paused` stays false, because the tree pause would also stop AppRoot, the lifecycle gate and the modal screens, all of which must keep running while Paused. The wrapper zeroes the tick accumulator whenever the clock is stopped (ADR-0003 section 3), so no time jump follows resume.
 
 ### 7. The fatal scene guarantee
-The fatal screen must load when the catalogue, a stage scene or a theme file is the thing that failed. It is therefore built in code in `_ready` step 1, before the catalogue load, from a `CanvasLayer` (layer 30) holding one `ColorRect` and one `Label` made with `.new()`. It loads no file: no scene, no font, no texture, no string table, no catalogue data. It uses the engine default theme (L8). Its text is a fixed generic message, the launch ID and a cause code from a closed set (`BOOT`, `BUILD`, `SCENE`, `READ`).
+The fatal screen must load when the catalogue, a stage scene or a theme file is the thing that failed. It is therefore built in code in `_ready` step 1, before the catalogue load, from a `CanvasLayer` (layer 30, `PROCESS_MODE_ALWAYS`) holding one `ColorRect` and one `Label` made with `.new()`. Both are anchored full-rect in code. The `ColorRect` colour is dark and the `Label` colour is light, both set in code, and the text size is set with `add_theme_font_size_override`, because default colours may give white text on a near-white ground. It loads no file: no scene, no font, no texture, no string table, no catalogue data. It uses the engine default theme and font (L8). Its text is a fixed generic message, the launch ID and a cause code from a closed set (`BOOT`, `BUILD`, `SCENE`, `READ`).
 
-The screen lives in AppRoot, not in the HUD or the wrapper tree, and the HUD never mounts it. Its `ColorRect` has `mouse_filter = STOP`, and `_enter_fatal` calls `adapter.set_input_blocked(true)` (ADR-0006) through the wrapper's `shutdown()` before the wrapper is freed, so no gesture reaches a dying battle and none reaches anything under the screen afterwards.
+The screen lives in AppRoot, not in the HUD or the wrapper tree, and the HUD never mounts it. Its `ColorRect` has `mouse_filter = STOP`, and `_enter_fatal` calls the wrapper's `shutdown()` before the wrapper is freed, which sets `gate.set_input_blocked(true)` (ADR-0007), so no gesture reaches a dying battle and none reaches anything under the screen afterwards.
 
 The screen is absorbing. `_enter_fatal` (at step 2b) does, in order: if a wrapper exists and its views were connected, the HUD has already written the Fatal record from reads held at the latch (Flow Rule 18, steps d and f2 of the frame); otherwise the root writes it; then the wrapper is shut down and freed as in section 9, `_wrapper = null`, `auto_accept_quit = true`, and the screen is shown. The Retry latch is ignored from then on, there is no button, and the process stays alive only until the OS or the player ends it. `_enter_fatal` is idempotent, because the relay keeps the first cause and `_wrapper` is already null the second time.
 
@@ -233,7 +235,9 @@ var hero_input: HeroInput
 var tower_input: TowerInput
 ```
 
-`InputAssembly.build` makes the resolver, registers `HeroInput` and `TowerInput` with it, connects `flow.phase` to `TowerInput` (the chip), and connects the resolver's signals to the two input objects. Both input objects queue commands with `battle.enqueue` and read the sim through the typed reads; neither holds the `Battle` reference beyond that argument at construction. `TowerInput` emits `slot_tapped`, `tower_inspected` and `upgrade_refused` (wrapper only, ADR-0002); the wrapper wiring test (`WiringCheck.wrapper`) covers them. The wrapper's `attach()` calls `InputAssembly.build`, then makes the `InputAdapter` and views over its result. Headless callers never call it, except the hero equivalence test.
+`InputAssembly.build` makes the resolver, registers `HeroInput` and `TowerInput` with it, connects `flow.phase` to `TowerInput` (the chip), and connects the resolver's signals to the two input objects. Both input objects queue commands with `battle.enqueue` and read the sim through the typed reads; neither holds the `Battle` reference beyond construction. `TowerInput` emits `slot_tapped`, `tower_inspected` and `upgrade_refused` (wrapper only, ADR-0002); `WiringCheck.wrapper` covers them.
+
+`InputAssembly` is the wrapper's own wiring, delegated to one function: only `BattleWrapper.attach()` and tests call it. ADR-0002 rule 1 (the builder and the wrapper are the two places that connect) therefore still holds, and no amendment is needed. `attach()` builds in this order: resolver, `HeroInput`, `TowerInput` (the three through `InputAssembly.build`), then `PointerGate.create(resolver, catalogue.input().edge_reject_margin, clock, log_sink)` with `log_sink` taken from the debug log in debug builds and a no-op otherwise, then `InputAdapter`, then the views and HUD. Headless callers never call it, except the hero equivalence test.
 
 ### 9. Retry: stop, cancel, dispose, free, rebuild
 `_retry()` runs at step 2c, from the latch, outside any signal and any input call:
@@ -243,13 +247,14 @@ func _retry() -> void:
     _retry_requested = false
     var old := _wrapper
     _wrapper = null
+    get_tree().auto_accept_quit = true   # no wrapper until _start_attempt returns
     old.shutdown()          # cancel input, block input, disconnect, battle.dispose(), drop references
     remove_child(old)       # out of the tree at once: no frame, input or notification reaches it
     old.free()              # immediate (L6); fallback below
     _start_attempt()        # attempt_seq + 1, new battle, new wrapper, new everything
 ```
 
-`wrapper.shutdown()` does, in this order: `resolver.cancel()` inline (the clock is already irrelevant, since nothing will tick this battle again); `adapter.set_input_blocked(true)`; disconnect the wrapper's own engine connections (the window `size_changed`); `battle.dispose()` (ADR-0002: disconnect every system and clear the list; idempotent); set `_battle`, the pieces and every held view reference to `null`. Then the root takes the wrapper out of the tree and frees it.
+`wrapper.shutdown()` does, in this order: `resolver.cancel()` inline (the clock is already irrelevant, since nothing will tick this battle again); `gate.forget_open_presses()`; `gate.set_input_blocked(true)`; disconnect the wrapper's own engine connections (the window `size_changed`); `battle.dispose()` (ADR-0002: disconnect every system and clear the list; idempotent); set `_battle`, the pieces and every held view reference to `null`. Then the root takes the wrapper out of the tree and frees it. Every view's `_exit_tree` must cope with references that `shutdown()` already set to `null`.
 
 **`free()` timing.** The decision is `remove_child` then immediate `free()`. It is safe by call stack: the wrapper's `step` has returned, the Retry handler that set the latch ended frames ago, and the only caller on the stack is AppRoot's own `_process`. The wrapper is the one node whose subtree must not be freed from inside its own callbacks, and it is not in any. An immediate free also means no input, notification or view `_process` can reach the old battle after the latch, and only one battle exists in memory at a time. **If L6 shows that `free()` here errors or leaves orphans, the fallback is `queue_free()`** after `remove_child`, `set_input_blocked(true)` and `shutdown()`, all of which already ran; the old tree is then unreachable for the rest of the frame, and the cost is one extra frame of memory. The Retry freed test (ADR-0004 section 9) runs one frame later in that case. Nothing else in this ADR changes with the answer.
 
@@ -344,7 +349,14 @@ func _retry() -> void:
 ## Migration Plan
 No code exists yet. These edits land in the same change that marks this ADR Accepted.
 
-0. **`ResumeCommand`.** ADR-0003 (the "five subclasses" list: Build, Upgrade, Pin, Burst, StartNextWave, and the matching line in architecture 4.3 line 444) gains `ResumeCommand` as the sixth. ADR-0002's canonical command table gains a `ResumeCommand` row and `StageFlow.resume() -> int` (`OK`, `HALTED`, `NOT_PAUSED`). ADR-0006 section 5 keeps the input route and refers here for the semantics.
+**Amendments to Accepted ADRs, for the user's sign-off at acceptance.** Each of these changes an Accepted ADR or a registry stance, so the user signs them off when marking this ADR Accepted:
+- ADR-0002 rule 7 (line 67): the builder, not `Battle`, creates the `HaltLatch`, because the `StatAccessor` needs it before `Battle` exists. ADR-0002's canonical command table gains a `ResumeCommand` row and `StageFlow.resume() -> int` (`OK`, `HALTED`, `NOT_PAUSED`). Its `lifecycle_changed` row gains the AppRoot recipient (`AppServices.on_lifecycle`, a callable) and the note that `resized` does not pause.
+- ADR-0003: the "five subclasses" list (and architecture 4.3 line 444) gains `ResumeCommand` as the sixth; step 1g of the frame gains `gate.forget_open_presses()` between `resolver.cancel()` and the `FieldSpace` swap; line 76 loses "(ADR-0008 confirms)". Step 2 order (Fatal, then Retry) is unchanged; the quit check sits between them.
+- Registry stances that change: the `HaltLatch` creator, the `ResumeCommand` entry, and a new lifecycle-owner stance (the wrapper) if the registry words it as the adapter.
+- `InputAssembly` needs no amendment: it is the wrapper's own wiring (section 8), so ADR-0002 rule 1 holds.
+
+Other edits that follow from this ADR:
+
 1. `docs/architecture/architecture.md` Data Flow 3.4 (lines 309 to 322): step 3 becomes "AppRoot calls `BattleBuilder.build`; the wrapper's `prepare()` loads the stage scene, then `attach()`"; item 3a (architecture 3.4a) drops `GestureResolver` (built by the wrapper through `InputAssembly`, not by the battle builder) and adds `HaltLatch`, `StatAccessor` and `TickConverter` first; step 4 names who calls the `phase(Build)` method.
 2. Same file, 3.5 (lines 324 to 329): replace "The timing of `free()` is unverified (ADR-0008)" with the section 9 sequence and its L6 fallback.
 3. Same file, 3.1 diagram line 272 and ADR-0003 section 2 step 2 (line 90): add the quit check ahead of Fatal and Retry.

@@ -201,7 +201,10 @@ class_name PointerLogEntry extends RefCounted   # plain values only
 - While blocked the gate must forward nothing and must never call `cancel_pointer` or `cancel()`; `set_input_blocked(true)` is legal only in a frame with a requested `cancel()`.
 - The wrapper must call `forget_open_presses()` right after every `resolver.cancel()` it runs.
 - The adapter must have `process_mode = PROCESS_MODE_ALWAYS`.
-- `project.godot` must set both emulation keys to `false`.
+- `project.godot` must set both emulation keys to `false`, and debug builds must read both back from `ProjectSettings` at boot and log an error if either is not `false`.
+- Modal screens must accept a release only from the event family of the press they saw.
+- `BattleWrapper.attach()` must build the resolver, HeroInput, TowerInput, `PointerGate`, then `InputAdapter`, in that order.
+- At step 1g the order must be `resolver.cancel()`, `forget_open_presses()`, then `set_space` if resized.
 - The adapter and gate must emit no signals, build no commands, read no engine time (only `RealClock`), and hold no lifecycle state.
 - Logging must run only when `log_sink.is_valid()`.
 
@@ -299,7 +302,8 @@ These edits land in the same change that marks this ADR Accepted:
 - `input-gesture-resolver.md` line 240 (press outside the field): a press outside `FIELD_RECT` is not forwarded (ADR-0006, ADR-0007).
 - `input-gesture-resolver.md` line 316 and `design/gdd/battle-hud.md` Rule 2 (line 34): modal screens are Controls that take every event in `_gui_input`; the adapter's press block keeps the same taps from the resolver.
 - ADR-0003 (Accepted) step 1g (line 89) and its Implementation Guidelines: add "then `forget_open_presses()`" after `resolver.cancel()`. This is additive and changes no frame order.
-- ADR-0006 (Proposed, not yet Accepted, so edited in its own review): section 5 to the revised block (forwards nothing, never calls `cancel_pointer`; legal only with a cancel request); D6 text to say the adapter reads `_input`; modal screens note that emulation is off and, if it is turned on, they apply the family lock.
+- ADR-0006 (Proposed, not yet Accepted, so edited in its own review): section 5 to the revised block (forwards nothing, never calls `cancel_pointer`; legal only with a cancel request); D6 text to say the adapter reads `_input`; section 5 and its guideline "Modal screens must use `_gui_input` with class checks" gain the family lock (a modal accepts a release only from the family of the press it saw), required now; the step 1g line of its Architecture Diagram ("wrapper step 1g") and its guideline "The wrapper must replace `FieldSpace` only at step 1g, after `resolver.cancel()`" both gain "then `forget_open_presses()`", so the step 1g order is `resolver.cancel()`, `forget_open_presses()`, then `set_space`.
+- Open Question A6 is closed by this ADR: no slop scale cap at MVP (section 8); the architecture A6 row edit above records it.
 - `project.godot`: add the two emulation keys (first adapter story).
 
 ## Validation Criteria
