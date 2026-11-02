@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: Revised after sixth design review (2026-11-02, NEEDS REVISION, 4 blocking items and 6 recommended addressed; other recommended items open in the review log); pending re-review
+> **Status**: Revised after seventh design review (2026-11-02, NEEDS REVISION, 2 blocking items and 6 recommended addressed; other recommended items open in the review log); pending re-review
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -40,12 +40,12 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 | L5 | First and last path points at least 16 outside the field, since the largest enemy's radius is 15: it enters and exits unseen | 40, 20 |
 | L6 | In-field path clear of the top band at the largest inset: `y − path_width / 2` at least 174 | 190, margin 16 |
 | L7 | Path centreline to the burst button's centre line at least `path_width / 2 + 64` | 100 needed, 186 |
-| L8 | Non-adjacent path segments at least `path_width + 60` apart | 132 needed, 160 |
+| L8 | Separate legs stay apart: wherever two centreline points lie less than `path_width + 60` apart in a straight line, the path between them is at most 1 / sin 22.5° (about 2.61) times that distance long. Checked at every path point and every 2 units along the path, off-field ends included. A bend, a jog or a curve baked to points passes, since its points are close only where the path between them is short; parallel legs and any turn sharper than 135° fail, since there the path between close points is long | 132 needed; separate legs 160 apart |
 | L9 | In-field length at least 800 | 1,644 |
 | L10 | Each slot covers at least 200 of path at the lowest level-1 tower range | 223 at range 150 |
 | L11 | Some disc of burst radius, searched on a grid of 10, holds at least 2.5 × that radius of path, so a bend exists to burst. Every stage: a fully straight stage is not allowed, since the burst needs a bend (user, 2026-11-02) | 196 against 175, at radius 70 |
 | L12 | 3 to 5 slots, as in the concept | 5 |
-| L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice; no segment doubles back on the one before, meaning no turn between consecutive segments is sharper than 135°. Since the field is convex and both end points lie outside it (L5), the path crosses exactly twice whenever every interior point is inside, so one check covers both clauses | Pass; every turn 90° |
+| L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice. Since the field is convex and both end points lie outside it (L5), the path crosses exactly twice whenever every interior point is inside, so one check covers both clauses. A segment that doubles back on the one before, a turn sharper than 135°, fails L8, so L13 has no turn clause | Pass; every turn 90° |
 
 L10 and L11 need tower range and burst radius, so they join the test in the Tower and Hero stories. L9's 800 and L10's 200 are proposed from the starter stage, not derived from a constraint, so recheck them when stages 2 and 3 are sketched (Open Questions). A new stage must also pass Battle HUD's layout checks (Start/Call clearances and the arc rules), which the same content test runs.
 
@@ -117,7 +117,7 @@ Each wave's total HP is 1.26 to 1.64 times the last.
 | First spawn of a wave | At most 2 s | 0 s | The field is not empty after Start |
 | Largest gap between scheduled spawns | At most 12 s | 9 s | A wave cannot be called early. This is Flow's cap on `start_delay`, measured where it matters |
 | `time_to_exit`, total `path_length` ÷ `move_speed`, for each enemy type any wave of the stage uses | 12 to 60 s | 15.5 (fast) to 44.8 s (heavy) | Time for a burst; no stalled waves. A stage rule, reported as `time_to_exit_min` or `time_to_exit_max`, though a broken Enemy record can trip it. It bounds path length by the types used: with fasts at least 1,320, with heavies at most 2,280 (Open Questions) |
-| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration`, and at most 30 s | 15 s against 10.25 s and 30 s | Waiting always restores the burst. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02). Tower's 10% bonus share binds first, at about 25 s a call: 14 gold a call, 70 across five calls (gold_upper_bound) |
+| `intermission_duration` of every position but the last | In ticks, `to_ticks(intermission_duration)` at least `to_ticks(cooldown) + max(1, to_ticks(telegraph_duration))`, matching how Hero counts its cycle; and at most 30 s | 900 ticks against 615, and 30 s | Waiting always restores the burst. A compare in seconds could miss by one tick at equality, since Hero rounds each part and gives the telegraph at least 1 tick. The cap keeps the early-call bonus at most 16 gold a call at Tower's 1.8 s per gold (user, 2026-11-02). Tower's 10% bonus share binds first, at about 25 s a call: 14 gold a call, 70 across five calls (gold_upper_bound) |
 | First position's `lives_at_risk` | Below `starting_lives` | 8 against 10 | The first wave cannot be lost, with no runtime rule: an idle player still leaks and feels it |
 | Every wave's `lives_at_risk` | At least 1 | 8 to 38 | No decorative waves |
 | Stage's total `lives_at_risk` | At least `starting_lives` | 120 against 10 | Stronger than Flow's "some cost above 0", since one 1-cost enemy against 10 lives cannot lose |
@@ -130,7 +130,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 
 **Handed to owning GDDs.**
 - **Tower:** reads `slot_positions`; supplies DPS per type and level, and keeps its own gold bound using `gold_upper_bound`. It must ensure `starting_gold` buys its cheapest tower, or the stage soft-locks.
-- **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 2 s. Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.31 s at starter values), or fast enemies escape the burst. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
+- **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 2 s. Keeps `fast` speed × `telegraph_duration` at most half the burst radius, or fast enemies escape the burst. The starter telegraph of 0.25 s gives 27.5 against 35 by Hero's tick-based check; the most it allows at `fast` 110 is about 0.31 s. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
 - **Battle HUD:** done. It confirms the burst line, shows the next wave's enemies by glyph and count, and reports got-through by type.
 
 **Deliberately not built for MVP.** Forks and lanes, armour, flying, splitters, lane-switchers, per-wave HP scaling, bounty multipliers, randomness, enemy attacks, a spawn signal (views read the roster), and leaks per lane.
@@ -312,7 +312,7 @@ The **gold_upper_bound** formula is defined as:
 | `bounty`, `count` | int | 0–100,000; 1–500 | data file | Per group |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and excludes the early-call bonus, which belongs to the Tower GDD, as does any bound on this value.
-**Example:** through wave 5: 456. Through wave 6: 630. A full board, all 5 slots built and at level 2, costs at least 550 at the Tower GDD's prices (all single). Gold before wave 6 is at most 496 at the starter 15 s intermissions, with every call's bonus (Tower). Over the legal range the bound is 526: every bonus arrives before wave 6, and Tower's bonus share rule (at most 10% of `max_final_gold`) caps it at 70, 14 a call, which binds before the 30 s intermission cap would pay 80. So the headroom against 550 is at least 24, and a player cannot have everything before the last wave at any legal value, which is a source of decisions. Wave 6's 174 arrives during the last wave, so it buys only mid-wave upgrades, and after the last kill it buys nothing.
+**Example:** through wave 5: 456. Through wave 6: 630. A full board, all 5 slots built and at level 2, costs at least 550 at the Tower GDD's prices (all single). Gold before wave 6 is at most 496 at the starter 15 s intermissions, with every call's bonus (Tower). At `starting_gold` 120, over every legal intermission, the bound is 526: every bonus arrives before wave 6, and Tower's bonus share rule (at most 10% of `max_final_gold`) caps it at 70, 14 a call, which binds before the 30 s intermission cap would pay 80. So the headroom against 550 is 24 at starter values. It is not a floor: other legal `starting_gold` values move it, to 14 at 129 for example. What guarantees a player cannot have everything before the last wave is Tower's `gold_before_last_wave` row, which keeps the headroom above 0 on every legal stage, and that is a source of decisions. Wave 6's 174 arrives during the last wave, so it buys only mid-wave upgrades, and after the last kill it buys nothing.
 
 ## Edge Cases
 
@@ -350,6 +350,7 @@ The **gold_upper_bound** formula is defined as:
 | Data & Config Pipeline | Enemy through the accessor; Wave and Stage directly; `path_points`, `slot_positions` and `path_width` added to Stage |
 | Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
 | Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
+| Input & Gesture Resolver | Slot and burst hit radii (36, 48) behind Rule 3 and L1 to L3; positions outside the field for presses in masked bars |
 
 **Downstream (hard):**
 
@@ -366,7 +367,7 @@ The **gold_upper_bound** formula is defined as:
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules |
 | Visual Feedback & VFX (VS) | Takes over the views below |
 
-Per the bidirectional rule, each GDD must list this one. Data, Combat, Game State, Tower, Hero and Battle HUD already do; the two soft ones must when authored.
+Per the bidirectional rule, each GDD must list this one. Data, Combat, Game State, Tower, Hero and Battle HUD already do, and Input names this system as owner of the slot clearance rule; the two soft ones must when authored.
 
 ## Visual/Audio Requirements
 
@@ -445,7 +446,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 **CI: Integration**
 19. (Rules 1 to 3, content test) **GIVEN** the real stage as records, **WHEN** the content test runs, **THEN** L1 to L9, L12 and L13 pass, and so do the wave rules for first spawn, largest gap, `time_to_exit`, the first position's `lives_at_risk`, every wave's `lives_at_risk`, the stage's total, the `lives_cost` cap, the 30 s intermission cap, `spawn_interval` at least `dt` in groups of 2 or more, and `starting_lives` at least 2 with at least 2 waves. L10, L11, the intermission floor and `peak_alive_ub` join when their data exists (Deferred criteria). Each rule has a stable ID used in its failure message: `L1` to `L13`, `first_spawn`, `max_gap`, `time_to_exit_min`, `time_to_exit_max`, `first_lives`, `wave_lives`, `stage_lives`, `lives_cost_cap`, `intermission_cap`, `interval_floor`, `min_lives_waves`, `intermission_min` and `peak_alive`.
-20. (content test) **GIVEN** the copies below, each the real stage and its Enemy records with one field changed, **WHEN** the content test runs on each at `dt` 1/60, **THEN** the set of IDs it reports equals the copy's set exactly. Every rule 19 runs today has a copy, one per clause where a rule has several. The unbroken stage reports the empty set (19). So a validator that reports every ID, the wrong one, or misses a second rule a change also breaks, fails. Slots and path points are numbered from 0; "path …" lists the changed points, the rest as authored. Each set was checked with a script that implements these rules on the records.
+20. (content test) **GIVEN** the copies below, each the real stage and its Enemy records with one field changed, **WHEN** the content test runs on each at `dt` 1/60, **THEN** the set of IDs it reports equals the copy's set exactly. Every rule 19 runs today has a copy, one per clause where a rule has several. The unbroken stage reports the empty set (19). So a validator that reports every ID, the wrong one, or misses a second rule a change also breaks, fails. Slots and path points are numbered from 0; "path …" lists the changed points, the rest as authored. Rows ending "passes" expect the empty set, so a validator stricter than the rule fails too. Each set was checked with `tools/balance-sim/stage_rules.py`, which implements these rules on the records and prints a match per copy.
 
 | Copy | Changed field = value | Exact ID set |
 |---|---|---|
@@ -460,14 +461,16 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | L5, last point | point 6 = (270, 970) | {L5} |
 | L6 | points 0 and 1 = (−40, 200), (430, 200) | {L6} |
 | L7 | path ends (270, 570), (270, 780), (400, 980) | {L7} |
-| L8 | path starts (−40, 226), (500, 226), (500, 300), (430, 300), then (430, 400) on | {L8} |
+| L8, close legs | path starts (−40, 226), (500, 226), (500, 300), (430, 300), then (430, 400) on | {L8} |
+| L8, doubled back | path ends (270, 570), (270, 900), (250, 700), (250, 980); every interior point inside | {L8} |
+| L8, baked curve passes | corner (430, 226) replaced by a quarter circle of radius 40 centred (390, 266), baked every 15°: (390, 226) to (430, 266) | {} |
 | L9 | path = (−40, 620), (270, 620), (270, 980) | {L9, time_to_exit_min} |
 | L12, too few | slots = slots 0 and 1 only | {L12} |
 | L12, too many | slots + (350, 630) | {L12} |
 | L13, interior point outside | path starts (−40, 226), (−20, 226), then (430, 226) on | {L13} |
 | L13, entry by the top | path = (430, −40), then (430, 400) on | {L13, L6} |
+| L13, entry by the right passes | point 0 = (580, 226) | {} |
 | L13, exit by a side | path ends (110, 570), (580, 570) | {L13} |
-| L13, doubled back | path ends (270, 570), (270, 1000), (270, 980) | {L13} |
 | `first_spawn` | wave 1 group `start_delay` = 3 | {first_spawn} |
 | `max_gap` | wave 2 second group `start_delay` = 17 | {max_gap} |
 | `time_to_exit_min` | Enemy `fast.move_speed` = 150 | {time_to_exit_min} |
@@ -496,7 +499,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Stage length (advisory) | Hero stories | The mid-skill driven hero (Hero System, Simulated results) wins on each of the four mixed builds, and each run lasts 5 to 8 minutes with no early calls and at least 3.5 minutes with every wave called. Length is ticks × `dt` from the first Start to the Won tick, rounded to 0.1 minute. A lost run fails the row. A miss reopens wave counts and intermissions here; it does not block a story. The simulation gives 5.0 to 5.3 and 3.7 to 3.8, so one build sits on the floor with no margin |
 | Empty field | Hero stories | For the mid-skill bot, the longest run of consecutive Active ticks with empty `targets()`, from a wave's first spawn to its clear, is at most 5 s. Wave 2 counts; if it fails, wave 2's second packet moves earlier |
 | Game Feel (playtest) | User, first playable | The three checks under Game Feel pass |
-| L10, L11, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass, and each adds its broken copies to criterion 20's table, with exact ID sets |
+| L10, L11, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass, and each adds its broken copies to criterion 20's table, with exact ID sets. L10 also changes existing rows: the L9, L1 x high and both L3 copies leave a slot covering under 200, so their sets gain L10 unless the copies move |
 | Retry (Flow) | This system's stories | A retried battle's snapshot equals a fresh one, the old battle's `weakref` is null, and only the catalogue is shared |
 | Listener test (Flow) | This system's, Tower stories | Each of this system's four signals has a non-zero connection count, and removing one connection fails with a message naming that signal |
 | Order (Combat) | This system's stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; no corpse moves |
@@ -521,4 +524,6 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Stretch mode: this GDD requires everything outside the 540 × 960 field to be masked on any screen shape, so off-field entry and exit stay unseen. How, by letterbox or panel, and whether the insets above hold on real phones, belongs to the decision record. If it cannot mask, L3, L5, L6 and L7 must be rechecked against the visible area | technical-director | Input ADR |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, and the snapshot | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
+| New types debut at full stakes: `fast` first appears in wave 3 as 8 members, 8 of 10 lives at risk, and `heavy` in wave 4 as 2. Does a first-time player read the 8-fast debut as unfair? Ask at first playable; if most testers say yes, add a wave rule capping a type's first appearance at `ceil(starting_lives / 3)` lives | Playtest + this GDD | First playable |
+| A `slow_strength` near 1 lets `peak_alive_ub` overflow an integer and can freeze `d_next`, since a step under half the precision of `d` adds nothing, which the Guard does not catch. Data should cap `slow_strength`, for example at 0.9 | Data GDD + Combat GDD | Before the Tower stories |
 | Starter waves are one scripted simulation, on a path 18% longer than the prototype's with one fewer slot, with no human data. Every convergence point moves with real towers | Bots at first playable | First playable |

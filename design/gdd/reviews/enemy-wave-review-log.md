@@ -226,3 +226,50 @@ Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a
 Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
 Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
 Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 2 | Recommended: 24
+Summary: All four review-6 blockers are fixed, and every core number reproduces against the sibling GDDs; an independent script reproduced all 31 C20 ID sets. Two blockers remained: C20's doubled-back copy could not isolate L13's turn clause, and L8's "non-adjacent" was undefined, so any baked curve or jog failed it. The line 315 headroom sentence and game-designer's debut-scale rule were downgraded to RECOMMENDED: the first is a wrong number whose conclusion holds, the second would reopen wave content the user set.
+Prior verdict resolved: Yes; all 4 review-6 blockers fixed
+Findings:
+- [BLOCKING] Acceptance Criteria, C20: the "L13, doubled back" copy put (270, 1000) outside the field, so it failed the interior clause and could not fail on the turn clause alone.
+- [BLOCKING] Layout rules, L8: "non-adjacent" undefined; by segment index every baked curve (Rule 2) or short jog fails; define by distance along the path.
+- [RECOMMENDED] Formulas, gold_upper_bound line 315: "at least 24 at any legal value" is false; `starting_gold` 129 gives 14; Tower's `gold_before_last_wave` row is the guarantee.
+- [RECOMMENDED] Wave rules, intermission: compare in ticks, as Hero rounds cooldown and telegraph apart with a 1-tick telegraph floor.
+- [RECOMMENDED] Dependencies: Input & Gesture Resolver missing, though Rule 3 and L1 to L3 use its radii.
+- [RECOMMENDED] Handed to owning GDDs, Hero: "0.31 s at starter values" is the maximum; the starter is 0.25 s (27.5 against 35).
+- [RECOMMENDED] Acceptance Criteria, C20: name and commit the checking script; add a right-edge entry copy that must pass.
+- [RECOMMENDED] Deferred criteria, L10: when L10 joins, the L9, L1 x high and L3 copies gain L10.
+- [RECOMMENDED] Open Questions: `slow_strength` near 1 overflows `peak_alive_ub` and can freeze `d_next` past the Guard; Data should cap it.
+- [RECOMMENDED] Design, game-designer: fast debuts as 8 (8 of 10 lives) and heavy as 2; test at first playable (overruled as blocking).
+- [RECOMMENDED] Layout rules, L5: no upper bound on the off-field lead; say how "outside" is measured (Euclidean or per axis).
+- [RECOMMENDED] Layout rules, L13: require at least 2 interior points; test entry and exit edges explicitly.
+- [RECOMMENDED] Layout rules, L11: grid origin and domain unspecified; gentle S-curves fail while 90° corners pass.
+- [RECOMMENDED] Layout rules, L10: count in-field path only. L1: no upper y bound.
+- [RECOMMENDED] Formulas, spacing: per_burst uncapped by `count`; use min(count, formula) in the packet target.
+- [RECOMMENDED] Acceptance Criteria: add just-passes boundary copies (y 304, 30 s, 76).
+- [RECOMMENDED] Deferred criteria: quote `leash_radius` in Two fronts; Stage length floor 5.0 equals the sim's 5.0; name the bot version for Empty field and Towers-only.
+- [RECOMMENDED] Manual checks: types, entry and exit, and exit strip still lack counts, frames and what the lead checks.
+- [RECOMMENDED] Economy: 10% bonus share counts wave 6's unspendable 174; measure against `gold_before_last_wave` or call it nominal.
+- [RECOMMENDED] Economy: lives and gold per HP rank the same, so ignoring heavies is optimal; add an ignore-heavies bot or raise heavy `lives_cost` to 3.
+- [RECOMMENDED] Economy: leak gold penalty overstated (4 gold, 0.8%); wave 4 is a gold dip; wave 6 gold buys little.
+- [RECOMMENDED] Design, game-designer: wave 3's fronts are 5 to 9 s apart at a point, so the choice is which group gets the burst, not where to stand.
+- [RECOMMENDED] Design, game-designer: wave 4's "packet closing on heavies" forms nothing, since enemies pass through each other.
+- [RECOMMENDED] Design, game-designer: pressure resets fully between waves (no overlap, flat 15 s); doomed-but-playing after an idle wave 1.
+- [RECOMMENDED] Design, game-designer: types give two decisions, not three, under first-along-path targeting; Pillar 3 risk that stages 2 and 3 read alike.
+Disagreements: economy-designer rated line 315 blocking; creative-director rated it recommended (wrong number, conclusion holds via Tower's row); main review read "legal range" as intermission lengths, which shows the ambiguity. game-designer rated the debut scale blocking; creative-director overruled it, since it reopens wave content the user set and the sims win those waves. qa-lead leaned to a fixture-only C20 copy and level-designer to a multi-point edit; the script decided.
+Fixed in the same session: both blockers (L8 redefined by distance along the path, which also covers doubling back, so L13 drops its turn clause; C20 gains "L8, doubled back" with every interior point inside, "L8, baked curve passes" and "L13, entry by the right passes"; `tools/balance-sim/stage_rules.py` added and named, and it reproduces all 33 sets), plus line 315, the intermission compare in ticks, Input in Dependencies, the 0.31 s wording, the L10 note, and two Open Questions (debut scale, `slow_strength` cap).
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 74832d34bceb0a41e81313fed2f40122dd0a2d3b
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
