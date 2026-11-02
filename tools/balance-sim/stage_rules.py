@@ -1,6 +1,6 @@
 """Stage content-test reference check for design/gdd/enemy-wave.md.
 
-Implements layout rules L1 to L9, L12, L13 and the wave rules that criterion 19
+Implements layout rules L1 to L9, L12 to L14 and the wave rules that criterion 19
 runs today, on the starter stage and on every copy in criterion 20's table.
 Prints the reported ID set per copy and whether it matches the table.
 Run: python3 tools/balance-sim/stage_rules.py
@@ -164,6 +164,9 @@ def check(c):
             bad = True
     if bad:
         ids.add('L13')
+    xs = [x for x, y in P[1:-1]] + [x[0] for x in exits]
+    if any(x < w / 2 - EPS or x > W - w / 2 + EPS for x in xs):
+        ids.add('L14')
     plen = sum(math.dist(a, b) for a, b in segs)
     used, lar = set(), []
     for pos, wid in enumerate(c['ids']):
@@ -268,13 +271,15 @@ COPIES = [
     ('L9', set_path([(-40, 620), (270, 620), (270, 980)]), {'L9', 'time_to_exit_min'}),
     ('L12, too few', lambda c: c.__setitem__('S', c['S'][:2]), {'L12'}),
     ('L12, too many', lambda c: c['S'].append((350, 630)), {'L12'}),
-    ('L13, interior point outside', set_path([(-40, 226), (-20, 226)] + B[1:]), {'L13'}),
+    ('L13, interior point outside', set_path([(-40, 226), (-20, 226)] + B[1:]), {'L13', 'L14'}),
     ('L13, entry by the top', set_path([(430, -40)] + B[2:]), {'L13', 'L6'}),
     ('L13, entry by the right passes', set_point(0, (580, 226)), set()),
-    ('L13, exit by a side', set_path(B[:5] + [(580, 570)]), {'L13'}),
+    ('L13, exit by a side', set_path(B[:5] + [(580, 570)]), {'L13', 'L14'}),
     ('L13, entry by the bottom', set_path([(190, 1000), (190, 226), (350, 226), (350, 1000)]),
      {'L13', 'L2'}),
     ('L13, two points', set_path([(-40, 226), (270, 980)]), {'L13', 'L2', 'L9', 'time_to_exit_min'}),
+    ('L14, leg near the side edge', set_path(B[:3] + [(20, 400), (20, 570)] + B[5:]), {'L14'}),
+    ('L14, on the limit passes', set_path(B[:3] + [(36, 400), (36, 570)] + B[5:]), set()),
     ('first_spawn', set_group(1, 0, 'start_delay', 3), {'first_spawn'}),
     ('max_gap', set_group(2, 1, 'start_delay', 17), {'max_gap'}),
     ('time_to_exit_min', set_enemy('fast', 'speed', 150), {'time_to_exit_min'}),

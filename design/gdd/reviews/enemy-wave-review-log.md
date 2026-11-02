@@ -320,3 +320,39 @@ Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe719
 Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
 Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: S
+Specialists: game-designer, systems-designer, level-designer, economy-designer, qa-lead, creative-director
+Blocking items: 1 | Recommended: 24
+Summary: Every core number reproduces for the third review in a row (HP, lives 120, gold bounds, catch points, path length, all 35 C20 sets). One blocker: the accepted ignore-heavies risk had a tripwire that could never fire, since the stage's 8 heavies cost 16 lives against 10. creative-director would approve once it is fixed, and puts the side-edge inset before any second stage.
+Prior verdict resolved: Yes; both review-8 blockers fixed
+Findings:
+- [BLOCKING] Open Questions, ignore heavies: an ignore-all bot always loses, so "within 1 life of mid-skill" never fires; partial skipping is the real case.
+- [RECOMMENDED] Layout rules: no inset from the side edges; a leg down x 0 passes L1 to L13 with half the road under the mask.
+- [RECOMMENDED] Layout rules, L2: margins of 4 and 9 mean a `path_width` above 80 fails.
+- [RECOMMENDED] Rule 14: `wave_index()`, `got_through_by_type()` and `def_id` have no criterion (qa-lead rated blocking; held at earlier ratings).
+- [RECOMMENDED] Manual, types and exit strip: no tester count, size or pass condition (qa-lead rated blocking; held at earlier ratings).
+- [RECOMMENDED] Starter values, bounties: "follow count and `lives_cost`" is false (gold per life 4, 3, 8).
+- [RECOMMENDED] Formulas, gold_upper_bound: repeats Tower's derivation; heavy-bounty margin is 1; 550 is only the all-single board.
+- [RECOMMENDED] Formulas, spacing: no cap by `count`; non-whole-tick intervals give uneven gaps; groups can share a tick.
+- [RECOMMENDED] Waves, wave 6 intent: five of the last eight normals never catch, the rest catch in the uncovered exit strip.
+- [RECOMMENDED] Acceptance Criteria: C6 split; one `move_speed` read per move unstated; C15 names no seeds; C16 lacks a GIVEN; no just-passes copies; stage_rules.py commit unpinned; Always-call wording; Burst fit undefined; deferred header against fixed numbers; Order row could run in CI; code-review items testable.
+- [RECOMMENDED] Acceptance Criteria: no criterion for Rules 5, 7 (countdown-end spawn), 8 (count 1), 9 (position once), 12 (full order), and six edge cases.
+- [RECOMMENDED] Economy: wave 4 pays less than wave 3 as HP rises; idle wave 1 leaves 2 lives.
+- [RECOMMENDED] Design, batch into the stage 2 sketch pass: Pillar 3 pass/fail test, wave escalation check, stage length at the 5.0 floor, Breathing from lone-heavy tails.
+- [RECOMMENDED] Design: towers-only must lose at MVP (game-designer; overruled, concept line 144 allows a win at MVP).
+Disagreements: game-designer rated ignore-heavies blocking as a design flaw; creative-director held the flaw at recommended (accepted for MVP in review 8) and blocked only the vacuous trigger, with economy-designer. qa-lead's three blockers held at earlier reviews' ratings. game-designer's towers-only-must-lose overruled against the concept.
+Fixed in the same session: the blocker (a Skip heavies row in Deferred criteria with skip-k bots for k 1 to 4; the Open Question points to it), plus L14 for the side edges with two C20 copies ("leg near the side edge", "on the limit passes") and two existing sets gaining L14, all 37 reproduced by stage_rules.py; L2's 80 ceiling; bounties called hand-set; line 315 cut to cite Tower with the margin and board costs; `min(count, …)` on per_burst and per_splash with the whole-tick and shared-tick notes; wave 6 intent; `wave_index()` and `got_through_by_type()` defined in Rule 14 and tested in C5 and C11; C15 seeds and script.
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c60545533fbf6ea8940aec69c7eedbd490fdddf6
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
