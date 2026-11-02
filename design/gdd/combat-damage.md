@@ -76,6 +76,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
+| Battle HUD | listens, reads | `damage_applied` for hit marks; the per-source counters for the result | Combat (API); HUD (drawing) |
 
 ## Formulas
 
@@ -103,7 +104,7 @@ The **hero_share** formula is defined as:
 | `dealt_hero`, `dealt_burst` | float | 0 and up | calculated | Sums of `applied` by source kind |
 | `dealt_total` | float | 0 and up | calculated | `dealt_tower + dealt_hero + dealt_burst`, so rounding cannot push share above 1 |
 
-**Output Range:** 0–1. Target 0.25–0.30, unproven: no human data exists, and the prototype's 39% came from one tower type and a bug (see Open Questions). Read it as a lower bound, because towers resolve first and a burst finishing softened enemies is credited only with what it dealt. The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
+**Output Range:** 0–1. Target 0.25–0.30, unproven: no human data exists, and the Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, median 26.2% (Hero, Simulated results). The prototype's 39% came from one tower type and a bug, and is history only. Read the share as a lower bound, because towers resolve first and a burst finishing softened enemies is credited only with what it dealt. The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
 **Example:** 200 hero + 100 burst of 1,000 total = 0.30.
 
 The **speed_factor** formula is defined as:
@@ -142,7 +143,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 - **If two towers would finish the same enemy on one tick**: the lower slot index gets the kill and the real damage; the other picks another target, since dead enemies are skipped.
 - **If a tower and the hero contest a kill**: the tower resolves first and wins it, which slightly lowers hero share. The order is fixed so bots stay comparable.
 - **If a stronger slow arrives with less time than the current one**: it replaces it entirely.
-- **If a burst lands on no enemy**: no events, no counters, though `attack_fired` still draws its ring. Hero owns whether the cooldown is spent.
+- **If a burst lands on no enemy**: no damage events and no damage counters, though Hero still counts the release in its own counters (`bursts_fired`, `bursts_hit_0`, Hero Rule 16), and `attack_fired` still draws its ring. Hero owns whether the cooldown is spent.
 - **If a burst is commanded between ticks**: it releases in the Hero-and-burst slot when its telegraph ends, at least one tick later, with victims computed then.
 - **If more enemies are hit than there are flash markers (16)**: the oldest flash is dropped; damage is unaffected.
 - **If a pause or cancel lands mid-slow**: the clock stops, so the slow simply waits. Slows cannot stick.
@@ -155,7 +156,9 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 ## Dependencies
 
-**Upstream:** none. Combat reads no data, which corrects the systems index (callers read and pass values in).
+**Upstream (hard):** Game State & Stage Flow, which builds Combat, ticks it in its slot, reads its counters.
+
+**Upstream (soft):** Data & Config Pipeline, which reads `max_hp` at spawn (the seed exception, Rule 9). Combat reads no other data, which corrects the systems index (callers read and pass values in).
 
 **Downstream (hard):**
 
@@ -164,8 +167,8 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 | Tower System | `deliver`, `apply_slow`, helpers |
 | Hero System | `deliver`, helpers |
 | Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
-| Game State & Stage Flow | Tick order, counters for the result |
-| Battle HUD, Visual Feedback & VFX (VS) | `damage_applied` |
+| Battle HUD | `damage_applied`; the per-source counters for the result |
+| Visual Feedback & VFX (VS) | `damage_applied` |
 | Stage Progression & Stars (VS) | Counters (soft) |
 
 Per the bidirectional rule, each of these GDDs must list this one when authored. Game State and Enemy & Wave already do.
@@ -250,8 +253,8 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Question | Owner | Resolve by |
 |---|---|---|
 | Does the technical director accept cutting ProjectileSpawner and the tick order? Both override existing notes | technical-director | App Lifecycle ADR |
-| What is the hero's real share? The prototype's 39% had one tower type, bot-fitted values and a bug that could credit negative damage, by an unmeasured amount. Re-run once all three tower roles exist | qa-lead | First playable |
-| Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Tower GDD + bots | First playable |
+| Does the bots' hero share hold for humans? The Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, median 26.2% (Hero, Simulated results), which closes the bot question. The prototype's 39% (one tower type, bot-fitted values, a bug) is history only | qa-lead | First playable |
+| Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Hero GDD + bots | First playable |
 | Instant hits leave weapon upgrades a thin 100 ms line to show growth on (Pillar 1). What makes them visible? | Weapons GDD (Vertical Slice) | Vertical Slice |
 | Do full-strength hero flashes during a burst hold up on a device, and does the 0.6 tower flash read? | art-director | First phone build |
 | Art bible §8 budgets a hit-flash shader while saying zero shaders; this spec uses none | technical-artist | First phone build |

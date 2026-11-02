@@ -46,7 +46,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 12. **Lost.** The first leak that takes lives to 0 ends the stage on that tick, as Lost.
 13. **Won.** Enemy & Wave's `waves_complete` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_complete`.
 14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_complete` still arrives after that, the stage stays Lost and the event is ignored.
-15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit (`phase` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for); the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The battle exposes `in_build()`, which Hero uses to refuse the burst, and one `halted()`, true on Won, Lost and Fatal, for systems whose own loops must stop. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started, lives left and Combat's damage by source, shown as plain text at MVP.
+15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock and emit (`phase` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for), then ask for the input adapter's `cancel()` at the end of that frame, never inside a tick (Rule 18 gives the order); the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The battle exposes `in_build()`, which Hero uses to refuse the burst, and one `halted()`, true on Won, Lost and Fatal, for systems whose own loops must stop. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started, lives left and Combat's damage by source, shown as plain text at MVP.
 15a. **Events out of phase.** A `wave_cleared` or `waves_complete` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: development builds log an error and the event is ignored. An `enemy_leaked` in Intermission also logs an error but still applies, because losing a life must never be silently dropped.
 
 **Retry.**
@@ -55,11 +55,11 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Pause.**
 
-17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
+17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and Flow makes the same end-of-frame `cancel()` request as an outcome (Rule 18). Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
 
 **Fatal.**
 
-18. **Fatal latches and halts.** The failure handler is idempotent and keeps the first cause. It sets a latch on the battle and on the app root, stops ticks and skips the remaining systems in the current tick. If it fires during `build`, the root discards the partial battle without ticking it. GDScript has no exceptions, so the calling function still finishes on a garbage value: therefore, once Fatal is set, nothing persists and no other transition is legal. A failed catalogue load, a bad accessor call and a broken stage scene all take this one path to the generic screen, which uses no catalogue data.
+18. **Fatal latches and halts.** The failure handler is idempotent and keeps the first cause. It sets a latch on the battle and on the app root, stops ticks and skips the remaining systems in the current tick. If it fires during `build`, the root discards the partial battle without ticking it. GDScript has no exceptions, so the calling function still finishes on a garbage value: therefore, once Fatal is set, nothing persists and no other transition is legal. A failed catalogue load, a bad accessor call and a broken stage scene all take this one path to the generic screen, which uses no catalogue data. When a handler latches during a tick, the tick returns at once. After it returns, Flow commits the outcome (Won, Lost or Fatal), stops the clock and emits `phase(...)`, then asks the wrapper to call the input adapter's `cancel()` at the end of that frame, never inside a tick. Headless, there is no adapter and the request does nothing.
 
 **Wiring is tested, not trusted.** An unconnected signal is a silent bug, so one test fails if any signal of any battle system has no listener, unless it is on a named allowlist for views, and a scripted micro-battle proves the targets are right: a kill raises gold by the bounty, a leak drops lives, and clearing all waves wins.
 
@@ -100,7 +100,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config Pipeline | reads | App root triggers load and holds the catalogue; reads the Stage record; receives the failure handler's calls | Data (load, lookup); this system (root, screen) |
-| Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; Won, Lost, Paused, Fatal and retry call `cancel()`; adapter forwards a lifecycle signal | Input (API); this system (composition) |
+| Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; Won, Lost, Paused, Fatal and retry ask for `cancel()` at the end of the frame, never inside a tick (Rule 18); adapter forwards a lifecycle signal | Input (API); this system (composition) |
 | Enemy & Wave | wires, commands | Listens to `wave_cleared`, `waves_complete`, `enemy_leaked`; calls start next wave | Enemy & Wave (signals) |
 | Tower System | wires | Forwards `wave_called_early(seconds_left)`; connects kills to gold | Tower (bonus value) |
 | Hero System | wires | Builds and ticks it | Hero |
@@ -147,7 +147,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If several leaks land on one tick and the first reaches 0**: Lost on that leak; the rest are ignored.
 - **If `lives_cost` is 0**: lives are unchanged and `lives_changed` is not emitted; the enemy still resolves.
 - **If every enemy in a real stage has a `lives_cost` of 0**: the stage cannot be lost. The CI content test rejects it (Enemy & Wave owns the check); code-built fixtures may do it, so the catalogue validator does not.
-- **If `starting_lives` is 1**: the first costly leak is Lost.
+- **If `starting_lives` is 1**: the first costly leak is Lost. Only code-built fixtures can do this, since Enemy & Wave requires at least 2 on a real stage.
 - **If the result is read after a loss**: "wave reached" is the last wave started.
 - **If a call-early command and the countdown's expiry fall together**: commands apply between ticks, so whichever comes first starts the wave, and the other finds no Intermission and is ignored. `wave_called_early` fires only for a real call.
 - **If Start Wave is tapped twice**: the second tap finds no Build and is ignored.
@@ -169,7 +169,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 
 **Upstream (hard):** Data & Config Pipeline, for load, the failure path and the Stage record.
 
-**Downstream (hard; none but Input has a GDD, so each interface is provisional until that GDD confirms it):**
+**Downstream (hard; all eight MVP systems now have GDDs, and each MVP interface below is confirmed by its GDD; the Vertical Slice rows stay provisional until their GDDs exist):**
 
 | System | Interface |
 |---|---|
@@ -177,7 +177,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 | Enemy & Wave | Emits the wave signals; owns durations |
 | Tower System | Early-call bonus; kills to gold; direct build command |
 | Hero System | Built and ticked here |
-| Combat & Damage | Per-source counters readable after the outcome |
+| Combat & Damage | Built, wired and ticked here; its per-source counters are read for the result |
 | Battle HUD & Build UI | Draws phases, lives, countdown, result; sends commands |
 | Stage Progression & Stars (VS) | Reads the result (soft at MVP) |
 | Save/Load, Menu & Screen Flow (VS) | Join the app machine (soft at MVP) |
@@ -255,7 +255,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result |
 | Listener test | Enemy & Wave, Tower stories | The system count is non-zero, and removing one connection fails naming it; watched failing once, with the output kept |
 | Micro-battle | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
-| Boot (Rules 1, 18) | Game State stories | A failed load and a broken scene both reach the fatal screen |
+| Boot (Rules 1, 18) | Game State stories | A failed load, a broken scene and a bad accessor call all reach the fatal screen |
 | Clamp and tick order (Rules 4, 5) | App Lifecycle ADR | Ticks are capped, and the order matches the GDDs |
 | Bonus and live actions (Rules 9, 10) | Tower stories | A bonus is paid per real call only, regardless of burst state; actions work in all three phases; the burst is refused in Build (Hero) |
 | Always-call bot gates (Rule 9) | Hero stories | A towers-only, always-call bot must not beat a driven hero, and the mid-skill, always-call bot passes Hero's Always-call gate, or the overlap fallback comes forward; re-baselined on the fixed tick |

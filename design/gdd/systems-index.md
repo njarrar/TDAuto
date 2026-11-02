@@ -30,8 +30,8 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Designed | design/gdd/battle-hud.md | Game State, Tower, Hero, Input |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Designed | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
@@ -99,7 +99,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 1. Enemy & Wave — depends on: Data, Combat, Game State. Each emitter declares its own signals (Data owns none, per the Data & Config GDD); the composition root wires them. Path and slots moved from the stage scene to the Stage record, technical-director to confirm.
 2. Tower System — depends on: Enemy & Wave, Combat, Input, Data, Game State. Gold income from `enemy_killed(bounty)`. **Split:** TowerSim in the builder and TowerInput in the wrapper, since the chip needs real time while the clock is stopped; technical director to confirm.
-3. Hero System — depends on: Input, Combat, Enemy & Wave, Data. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
+3. Hero System — depends on: Input, Combat, Enemy & Wave, Data, Game State. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
 4. Stage Progression & Stars — depends on: Game State, Enemy & Wave, Combat (per-source counters for the report), Data. **TD note:** stars are lives-based, not damage-based.
 5. Skill Point Economy — depends on: Stage Progression, Game State. One-time first-clear grant (design-review ruling pending in the concept revision).
 6. Skill Tree System — depends on: Skill Point Economy, Stat & Modifier, Data.
@@ -108,7 +108,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Presentation Layer
 
-1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input.
+1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input, Data & Config.
 2. Visual Feedback & VFX — depends on: Combat, Hero, Tower.
 3. Menu & Screen Flow — depends on: Stage Progression, Skill Tree, Save/Load.
 4. Onboarding Prompts — depends on: Game State, Battle HUD.

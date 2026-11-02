@@ -63,7 +63,7 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 IDs and levels are checked before any accessor read, through a new non-fatal `is_tower(id)` on Data, so a bot's bad ID returns a refusal rather than reaching the fatal handler. Cost is read through the accessor at use time, never cached from when the arc or chip opened. On success, in one step and with nothing between: gold falls by the cost, the tower is created or its level raised, then `gold_changed` fires, then `tower_built` or `tower_upgraded`. A refusal changes nothing and emits nothing.
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
-7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and does nothing. The arc belongs to the HUD, which calls `build`.
+7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and calls `build`, which returns `NO_GOLD`; the HUD nudges the disc (Battle HUD Rule 7). The arc belongs to the HUD, which calls `build`.
 8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`. Both durations are presentation constants, not catalogue values (Data Rule 1).
 
 | Event while a chip is open | Result |
@@ -172,7 +172,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired` | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; forwards `wave_called_early(seconds_left)` | Flow (order); this system (bonus) |
-| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
+| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
@@ -288,15 +288,15 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`, tick slot |
-| Input & Gesture Resolver | Target registry, `tap`, `pressed` (TowerInput only) |
+| Input & Gesture Resolver | Target registry (slots and towers TAP 200; upgrade chip TAP 300, Rule 8), `tap`, `pressed` (TowerInput only) |
 | Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
 
-**Downstream (these have no GDD yet, so the interfaces are provisional until they confirm them):**
+**Downstream (Battle HUD has a GDD that confirms its interface; the Vertical Slice rows have no GDD yet, so they stay provisional until they confirm them):**
 
 | System | Interface |
 |---|---|
 | Battle HUD & Build UI | Rule 17's signals and reads; calls `build` |
-| Hero System | None in code; bot gates and `burst_spike` |
+| Hero System (soft) | Hero: none directly; balanced against through bots and `burst_spike` |
 | Stat & Modifier (Vertical Slice) | Reads through the same accessor |
 | Skill Tree, Synergy Hook (Vertical Slice) | Tags and accessor context with the live tower |
 
@@ -338,7 +338,7 @@ Battle HUD draws these; this system supplies the data.
 - Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion.
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
-📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: the chip's window has no visible clock, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
+📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: the chip's window has no visible clock (answered: Battle HUD Rule 9's draining bar), a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
 
 ## Cross-References
 
@@ -409,7 +409,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Calling early is nearly free for a hero bot, though the concept promises a cost (Hero GDD, Open Questions) | qa-lead + Hero GDD | First playable |
+| Calling early is nearly free for a hero bot, though the concept promises a cost. The pass mark is Hero's "Always-call, humans" row, and the fallback is Flow Rule 9's overlapping waves | Hero GDD | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
 | Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
 | Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |

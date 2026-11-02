@@ -121,7 +121,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 
 **Handed to owning GDDs.**
 - **Tower:** reads `slot_positions`; supplies DPS per type and level, and keeps its own gold bound using `gold_upper_bound`. It must ensure `starting_gold` buys its cheapest tower, or the stage soft-locks.
-- **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 2 s. Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.31 s at starter values), or fast enemies escape the burst. Reads "bursts hitting 3 or more" knowing it barely tests aim here (Formulas).
+- **Hero:** walks re-pins at 240 in a straight line, so two fronts cost about 1.5 s (Hero Rule 3). Keeps `fast` speed × `telegraph_duration` at most half the burst radius (0.31 s at starter values), or fast enemies escape the burst. "Bursts hitting 3 or more" barely tests aim here (Formulas), so the burst metric is now kills per burst (Hero Rule 17).
 - **Battle HUD:** done. It confirms the burst line, shows the next wave's enemies by glyph and count, and reports got-through by type.
 
 **Deliberately not built for MVP.** Forks and lanes, armour, flying, splitters, lane-switchers, per-wave HP scaling, bounty multipliers, randomness, enemy attacks, a spawn signal (views read the roster), and leaks per lane.
@@ -280,7 +280,7 @@ The **gold_upper_bound** formula is defined as:
 | `bounty`, `count` | int | 0–100,000; 1–500 | data file | Per group |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and excludes the early-call bonus, which belongs to the Tower GDD, as does any bound on this value.
-**Example:** through wave 5: 456. Through wave 6: 630. A full board costs at least 550 at the Tower GDD's prices, so a player cannot have everything before the last wave, which is a source of decisions.
+**Example:** through wave 5: 456. Through wave 6: 630. These are starting gold plus bounties and leave out the early-call bonus, which adds at most 40 (Tower's 496 and 670 include it). A full board costs at least 550 at the Tower GDD's prices, so a player cannot have everything before the last wave, which is a source of decisions.
 
 ## Edge Cases
 
@@ -317,13 +317,13 @@ The **gold_upper_bound** formula is defined as:
 | Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
 | Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
 
-**Downstream (hard; no GDD yet, so each interface is provisional until that GDD confirms it):**
+**Downstream (hard; all eight MVP systems have GDDs, so these interfaces are confirmed there; the Vertical Slice rows stay provisional until their GDDs exist):**
 
 | System | Interface |
 |---|---|
 | Tower System | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Hero System | `targets()`; `time_to_exit` and intermission rules against burst cooldown |
-| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records for any next-wave line |
+| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records; `wave_index()`, `got_through_by_type()`, `targets()` |
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules (soft) |
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
 
@@ -369,8 +369,8 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 | Wave and Stage records, accessor, content test | `design/gdd/data-config-pipeline.md` | Core Rules; Rules 1, 9, 10 | Amended here |
 | Instant hits, slow, tick order, targeting helpers, `spawn_id` | `design/gdd/combat-damage.md` | Rules 4, 7, 8, 10, 11; Handed to owning GDDs | Rule dependency; `to_ticks` amends its slow storage |
 | Wave signals, lives, intermission, halt, pause | `design/gdd/game-state-stage-flow.md` | Rules 4, 7, 8, 13, 14, 15, 15a, 17, 18 | Rule dependency; `to_ticks` and payload amend it |
-| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | Open Question on slots | Answers it here |
-| Hero share, wave-design rule, stage length, slot count, first wave | `design/gdd/game-concept.md` | Pillar 2, MVP, Onboarding | Rule dependency |
+| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | UI Requirements (slot and burst button discs never overlap) | Rule dependency; L3 enforces it |
+| Hero share, wave-design rule, stage length, slot count, first wave | `design/gdd/game-concept.md` | Pillar 2, Core Loop (Short-Term), MVP, Onboarding | Rule dependency |
 | Enemy primitives, path, slots, chevrons, pools | `design/art/art-bible.md` | §2, §3, §5, §6, §7, §8 | Value dependency; amended |
 | Prototype path, wave values | `prototypes/hero-pin-concept/main.gd` | `PATH`, `SLOTS`, `WAVES` | Evidence; not reused |
 
@@ -407,9 +407,9 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 |---|---|---|
 | Towers-only | Hero stories | The best of a fixed set of towers-only build scripts ends with 3 lives or fewer, a loss included (MVP). Waves are never tuned to stay beatable without the hero |
 | Driven margin | Hero stories | A driven hero ends at least 4 lives above that |
-| Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Combat. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
+| Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Hero's Deferred criteria. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
 | Mono-role | Tower stories | Every mono-role build ends below the best mixed build |
-| Always-call | Tower stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all |
+| Always-call | Hero stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all. The gates are Flow Rule 9's |
 | Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
 | Two fronts | Hero stories | In waves 3, 5 and 6, two of `targets()` are over 2 × `leash_radius` apart at some tick |
 | No input | This system's stories | With only Start pressed, the run survives wave 1 |
@@ -429,14 +429,14 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
+| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content. Hero's Open Question owns it | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
-| The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
+| Closed. The concept named bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Hero Rule 17 answers it: the metric is now kills per burst | Hero GDD | Closed |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
-| Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Tower GDD + bots | First playable |
+| Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Hero GDD + bots | First playable |
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
-| Stretch mode: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked | technical-director | Input ADR |
+| Stretch mode: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. Input's adapter row owns the stretch mode | technical-director | Before the first input story |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, and the snapshot | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
 | Starter waves are one scripted simulation, on a path 19% longer than the prototype's with one fewer slot, with no human data. Every convergence point moves with real towers | Bots at first playable | First playable |

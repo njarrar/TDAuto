@@ -201,3 +201,9 @@ User decisions: option (a) for G1, and "clearly lose" in Pillar 2 means ending t
 - **G5:** Pillar 2, Hero's "Pinned once" row and Combat's Pillar 2 row now read "clearly lose" as fewer lives; the Hero row no longer says it may fall short.
 
 The other warnings stay open.
+
+## Resolution — 2026-11-02 — Warning batch applied, re-run pending
+
+Applied across all ten design files: R1 to R18 (except R6's ownership is marked, values kept), X1 to X4, X6 to X8, X10 and X12, the first run's C4, C5 and C7 to C14, and S1 to S4. Choices made in autonomous mode, logged: "fired" means `burst_started`; each consumer reads `left_hand` directly at build; outcomes and Pause ask for `cancel()` at the end of the frame, never inside a tick; hit radii are structural constants, not catalogue values; `edge_reject_margin` caps at 36; Combat sits downstream of Flow and takes Data as a soft upstream; a pin in Build keeps its ground ring until the hero walks.
+
+Still open, needing user rulings: G2 to G11 (slow's value, attention load, the share gate's bot, economy pacing, the curve, fantasies, intermission as dead time, mastery toward hero action, the bonus size), X5 (left-hand Start/Call gap, a phone-test question) and X9 (whether a burst on an emptied field counts).
