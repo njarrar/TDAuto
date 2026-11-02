@@ -14,8 +14,30 @@
 - ADRs Referenced: none exist yet. `docs/architecture/` holds only `tr-registry.yaml` (`requirements: []`). Eight ADRs are required (see Required ADRs).
 - Technical Requirements Baseline: 65 requirements, 0 registered, 65 provisional. They are digests of the Detailed Design, Interactions and
   Dependencies sections, not copies of every acceptance criterion. Stories carry the finer detail.
-- TD-ARCHITECTURE: 2026-11-02 NOT ASSESSED: the `Agent` tool was not available to the run, so the technical-director gate could not be spawned. Re-run the gate before `/gate-check pre-production`.
-- LP-FEASIBILITY: 2026-11-02 NOT ASSESSED: the `Agent` tool was not available to the run, so the lead-programmer gate could not be spawned. Re-run the gate before `/gate-check pre-production`.
+- TD-ARCHITECTURE: 2026-11-02 CONCERNS (accepted): the design is sound; seven concerns are listed under Gate Findings and must be settled before or in the first ADRs.
+- LP-FEASIBILITY: 2026-11-02 CONCERNS (accepted): buildable by a small team in GDScript as laid out; seven concerns are listed under Gate Findings.
+
+---
+
+## Gate Findings (2026-11-02)
+
+Both director gates returned CONCERNS. Neither blocks ADR writing. The items below are settled before or in the named ADRs; the ones marked **before drafting** come first.
+
+| ID | Source | Finding | Settled by |
+|----|--------|---------|------------|
+| GF1 | TD | API Boundaries 4.2 leaves out the resolver's `set_centre(id, pos)` and `set_enabled`, which the Input GDD defines; without `set_centre` the hero's hit disc cannot follow a walking hero (TR-hero-008). | **Before drafting**: add both to 4.2 |
+| GF2 | TD, LP | API Boundaries 4.3: `Battle` exposes no route to its systems, which the HUD and the ADR-0008 harness need. | **Before drafting**: add typed `tower()`, `hero()`, `wave()`, `flow()`, `combat()` reads, or `systems()` |
+| GF3 | TD | The ADR Audit traceability table and the Technical Requirements Baseline disagree on several TR-to-ADR links (input-006, enemy-007, enemy-008, tower-001, hero-001). | **Before drafting**: make the Baseline the source and fix the traceability table |
+| GF4 | TD, LP | ADR-0007's stretch and coordinate-space choice fixes the space ADR-0002 and `targets()` use, and High items A4 and M6 hang on it. | Move ADR-0007's stretch and coordinate part to must-have, before ADR-0002 is accepted; TR-hud-005 and TR-hud-008 go to the deferred Mobile Platform ADR |
+| GF5 | TD, LP | Touch events, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export are NOT SOURCEABLE (A7). | **Before drafting** ADR-0002, 0003 and 0007: a short phone spike that extends `docs/engine-reference/godot/` |
+| GF6 | TD | Lifecycle has two owners (InputAdapter and BattleWrapper); the adapter is rebuilt on Retry. No GDD handles the Android back button. | ADR-0003: one owner (the wrapper or AppRoot); add back to the lifecycle states |
+| GF7 | TD, LP | Determinism should not depend on unverified engine event order, and the fixed tick has no clamp, catch-up cap or per-tick budget. | ADR-0006: queue commands from input and apply them at the start of the next `battle.tick` (bots use the same queue); set the clamp, the catch-up cap and a ms budget per tick |
+| GF8 | TD, LP | Data Flow 3.6's "check `halted()` after each accessor read and each signal" cannot be enforced or tested. | ADR-0003: check at tick-slot edges and in signal emitters; after Fatal the accessor returns a value of the right type; list the few runtime Fatal sources |
+| GF9 | LP | The catalogue record type is open ("Dictionary or typed record"); a Dictionary also breaks the read-only rule (TR-data-005). | ADR-0001, first: pick typed records and test missing-field defaults on 4.7.2 |
+| GF10 | LP | Canonical signal and read signatures differ between GDDs (M4). | ADR-0004, before any story: one table of canonical signatures |
+| GF11 | TD | ADR numbers do not follow writing order (0008 sits mid-list). | Renumber in writing order while no ADR exists |
+
+TD recommendations for the ADRs to confirm: accept A1 (cut ProjectileSpawner, keep the tick order), A2 (plain builder and the Sim/Input splits) and A3 (path and slots on the Stage record). Smaller items: `wave_called_early` could carry whole ticks; type the `Object` enemy parameters (ADR-0005) and the Catalogue returns (ADR-0001).
 
 ---
 
