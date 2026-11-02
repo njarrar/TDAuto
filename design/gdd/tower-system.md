@@ -170,10 +170,10 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 |---|---|---|---|
 | Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions`; `gold_upper_bound` | Enemy & Wave |
-| Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired` | Combat (API); this system (when, whom, values) |
+| Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`; runs in the Towers-by-slot-index slot of the tick | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
-| Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
+| Battle HUD | listens, calls | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
 
@@ -289,13 +289,13 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`, tick slot |
 | Input & Gesture Resolver | Target registry (slots and towers TAP 200; upgrade chip TAP 300, Rule 8), `tap`, `pressed` (TowerInput only) |
-| Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
+| Game State & Stage Flow | Build, tick order, `halted()`, `enemy_killed(bounty)` wired to gold, `wave_called_early(seconds_left)`, `phase` for the chip |
 
 **Downstream (hard unless noted; Battle HUD has a GDD that confirms its interface; the Vertical Slice rows have no GDD yet, so they stay provisional until they confirm them):**
 
 | System | Interface |
 |---|---|
-| Battle HUD & Build UI | Rule 17's signals and reads; calls `build` |
+| Battle HUD & Build UI | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `tower_inspected` (Rule 17); calls `build` |
 | Hero System (soft) | Hero: none directly; balanced against through bots and `burst_spike` |
 | Stat & Modifier (Vertical Slice) | Reads through the same accessor |
 | Skill Tree, Synergy Hook (Vertical Slice) | Tags and accessor context with the live tower |
@@ -394,7 +394,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Criterion | Owner | Passes when |
 |---|---|---|
 | Bot gates | Hero stories | The Hero GDD owns every row in Hero's Deferred table, with their current results |
-| `burst_spike`, L11, intermission, bypass | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
+| `burst_spike`, bypass | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage. L11 and intermission: pointer to Enemy & Wave's Deferred "L11 and intermission rows" row, which owns them |
 | Burst state (Flow) | Hero stories | Pointer: Hero's Deferred "Bypass, burst state" row owns this check |
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
 | TowerInput wiring | Tower UI story | With a fake resolver, taps reach `ChipWindow`, a built slot is disabled, `slot_tapped` fires, and `phase` closes the chip |
@@ -409,9 +409,9 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Calling early is nearly free for a hero bot, though the concept promises a cost. The bonus is at most 8 per call and 40 per stage, under the cheapest tower; accepted for MVP. Hero's "Always-call, humans" row is the pass mark and decides whether calling needs a cost or a bigger reward. The fallback is Flow Rule 9's overlapping waves. Whether players notice the bonus at 1.8 s per gold is Battle HUD's "Do players find Call?" row | Hero GDD ("Always-call, humans" row); Battle HUD | First playable |
+| Calling early is nearly free for a hero bot, though the concept promises a cost. The bonus is at most 8 per call and 40 per stage, under the cheapest tower; accepted for MVP. Hero's "Always-call, humans" row is the pass mark and decides whether calling needs a cost or a bigger reward. The fallback is Flow Rule 9's overlapping waves. Pointer only: whether players notice the bonus at 1.8 s per gold is Battle HUD's "Do players find Call?" row | Hero GDD ("Always-call, humans") | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
-| Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
+| Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell. Pointer: Hero's "Dominant build" row owns this | Hero GDD ("Dominant build" row) | First playable |
 | Wave 6 pays 174 of 510 bounty, when spending matters least, and gold does not carry over. Accepted for MVP; if the median wave 6 spend at Won (Battle HUD Rule 19's gold spent per wave) is under 87, half of wave 6's 174, bounty moves into waves 3 to 5 | Tower GDD + human logs | First playable |
 | Does slow earn its slot? One slow ties zero slows on the mid-skill bot and two cost lives. The gate is Hero's Deferred "Slow value" row | Hero GDD + bots | First playable |
 | Does a wrong disc happen often enough to need undo? | Pillar 4 phone test | First phone build |

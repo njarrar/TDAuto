@@ -152,7 +152,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 | Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`. Counts down Status from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
 | Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions` | This system (signals, list); Tower (gold, targeting) |
 | Hero System | serves | `targets()` for attack and burst | This system (list); Hero (targeting) |
-| Battle HUD and views | serves | Views read `roster()` and the path each frame; the HUD may read Wave records directly | This system (data); views (drawing) |
+| Battle HUD and views | serves | Views read `roster()` and the path each frame; the HUD reads `wave_index()`, `got_through_by_type()` and `targets()`, and may read Wave records directly | This system (data); views (drawing) |
 | Bots and tests | call | Reach it through the builder and commands | Harness |
 
 ## Formulas
@@ -315,7 +315,7 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Data & Config Pipeline | Enemy through the accessor; Wave and Stage directly; `path_points`, `slot_positions` and `path_width` added to Stage |
 | Combat & Damage | Health, Status, `speed_factor`, `is_dead`, the reap, `spawn_id`, `deliver` for test kills; Rule 11's tick order |
-| Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
+| Game State & Stage Flow | `start_next_wave()`, `halted()`, `wave_cleared`, `waves_complete`, `enemy_leaked`, wiring, tick slots, `to_ticks` in Rule 4 |
 
 **Downstream (hard; all eight MVP systems have GDDs, so these interfaces are confirmed there; the Vertical Slice rows stay provisional until their GDDs exist):**
 
@@ -412,13 +412,13 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
 | Two fronts | Hero stories | In waves 3, 5 and 6, two of `targets()` are over 2 × `leash_radius` apart at some tick |
 | No input | This system's stories | With only Start pressed, the run survives wave 1 |
-| Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough |
+| Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough. If it fails, wave 2's packet is retuned |
 | L11 and intermission rows | Hero stories | These checks join the content test and pass. L10 and peak run in Tower's CI (Tower criterion 27) |
 | Retry (Flow) | This system's stories | A retried battle's snapshot equals a fresh one, the old battle's `weakref` is null, and only the catalogue is shared |
-| Listener test (Flow) | This system's, Tower stories | The count is non-zero, and removing a connection fails naming it |
+| Listener test (Flow) | This system's stories | This system's count is non-zero, and removing one of its connections fails naming it. Tower's half is Tower criterion 28 |
 | Order (Combat) | This system's stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; no corpse moves |
-| Catalogue unchanged (Data) | Tower, this system's stories | Unchanged after a battle where an enemy spawned and died |
-| Never cache (Data) | Tower, Hero, HUD stories | The second use reflects the spy |
+| Catalogue unchanged (Data) | This system's stories | Unchanged after a battle where an enemy spawned and died. Tower's half is Tower criterion 28 |
+| Never cache (Data) | This system's stories | This system's reads: the second use reflects the spy. Enemy & Wave criterion 4 tests the spy |
 
 **Manual** (screenshots retained in `production/qa/evidence/`): the path is drawn on its points; entry and exit are unseen; the three types are told apart in grey at minimum size; dormant and active exit strip.
 
@@ -430,13 +430,16 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 |---|---|---|
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content. Hero's Open Question owns it | Hero GDD (this row points there) | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
-| Closed. The concept named bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Hero Rule 17 answers it: the metric is now kills per burst | Hero GDD | Closed |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values (Hero's row owns this) | Hero GDD + bots | First playable |
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
 | Stretch mode: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. Input's adapter row owns the stretch mode | technical-director | Before the first input story |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, and the snapshot | technical-director | App Lifecycle ADR |
-| Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
+| Does the technical director accept moving path and slots from the scene to the Stage record? The tick order question is Combat's row (combat-damage.md, Open Questions) | technical-director | App Lifecycle ADR |
 | Starter waves are one scripted simulation, on a path 19% longer than the prototype's with one fewer slot, with no human data. Every convergence point moves with real towers | Bots at first playable | First playable |
 | The six-wave curve rises every wave with no easier wave between (HP 1.50, 1.32, 1.26, 1.48, 1.64 times). Accepted for MVP as a finale; the second stage tests a curve with a dip (Pillar 3) | level-designer | Vertical Slice |
+
+**Closed** (kept for history):
+
+- The concept named bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Hero Rule 17 answers it: the metric is now kills per burst. Owner: Hero GDD.

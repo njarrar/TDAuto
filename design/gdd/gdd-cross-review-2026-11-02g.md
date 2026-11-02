@@ -97,3 +97,10 @@ Three blocking issues, all from the sixth fix's design rulings and each a short 
 1. B1: add an `instructed` field to Rule 19's attempt record.
 2. B2: make Hero's Locked nudge a 120 ms alpha blink under Reduce Motion.
 3. B3: give the Call prompt a position, priority, trigger, hide rule and criterion, and limit `:408` to the button.
+
+## Resolution, 2026-11-02: the three blockers and every warning applied, re-run pending
+
+- **B1:** Rule 19's attempt record carries `instructed` (true or false), set from a debug toggle. Free attempts gate first; only if they are inconclusive does the instructed group gate, on its own and labelled as scheduled calls; the never-call rate and First run use `instructed` false only; each tester runs the extension last.
+- **B2:** Hero's Locked nudge is a 120 ms alpha blink on the button under Reduce Motion.
+- **B3:** the Call prompt shares the one Prompt panel, shows only when no other prompt applies, needs `bursts_started` of at least 1, a built tower and a failed never-call gate, and hides for good on the first call; the "no advice once armed" check covers the button only; criterion 16 tests it.
+- **W1 to W15:** applied as listed: every Rule 19 record has a `kind` field in the reader's key, spending before wave N counts to wave N, a failed build raises `attempt_seq` and writes an empty Fatal record, the blink is never on a panel (art bible §7 says so too), Rule 11 excludes a resume, Rule 2's centre promise holds for a pinned hero, the slow type line has its string, `slot_positions` comes from Enemy & Wave only, `pin_rect` covers bottom insets up to 72, interface names match on both sides, and each duplicated row has one owner.

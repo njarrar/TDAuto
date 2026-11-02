@@ -52,7 +52,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `intermission_duration` | float, seconds | 0 | 600 | Enemy & Wave |
 | `drag_slop` | float, field units | 8 | 30 | Input |
 | `tap_slop` | float, field units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
-| `edge_reject_margin` | float, field units | 0 | 36 | Input; Rule 12 needs the burst button 48 inside it |
+| `edge_reject_margin` | float, field units | 0 | 36 | Input Rule 12 needs the burst button's centre at least `edge_reject_margin` + 48 from a side edge; the HUD puts it 84 in |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
 | `path_width` | float, field units | above 0 | 2,000 | Enemy & Wave |
@@ -131,7 +131,7 @@ There is no reload transition: a data change applies on the next run.
 | Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
 | Combat & Damage | Nothing directly; Enemy & Wave passes `max_hp` in at spawn. Callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
-| Tower System | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | This system |
+| Tower System | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` directly from Stage (Enemy & Wave serves `slot_positions`) | This system |
 | Hero System | Hero and Burst through the accessor; Stage fields (`hero_start`, `pin_rect`, `pin_exclusion`) and the Options record directly | This system |
 | Input & Gesture Resolver | The Input record, read directly | This system; Input GDD owns its meaning |
 | Battle HUD | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly | This system |
@@ -181,7 +181,7 @@ There is no reload transition: a data change applies on the next run.
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
 | Combat & Damage (soft) | Gets `max_hp` passed in by Enemy & Wave at spawn (Combat's seed exception); callers pass other values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
-| Tower System | Tower levels via the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
+| Tower System | Tower levels via the accessor; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` (Enemy & Wave serves `slot_positions`) |
 | Hero System | Hero and Burst via the accessor; `hero_start`, `pin_rect`, `pin_exclusion` and the Options record directly |
 | Input & Gesture Resolver | The Input record |
 | Battle HUD & Build UI | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly |
