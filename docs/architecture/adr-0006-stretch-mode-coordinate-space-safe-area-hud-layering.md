@@ -31,7 +31,7 @@ The resolver, `targets()`, the views and the HUD need one coordinate space, a st
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0002 (Accepted): canonical signals, reads and commands, the wiring rules, `VIEW_SIGNALS`. ADR-0003 (Accepted): the frame steps, `Battle.enqueue`, `BattleCommand`, `RealClock`, step 1g `cancel()`. ADR-0001 (Accepted) for the Options and Stage records |
+| **Depends On** | ADR-0002 (Accepted): canonical signals, reads and commands, the wiring rules, `VIEW_SIGNALS`. ADR-0003 (Accepted): the frame steps, `Battle.enqueue`, `BattleCommand`, `RealClock`, step 1g `cancel()`. ADR-0001 (Accepted) for the Options and Stage records. Soft: ADR-0005 (Proposed), since the enemy pool is keyed by `spawn_id` |
 | **Enables** | ADR-0007 (the adapter converts every position through `FieldSpace` and honours the press block); ADR-0008 (the wrapper builds the layers named here and forwards `resized`); the Mobile Platform ADR (deferred: device budgets, tall-phone margin look) |
 | **Blocks** | Battle HUD epic; every story that converts a screen position (Input adapter, TowerInput, HeroInput); the enemy and combat view stories; the `project.godot` display keys |
 | **Ordering Note** | Accepted before ADR-0007 (GF4). **This ADR must not be Accepted until the phone spike (GF5, A7) has run** and confirmed, on Godot 4.7.2 on a target phone: D2 (event positions under `canvas_items`), D3 (visible rect and extra-area placement), D4 (safe-area call and units; Android edge-to-edge), D5 (resize and safe-area notifications), D6 (modal Control receives touch and stops it), D7 (IGNORE passes touch), D9 (Mobile renderer on the lowest target Android, or the fallback), D10 (dp width). D1 and D8 are closed on desktop by the first display-keys story. The spike extends `docs/engine-reference/godot/` with each answer. If D6 fails, the fallback route in section 5 becomes the primary route before acceptance |
@@ -70,12 +70,17 @@ window/size/viewport_height=960
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
+
+[input_devices]
+pointing/emulate_mouse_from_touch=false
+pointing/emulate_touch_from_mouse=false
 ```
 
 - **`canvas_items`**: 2D draws at the screen's own resolution with a scale transform, so text and lines stay sharp on a phone. This matters more in 4.7, where `CanvasItem` lines draw with no feather and look thinner (sourced). `viewport` mode would render at 540 by 960 and upscale, blurring 14 dp text.
 - **`expand`**: the scale is `min(width / 540, height / 960)`, so a taller phone scales by width (the Input GDD's `field_scale = width_dp / 540`) and a wider tablet by height (the Input GDD's "height-limited tablet"). The extra area becomes visible canvas, not black bars, which the curtains in section 3 then cover. `keep` would put letterbox bars outside the viewport, where event positions fall outside the field and safe-area insets may sit inside bars.
 - **Portrait only**, base 540 by 960. The orientation key's name and value are D8.
 - Desktop opens a 540 by 960 window; resizing it is a `resized` lifecycle state (section 4).
+- **Both emulation keys are `false` (D12).** A phone touch then arrives only as a touch event and a desktop click only as a mouse event, so no screen or adapter sees one press twice. Desktop mouse-as-touch is done by the adapter, which treats a mouse button event as pointer 0 by its class (ADR-0007 must agree).
 
 ### 2. The field space
 There is one gameplay coordinate space: **field units**, origin at the field's top-left, x right, y down, field rect `Rect2(0, 0, 540, 960)`. Path points, slots, the hero, enemies, hit discs, `pin_rect`, `pin_exclusion`, aim points and the HUD layout table are all in it. One field unit is one base viewport unit; under `canvas_items` it is `scale` screen pixels.
@@ -118,7 +123,7 @@ BattleWrapper (Node)
 │   ├─ EnemyLayer (one Node2D, one _draw)                     section 7
 │   └─ CombatView (one Node2D, one _draw)                     section 7
 ├─ HudLayer (CanvasLayer, layer 10, offset = FieldSpace.origin)
-│   ├─ Curtains (Node2D; draws margin_rects() opaque)
+│   ├─ Curtains (Node2D; draws margin_rects() opaque; owned by the wrapper, not a HUD piece)
 │   ├─ HudField (Node2D; one _draw: arc, chip, Start/Call, burst art, rings)
 │   └─ HudTopBand (Control tree; mouse_filter IGNORE throughout)
 └─ ModalLayer (CanvasLayer, layer 20, offset 0)
@@ -127,7 +132,7 @@ BattleWrapper (Node)
 AppRoot FatalScreen: CanvasLayer 30 (ADR-0008)
 ```
 
-- **Curtains** cover everything outside the field with the panel colour, on a layer above the world. So an enemy entering by a side edge or leaving by the bottom stays unseen on any aspect, and "visible" equals "targetable" (Enemy & Wave Rule 4). This answers Enemy & Wave's stretch question: layout rules L3, L5, L6 and L7 see the same 540 by 960 field on every device, so only the inset-dependent ones need a recheck. No clip API is used, only `draw_rect`.
+- **Curtains** belong to the wrapper, not to the Battle HUD, so HUD Rule 1's three pieces stay three. They cover everything outside the field with the panel colour, on a layer above the world. So an enemy entering by a side edge or leaving by the bottom stays unseen on any aspect, and "visible" equals "targetable" (Enemy & Wave Rule 4). This answers Enemy & Wave's stretch question: layout rules L3, L5, L6 and L7 see the same 540 by 960 field on every device, so only the inset-dependent ones need a recheck. No clip API is used, only `draw_rect`.
 - **The only Controls that can stop input are the two modal screens.** Every other HUD Control has `mouse_filter = IGNORE` (HUD Rule 1: the top band ignores input). This settles a conflict: the Input GDD's HUD row says the top-band Controls "consume their own events"; HUD Rule 1, the owner, says they ignore input, and this ADR follows the owner (Migration Plan). HudField is a `Node2D`, so it is never in GUI hit testing; its tappable parts are resolver discs.
 - **All hit discs are registered in field units**, by their owners, at the priorities of the Input GDD table: Start/Call TAP 350 radius 48, arc discs TAP 300, arc backdrop TAP 250 sink, chip TAP 300 radius 40 (TowerInput), burst sink TAP 400 and burst DRAG 100 (HeroInput) (TR-hud-002). Every thumb target's radius is at least 36, so `2 × r × 360 ≥ 48 × 540` holds at the minimum width.
 
@@ -145,21 +150,16 @@ AppRoot FatalScreen: CanvasLayer 30 (ADR-0008)
 ```gdscript
 # InputAdapter (ADR-0007 implements; this ADR fixes the contract)
 func set_input_blocked(blocked: bool) -> void
-# true: if a forwarded press is open, call resolver.cancel_pointer(index) at once;
-#       forward no new press until false. Moves and releases of no open press are dropped.
+# true: forward nothing until false: no new press, and moves and releases are dropped.
+#       It never calls cancel_pointer itself. An open press is closed by the step 1g cancel()
+#       that Paused and every outcome already request (ADR-0003); cancel never runs in apply_queued.
 ```
 
-The wrapper injects `adapter.set_input_blocked` into the HUD as a `Callable`. The HUD calls it with `true` when it mounts a modal and `false` when it unmounts one. Modals mount only from `phase` handlers for Paused, Won, Lost and Fatal, which ADR-0003 emits outside any tick (steps 1b, 1d, 1f2), so `cancel_pointer` never runs inside a tick. This is one gate in the adapter, not a gate in each owner, so HUD Rule 2's "no second resolver and no gate in each owner" still holds.
+The wrapper injects `adapter.set_input_blocked` into the HUD as a `Callable`. The HUD calls it with `true` when it mounts a modal and `false` when it unmounts one. Modals mount only from `phase` handlers for Paused, Won and Lost, which ADR-0003 emits outside any tick (steps 1b, 1d, 1f2). Because the block only stops forwarding, nothing is cancelled inside `apply_queued` or a tick; the step 1g `cancel()` closes the open press in the same frame. The FatalScreen is not a HUD modal: it lives in AppRoot on layer 30 and blocks the adapter itself (ADR-0008). This is one gate in the adapter, not a gate in each owner, so HUD Rule 2's "no second resolver and no gate in each owner" still holds.
 
 **Fallback route if D6 fails** (the Control gets no touch press under ADR-0007's event family): while blocked, the adapter passes raw press and release points, in field units, to an injected `modal_sink: Callable` instead of dropping them, and the modal screen judges them with the same HudLogic model. Only the adapter and the modal screens change.
 
-**Resume.** A resume tap on PausedScreen queues a new command:
-
-```gdscript
-class_name ResumeCommand extends BattleCommand   # (no args) -> StageFlow.resume(); returns OK, HALTED or NOT_PAUSED
-```
-
-It drains in step 1b with the clock stopped, like every command (ADR-0003), and is logged like the rest. StageFlow returns to the phase it left and emits `phase` (Flow Rule 17); the HUD unmounts PausedScreen and unblocks the adapter in that `phase` handler. A finger held across the pause stays dead: its press was cancelled by the block, and the screen never saw it. This answers M6 and replaces a direct call from a view into StageFlow, which ADR-0002 rule 5 forbids. It adds a sixth command to ADR-0002's table and ADR-0003's subclass list (Migration Plan).
+**Resume: the input route only.** A resume tap on PausedScreen queues a `ResumeCommand` through `Battle.enqueue`; it never calls StageFlow (ADR-0002 rule 5). That is this ADR's whole part, and it answers M6. **ADR-0008 owns the pause semantics:** the command and `StageFlow.resume()` with its result codes, the phase it returns to, Android back while Paused, and that regaining focus never resumes by itself (Flow Rule 17). ADR-0008 also formally amends ADR-0002's command table and ADR-0003's subclass list. When StageFlow emits the returned `phase`, the HUD unmounts PausedScreen and unblocks the adapter in that handler. A finger held across the pause stays dead: its press was closed by the step 1g `cancel()`, and the screen never saw it.
 
 ResultScreen's Retry and Play again call `AppRoot.request_retry()` (ADR-0002), which only sets a latch (HUD Rule 18).
 
@@ -191,7 +191,7 @@ var right: float
 ### 8. Views, pools and `_process`
 - **Enemies (TR-enemy-007).** One `EnemyLayer` canvas item draws every enemy in one `_draw`, from `wave().roster()` read in step 1f. Per-enemy presentation state (fade, notch angle) lives in a record pool pre-sized to 48 (`peak_alive_ub`'s bound), keyed by `spawn_id` and reused. No node is created or freed per enemy. If the roster exceeds the pool, the pool grows and logs a development error, because an invisible enemy is worse than a hitch (Enemy & Wave edge case). The pool is rebuilt with the views on Retry.
 - **Effects.** CombatView draws tracers and flashes in one `_draw` from a ring buffer of 64 effect records filled by `attack_fired` and `damage_applied`. When full, the oldest is overwritten and debug builds warn once per second; a lost tracer is cosmetic. Tracers are drawn at least 2 field units wide to offset the 4.7 thinner lines (sourced).
-- **`_process` in views.** Views may animate in their own `_process` and use `Tween` for art only (alpha, fades, icon loops, the 120 ms collapse), reading only. A view `_process` must never queue a command, register or unregister a target, change HudLogic state, or write anything another object reads. HUD state that the rules depend on (Start/Call and Retry arming) advances only through `hud.advance(ms)`, called by the wrapper in step 1f with the frame's delta in ms clamped to 100, and ignored while Paused (HUD Rule 11, TR-hud-007). `call_prompt_done` is set by the HUD from the `StartNextWaveCommand`'s `on_result` when the prompt has shown (HUD Rule 13).
+- **`_process` in views.** Views may animate in their own `_process` and use `Tween` for art only (alpha, fades, icon loops, the 120 ms collapse), reading only. A view `_process` must never queue a command, register or unregister a target, change HudLogic state, or write anything another object reads. HUD state that the rules depend on (Start/Call and Retry arming) advances only through `hud.advance(ms)`, called by the wrapper in step 1a, beside `advance_chip` and before any tick (HUD Rule 10: real-time models advance before ticks), with the frame's delta in ms clamped to 100, and ignored while Paused (HUD Rule 11, TR-hud-007). `call_prompt_done` is set by the HUD from the `StartNextWaveCommand`'s `on_result` when the prompt has shown (HUD Rule 13).
 
 ### 9. Renderer (A8)
 Keep **Mobile** (`renderer/rendering_method="mobile"`, as set). The game draws only 2D `CanvasItem` primitives and text, with no custom shaders, so switching to Compatibility is one project setting with no code change. Rule: no code or asset may depend on a renderer-only feature. The spike runs the build on the lowest target Android (D9); if Mobile fails to start or misses the 30 fps floor there, the project switches to Compatibility, recorded by amending this section. Draw-call and memory budgets stay with the deferred Mobile Platform ADR (TR-hud-008).
@@ -206,13 +206,14 @@ ModalLayer 20   PausedScreen / ResultScreen (STOP) --ResumeCommand--> Battle.enq
 HudLayer 10     Curtains | HudField (_draw) | HudTopBand (IGNORE)       offset = origin
 World 0         Stage | Towers | Hero | EnemyLayer (pool 48) | CombatView (ring 64)   position = origin
 
+wrapper step 1a: advance_chip; hud.advance(min(delta_ms, 100))
 wrapper step 1b: forward `resized` + request cancel
-wrapper step 1f: hud.advance(min(delta_ms, 100)); views redraw from reads
+wrapper step 1f: views redraw from reads
 wrapper step 1g: resolver.cancel(); if resized: new FieldSpace, move layers, new FieldInsets
 ```
 
 ### Key Interfaces
-`FieldSpace` (constants `FIELD_SIZE`, `FIELD_RECT`; `make`, `to_field`, `to_canvas`, `contains`, `margin_rects`, `mirror_x`); `SafeAreaSource.safe_rect_canvas() -> Rect2`; `FieldInsets.from(space, safe)`; `HudLayout.burst_centre(left_hand, insets) -> Vector2`; `InputAdapter.set_input_blocked(blocked: bool)`; fallback `modal_sink: Callable`; `ResumeCommand` (sixth `BattleCommand`) and `StageFlow.resume() -> int` (`OK`, `HALTED`, `NOT_PAUSED`); `BattleHud.advance(ms: float)`.
+`FieldSpace` (constants `FIELD_SIZE`, `FIELD_RECT`; `make`, `to_field`, `to_canvas`, `contains`, `margin_rects`, `mirror_x`); `SafeAreaSource.safe_rect_canvas() -> Rect2`; `FieldInsets.from(space, safe)`; `HudLayout.burst_centre(left_hand, insets) -> Vector2`; `InputAdapter.set_input_blocked(blocked: bool)`; fallback `modal_sink: Callable`; `BattleHud.advance(ms: float)` (called in step 1a). `ResumeCommand` and `StageFlow.resume()` are ADR-0008's; this ADR only queues the command.
 
 ### Implementation Guidelines
 - `project.godot` must carry the five display keys of section 1; no code may change stretch settings at runtime.
@@ -223,6 +224,8 @@ wrapper step 1g: resolver.cancel(); if resized: new FieldSpace, move layers, new
 - Every HUD Control other than PausedScreen and ResultScreen must have `mouse_filter = IGNORE`.
 - Modal screens must use `_gui_input` with class checks, never `Button`, and must fire only on a release whose press they saw while Armed.
 - The HUD must call `set_input_blocked(true)` on every modal mount and `false` on unmount, only from `phase` handlers.
+- The adapter's block must never call `cancel_pointer` or `cancel`; only step 1g cancels.
+- Both emulation keys must stay `false`.
 - The Paused tap must queue `ResumeCommand`; no view may call `StageFlow` directly.
 - The burst button's art and disc must both come from `HudLayout.burst_centre`.
 - No transform in the wrapper tree may have a negative scale.
@@ -279,7 +282,8 @@ wrapper step 1g: resolver.cancel(); if resized: new FieldSpace, move layers, new
 - Renderer switching costs one setting.
 
 ### Negative
-- A sixth command and a `StageFlow.resume()` read; ADR-0002 and ADR-0003 tables must be amended.
+- The resume route depends on ADR-0008's `ResumeCommand`.
+- **Edge-to-edge:** with the field bottom-anchored, the bottom rows can sit under the Android gesture bar if edge-to-edge is on (D4). The content test checks that no slot, disc or path end lies within `I_bottom` of the field's bottom edge at the worst inset the Mobile Platform GDD sets.
 - A tall phone shows an empty top margin until the Mobile Platform GDD styles it.
 - The adapter gains a block flag and possibly a modal sink.
 - One `_draw` for all enemies redraws every frame even when little moves.
@@ -319,17 +323,16 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 
 - `project.godot`: add the five `[display]` keys of section 1.
 - `docs/architecture/architecture.md`:
-  - 3.1: step f gains `hud.advance(min(delta_ms, 100))`; step g gains "then, after a forwarded `resized`, rebuild `FieldSpace` and insets".
+  - 3.1: step a gains `hud.advance(min(delta_ms, 100))`; step g gains "then, after a forwarded `resized`, rebuild `FieldSpace` and insets".
   - 4.2: add `InputAdapter.set_input_blocked(blocked: bool)` and the optional `modal_sink`; add `FieldSpace` to Foundation; the adapter drops presses outside `FIELD_RECT`.
-  - 4.3: add `ResumeCommand` to the command list and `StageFlow.resume() -> int`.
+  - Required ADRs note (around line 689): ADR-0006 to 0008 were drafted before the phone spike; none is Accepted until the spike confirms its items.
   - 4.5: `targets()` uses `FieldSpace.FIELD_RECT`.
   - 4.6: modal screens are Controls on layer 20 with the adapter block as a backstop; the Paused tap queues `ResumeCommand`.
   - 4.7: `DisplayServer` safe-area row points to `SafeAreaSource` and D4.
   - Module Ownership, Foundation: add `FieldSpace`, `FieldInsets`, `SafeAreaSource`; Presentation: Curtains, EnemyLayer.
   - Baseline TR-enemy-007: "views pool enemy presentation records (one canvas item)".
   - Open Questions A4, M6 and A8: closed by ADR-0006 (A8 pending D9).
-- `docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md` (Accepted): add a cross-reference note, not a change of decision, that the Commands table gains `resume() -> int` on StageFlow (`OK`, `HALTED`, `NOT_PAUSED`) by ADR-0006, and the Reads table gains nothing.
-- `docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md` (Accepted): cross-reference note that `ResumeCommand` is a sixth subclass, step 1f includes `hud.advance`, and step 1g swaps `FieldSpace` after a resize, by ADR-0006.
+- `docs/architecture/adr-0003-frame-order-command-queue-ticks-and-view-update.md` (Accepted): cross-reference note that step 1a includes `hud.advance` and step 1g swaps `FieldSpace` after a resize, by ADR-0006. (The `ResumeCommand` amendment of ADR-0002 and ADR-0003 is ADR-0008's.)
 - `design/gdd/input-gesture-resolver.md`: Battle HUD row (around line 127): "its top-band Controls ignore input; its modal screens consume events" (HUD Rule 1 wins). Implementation note (around line 78) and Open Questions row (around line 398): stretch mode is `canvas_items`/`expand`, decided by ADR-0006.
 - `design/gdd/battle-hud.md`: Rule 17: "the tap queues a resume command (ADR-0006)"; "Handed to owning GDDs, Technical director": stretch decided by ADR-0006, field bottom-anchored, margins curtained; the burst position comes from one function shared with HeroInput.
 - `design/gdd/game-state-stage-flow.md` Rule 17 and Interactions (around line 109): resume reaches Flow as a queued command, `StageFlow.resume()`.
@@ -341,7 +344,8 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 - `HudLayout.burst_centre` gives (456, 888) right-handed at inset 0 and (84, 816) left-handed at inset 100.
 - Integration test: every Control under HudLayer has `mouse_filter = IGNORE`; both modal roots are STOP on layer 20.
 - Integration test: mounting PausedScreen during a hero drag emits `drag_cancelled` and no `drag_ended`; a release after unmount of a press made while blocked emits nothing.
-- Headless test: `ResumeCommand` in Paused returns `OK` and `phase` returns to the left phase; in Wave it returns `NOT_PAUSED`.
+- Integration test: a Paused tap queues exactly one `ResumeCommand` and calls nothing on StageFlow. (Resume results are tested under ADR-0008.)
+- Integration test: while blocked the adapter forwards nothing and calls no cancel; the press closes at step 1g.
 - An enemy pool test runs a 48-enemy fixture with no node created after build.
 - Retained screenshots in `production/qa/evidence/`: desktop 540x960 HUD; a 9:20 window showing curtains and the bottom-anchored field; left-handed burst.
 - Phone spike records D2 to D7, D9, D10; desktop records D1, D8.
@@ -350,3 +354,4 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 - Architecture: `docs/architecture/architecture.md` Gate Findings GF4, GF5; Open Questions A4, A7, A8, M6; API Boundaries 4.2, 4.5, 4.6, 4.7; Required ADRs row ADR-0006.
 - ADR-0001, ADR-0002, ADR-0003 (Accepted; this ADR extends 0002 and 0003 by note). ADR-0007 and ADR-0008 (not yet written) depend on it.
 - GDDs: `design/gdd/battle-hud.md` Rules 1, 2, 6, 11, 13, 17, Layout; `input-gesture-resolver.md` Positions and units, Rule 7, `target_ok`; `enemy-wave.md` Rule 4; `hero-system.md` Rule 2; `game-state-stage-flow.md` Rule 17; `design/art/art-bible.md` §3, §7; cross-review `design/gdd/gdd-cross-review-2026-11-02j.md` M6.
+- Reviews, 2026-11-02: TD-ADR (which also ran the engine check, since the Godot specialist drafted this ADR): CONCERNS; must-fix items 1 to 5 revised (`hud.advance` moved to step 1a, D12 with both emulation keys `false`, the block never cancels, `ResumeCommand` semantics handed to ADR-0008, Fatal left to AppRoot) and the recommended items applied.
