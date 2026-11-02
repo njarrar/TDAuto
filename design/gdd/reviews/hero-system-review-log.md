@@ -115,3 +115,37 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md ab70307efbff1830a433cc8f2056f805
 
 ## Revision — 2026-11-02 — Two blockers applied, re-review pending
 Applied in the authoring session: criterion 14 rewritten to a runnable check, which the script now performs; Start/Call disabled while the hero's centre is strictly under 104 from it (user decision), in Battle HUD Rule 10 and criterion 9, with a Hero edge case. Also: Data's pin_exclusion stated as a list of shapes, median share 26.2, towers-only bot named, script decides details the bot table omits, best pin a lower bound, "4 to 5 hit" dropped.
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
+Blocking items: 8 | Recommended: 6
+Summary: No pillar concerns; the design converges. Eight short text fixes, two of them where the text is wrong: tick step 5 can set Ready during a telegraph, and the bot table contradicts the script it reports. About 20 items tagged blocking by QA and the programmer go to story level, as earlier reviews decided; the creative director asks for a focused check of the eight edits next.
+Prior verdict resolved: Yes, both; criterion 14 runs, and Start/Call is disabled near a crossing hero.
+Findings:
+- [BLOCKING] Tick step 5: "If Cooling: subtract 1; at 0, Ready", since cooldown_left is 0 while Telegraphing.
+- [BLOCKING] Edge Cases: a walking hero can pass over the burst button, e.g. (340,888) to (470,700) passes 56 from the right line; state who wins the press, and test it.
+- [BLOCKING] Starter values, Rule 1: hero_start is 80 from the path inside a drawn leash of 90, so it looks broken; hide the leash until the first pin, or move hero_start and tighten the content rule.
+- [BLOCKING] Formulas, clamp_pin: "always a valid point" is unproven for thin regions; add a fallback (hold the last valid pin) and drop the claim.
+- [BLOCKING] Simulated results: the bot table contradicts the script on the mid-skill wait (counts only with an enemy in reach), the ceiling gate and the frozen intermission; correct those lines.
+- [BLOCKING] Content rules: burst damage at least the max HP of normal and fast, protecting "kills what it touches" across a 5-point margin.
+- [BLOCKING] Rule 6, criterion 12: cite Enemy & Wave Rule 4 for the inclusive field, and take the grid to 540 and 960.
+- [BLOCKING] Formulas, clamp_pin example: 718.41 should be 718.42.
+- [RECOMMENDED] Player Fantasy: write a short section; three blockers above protect the fantasy.
+- [RECOMMENDED] Formulas, hero_share_bound: not a bound; example burst_mean 300 against about 324; say whether the 40% cap applies to the ceiling bot (27% to 42%).
+- [RECOMMENDED] Formulas: dt in burst_safe_distance and its negative range; walk_ticks wording.
+- [RECOMMENDED] Simulated results: state the share band's tolerance rather than a knife edge.
+- [RECOMMENDED] Core Rules, Tick: name Combat's call that emits attack_fired, and list it in Combat.
+- [RECOMMENDED] Open Questions: record the invulnerable hero as a known gap.
+Reviewed-Content-Hash: design/gdd/hero-system.md 73b430f0197ec4c4d718ff8e5f573b4076cc84e5
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9df110c0ac2
+Reviewed-Content-Hash: design/gdd/combat-damage.md 6752d513d2ea4eca4d31747a1087005417d40ee7
+Reviewed-Content-Hash: design/gdd/enemy-wave.md b54c78785944be6bfd376a6a80eca92dca9c770f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b1ed8303576fede3018cf2eaa956e5363d02d7ca
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md b3ade581d79c340adf236a11d85202bf8e764b77
+Reviewed-Content-Hash: design/gdd/tower-system.md e36b8c7a04b724ebf610ebfcedbda7f839e66f87
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4eb1db4b0072cb030f6e13b8bf1c8dd4469421e4
