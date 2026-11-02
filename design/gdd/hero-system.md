@@ -167,7 +167,7 @@ Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rule
 |---|---|---|---|
 | Data & Config | reads | Hero and Burst through the accessor at use time; `hero_start`, `pin_rect`, `pin_exclusion` directly from Stage; the left-hand flag | Data (values); this system (meaning, balance) |
 | Input & Gesture Resolver | registers, listens | HeroInput registers hero (DRAG, priority 200, radius 56), button (DRAG, priority 100, radius 48) and sink (TAP, priority 400, radius 48); hears `pressed`, `drag_*`; updates the hero's centre | Input (API); HeroInput (meaning) |
-| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left` for the preview | Combat (API); this system (when, whom, values) |
+| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `is_dead` for kills, `hp_left` for the preview | Combat (API); this system (when, whom, values) |
 | Enemy & Wave | reads | `targets()`; rules on `time_to_exit`, intermission and fast speed | Enemy & Wave |
 | Game State & Stage Flow | built, injected | Builder makes HeroSim and ticks it in order; injects `halted()` and `in_build()` | Flow (order) |
 | Tower System | none directly | Balanced against through bots; `burst_spike`, gates | Bots |
@@ -292,7 +292,7 @@ The **hero_share_bound** formula is defined as:
 | System | Interface |
 |---|---|
 | Input & Gesture Resolver | Registry, `pressed`, `drag_*`, `drag_cancelled`, `idle` (HeroInput only) |
-| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left`, tick slot |
+| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `is_dead`, `hp_left`, tick slot |
 | Enemy & Wave | `targets()`, wave rules |
 | Data & Config Pipeline | Hero and Burst through the accessor; `hero_start`, `pin_rect`, `pin_exclusion` |
 | Game State & Stage Flow | Build, tick order, `halted()`, `in_build()` |
@@ -428,6 +428,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Best moment | User, first playable | A non-developer names whether the burst is still a best moment, and whether a radius of 70 feels satisfying or fiddly; if not, the Open Questions fallback runs |
 | Waves | Hero stories | Burst fit, two fronts and empty field, per Enemy & Wave |
 | Bypass, burst state | Hero stories | Combat's invariant `I` holds; the bonus ignores burst state |
+| Burst between ticks (Combat's row) | Hero stories | A burst commanded between ticks releases in the Hero-and-burst slot at least one tick later, and its corpses are reaped without moving |
 | HeroInput wiring | Hero UI story | With a fake resolver, gestures reach the commands |
 | Pins near a button | User, first phone build | A pin drag ending in the bottom third lands within 40 of the finger on at least 90% of attempts, and no press meant for the hero calls a wave or arms an aim (game-designer review, 2026-11-02) |
 
