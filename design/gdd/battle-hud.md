@@ -118,7 +118,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 | Lost panel | x 48 to 492, y 200 to 752; Retry 128 × 72 at (270, 700) |
 | Won panel | Compact, x 48 to 492, y 752 to 944, so the finished build stays visible above it (Pillar 1); Play again 128 × 72 at (270, 904) |
 
-This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing moves. Start/Call clears: the left burst's hit disc by 7.2 at its worst, the right by 174.5, the slot at (170, 700) by 17.3, `hero_start` by 60, and the lane's edge at x 234 with its rect ending at x 230. A hero can be pinned under it, and a tap there calls the wave, as with a slot: accepted, and measured in the Pillar 4 test.
+This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing moves. Start/Call clears: the left burst's hit disc by 7.2 at its worst, the right by 174.5, the slot at (170, 700) by 17.3, `hero_start` by 60, and the lane's edge at x 234 with its rect ending at x 230. A hero can never be pinned under it, since Stage's `pin_exclusion` holds a disc of radius 104 at its centre (user decision, 2026-11-02).
 
 **Content rules, added to the content test.** All bounds are proposed.
 
@@ -411,5 +411,4 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16 | technical-director | Mobile Platform |
 | At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
-| A hero pinned under Start/Call is called by a tap there. Is it a mis-fire in practice? | Pillar 4 phone test | First phone build |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |

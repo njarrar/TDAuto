@@ -1,6 +1,6 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
-> **Status**: Designed (pending independent review)
+> **Status**: In Review (design review 2026-11-02 NEEDS REVISION; six blockers applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted re-pinning at about 2 lives and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -33,30 +33,30 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 **The pin.**
 
 1. **Nothing happens until the first pin.** The hero starts unpinned at the stage's `hero_start`. It fights nothing, and the burst is refused until it is pinned, so the button stays locked. A never-pinned run is therefore identical to towers-only by rule (Combat's deferred gate), which is the prototype's pet test, and the first thing a player learns is the pin.
-2. **`pin(position)` sets the destination.** It runs between ticks, and returns `HALTED` (`halted()` is true), `BAD_POSITION` (not finite), `OUT_OF_BOUNDS` (outside `pin_rect`), `BUTTON_ZONE` (under 104 from either hand's burst button line, in Stage's `pin_exclusion`: the hero's radius of 56 plus the button's 48), or `OK`, checked in that order. A refusal changes nothing. In Build a pin applies at once and walking starts on the first tick (Flow Rule 10).
-3. **The hero walks in a straight line.** At `walk_speed`, 240 units per second, with no path-following, so "no pathfinding" stands. It does not attack while walking, and a new pin restarts from where it is. There is no re-pin cooldown. Crossing the starter hairpin takes about 2 s, so two fronts cost something, but it is not a chore.
-4. **The leash is the hero's whole reach.** The hero stands at its pin and attacks the nearest enemy from `targets()` inside `leash_radius`. There is no separate range and no chasing inside the leash: one ring means one thing, which is how the prototype's players read it. This amends Combat Rule 10 and its criterion 11.
+2. **`pin(position)` sets the destination.** It runs between ticks, and returns `HALTED` (`halted()` is true), `BAD_POSITION` (not finite), `OUT_OF_BOUNDS` (outside `pin_rect`), `BUTTON_ZONE` (inside a shape in Stage's `pin_exclusion`), or `OK`, checked in that order. A refusal changes nothing. `pin_exclusion` is a list of segments with a radius, a disc being a segment of no length: each hand's burst line, and Start/Call's centre, each at radius 104, the hero's 56 plus the target's 48. So a hero can never be pinned under a button, because a thumb roll there could call a wave, which cannot be undone (user decision, 2026-11-02). Every distance test compares squared distances, inclusive, so exactly 104 is `OK`. In Build a pin applies at once and walking starts on the first tick (Flow Rule 10).
+3. **The hero walks in a straight line.** At `walk_speed`, 240 units per second, with no path-following, so "no pathfinding" stands. It does not attack while walking, and a new pin restarts from where it is. `hero_pinned` fires from the command, after the state is set. Signal handlers never issue commands. There is no re-pin cooldown. Crossing the starter hairpin takes about 2 s, so two fronts cost something, but it is not a chore.
+4. **The leash is the hero's whole reach.** The hero stands at its pin and attacks the nearest enemy from `targets()` inside `leash_radius`. There is no separate range and no chasing inside the leash, so the leash means what the hero itself can hit, which is how the prototype's players read it. The burst's reach is a separate ring, shown only while aiming. This amends Combat Rule 10 and its criterion 11.
 5. **Auto-attack is deliberately small.** It exists to make the pin feel inhabited, at 4 damage per second against a level-1 single tower's 20. About 5% of a stage's damage comes from it, and 8% at the very most.
 
 **The burst.**
 
 6. **`burst(aim_point)` commits at once.** It returns `HALTED`, `BUILD_PHASE`, `NOT_PINNED`, `NOT_READY`, `BAD_POSITION`, `OFF_FIELD`, `OUT_OF_REACH` (over `reach` from the hero's current position) or `OK`, in that order, so state is checked before geometry. On `OK`, it reads `telegraph_duration`, holds `aim_point` fixed and starts `max(1, to_ticks(telegraph_duration))` ticks of telegraph. There is no cancel after release.
-7. **Reach ties the burst to the pin.** The aim must lie within `reach`, 160 units, of the hero's current position, so a walking hero's reach moves with it. The auto-attack is too small to make standing anywhere matter, so without this, one well-placed pin matched an active player, and at 200 it nearly did. At 160, the best single pin found ends 1 to 3 lives lower on the four mixed builds. So re-pinning is worth about 2 lives on one path. The user accepted that for MVP (2026-11-02), and Enemy & Wave's lanes remain the fallback (Open Questions).
-8. **Release.** When the telegraph ends, in the Hero-and-burst slot (Combat Rule 2), victims are `all_in_radius` of `aim_point` over `targets()`, using current positions. Each gets one `deliver` with source kind BURST. An enemy can walk out during the telegraph, and a fast one moves 44 units. A burst that lands on nobody still spends its cooldown, since a cancel before release is free.
+7. **Reach ties the burst to the pin.** The aim must lie within `reach`, 160 units, of the hero's current position, so a walking hero's reach moves with it. It is tested once, at command, so a hero walking through the telegraph can land a burst up to 220 from where it ends up, which is accepted. The auto-attack is too small to make standing anywhere matter, so without this, one well-placed pin matched an active player, and at 200 it nearly did. At 160, the best single pin found ends 1 to 3 lives lower on the four mixed builds. So re-pinning is worth about 2 lives on one path. The user accepted that for MVP (2026-11-02), and Enemy & Wave's lanes remain the fallback (Open Questions).
+8. **Release.** When the telegraph ends, in the Hero-and-burst slot (Combat Rule 2), victims are `all_in_radius` of `aim_point` over `targets()`, using current positions. Each gets one `deliver` with source kind BURST and the Burst's ID. An auto-attack uses source kind HERO and the Hero's ID. An enemy can walk out during the telegraph, and a fast one moves 27.5 units. A burst that lands on nobody still spends its cooldown, since a cancel before release is free.
 9. **Cooldown runs from release, and not during the telegraph.** So one full cycle is `telegraph_duration + cooldown`, which is what Enemy & Wave's intermission rule compares against. The timer ticks wherever ticks run, so Intermission restores it, and Build does not. The burst starts Ready, and it is refused in Build (Flow Rule 10). That rule is also why a first burst is never wasted before wave 1 starts.
 10. **A small, lethal burst keeps a 10 s cooldown inside the share target.** The user set 10 s (2026-11-02). Share is damage × victims × number of bursts, so with twice the bursts a wide one cannot stay near Pillar 2's target: radius 130 reached about 45%. So the radius is 70 and damage 130: each burst kills every `fast` and `normal` it touches, and a `heavy` loses about a sixth of its HP. Fewer victims keep share down, and a small ring makes aim the skill. Results are sensitive to radius: 65 gave a median share of 28% at reach 200, and 75 gave 37%. Overkill counts for nothing, as ever.
 
 **Aim, in HeroInput.**
 
 11. **Arming.** A press on the button arms an aim only if the burst is Ready, the hero has been pinned and the phase is not Build. Otherwise the whole press is dead: a cooling press shows the seconds digit above the thumb, and an early thumb presses again. There is no queue.
-12. **Aim point.** `aim_point` is the finger plus (0, −100), clamped to the field, then to just inside `reach` from the hero, so exact comparison can never refuse it. It is recomputed every frame while the hero walks, so a still thumb's ring stays true. There is no flip, because no in-field path lies above y 174 (L6). This amends art bible §7 and Input's table. The offset is a presentation constant, since bots skip it.
-13. **Cancel has hysteresis.** Every aim starts cancelling. It stops once the finger is over 64 from the button's centre, and resumes at 48 or less, measured on `drag_started`, each `drag_moved` and the release. On `drag_ended` the burst fires unless cancelling, so a finger released at 55 that never passed 64 cancels. `drag_cancelled` and `idle` clear the aim. A non-`OK` result from a command here is a development error. HeroInput hit-tests this itself (Input Rule 7).
-14. **Pin clamp.** `pin_point` is the finger plus (0, −`pin_offset`), with `pin_offset` 0 at MVP, then moved to the nearest point just inside `pin_rect` and outside the button zone. The ghost slides along the boundary and never refuses a person, so the drawn ring is always where the pin lands; only bots see the refusals. The UX proposal of a 105 offset waits for the phone test (Open Questions), and raising it is one constant.
+12. **Aim point.** `aim_point` is the finger plus (0, −100), clamped to the field, then to `reach − 0.01` from the hero, so exact comparison can never refuse it. It is recomputed every frame while the hero walks, so a still thumb's ring stays true. There is no flip, because no in-field path lies above y 174 (L6). This amends art bible §7 and Input's table. The offset is a presentation constant, since bots skip it.
+13. **Cancel has hysteresis.** Every aim starts cancelling. It stops once the finger is over 64 from the button's centre, and resumes at 48 or less, measured on `drag_started`, each `drag_moved` and the release. On `drag_ended` the burst fires unless cancelling, so a finger released at 55 that never passed 64 cancels. `drag_cancelled` and `idle` clear the aim. A result other than `OK` or `HALTED` from a command here is a development error. HeroInput hit-tests this itself (Input Rule 7).
+14. **Pin clamp.** `pin_point` is the finger plus (0, −`pin_offset`), with `pin_offset` 0 at MVP, passed through `clamp_pin`, one pure function shared with HeroSim's validity test (Formulas). The ghost follows it and never refuses a person, so the drawn ring is always where the pin lands; only bots see the refusals. The ghost can jump where two valid edges are equally near. The UX proposal of a 105 offset waits for the phone test (Open Questions), and raising it is one constant.
 15. **Hit target.** The hero's DRAG radius is 56, up from 36, so an occluded grab lands. Tap targets still win a tap (Input Rule 3), though a hero within 92 of a slot now takes a thumb roll past `tap_slop` as a re-pin rather than a dead press, which is accepted and tested. The burst button's DRAG 200 and sink TAP 400 stay as in Input. The HUD places the button and HeroInput registers it. While walking, the target's centre updates every frame.
 
 **Reading and logging.**
 
-16. **Signals and counters.** Signals: `hero_pinned(position)`, `burst_started(aim_point, telegraph_ticks)`, plus Combat's `attack_fired` and `damage_applied`, on Flow's view allowlist. Reads: `position()`, `pin()`, `pin_state()`, `burst_state()`, `cooldown_left()`. Counted: `repins`, and per release `bursts_fired`, `bursts_hit_0`, `bursts_hit_3` and `bursts_hit_5` (at least that many), `burst_victims`, `burst_kills`, `kills_per_burst[]` and `kills_on_hit_3[]`. A victim has applied above 0, as `deliver` returns, and a kill is `is_dead` after that delivery. HeroInput's story test with a fake resolver proves its wiring, as for Tower. Development builds also log `best_victims`, the best disc centred on any enemy at release, so aim can be told from timing.
+16. **Signals and counters.** Signals: `hero_pinned(position)`, `burst_started(aim_point, telegraph_ticks)`, plus Combat's `attack_fired` and `damage_applied`, on Flow's view allowlist. Reads: `position()`, `pin_target()`, `pin_state()`, `burst_state()`, `cooldown_left()`. HeroInput adds `aim_state()`, `aim_point()` and `cooldown_digit()`, which is `display_seconds` of `cooldown_left` (Battle HUD Formulas), driven by an explicit `update()` so tests need no frames. Counted: `repins`, and per release `bursts_fired`, `bursts_hit_0`, `bursts_hit_3` and `bursts_hit_5` (at least that many), `burst_victims`, `burst_kills`, `kills_per_burst[]` and `kills_on_hit_3[]`. A victim has applied above 0, as `deliver` returns, and a kill is `is_dead` after that delivery. HeroInput's story test with a fake resolver proves its wiring, as for Tower. Development builds also log `best_victims`, the best disc centred on any enemy at release, so aim can be told from timing.
 17. **The mastery metric becomes kills per burst.** "Hits 3 or more" barely tests aim here (Enemy & Wave Formulas). The personal number is median kills per burst. The concept is amended.
 
 **Tick.** In Combat Rule 11's slot, with `halted()` checked after every read and signal, returning at once:
@@ -78,11 +78,20 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 | | `cooldown`, `telegraph_duration`, `reach` | 10, 0.25, 160 |
 | Stage | `hero_start` | (350, 800): 102 from the nearest slot, 80 from the path, 107 from the right-hand button |
 | | `pin_rect` | x 48 to 492, y 174 to 888: a fixed worst case, so the sim needs no insets and every device agrees |
-| | `pin_exclusion` | x 456 or 84, y 816 to 888: the values L3 and L7 test, and the HUD conforms to them |
+| | `pin_exclusion` | Segments (456, 816) to (456, 888) and (84, 816) to (84, 888), the lines L3 and L7 test, and the point (186, 800), each at radius 104. The HUD conforms to them. It covers the centre of slot (170, 700) by 3 units, which is accepted |
 
 **Enemy & Wave and Tower are amended to fit.** Enemy HP is now `normal` 125, `fast` 60 and `heavy` 750, every `intermission_duration` is 15 s, and Tower's `early_call_seconds_per_gold` is 1.8, which keeps the bonus cap.
 
-**Simulated results.** A throwaway script on the starter stage with the fixed tick and tick order, and scripted bots. The mid-skill bot re-pins every 3 s just ahead of the leading enemy, waits 2 s after the burst is ready and aims 25 units off. The pinned-once bot does the same but never re-pins. The ceiling bot re-pins every 1.5 s and aims perfectly.
+**Simulated results.** A throwaway script on the starter stage with the fixed tick and tick order, and scripted bots, not yet in the repo, so these numbers cannot be re-run until the bots are built to this table. All bots buy in the listed order as gold allows, level 1s first, in slot order 1, 0, 2, 3, 4 and then upgrades, and none is random.
+
+| Bot | Re-pin | Burst fires when | Aim |
+|---|---|---|---|
+| Mid-skill | Every 3 s, to `clamp_pin` of the path point 60 ahead of the leading enemy | 2 s after Ready, and 5 enemies fit in the radius or one is past 80% of the path | (25, 25) off the enemy whose disc holds most, within reach |
+| Pinned once | Never; at (270, 480) | As mid-skill | As mid-skill |
+| Best single pin | Never; the best valid point on a 40-unit grid | As mid-skill | As mid-skill |
+| Ceiling | Every 1.5 s | At Ready, otherwise as mid-skill | Exact |
+
+Bots skip the finger offset, so they can aim lower than a thumb can (Open Questions). A loss counts as 0 lives.
 
 | Build | Towers only | Pinned once, bursts | Mid-skill | Ceiling | Towers only, always calling | Mid-skill, always calling |
 |---|---|---|---|---|---|---|
@@ -105,7 +114,7 @@ The pinned-once column stands at (270, 480). Searching for the best single pin o
 | Burst share in 2, 2 and 1 against single only | 33% against 25% | At least 75% of it: passes |
 | Stage length | 5.1 to 5.3 min; 3.7 to 3.9 with every call | Concept's 5 to 8: passes uncalled |
 
-Aim now counts for a lot, and share moves with it. At reach 200, reacting in 1 s with perfect aim gave 30% to 45% and all 10 lives, and reacting in 3 s, 50 units off, gave 18% to 23% and 5 to 7 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 27% to 41%. Without the burst, the mid-skill bot lost on wave 5 or 6 on every mixed build, so the burst is what wins.
+Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect aim gave 29% to 42% and all 10 lives, and reacting in 3 s, 50 units off, gave 18% to 23% and 7 to 9 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 27% to 41%. Without the burst, the mid-skill bot lost on wave 5 or 6 on every mixed build, so the burst is what wins.
 
 **Calling is still close to free for a bot.** On mixed builds it cost no lives, and gained 2 on two builds from the gold, and it cuts the stage to under 4 minutes, below the concept's 5 to 8. Bots need no preparation, and enemies take many seconds to arrive. So whether a person pays a cost moves to logs at first playable (Acceptance Criteria), with Flow's overlapping waves as the fallback.
 
@@ -120,6 +129,7 @@ Aim now counts for a lot, and share moves with it. At reach 200, reacting in 1 s
 | L11 (Enemy & Wave) | Some disc of `radius` holds at least 2.5 × `radius` of path, so a bend exists to burst | 196 ≥ 175 |
 | `reach` | At least `radius`, at most 540 | 160 |
 | `hero_start` | A valid pin; at least `path_width / 2 + 40` from the path, at least 92 from any slot | 80, 102 |
+| `pin_exclusion` | Covers each hand's burst line and Start/Call's centre, at a radius of at least 56 plus that target's hit radius | 104 |
 | `pin_rect` | x margin at least 36; top at least 174 (L6); bottom at most 888 | Pass |
 
 **Handed to owning GDDs.**
@@ -137,7 +147,7 @@ Aim now counts for a lot, and share moves with it. At reach 200, reacting in 1 s
 | Hero | Meaning | `pin` `OK` | On tick |
 |---|---|---|---|
 | Unpinned | At `hero_start`; fights nothing | → Walking | No reads, no attack |
-| Walking | Moving to the pin; no attacks; its attack timer still counts | Restart from the current position | At the pin → Pinned |
+| Walking | Moving to the pin; no attacks; its attack timer still counts | Restart from the current position, or Pinned at once if the pin is its own position | At the pin → Pinned |
 | Pinned | At the pin; attacks inside the leash | → Walking, or stays Pinned if the pin is its own position | Attacks |
 
 | Burst | Meaning | `burst` | On tick |
@@ -193,7 +203,7 @@ The **burst_safe_distance** formula is defined as:
 
 The **walk_ticks** formula is defined as:
 
-`walk_ticks = max(1, to_ticks(distance / walk_speed))` when `distance` is above 0; a pin at the hero's own position is Pinned at once
+`walk_ticks = ceil(distance / (walk_speed × dt))` when `distance` is above 0; a pin at the hero's own position is Pinned at once. This is movement, not an authored time, so it rounds up rather than using `to_ticks`, and a hop can never outrun `walk_speed`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -201,8 +211,24 @@ The **walk_ticks** formula is defined as:
 | `distance` | float, units | 0 up to the `pin_rect` diagonal | calculated | Current position to the pin |
 | `walk_speed` | float, units/s | above 0 to 2,000 | data file via the accessor | Hero |
 
-**Output Range:** 1 up to 210 ticks across the rect's diagonal of 841, so even the smallest hop takes a tick and a bot cannot chain free moves.
-**Example:** 240 units: 60 ticks. The position along the line is `from + (pin − from) × (1 − walk_left / walk_ticks)`.
+**Output Range:** 1 up to 211 ticks across the rect's diagonal of 841, so even the smallest hop takes a tick and a bot cannot chain free moves.
+**Example:** 240 units: 60 ticks. The position along the line is `from + (pin − from) × (1 − float(walk_left) / float(walk_ticks))`, with the ratio in floats, and at `walk_left` 0 the position is assigned the pin directly.
+
+The **clamp_pin** rule is defined as:
+
+`clamp_pin(f)` = the candidate nearest `f`, ties going to the lower y and then the lower x
+
+**Variables:**
+| Variable | Type | Range | Source | Description |
+|----------|------|-------|--------|-------------|
+| `f` | 2D point | any | calculated | The offset finger |
+| `pin_rect` | rectangle | field units | data file (Stage) | Allowed area |
+| `pin_exclusion` | list of segment and radius | field units | data file (Stage) | Forbidden shapes |
+
+Candidates, kept only if valid, which means inside `pin_rect` and at least the radius from every shape: `f` clamped to the rect; `f` projected to radius + 0.01 from each shape; and every crossing of a shape's boundary, at radius + 0.01, with a rect edge or with another shape's boundary.
+
+**Output Range:** always a valid point, because the starter's rect holds valid area and the content test requires it of every stage.
+**Example:** `f` (492, 888) gives about (352, 888), 140 away, rather than (492, 718.4), 169.6 away. `f` (270, 800) is 84 from Start/Call, and moves right to about (290, 800).
 
 The **hero_share_bound** formula is defined as:
 
@@ -257,13 +283,12 @@ The **hero_share_bound** formula is defined as:
 | Data & Config Pipeline | Hero and Burst through the accessor; `hero_start`, `pin_rect`, `pin_exclusion` |
 | Game State & Stage Flow | Build, tick order, `halted()`, `in_build()` |
 
-**Soft:** Tower System, through bot gates and `burst_spike` only.
+**Soft:** Tower System, through bot gates and `burst_spike` only. Battle HUD, which has its own GDD, reads Rule 16's reads and signals and conforms to `pin_exclusion`.
 
 **Downstream (these have no GDD yet, so the interfaces are provisional until they confirm them):**
 
 | System | Interface |
 |---|---|
-| Battle HUD & Build UI | Rule 16's reads and signals; button placement |
 | Hero Weapons, Skill Tree, Synergy Hook (Vertical Slice) | Accessor context with the live hero; leash and burst keys |
 | Stage Progression (Vertical Slice) | Counters |
 | Visual Feedback & VFX (Vertical Slice) | `burst_started`, `attack_fired` |
@@ -331,11 +356,11 @@ Battle HUD draws these, and this system supplies the state.
 
 ## Acceptance Criteria
 
-A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THEN is the entire log. A fake `targets()`, a fake clock stepping `T` (one tick), and a spy accessor that logs reads, changes values and latches `halted()`. `hero()`: `dt` 0.25; damage 4, interval 0.5; leash 90; walk 100; burst 105, radius 50, cooldown 1.0, telegraph 0.5, reach 200. `input()` adds a fake resolver. No scene or time assertions.
+A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THEN is the entire log. A fake `targets()`, a fake clock stepping `T` (one tick), and a spy accessor that logs reads, changes values and latches `halted()`. `hero()`: `dt` 0.25; damage 4, interval 0.5; leash 90; walk 100; burst 105, radius 50, cooldown 1.0, telegraph 0.5, reach 200; starter `pin_rect` and `pin_exclusion`; a settable `in_build()` stub. `input()` adds a fake resolver and calls `update()` directly. Paired faults means every pair of faults in the rule's list, the earlier code winning. A finger grid is every 8 units over 540 × 960. Exact distance cases use axis-aligned offsets. No scene or time assertions.
 
 **CI: Logic**
 1. (Rule 1, Unpinned) **GIVEN** a target, **WHEN** 100 T, **THEN** an empty log and no reads; `burst` returns `NOT_PINNED`.
-2. (Rule 2) **GIVEN** paired faults, **THEN** `HALTED`, `BAD_POSITION`, `OUT_OF_BOUNDS`, `BUTTON_ZONE` in order, unchanged. Exactly 104: `OK`.
+2. (Rule 2) **GIVEN** paired faults, **THEN** `HALTED`, `BAD_POSITION`, `OUT_OF_BOUNDS`, `BUTTON_ZONE` in order, unchanged. Each hand's line and Start/Call refuse at 103 and give `OK` at exactly 104.
 3. (Rule 3, Walking) **GIVEN** a pin 50 away, **WHEN** T, **THEN** 25 along and no attack; a re-pin restarts from there.
 4. (Rule 4) **GIVEN** Pinned, **THEN** the nearest within 90 inclusive is hit; the hero stays.
 5. (Rule 5) **GIVEN** a target, **WHEN** 8 T, **THEN** four hits of 4.
@@ -344,27 +369,27 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 8. (Rule 8) **WHEN** one enemy leaves mid-telegraph and one enters, **THEN** one BURST `deliver`, to the entrant. Nobody: `bursts_hit_0`, and the cooldown starts.
 9. (Rule 9) **GIVEN** `OK`, **THEN** release on T2, `NOT_READY` after T5, Ready on T6.
 10. (Rule 10, burst_total) Six at HP 125: 630, 0 kills. HP 105: 630, 6 kills. One at 40: 40.
-11. (Rule 11) Ready and pinned arms; Build, Cooling or unpinned is dead through release; Cooling reports the digit.
-12. (Rule 12) **GIVEN** a finger grid and a walking hero, **THEN** clamped aims are never refused, and a still thumb's aim tracks each frame.
-13. (Rule 13) Live above 64, cancelling at 48, unchanged between; a release at 55 that never passed 64 cancels; `drag_cancelled` and `idle` fire nothing and clear it.
-14. (Rule 14) **GIVEN** a finger grid, **THEN** `pin` is `OK` at the ghost, including the rect's corner by the button.
-15. (Rule 15) Hero DRAG 100 radius 56, button DRAG 200, sink TAP 400; a walking centre updates per frame; a thumb roll past `tap_slop` on a slot within 92 re-pins.
+11. (Rule 11) Ready and pinned: `aim_state()` is Cancelling. Build, Cooling or unpinned: Idle through release, and no command. Cooling: `cooldown_digit()` 1 with `cooldown_left` 1.
+12. (Rule 12) **GIVEN** a finger grid and a walking hero, **THEN** `burst(aim_point())` is never `OUT_OF_REACH` or `OFF_FIELD`, and with a still thumb `aim_point()` moves on `update()` after the hero does.
+13. (Rule 13) From Cancelling: 64.0 stays, 64.01 goes Live. From Live: 48.01 stays, 48.0 goes Cancelling. A release at 55 that never passed 64 cancels. `drag_cancelled` and `idle` fire nothing and give Idle.
+14. (Rule 14, clamp_pin) **GIVEN** a finger grid, **THEN** `pin` is `OK` at the ghost. (492, 888) gives about (352, 888). A tie goes to the lower y.
+15. (Rule 15) Hero DRAG 100 radius 56, button DRAG 200, sink TAP 400; a walking centre updates on `update()`.
 16. (Rule 16) **GIVEN** one script, with and without listeners, **THEN** identical state; bursts on 0, 3 and 5 set the counters, "at least".
 17. (Rule 17) Kills 0, 2, 3 in `kills_per_burst`: median 2.
-18. (Step 1) The last walk tick: Pinned at exactly the pin, and attacking that tick.
+18. (Step 1) The last walk tick: Pinned with `position()` equal to the pin, and attacking that tick.
 19. (Step 2) The attack timer counts while walking.
 20. (Step 3) No target: `leash_radius` only; an entrant on T5 is hit.
 21. (Step 4) Timer, `attack_fired`, `deliver` in order; changed values show on the next use; a latch stops it.
 22. (Step 5) `cooldown_left` 1, T: Ready.
 23. (Step 6) `telegraph_left` 2, T: no release. Telegraph 0: release on T1.
 24. (Step 7) Reads, Cooling, `all_in_radius`, attack report, delivers, counters in order, with BURST and the Burst's ID; each latch stops the rest.
-25. (walk_ticks) `dt` 1/60, speed 240: 240, 1.9 and 2.1 give 60, 1, 1. Distance 0: Pinned at once.
+25. (walk_ticks) `dt` 0.25, speed 100: 25, 25.01 and 100 give 1, 2 and 4. Distance 0: Pinned at once. The position at half way is the midpoint.
 26. (Telegraphing) `burst`: `NOT_READY`; a re-pin leaves the aim where it was.
 27. (Phase) An aim armed in Intermission fires in Wave.
 
 **CI: Integration**
-28. (Equivalence) One script through the resolver and HeroInput, and through direct commands: identical state.
-29. (Never touched) Full state is identical to towers-only.
+28. (Equivalence) A tick-indexed gesture script, unclamped, with finger = aim + (0, 100), through the real resolver and HeroInput, and the same script through direct commands: after every tick, HeroSim's fields, counters and logs are equal. A thumb roll past `tap_slop` on a slot within 92 re-pins.
+29. (Never pinned) A fixed script on the starter stage to Won or Lost, with HeroSim never pinned and with HeroSim absent: per-tick lives, gold, enemies, towers, the `deliver` and `attack_fired` logs and the accessor read log are equal, and HeroSim's fields keep their initial values.
 30. (Content) Real records pass; each rule fails on its own broken fixture, watched failing once.
 31. (Flow, Combat) Build runs no T; a fatal leak lands nothing; Paused resumes exactly.
 
@@ -373,16 +398,17 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Criterion | Owner | Passes when |
 |---|---|---|
 | Hero alone, slow-only | Hero stories | Both lose |
-| Towers-only | Hero stories | The best non-calling script ends with 3 lives or fewer, a loss included; mid-skill at least 4 above |
-| Pinned once | Hero stories | The best single pin on a grid of 40 ends below mid-skill on at least three of four mixed builds. This falls short of Pillar 2's "clearly lose": today it is 1 to 3 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
+| Towers-only | Hero stories | On the mixed builds, the best non-calling script ends with 3 lives or fewer, a loss being 0; mid-skill at least 4 above it on each |
+| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This falls short of Pillar 2's "clearly lose": today it is 1 to 3 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
 | Share | Hero stories | Median of mixed builds 25% to 30%, none above 40%, at the mid-skill bot. It moves with skill, so ±1 s and ±25 aim are reported, not gated. Human logs replace it at first playable; if it cannot be held, the user decides whether to amend the pillar |
 | Burst outcome | Hero stories | Median kills on bursts hitting 3 or more is at least 2 |
 | `dealt_burst` | Hero stories | 2, 2 and 1 share at least 75% of single-only's |
-| Dominant build | Hero stories | At least two mixed builds within 2 lives of each other |
+| Dominant build | Hero stories | On mid-skill, at least two mixed builds within 2 lives of the best one |
 | Mono-role | Hero stories | Towers-only: every mono build loses. Mid-skill: every mono build ends below the best mixed build |
 | Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; mid-skill fires at most 1 more burst and gains at most 2 lives on any build |
 | Always-call, humans | User, first playable | Log `seconds_left`, burst readiness and next-wave lives lost per call. If frequent callers lose no more than waiters, the user decides on Flow's overlap fallback |
 | First run (challenge) | User, first playable | A non-developer finds the pin unprompted beyond the one line, and wins within three attempts, with fewer than 8 lives on the first win. Target set by the user (2026-11-02) |
+| Radius 70 on a phone | User, MVP+ phone test | At most 25% of human bursts hit nobody (`bursts_hit_0` / `bursts_fired`), and median kills per burst is at least 2. Pass mark set by the user (2026-11-02). On a fail, the Open Questions fallback runs |
 | Best moment | User, first playable | A non-developer names whether the burst is still a best moment, and whether a radius of 70 feels satisfying or fiddly; if not, the Open Questions fallback runs |
 | Waves | Hero stories | Burst fit, two fronts and empty field, per Enemy & Wave |
 | Bypass, burst state | Hero stories | Combat's invariant `I` holds; the bonus ignores burst state |
@@ -397,12 +423,13 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Question | Owner | Resolve by |
 |---|---|---|
 | Is a gap this wide right for a first-time player: every build loses by wave 5 without the hero, while one pin plus bursts wins three of four mixes? | First-run test | First playable |
-| Does a burst of radius 70 still feel like the best moment? The tester loved radius 150 at 8 s against much weaker enemies. A thumb's aim may be too rough for it, and bot results swing hard with radius. Fallback: a wider, weaker burst, with share over target for the user to rule on | Non-developer test | First phone build |
+| Does a burst of radius 70 still feel like the best moment? The tester loved radius 150 at 8 s against much weaker enemies. A thumb's aim may be too rough for it, and bot results swing hard with radius. Fallback: a soft aim magnet toward the densest cluster, then a wider, weaker burst with share over target for the user to rule on | Non-developer test | First phone build |
 | Re-pinning at about 2 lives is accepted for MVP. Do humans agree it earns its place? A 3 s bot re-pins about 110 times a stage for it. Log `repins` for humans against lives. Fallback: Enemy & Wave's parallel lanes | Bots + human logs | First playable |
 | Is reach 160 felt as a clear limit or as the reticle getting stuck? Fallback: a wider reach, which weakens the pin | Playtest | First phone build |
 | One build sits at 38%, and a better player reaches 45%. Is a single band right for players who improve? If it cannot hold, the user rules on the pillar's target | Human logs | First playable |
 | Calling is nearly free for bots, against the concept's promised cost. Does a person feel preparation time? | Human logs | First playable |
-| Should a pin use a finger offset? UX proposes 105, the systems view 0 until misses show. The leash ring shows past the thumb, so 0 stands for now | Pillar 4 phone test | First phone build |
+| Should a pin use a finger offset? UX puts the top half out of a thumb's reach at 0 and proposes 100. MVP is on desktop, so 0 stands, and the phone test compares 0 and 100, including top-half pins | Pillar 4 phone test | First phone build |
+| A thumb's aim stops at y 860, so a burst reaches the path only to y 930, leaving its last 30 units, and more with an inset, out of reach. Bots ignore this. Does it matter, since enemies there are about to leak? | Pillar 4 phone test | First phone build |
 | Can a thumb re-grab a hero pinned near the top? The offset extends a drop, not a grab | Pillar 4 phone test | First phone build |
 | Should an early thumb wait on a cooling button instead of being dead? UX proposed tracking it | Playtest | First playable |
 | Is a hollow kill mark readable at 22 px, and alpha 0.35 dots on a phone? | art-director | First phone build |

@@ -48,7 +48,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
 **Handed to owning GDDs.**
 - **Tower:** sets the splash-versus-burst gate (Rule 6, set), fires by slot index, holds range and timers, and passes role values in.
-- **Hero:** has no HP at MVP (user decision). Owns the burst's visual at MVP, the expanding gold ring of art bible §2, since it is the payoff, and it has no row in the table above. Reports `dealt_burst` separately in bot baselines. Needs no attack range field, since the leash is its whole reach. Queues a burst for its tick slot. Counts bursts that hit 3 or more enemies.
+- **Hero:** has no HP at MVP (user decision). Owns the burst's visual at MVP, the expanding gold ring of art bible §2, since it is the payoff, and it has no row in the table above. Reports `dealt_burst` separately in bot baselines. Needs no attack range field, since the leash is its whole reach. Runs its burst's telegraph in its tick slot and releases there. Counts bursts that hit 3 or more enemies.
 - **Enemy & Wave:** battle-wide unique `spawn_id`, one position per enemy per tick (cached, because walking the path is the costly part), removing a leaked enemy at once, stopping its leak loop once a fatal leak ends the stage, the reap step, `enemy_killed`, and whether splitter children inherit a slow (Vertical Slice).
 
 **Deliberately not built for MVP.** Projectiles, damage types, armour, resist, falloff, splash caps, hero health, enemy attacks, damage numbers, critical hits, stacking status effects and targeting options.
@@ -143,7 +143,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 - **If a tower and the hero contest a kill**: the tower resolves first and wins it, which slightly lowers hero share. The order is fixed so bots stay comparable.
 - **If a stronger slow arrives with less time than the current one**: it replaces it entirely.
 - **If a burst lands on no enemy**: no events, no counters, though `attack_fired` still draws its ring. Hero owns whether the cooldown is spent.
-- **If a burst is commanded between ticks**: it releases in the Hero-and-burst slot of the next tick, with victims computed then.
+- **If a burst is commanded between ticks**: it releases in the Hero-and-burst slot when its telegraph ends, at least one tick later, with victims computed then.
 - **If more enemies are hit than there are flash markers (16)**: the oldest flash is dropped; damage is unaffected.
 - **If a pause or cancel lands mid-slow**: the clock stops, so the slow simply waits. Slows cannot stick.
 - **If enemies spawn on one tick**: `spawn_id` is battle-wide and assigned in group order, so ties stay deterministic.
@@ -157,7 +157,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 **Upstream:** none. Combat reads no data, which corrects the systems index (callers read and pass values in).
 
-**Downstream (hard; Tower, Hero and HUD have no GDD yet, so those interfaces are provisional until their GDDs confirm them):**
+**Downstream (hard):**
 
 | System | Interface |
 |---|---|
