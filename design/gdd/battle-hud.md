@@ -31,7 +31,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 | HudTopBand | Display-only Controls for gold, lives and pips, which ignore input |
 | HudField | One `_draw` for arc, chip, Start/Call, burst button art and rings, with its hit targets as Input discs |
 
-2. **Modal screens are Controls.** The result and Paused screens are full-screen Controls that consume every event before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
+2. **Modal screens are Controls.** The result and Paused screens are full-screen Controls that consume every event before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the `lifecycle_changed(state)` signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
 
 **What is on screen, and when.**
@@ -191,9 +191,9 @@ The Call prompt (Rule 13) shares this one panel and has its own gate: `call_prom
 | Data & Config Pipeline | reads | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly | Data |
 | Combat & Damage | listens, reads | `damage_applied`; per-source counters for the result (soft) | Combat |
 | Enemy & Wave | reads | `wave_index()`, `got_through_by_type()`, `targets()` (soft) | Enemy & Wave |
-| Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase`, `lives_changed`, `in_build()`, `intermission_left` | Flow |
+| Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase`, `lives_changed`, `lifecycle_changed(state)`, `in_build()`, `intermission_left` | Flow |
 
-Headless wiring tests are unaffected, since the HUD is absent, and `phase` and `lives_changed` join Flow's view allowlist.
+Headless wiring tests are unaffected, since the HUD is absent. `phase` and `lives_changed` are already on Flow's view allowlist.
 
 ## Formulas
 
@@ -243,7 +243,7 @@ The **chip_bar** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `elapsed` | float, ms | 0 and up | calculated (Tower's `chip_state()`) | Real time since the chip opened |
+| `elapsed` | float, ms | 0 and up | calculated (`chip_state().elapsed_ms`, read from TowerInput) | Real time since the chip opened; stays a float in milliseconds |
 
 **Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value.
 **Example:** 750 ms: 0.5.
@@ -378,7 +378,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 18. (Rule 14) Three rings, then none; a dismissal draws none; a rebuild resets.
 19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0.
 20. (Rule 16) Each next-try line in order; a fixture where count and lives disagree; ties heavy, normal, fast; a built role gives no line; a loss led by fast enemies with no slow built shows "Next try: drag the hero to the leak."
-21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across the lifecycle signal does nothing. Paused resumes on release.
+21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across `lifecycle_changed(state)` does nothing. Paused resumes on release.
 22. (Rule 18) Retry twice: one latch; the handler frees nothing; Fatal first.
 23. (Rule 19) Each of the three record kinds with all fields and its `kind`: attempt, wave (wave 1 included) and fatal, each with `instructed`, `tester_id`, launch ID and `attempt_seq`, and attempt and wave with `call_prompt_shown`; a per-attempt `call_prompt_shown` flag turns true the first time the Call prompt shows and is stamped on every later wave record and the attempt record, and the reader leaves out an attempt if any of its records has `call_prompt_shown` true; each wave record with `final`, `wave_index`, `start` (build, called or waited), `seconds_left` at the start (0 if waited, none for build), burst readiness at the start, lives lost, `repins` and Wave seconds, opened on a `wave_index()` change and never on a resume, and written at that wave's `wave_cleared` or the outcome; the attempt record with `gold_left` and gold spent per wave, gold spent in Wave N counting to wave N; on focus loss or an app quit request the open record is written as provisional with `final` false, and `final` is true when written at the clear or the outcome; the reader keeps only the last record per launch ID, `attempt_seq`, `kind` and `wave_index`; the wave 1 record has `start` build and no `seconds_left`; the `instructed` toggle and `tester_id` persist across launches until turned off; Wave seconds and seconds to first pin exclude Paused time; a Fatal writes one fatal record, and for a Fatal during `build`, a first launch included, the app root writes one with empty counters under a new `attempt_seq`; burst state not through Tower; a sink failure is non-fatal.
 24. (arc_disc) Slot (270, 305): the three example points.

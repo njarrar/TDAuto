@@ -37,7 +37,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here. Flow emits `phase(Build)` once per build: with views, after they connect; headless (bots, tests), when `build` returns. The builder only wires and emits nothing (Rule 3). Not emitted if a Fatal latches during `build`; the partial battle is discarded (Rule 18). Views treat it as the phase beginning (Battle HUD Rule 11). This covers first launch and every Retry. Resume in Build emits `phase(Build)` again (Rule 17), and views do not treat that as a new build.
 7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_complete` instead, so Flow needs no wave count.
 8. **Intermission.** After every wave but the last, a countdown runs. Enemy & Wave owns its duration and sends it as the payload of `wave_cleared`. The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
-9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback, and it comes forward if either check fails: the **mid-skill, always-call** bot breaks Hero's Always-call gate (on mixed builds, at most 1 more burst and at most 2 lives gained over mid-skill), or the first-playable logs fail Hero's "Always-call, humans" pass mark (Hero, Deferred criteria). Bots do not call early unless a mode says so. A **towers-only, always-call** mode and a **mid-skill, always-call** mode join the Pillar 2 bot gates. Only the mid-skill bot can trigger the fallback, since Hero's gate for the towers-only bot (flips no loss, gains at most 2 lives) does not bring overlap forward (Hero Deferred, Always-call, bots; user decision 2026-11-02, cross-GDD review G1). The intermission countdown is not a wait timer in the anti-pillar's sense: the player can always end it with Call. If the early-call checks fail, overlapping waves come forward and the countdown stops being dead time.
+9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(ticks_left)` in whole ticks, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback, and it comes forward if either check fails: the **mid-skill, always-call** bot breaks Hero's Always-call gate (on mixed builds, at most 1 more burst and at most 2 lives gained over mid-skill), or the first-playable logs fail Hero's "Always-call, humans" pass mark (Hero, Deferred criteria). Bots do not call early unless a mode says so. A **towers-only, always-call** mode and a **mid-skill, always-call** mode join the Pillar 2 bot gates. Only the mid-skill bot can trigger the fallback, since Hero's gate for the towers-only bot (flips no loss, gains at most 2 lives) does not bring overlap forward (Hero Deferred, Always-call, bots; user decision 2026-11-02, cross-GDD review G1). The intermission countdown is not a wait timer in the anti-pillar's sense: the player can always end it with Call. If the early-call checks fail, overlapping waves come forward and the countdown stops being dead time.
 10. **Actions are never phase-locked.** Building, upgrading and re-pinning stay live in Build, Wave and Intermission, and a change of phase never cancels a gesture. In Build, towers and pins apply at once, while movement and timers begin on the first tick. The burst is the exception: Hero refuses it in Build, since a stopped clock would never let it recover.
 
 **Lives and outcome.**
@@ -68,7 +68,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 - **Hero:** refuses the burst in Build, and balances burst cooldown against `intermission_duration` with Enemy & Wave.
 - **Tower:** the early-call bonus value, priced knowing that a ready burst makes calling nearly free, and never dependent on burst state, and one direct build command shared by the arc and the bots, since the arc lives in the HUD and is absent headless. Input's Rule 11 covers only the hero.
 - **Combat:** per-source damage counters readable after the outcome.
-- **Battle HUD:** the Start/Call button, the outcome screen and the resume tap. Input's adapter gains `lifecycle_changed(state)` for Flow (named in Input too).
+- **Battle HUD:** the Start/Call button, the outcome screen and the resume tap. The BattleWrapper emits `lifecycle_changed(state)` for Flow, with five states: `focus_lost`, `focus_gained`, `quit_requested`, `resized`, `back`. The input adapter emits no lifecycle signal.
 
 **Deliberately not built for MVP.** Menus and stage select, saves, stars, grades, a report screen, game speed-up, calling a wave during a wave, a manual pause, a quit button, in-place reset, an event-bus autoload, a dependency-injection container, a state-machine framework, a scene stack and replays.
 
@@ -101,9 +101,9 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config Pipeline | reads | App root triggers load and holds the catalogue; reads the Stage record; receives the failure handler's calls | Data (load, lookup); this system (root, screen) |
-| Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; outcomes and Paused ask for `cancel()` at the end of the frame, never inside a tick (Rules 15, 17, 18); retry cancels inline (Rule 16); adapter forwards `lifecycle_changed(state)` (Input names it too) | Input (API); this system (composition) |
+| Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; outcomes and Paused ask for `cancel()` at the end of the frame, never inside a tick (Rules 15, 17, 18); retry cancels inline (Rule 16); the BattleWrapper (not the adapter) emits `lifecycle_changed(state)`: `focus_lost`, `focus_gained`, `quit_requested`, `resized`, `back` | Input (API); this system (composition) |
 | Enemy & Wave | wires, commands | Listens to `wave_cleared`, `waves_complete`, `enemy_leaked`; calls start next wave; injects `halted()`; ticks its slots; uses `to_ticks` (Rule 4) | Enemy & Wave (signals) |
-| Tower System | builds, wires | Builds TowerSim and ticks it; forwards `wave_called_early(seconds_left)`; connects kills to gold; injects `halted()`; sets the tick order; emits `phase` (for the chip); the bots' `build` command | Tower (bonus value) |
+| Tower System | builds, wires | Builds TowerSim and ticks it; forwards `wave_called_early(ticks_left)`; connects kills to gold; injects `halted()`; sets the tick order; emits `phase` (for the chip); the bots' `build` command | Tower (bonus value) |
 | Hero System | wires | Builds and ticks it; injects `halted()` and `in_build()` | Hero |
 | Combat & Damage | builds, ticks (Status slot), reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads per-source counters for the result | Combat |
 | Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
@@ -127,7 +127,7 @@ The **lives_after** formula is defined as:
 
 The **intermission_left** formula is defined as:
 
-`intermission_left = max(0, intermission_left − 1)`, in whole ticks, starting at `to_ticks(intermission_duration)`; `seconds_left = intermission_left × dt`
+`intermission_left = max(0, intermission_left − 1)`, in whole ticks, starting at `to_ticks(intermission_duration)`; an early call emits `ticks_left = intermission_left`, and a display shows seconds as `intermission_left × dt`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -137,8 +137,8 @@ The **intermission_left** formula is defined as:
 
 Flow ticks before Enemy & Wave, and the tick that enters Intermission does not decrement.
 
-**Output Range:** the next wave starts on the tick it reaches 0. A duration of 0 starts it on the next tick. `seconds_left` on an early call is this value, above 0 up to the full duration; a call at 0 is ignored with no signal.
-**Example:** 720 ticks left, player calls: `wave_called_early(12.0)`, and the next wave starts in the next tick.
+**Output Range:** the next wave starts on the tick it reaches 0. A duration of 0 starts it on the next tick. `ticks_left` on an early call is this value, above 0 up to the full duration; a call at 0 is ignored with no signal.
+**Example:** 720 ticks left, player calls: `wave_called_early(720)` (12.0 s at `dt` 1/60, shown by the HUD), and the next wave starts in the next tick.
 
 The bonus for calling early is the Tower GDD's formula, not this one.
 
@@ -168,14 +168,14 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 
 ## Dependencies
 
-**Upstream (hard):** Data & Config Pipeline, for load, the failure path and the Stage record. Input & Gesture Resolver, for `cancel()` requests at the end of a frame and the adapter Flow wires (built per battle; it forwards lifecycle).
+**Upstream (hard):** Data & Config Pipeline, for load, the failure path and the Stage record. Input & Gesture Resolver, for `cancel()` requests at the end of a frame and the adapter Flow wires (built per battle; it emits no lifecycle signal).
 
 **Downstream (hard; all eight MVP systems now have GDDs, and each MVP interface below is confirmed by its GDD; the Vertical Slice rows stay provisional until their GDDs exist):**
 
 | System | Interface |
 |---|---|
 | Enemy & Wave | `start_next_wave()`, `halted()`, tick slots, `to_ticks` (Rule 4); listens to `wave_cleared`, `waves_complete`, `enemy_leaked` |
-| Tower System | Builds TowerSim and ticks it; early-call bonus (`wave_called_early(seconds_left)`); kills to gold; `halted()`, the tick order, `phase` (for the chip); the bots' `build` command |
+| Tower System | Builds TowerSim and ticks it; early-call bonus (`wave_called_early(ticks_left)`); kills to gold; `halted()`, the tick order, `phase` (for the chip); the bots' `build` command |
 | Hero System | Built and ticked here; injects `halted()` and `in_build()` |
 | Combat & Damage | Built, wired and ticked here; its per-source counters are read for the result |
 | Battle HUD & Build UI | Listens to `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume |
@@ -233,7 +233,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 **CI: Logic**
 1. (Rule 6) **GIVEN** a recording fake connected before `build`, then a built flow, **WHEN** 100 ticks, **THEN** a log of only `phase(Build)` and 0 starts; **WHEN** Start twice, **THEN** `phase(Wave)` and 1 start.
 2. (Rules 7, 8) **GIVEN** wave 1, **WHEN** `wave_cleared` and 3 ticks, **THEN** `phase(Intermission)` and 1 start; a 4th tick appends `phase(Wave)`, and 2 starts.
-3. (Rule 9) **GIVEN** Intermission after 2 ticks, **WHEN** call twice, **THEN** `wave_called_early(0.5), phase(Wave)`, and 2 starts.
+3. (Rule 9) **GIVEN** Intermission after 2 ticks, **WHEN** call twice, **THEN** `wave_called_early(2), phase(Wave)`, and 2 starts. The 1.0 s intermission is 4 ticks at `dt` 0.25 (`to_ticks(1.0)`); after 2 ticks, 2 are left (0.5 s ÷ 0.25 s per tick = 2).
 4. (Rule 9) **GIVEN** Build, any Wave, or just after expiry, **WHEN** call, **THEN** nothing appended and starts unchanged.
 5. (Rule 13) **GIVEN** the last wave, **WHEN** `waves_complete`, **THEN** `phase(Won)`.
 6. (Rules 11, 12) **GIVEN** 3 lives, **WHEN** cost 2, **THEN** `lives_changed(1)`; a following cost 3 or 5 gives `lives_changed(0), phase(Lost)`; cost 0 gives an empty log. A further same-tick leak appends nothing.

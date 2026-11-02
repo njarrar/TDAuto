@@ -12,7 +12,7 @@
   `enemy-wave.md`, `tower-system.md`, `hero-system.md`, `battle-hud.md`
 - Cross-review state: `design/gdd/gdd-cross-review-2026-11-02j.md`. Blockers L1 to L3 are fixed. Warnings M1 to M11 are carried into
   Open Questions and the Required ADRs below. This run did not re-review the GDDs.
-- ADRs Referenced: none exist yet. `docs/architecture/` holds only `tr-registry.yaml` (`requirements: []`). Eight ADRs are required, numbered in writing order, plus a deferred Mobile Platform ADR (see Required ADRs).
+- ADRs Referenced: ADR-0001 and ADR-0002 are Accepted (2026-11-02). `docs/architecture/` also holds `tr-registry.yaml` (`requirements: []`). Eight ADRs are required, numbered in writing order, plus a deferred Mobile Platform ADR (see Required ADRs). ADR-0003 to ADR-0008 are not yet written.
 - Technical Requirements Baseline: 65 requirements, 0 registered, 65 provisional. They are digests of the Detailed Design, Interactions and
   Dependencies sections, not copies of every acceptance criterion. Stories carry the finer detail.
 - TD-ARCHITECTURE: REVISED after CONCERNS (2026-11-02): the design is sound; the concerns are listed under Gate Findings, and Version 2 settles all but GF5.
@@ -35,7 +35,7 @@ Both director gates returned CONCERNS. Neither blocks ADR writing. Version 2 app
 | GF7 | TD, LP | Determinism should not depend on unverified engine event order, and the fixed tick has no clamp, catch-up cap or per-tick budget. | **Decided**, ADR-0003 confirms: Data Flow 3.1, API Boundaries 4.3 (command queue, at most 5 ticks per frame, 2 ms per tick proposed) |
 | GF8 | TD, LP | Data Flow 3.6's "check `halted()` after each accessor read and each signal" cannot be enforced or tested. | **Decided**, ADR-0008 confirms: Data Flow 3.6, API Boundaries 4.1 and 4.5 |
 | GF9 | LP | The catalogue record type is open ("Dictionary or typed record"); a Dictionary also breaks the read-only rule (TR-data-005). | **Decided**, ADR-0001 confirms: API Boundaries 4.1 (typed read-only records) |
-| GF10 | LP | Canonical signal and read signatures differ between GDDs (M4). | **Decided**, ADR-0002 confirms: Required ADRs (one table of canonical signatures, written before any story) |
+| GF10 | LP | Canonical signal and read signatures differ between GDDs (M4). | **Done** (ADR-0002 Accepted): Required ADRs (one table of canonical signatures, written before any story); the edits in ADR-0002's Migration Plan are applied in 3.2 and 4.2 to 4.6 |
 | GF11 | TD | ADR numbers do not follow writing order (0008 sits mid-list). | **Done**: Required ADRs (renumbered in writing order, with an old-to-new note) |
 
 TD recommendations, now decided here (the named ADRs confirm): A1 is accepted: ProjectileSpawner is cut and the tick order stays (ADR-0005). A2 is accepted: the composition root is a plain builder, and TowerSim/TowerInput and HeroSim/HeroInput are split (ADR-0008). A3 is accepted: path and slots live on the Stage record (ADR-0001). Smaller items, also decided: `wave_called_early` carries `ticks_left: int`, and the HUD derives seconds for display (ADR-0002); the `Object` enemy parameters are typed (ADR-0005); the Catalogue returns are typed (ADR-0001).
@@ -191,9 +191,9 @@ Format: Owns (sole writer), Exposes, Consumes, Engine APIs. Risk tags are from t
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | WaveSim | Roster, `spawn_id`, wave index, schedule, leaks, reap, `got_through_by_type` | `start_next_wave()`, `roster()`, `targets()`, `wave_index()`, `enemy_killed(bounty)`, `enemy_leaked(lives_cost)`, `wave_cleared(intermission_duration)`, `waves_complete` | Stage and Wave records, StatAccessor, Combat state | None |
-| TowerSim | Gold, slot states, tower instances, attack timers | `build(slot, role)`, `upgrade(slot)`, `gold()`, `slot_state(i)`, `chip_state()`, `gold_changed`, `tower_built`, `tower_upgraded` | `enemy_killed`, `targets()`, `slot_positions`, Combat API, StatAccessor | None |
-| TowerInput | Slot and tower registration, the upgrade chip window | `slot_tapped(slot_index)`, `tower_inspected(slot_index)`, `upgrade_refused(slot_index)` | GestureResolver, TowerSim commands | Real-time clock for the chip (`Time` singleton, LOW) |
-| HeroSim | Position, pin, leash, burst state, cooldown, counters | `pin(pos)`, `burst(aim)`, `position()`, `pin_state()`, `burst_state()`, `cooldown_left()`, `hero_target_id()`, `hero_pinned`, `burst_started` | `targets()`, Combat API, StatAccessor, Stage record, Options | None |
+| TowerSim | Gold, slot states, tower instances, attack timers | `build(slot_index, tower_id)`, `upgrade(slot_index)`, `gold()`, `slot_state(slot_index)`, `gold_changed`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)` | `enemy_killed`, `targets()`, `slot_positions`, Combat API, StatAccessor | None |
+| TowerInput | Slot and tower registration, the upgrade chip window | `slot_tapped(slot_index)`, `tower_inspected(slot_index)`, `upgrade_refused(slot_index)`, `chip_state()` | GestureResolver, TowerSim commands | Real-time clock for the chip (`Time` singleton, LOW) |
+| HeroSim | Position, pin, leash, burst state, cooldown, counters | `pin(position)`, `burst(aim_point)`, `position()`, `pin_state()`, `pin_target()`, `burst_state()`, `cooldown_left()`, `counters()`, `hero_pinned`, `burst_started` | `targets()`, Combat API, StatAccessor, Stage record, Options | None |
 | HeroInput | Hero, burst button and sink registration; the hero disc centre, set with `set_centre` every frame while the hero walks; aim and cancel hysteresis; aim-point offset | none outward | GestureResolver, HeroSim commands | None |
 
 ### Presentation
@@ -285,9 +285,10 @@ Decided here (GF7), ADR-0003 confirms and the phone spike measures:
 | `wave_cleared(intermission_duration: float)`, `waves_complete` | WaveSim | StageFlow | Signal |
 | `wave_called_early(ticks_left: int)` | StageFlow | TowerSim (bonus gold) | Signal; seconds are derived only for display |
 | `phase(state)`, `lives_changed(current)` | StageFlow | Battle HUD, TowerInput (chip) | Signal (view allowlist) |
-| `gold_changed`, `tower_built`, `tower_upgraded` | TowerSim | Battle HUD | Signal (view allowlist) |
+| `gold_changed(current: int)`, `tower_built(slot_index: int, tower_id: StringName)`, `tower_upgraded(slot_index: int, level: int)` | TowerSim | Battle HUD | Signal (view allowlist) |
 | `hero_pinned(position)`, `burst_started(aim_point, telegraph_ticks)` | HeroSim | Battle HUD | Signal (view allowlist) |
-| `attack_fired(...)`, `damage_applied(event, applied, position)` | Combat | CombatView, Battle HUD | Signal, copied positions (view allowlist) |
+| `attack_fired(source_kind, source_id, origin, impact, radius)` | Combat | CombatView only (not the Battle HUD) | Signal, copied positions (view allowlist) |
+| `damage_applied(event, applied, position)` | Combat | CombatView, Battle HUD | Signal, copied positions (view allowlist) |
 | `slot_tapped`, `tower_inspected`, `upgrade_refused` | TowerInput | Battle HUD | Signal, wrapper only |
 | `lifecycle_changed(state)`: focus lost, focus gained, quit requested, resized, back | BattleWrapper (sole lifecycle owner, GF6) | StageFlow (pause; Android back in a battle is Pause), HUD; forwarded to AppRoot | Signal |
 | Reads (`gold()`, `slot_state`, `chip_state`, `roster()`, `position()`, `pin_state()`, `cooldown_left()`, `wave_index()`, counters) | Owners | Battle HUD, views, bots | Synchronous read, every frame, compared in whole ticks |
@@ -342,8 +343,7 @@ finishes. Decided here (GF8), ADR-0008 confirms:
 ## API Boundaries
 
 Pseudocode is GDScript. Names follow `project.yaml` (`PascalCase` classes, `snake_case` members, past-tense signals). Engine types used in an
-interface are flagged. Where two GDDs spell one name differently (warning M4) the form below is the proposed canonical one and the GDD fix is
-tracked in Open Questions.
+interface are flagged. Where two GDDs spelled one name differently (warning M4), the form below is the canonical one fixed by ADR-0002.
 
 ### 4.1 Data and stat accessor (Foundation)
 
@@ -380,11 +380,12 @@ against a code schema, so missing-field detection does not rest on engine defaul
 
 ```gdscript
 class_name GestureResolver extends RefCounted
-signal pressed(target_id: int, pos: Vector2)
+# Signal shapes follow the Input GDD. best_tap and best_drag are target IDs, or -1 for none.
+signal pressed(best_tap: int, best_drag: int, pos: Vector2)
 signal tap(target_id: int, pos: Vector2)
-signal drag_started(target_id: int, pos: Vector2)
-signal drag_moved(target_id: int, pos: Vector2)
-signal drag_ended(target_id: int, pos: Vector2)
+signal drag_started(target_id: int, press_pos: Vector2, pos: Vector2)
+signal drag_moved(target_id: int, press_pos: Vector2, pos: Vector2)
+signal drag_ended(target_id: int, press_pos: Vector2, pos: Vector2)
 signal drag_cancelled(target_id: int)
 signal ground_tap(pos: Vector2)
 signal idle()
@@ -432,10 +433,21 @@ func tick(dt: float) -> void                  # the only way simulation time ent
 func halted() -> bool
 func in_build() -> bool
 func enqueue(command: Callable) -> void       # input and bots queue commands here (GF7); command type is ADR-0003
-func start_next_wave() -> void                # Start/Call; reached through the queue
-signal phase(state: StringName)
+func dispose() -> void                        # Retry backstop: disconnects signals and clears the system list
+# Battle declares no signals. Every battle signal lives on a system in systems(), so the wiring test sees it.
+# No system holds Battle. halted() reaches systems through a shared HaltLatch (RefCounted) that Battle creates
+# and hands to each system: systems hold the latch, Battle holds the systems, nothing points back.
+
+class_name StageFlow extends RefCounted
+func start_next_wave() -> void                # Start/Call; reached through the queue; forwards to WaveSim
+signal phase(state: StringName)               # Build, Wave, Intermission, Paused, Won, Lost, Fatal
 signal lives_changed(current: int)
 signal wave_called_early(ticks_left: int)     # whole ticks; the HUD derives seconds for display
+func state() -> StringName
+func lives() -> int
+func intermission_left() -> int               # ticks
+func result() -> BattleResult
+func to_ticks(seconds: float) -> int          # the one float-to-tick conversion
 
 # Typed reads of the sim objects (GF2). Views and the harness use these; systems never do.
 func flow() -> StageFlow
@@ -489,16 +501,23 @@ signal wave_cleared(intermission_duration: float)
 signal waves_complete()
 
 # TowerSim (commands reach it through Battle.enqueue, from the HUD and the bots alike)
-func build(slot_index: int, role_tag: StringName) -> int    # result enum: OK, NO_GOLD, ...
-func upgrade(slot_index: int) -> int
+func build(slot_index: int, tower_id: StringName) -> int    # OK, HALTED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD
+func upgrade(slot_index: int) -> int                        # OK, HALTED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD
 func gold() -> int
-func slot_state(slot_index: int) -> Dictionary
-func chip_state() -> Dictionary    # fields undefined in the Tower GDD (warning M4); define in the Tower stories
+func slot_state(slot_index: int) -> SlotState               # tower_id (empty when unbuilt), level, cooldown_left (ticks)
+
+# TowerInput (wrapper-built, absent headless)
+func chip_state() -> ChipState     # slot_index (-1 when closed), elapsed_ms (float, real time), level (int)
 
 # HeroSim
-func pin(pos: Vector2) -> int      # HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE, OK
-func burst(aim: Vector2) -> int    # HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH, OK
+func pin(position: Vector2) -> int      # OK, HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE
+func burst(aim_point: Vector2) -> int   # OK, HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH
+func pin_target() -> Vector2
+func burst_state() -> int
+func counters() -> HeroCounters
 ```
+
+`SlotState`, `ChipState` and `HeroCounters` are small read-only `RefCounted` records, not Dictionaries. ADR-0002 owns the full signature table.
 
 Invariants: leak events fire synchronously and before `waves_complete`; `halted()` is checked by the tick loop at every slot edge and by each
 signal emitter (Data Flow 3.6); no
@@ -506,8 +525,8 @@ system holds a target between attacks (re-pick every attack, so no reference dan
 
 ### 4.6 Battle HUD (Presentation)
 
-The HUD exposes nothing. It queues `start_next_wave` and TowerSim `build` and `upgrade` through `Battle.enqueue()`, calls the Retry latch on
-AppRoot and `set_call_prompt_done()` on AppRoot, reads through `Battle.tower()`, `hero()`, `wave()`, `flow()` and `combat()`, and listens to the
+The HUD exposes nothing. It queues `start_next_wave` and TowerSim `build` and `upgrade` through `Battle.enqueue()`, calls `request_retry()` (the
+Retry latch) and `set_call_prompt_done()` on AppRoot, reads through `Battle.tower()`, `hero()`, `wave()`, `flow()` and `combat()`, and listens to the
 signals in Data Flow 3.2. Invariants: modal screens are full-screen Controls that consume every event before the adapter sees it; all commands
 are queued from the input call stack and run at the start of the next tick, so they still run before the frame's ticks; Retry only sets a latch.
 
@@ -615,7 +634,7 @@ ADR Audit and the Covers column in Required ADRs are derived from it.
 | TR-tower-003 (provisional) | tower-system | Three roles (single target, splash, slow) fire in slot-index order, first along the path; two levels, no selling | Core | stories |
 | TR-tower-004 (provisional) | tower-system | Early-call bonus computed from `wave_called_early(ticks_left: int)` (seconds derived) and `early_call_seconds_per_gold`, never from burst state | Core | stories |
 | TR-tower-005 (provisional) | tower-system | The upgrade chip needs real time while the clock is stopped; hard bounce guard of at least 200 ms before a commit tap; input order against the real-time feed | Input | 0003 |
-| TR-tower-006 (provisional) | tower-system | Tower exposes `gold()`, `slot_state`, `chip_state`, `gold_changed`, `tower_built`, `tower_upgraded` for the HUD | UI | stories |
+| TR-tower-006 (provisional) | tower-system | TowerSim exposes `gold()`, `slot_state`, `gold_changed`, `tower_built`, `tower_upgraded`, and TowerInput exposes `chip_state` (ADR-0002), for the HUD | UI | stories |
 | TR-tower-007 (provisional) | tower-system | Tower CI computes `peak_alive_ub` and layout rule L10 and runs in a headless battle | Core | 0004 |
 | TR-hero-001 (provisional) | hero-system | HeroSim (pure) and HeroInput (wrapper-built) are separate, as part of battle composition (A2); the hero has no HP at MVP | Core | 0008 |
 | TR-hero-002 (provisional) | hero-system | Pin sets a destination inside `pin_rect` and outside `pin_exclusion`; straight-line walk at `walk_speed`; leash is the whole reach | Core | stories |
@@ -649,7 +668,7 @@ Requirements Baseline. Where a decision cell says **decided here**, this documen
 | ADR | Layer | Decision to make | Covers | Engine risk |
 |---|---|---|---|---|
 | **ADR-0001 Catalogue Storage Format and Stat Accessor** | Foundation | Storage format (decided: JSON plus a code schema); how a missing field, fractional integer and unknown property are detected; read-only enforcement; accessor signature and key format; file locations; storage form of `path_points` and `slot_positions`; export check on Android and iOS. **Decided here:** records are typed read-only records, not Dictionaries (GF9); Catalogue returns are typed; path and slots live on the Stage record (A3) | TR-data-001 to 008, TR-enemy-008 | HIGH: JSON export packing NOT SOURCEABLE (V1) |
-| **ADR-0002 Signal Contracts and Wiring Conventions** | Foundation | Typed signal declarations, explicit connections in the builder, no event-bus autoload, the view allowlist and how the wiring test derives its set, canonical interface names (M4). **Decided here:** this ADR owns one table of canonical signal and read signatures, written before any story (GF10); `wave_called_early` carries `ticks_left: int` | TR-flow-010, TR-combat-007, TR-hud-006 | MEDIUM: lambda capture by value, GDScript 4.7 typing |
+| **ADR-0002 Signal Contracts and Wiring Conventions** | Foundation | Typed signal declarations, explicit connections in the builder, no event-bus autoload, the view allowlist and how the wiring test derives its set, canonical interface names (M4). **Decided here:** this ADR owns one table of canonical signal and read signatures, written before any story (GF10); `wave_called_early` carries `ticks_left: int`. **Done: Accepted 2026-11-02** (the Migration Plan edits are applied to this document) | TR-flow-010, TR-combat-007, TR-hud-006 | MEDIUM: lambda capture by value, GDScript 4.7 typing |
 | **ADR-0003 Frame Order: Command Queue, Ticks and View Update** | Core | Tick rate, accumulator and clamp; where TowerInput and HeroInput sit in the wrapper; input against the real-time chip feed and the per-frame hero centre update; the command type for `Battle.enqueue` and how a refused command reaches the HUD. **Decided here (GF7):** commands are queued from the input call stack and applied at the start of the next `battle.tick`, bots included; at most 5 catch-up ticks per frame, the rest dropped and logged in development builds; 2 ms per tick on the target phone (proposed; the phone spike measures it) | TR-flow-003, 004, TR-tower-005, TR-hero-008, TR-hud-003 | HIGH: frame order unverified (no longer load-bearing for determinism) |
 | **ADR-0004 Headless Battle Harness and Snapshot** | Foundation | How tests snapshot a battle (through `Battle.systems()`, in tick order), enumerate its systems and inject recording ones; bot commands through the builder and the command queue; gdUnit4 on 4.7.2 | TR-flow-011, TR-tower-007, TR-hero-005 | LOW: gdUnit4 6.2.2 runs on 4.7.2 per the reference |
 | **ADR-0005 Simulation State Attachment: Health, Status and Roster** | Core | How Health and Status attach to an enemy instance; whether a future spawner sits behind `deliver`; roster and `spawn_id` representation. **Decided here:** ProjectileSpawner is cut and the tick order stays (A1); the `Object` enemy parameters are typed (`EnemyInstance`, name to confirm) | TR-combat-001 to 006, TR-enemy-001 to 006 | LOW to MEDIUM (typed arrays, packed array write rule) |
@@ -700,7 +719,7 @@ Warnings M1 to M11 come from `design/gdd/gdd-cross-review-2026-11-02j.md`. They 
 | M1 | Nothing handles `lifecycle_changed` "quit requested" and "resized"; the provisional HUD record has no writer | High | ADR-0008 (the BattleWrapper owns lifecycle, GF6); then a Flow GDD fix routing both through Rule 17 |
 | M2 | A broken stage scene cannot Fatal "during `build`"; the wrapper loads `scene_ref` after `build` returns; who writes the Fatal record before views connect is unstated | High | ADR-0008 (the wrapper's scene load is a runtime Fatal source, GF8) |
 | M3 | `chip_state()` during `upgrade` (current or next level) is undefined | Medium | Tower stories; HUD story |
-| M4 | Interface names and signatures differ between GDDs (`lifecycle_changed(state)`, `start_next_wave()`, `slot_tapped(slot_index)`, `chip_state()` fields, `bursts_started`, owner column) | Medium | ADR-0002 fixes canonical names in one signature table before any story (GF10); GDD fixes tracked in the review report |
+| M4 | Interface names and signatures differ between GDDs (`lifecycle_changed(state)`, `start_next_wave()`, `slot_tapped(slot_index)`, `chip_state()` fields, `bursts_started`, owner column) | Medium | **Closed: decided by ADR-0002** (one canonical signature table; the GDD fixes in its Migration Plan are applied) |
 | M5 | HUD Rule 10 states the pin cancel more loosely than Hero Rule 14 | Low | HUD story: use "within 48 at release, or never passed 64" |
 | M6 | The Paused resume tap has no input route | High | ADR-0006 (overlay is a Control before the adapter) |
 | M7 | Stale criteria and questions across GDDs (expired chip tap, wrong-disc question, snapshot question, hero share, ADR names) | Medium | Stories; snapshot question goes to ADR-0004 |

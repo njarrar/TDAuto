@@ -96,11 +96,11 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 14. **Gold is one integer, never negative, with no cap, and `gold_changed` fires only when it changes.** Faucets: `starting_gold` when the battle is built (read directly from Stage); `enemy_killed(bounty)`, whoever dealt the kill; and the early-call bonus. Sinks: the two commands. Leaks pay nothing. There is no interest or stipend, which would add hoarding and blur what calling early costs. Gold freezes once `halted()` is true: a fatal leak skips the reap, so nothing is paid (Combat Rule 11).
 15. **A bounty is spendable from the next command.** Kills pay in the reap slot in ascending `spawn_id`, and commands run between ticks, so they cannot interleave.
-16. **The early-call bonus scales with time given up.** `wave_called_early(seconds_left)` pays the bonus at once, before the next wave's first spawn (Formulas). A flat bonus would make calling on the last tick free money. It reads no burst state (Flow Rule 9), and Start Wave in Build pays nothing. The rate is a new Stage field, `early_call_seconds_per_gold`, which keeps gold values on the records that spend or earn them.
+16. **The early-call bonus scales with time given up.** `wave_called_early(ticks_left)` pays the bonus at once, before the next wave's first spawn (Formulas). A flat bonus would make calling on the last tick free money. It reads no burst state (Flow Rule 9), and Start Wave in Build pays nothing. The rate is a new Stage field, `early_call_seconds_per_gold`, which keeps gold values on the records that spend or earn them.
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. Battle HUD listens to `tower_built` and `tower_upgraded` to redraw the slot and the chip. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `upgrade_refused(slot_index)` for the chip's refused tap (Rule 8), `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it. Its three signals are wrapper-only on Flow's list, and the TowerInput wiring story test (Deferred) proves them with a fake resolver, including that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. Battle HUD listens to `tower_built` and `tower_upgraded` to redraw the slot and the chip. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `upgrade_refused(slot_index)` for the chip's refused tap (Rule 8), `tower_inspected(slot_index)` and the read `chip_state()`, which returns a read-only record with three fields: `slot_index: int` (the slot whose chip is open, `-1` when no chip is open), `elapsed_ms: float` (real time since the chip opened, in milliseconds, kept as a float) and `level: int` (the tower's current level). It exists only in the wrapper, so headless wiring tests cannot see it. Its three signals are wrapper-only on Flow's list, and the TowerInput wiring story test (Deferred) proves them with a fake resolver, including that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -171,9 +171,9 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | Data & Config | reads | Tower stats through the accessor by `def_id` and level; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions`; `gold_upper_bound` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`; runs in the Towers-by-slot-index slot of the tick | Combat (API); this system (when, whom, values) |
-| Game State & Stage Flow | built, listens | Builder builds TowerSim and ticks it in order; routes the bots' `build` command; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
+| Game State & Stage Flow | built, listens | Builder builds TowerSim and ticks it in order; routes the bots' `build` command; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(ticks_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
-| Battle HUD | listens, calls | `gold()`, `gold_changed`, `tower_built`, `tower_upgraded`, `slot_state(slot_index)`, `chip_state()`, `slot_tapped`, `upgrade_refused(slot_index)`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
+| Battle HUD | listens, calls | `gold()`, `gold_changed`, `tower_built`, `tower_upgraded`, `slot_state(slot_index)`, `chip_state()` (on TowerInput), `slot_tapped`, `upgrade_refused(slot_index)`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots, `burst_spike` and Hero's Deferred gates | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
 
@@ -181,12 +181,12 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 The **early_call_bonus** formula is defined as:
 
-`early_call_bonus = to_ticks(seconds_left) div to_ticks(early_call_seconds_per_gold)`, with whole-number division
+`early_call_bonus = ticks_left div to_ticks(early_call_seconds_per_gold)`, with whole-number division. `ticks_left` arrives from Flow already in whole ticks, so the bonus does not convert it; only the Stage rate, which is authored in seconds, goes through `to_ticks`.
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `seconds_left` | float, seconds | above 0, up to `intermission_duration` | calculated (Flow) | Time given up; a whole number of ticks times `dt` |
+| `ticks_left` | int, ticks | above 0, up to `to_ticks(intermission_duration)` | `wave_called_early` payload (Flow) | Time given up, in whole ticks |
 | `early_call_seconds_per_gold` | float, seconds | one tick to 600 | data file (Stage) | Seconds given up per gold |
 
 **Output Range:** 0 to 8 per call and 40 per stage at starter values. A call with less than one rate's worth left pays 0 and still starts the wave.
@@ -289,7 +289,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`, tick slot |
 | Input & Gesture Resolver | Target registry (slots and towers TAP 200; upgrade chip TAP 300, Rule 8), `tap`, `pressed` (TowerInput only) |
-| Game State & Stage Flow | Build, tick order, `halted()`, `enemy_killed(bounty)` wired to gold, `wave_called_early(seconds_left)`, `phase` for the chip |
+| Game State & Stage Flow | Build, tick order, `halted()`, `enemy_killed(bounty)` wired to gold, `wave_called_early(ticks_left)`, `phase` for the chip |
 
 **Downstream (hard unless noted; Battle HUD has a GDD that confirms its interface; the Vertical Slice rows have no GDD yet, so they stay provisional until they confirm them):**
 
@@ -381,7 +381,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 21. (Rule 15) **GIVEN** gold 26 and a corpse worth 4, **THEN** `NO_GOLD` before the reap, `OK` after.
 22. (Rule 16, Flow row) **GIVEN** the builder, **WHEN** called twice, **THEN** one bonus, before the first spawn. Start in Build pays nothing.
 23. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; `slot_state(slot_index)` empty, then `A`, 1, 0.
-24. (early_call_bonus) `dt` 0.25, rate 1.0: 3.0, 2.75, 0.75 pay 3, 2, 0. `dt` 1/60, rate 1.8: 900, 863, 108, 107 ticks pay 8, 7, 1, 0.
+24. (early_call_bonus) `dt` 0.25, rate 1.0 (4 ticks): 12, 11, 3 ticks left (3.0, 2.75, 0.75 s) pay 3, 2, 0. `dt` 1/60, rate 1.8: 900, 863, 108, 107 ticks pay 8, 7, 1, 0.
 25. (gold_before_wave) A starter-shaped factory: 160, 216, 296, 368, 496; final 670.
 26. (burst_spike) 130, 70, 30, 75, interval 0.5, speed 72, `n` 6: 520 / 90. `n` 4 is unchecked.
 
