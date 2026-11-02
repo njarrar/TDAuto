@@ -1,6 +1,6 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
-> **Status**: In Review (fourth design review 2026-11-02 NEEDS REVISION; eight blockers and two user decisions applied, re-review pending)
+> **Status**: In Review (fifth design review 2026-11-02 NEEDS REVISION; four blockers and four text fixes applied, targeted re-check pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, now about 3 lives, and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -56,17 +56,17 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 
 **Reading and logging.**
 
-16. **Signals and counters.** Signals: `hero_pinned(position)`, `burst_started(aim_point, telegraph_ticks)`, plus Combat's `attack_fired` and `damage_applied`, on Flow's view allowlist. Reads: `position()`, `pin_target()`, `pin_state()`, `burst_state()`, `cooldown_left()`. HeroInput adds `aim_state()`, `aim_point()` and `cooldown_digit()`, which is `display_seconds` of `cooldown_left` (Battle HUD Formulas), driven by an explicit `update()` so tests need no frames. Counted: `repins`, and per release `bursts_fired`, `bursts_hit_0`, `bursts_hit_3` and `bursts_hit_5` (at least that many), `burst_victims`, `burst_kills`, `kills_per_burst[]` and `kills_on_hit_3[]`. A victim has applied above 0, as `deliver` returns, and a kill is `is_dead` after that delivery. HeroInput's story test with a fake resolver proves its wiring, as for Tower. Development builds also log `best_victims`, the best disc centred on any enemy at release, so aim can be told from timing.
+16. **Signals and counters.** Signals: `hero_pinned(position)`, `burst_started(aim_point, telegraph_ticks)`, plus Combat's `attack_fired` and `damage_applied`, on Flow's view allowlist. Reads: `position()`, `pin_target()`, `pin_state()`, `burst_state()`, `cooldown_left()`. HeroInput adds `aim_state()`, `aim_point()` and `cooldown_digit()`, which is `display_seconds` of `cooldown_left` (Battle HUD Formulas), driven by an explicit `update()` so tests need no frames. Counted: `repins`, the `OK` pins after the first, and per release `bursts_fired`, `bursts_hit_0`, `bursts_hit_3` and `bursts_hit_5` (at least that many), `burst_victims`, `burst_kills`, `kills_per_burst[]` and `kills_on_hit_3[]`. A victim has applied above 0, as `deliver` returns, and a kill is `is_dead` after that delivery. HeroInput's story test with a fake resolver proves its wiring, as for Tower. Development builds also log `best_victims`, the best disc centred on any enemy at release, so aim can be told from timing.
 17. **The mastery metric becomes kills per burst.** "Hits 3 or more" barely tests aim here (Enemy & Wave Formulas). The personal number is median kills per burst. The concept is amended.
 
 **Tick.** In Combat Rule 11's slot, with `halted()` checked after every read and signal, returning at once:
    1. Walking: subtract 1 from `walk_left`, and set the position along the line. At 0: exactly at the pin, Pinned.
    2. If `attack_left` is above 0, subtract 1. If still above 0, or not Pinned, go to 5.
    3. Read `leash_radius`, then `nearest_in(targets(), position, leash)`. None: hold at 0 and go to 5.
-   4. Read `damage` and `attack_interval`. Set `attack_left = to_ticks(attack_interval)`, report the attack so Combat emits `attack_fired`, then `deliver`.
+   4. Read `damage` and `attack_interval`. Set `attack_left = to_ticks(attack_interval)`, call Combat's `report_attack(HERO, the Hero's ID, position, the target's position, 0)`, which emits `attack_fired`, then `deliver`.
    5. If Cooling: subtract 1 from `cooldown_left`; at 0, Ready. Nothing else touches the burst here, since `cooldown_left` is also 0 while Ready and Telegraphing.
    6. Telegraphing: subtract 1 from `telegraph_left`. If still above 0, end.
-   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius`, report the attack with source kind BURST, the Burst's ID and the hero's position as origin, one `deliver` per victim, then the counters.
+   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius`, `report_attack(BURST, the Burst's ID, position, aim_point, radius)`, one `deliver` per victim, then the counters.
 
 **Starter values.** These are fixtures, not balance.
 
@@ -134,7 +134,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 | `pin_rect` | x margin at least 36; top at least 174 (L6); bottom at most 888 | Pass |
 
 **Handed to owning GDDs.**
-- **Combat:** Rule 10's leash check loses its separate range, `deliver` returns what it applied, and a read of remaining HP is added for the aim preview.
+- **Combat:** Rule 10's leash check loses its separate range, `deliver` returns what it applied, a read of remaining HP is added for the aim preview, and Rule 12 gains `report_attack(source_kind, source_id, origin, impact, radius)`, the one call that emits `attack_fired`, made before the attack's first `deliver`.
 - **Battle HUD:** done. It places the button at the active hand's `pin_exclusion` shape, draws the digit, keeps Start/Call clear of `hero_start`, and ignores a Start/Call tap whose press named the hero.
 - **Input:** the hero's DRAG priority rises to 200 and the burst button's falls to 100.
 - **Data & Config:** each `pin_exclusion` shape carries a hand.
@@ -167,7 +167,7 @@ Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rule
 |---|---|---|---|
 | Data & Config | reads | Hero and Burst through the accessor at use time; `hero_start`, `pin_rect`, `pin_exclusion` directly from Stage; the left-hand flag | Data (values); this system (meaning, balance) |
 | Input & Gesture Resolver | registers, listens | HeroInput registers hero (DRAG, priority 200, radius 56), button (DRAG, priority 100, radius 48) and sink (TAP, priority 400, radius 48); hears `pressed`, `drag_*`; updates the hero's centre | Input (API); HeroInput (meaning) |
-| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `attack_fired`, `hp_left` for the preview | Combat (API); this system (when, whom, values) |
+| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `report_attack` (which emits `attack_fired`), `hp_left` for the preview | Combat (API); this system (when, whom, values) |
 | Enemy & Wave | reads | `targets()`; rules on `time_to_exit`, intermission and fast speed | Enemy & Wave |
 | Game State & Stage Flow | built, injected | Builder makes HeroSim and ticks it in order; injects `halted()` and `in_build()` | Flow (order) |
 | Tower System | none directly | Balanced against through bots; `burst_spike`, gates | Bots |
@@ -200,8 +200,11 @@ The **burst_safe_distance** formula is defined as:
 | `move_speed` | float, units/s | above 0 to 2,000 | data file via the accessor | Enemy |
 | `speed_factor` | float | above 0 to 1 | Combat | Slow |
 | `telegraph_duration` | float, seconds | 0–600 | data file via the accessor | Telegraph |
+| `dt` | float, seconds | 1/60 | Flow | One tick |
 
-**Output Range:** at most `radius`, at least half of it under the content rule. An enemy this close to the aim at command is still inside at release, unless dead or off the field. It is a design aid, with no code.
+`to_ticks` is Enemy & Wave's: `round(seconds / dt)`, halves away from zero.
+
+**Output Range:** strictly below `radius`, and at least half of it for every enemy under the content rule. Without that rule it can go negative, which means no distance is safe. An enemy this close to the aim at command is still inside at release, unless dead or off the field. It is a design aid, with no code.
 **Example:** fast 42.5, normal 55, heavy 60.5.
 
 The **walk_ticks** formula is defined as:
@@ -241,9 +244,9 @@ A local nearest point lies either on one smooth piece of the boundary, which ste
 **Output Range:** a valid point. If no candidate is valid, which needs a valid region thinner than 0.02, it returns `hold`, valid by rule, so the ghost stays on the current pin. The script checks the rule against valid samples along every boundary piece, for each hand.
 **Example:** right hand: `f` (492, 888) gives (395.99, 888), 96 away. `f` (480, 850) gives (492, 767.99), 82.9 away, rather than (395.99, 850), 84 away, so the ghost slides up the field's edge. `f` (200, 800) is 14 from Start/Call and moves right to (246.01, 800). Left hand: `f` (84, 850) gives (144.01, 850).
 
-The **hero_share_bound** formula is defined as:
+The **hero_share_estimate** formula is defined as:
 
-`hero_share_bound = min(1, (damage_per_second × T + N × burst_mean) / stage_hp)`
+`hero_share_estimate = min(1, (damage_per_second × T + N × burst_mean) / stage_hp)`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -254,8 +257,8 @@ The **hero_share_bound** formula is defined as:
 | `burst_mean` | float | 0 and up | bots | Mean `burst_total` |
 | `stage_hp` | float | above 0 | data file | Sum of `max_hp × count` |
 
-**Output Range:** 0 to 1. It assumes nothing else dealt the damage, so it is a design aid.
-**Example:** `stage_hp` 16,790, `T` 200, `N` 11, `burst_mean` 300: (800 + 3,300) / 16,790 = 24%. So staying under 30% allows about 385 per burst, or three fresh normals.
+**Output Range:** 0 to 1. It assumes nothing else dealt the damage, and `N` is the bursts a bot actually fired, not the most it could fire, so it estimates rather than bounds. A design aid.
+**Example:** `stage_hp` 16,790, `T` 200, `N` 11, `burst_mean` 324: (800 + 3,564) / 16,790 = 26.0%, against the mid-skill median of 26.2%. So staying under 30% allows about 385 per burst, a little over three fresh normals (375). The 40% ceiling gates the mid-skill bot only; the ceiling bot's 27% to 42% is reported.
 
 ## Edge Cases
 
@@ -292,7 +295,7 @@ The **hero_share_bound** formula is defined as:
 | System | Interface |
 |---|---|
 | Input & Gesture Resolver | Registry, `pressed`, `drag_*`, `drag_cancelled`, `idle` (HeroInput only) |
-| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `attack_fired`, `hp_left`, tick slot |
+| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left`, tick slot |
 | Enemy & Wave | `targets()`, wave rules |
 | Data & Config Pipeline | Hero and Burst through the accessor; `hero_start`, `pin_rect`, `pin_exclusion` |
 | Game State & Stage Flow | Build, tick order, `halted()`, `in_build()` |
@@ -386,7 +389,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 11. (Rule 11) Ready and pinned: `aim_state()` is Cancelling. Build, Cooling or unpinned: Idle through release, and no command. Cooling: `cooldown_digit()` 1 with `cooldown_left` 1.
 12. (Rule 12) **GIVEN** a finger grid, **WHEN** for each point, from a fresh Ready, pinned state in Wave, with the hero at its pin and again mid-walk, `burst(aim_point())` is called, **THEN** `OK` every time. **GIVEN** a still finger beyond reach and a walking hero, **WHEN** `update()`, **THEN** `aim_point()` has changed and is within `reach` of the new position.
 13. (Rule 13) From Cancelling: 64.0 stays, 64.01 goes Live. From Live: 48.01 stays, 48.0 goes Cancelling. A release at 55 that never passed 64 cancels. `drag_cancelled` and `idle` fire nothing and give Idle.
-14. (Rule 14, clamp_pin) For each hand: **GIVEN** a finger grid, **THEN** `pin` is `OK` at the ghost. **GIVEN** fingers at each active shape's endpoints and on a 20-unit grid over x 0 to 540 and y 660 to 960, edges included, **THEN** the result is no more than 0.03 further from the finger than the nearest of the valid samples, taken every 0.5 along each active circle, parallel line and rect edge. Within 0.02, right hand: (492, 888) gives (395.99, 888); (480, 850) gives (492, 767.99); (200, 800) gives (246.01, 800). Left hand: (84, 850) gives (144.01, 850). A tie: (186, 800) gives (186, 739.99), the smaller y. **GIVEN** shapes covering the whole rect, **THEN** `clamp` returns `hold`.
+14. (Rule 14, clamp_pin) For each hand: **GIVEN** a finger grid, **THEN** `pin` is `OK` at the ghost. **GIVEN** fingers at each active shape's endpoints and on a 20-unit grid over x 0 to 540 and y 660 to 960, edges included, **THEN** for each, `pin` is `OK` at the result, and its distance from the finger differs by no more than 0.03, either way, from that of the nearest of the valid samples, taken every 0.5 along each active circle, parallel line and rect edge. Within 0.02, right hand: (492, 888) gives (395.99, 888); (480, 850) gives (492, 767.99); (200, 800) gives (246.01, 800). Left hand: (84, 850) gives (144.01, 850). A tie: (186, 800) gives (186, 739.99), the smaller y. **GIVEN** shapes covering the whole rect, **THEN** `clamp` returns `hold`.
 15. (Rule 15) Hero DRAG priority 200 radius 56, button DRAG priority 100 radius 48, sink TAP 400 radius 48; a walking centre updates on `update()`. **GIVEN** the hero walking 30 from the button's centre, **WHEN** a press lands between them and moves 15, **THEN** the hero is dragged and no aim arms.
 16. (Rule 16) **GIVEN** one script, with and without listeners, **THEN** identical state; bursts on 0, 3 and 5 set the counters, "at least".
 17. (Rule 17) The median of an even count is the mean of the middle two, and an empty list has none. Kills 3, 0, 2: median 2. Kills 5, 0, 3, 2: median 2.5.
@@ -427,11 +430,11 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Waves | Hero stories | Burst fit, two fronts and empty field, per Enemy & Wave |
 | Bypass, burst state | Hero stories | Combat's invariant `I` holds; the bonus ignores burst state |
 | HeroInput wiring | Hero UI story | With a fake resolver, gestures reach the commands |
-| Pins near a button | User, first phone build | A pin drag ending in the bottom third lands within 40 of the finger on at least 90% of attempts, and no press meant for the hero calls a wave or arms an aim (game-designer review, 2026-11-02) |
+| Pins near a button | User, first phone build | Over at least 20 pin drags released in the bottom third, each pin lands within 2 of `clamp_pin` of the release point, and no press meant for the hero calls a wave or arms an aim; the median distance from release point to pin is reported, not gated (game-designer review, 2026-11-02) |
 
-**Manual** (retained in `production/qa/evidence/`): unpinned prompt and leash; ghost; reach ring; cooling digit; cancelling state; kill preview in greyscale; telegraph and spokes; Ready ticks at quarter scale.
+**Manual** (retained in `production/qa/evidence/`): unpinned grab ring and prompt, with no leash; leash on a press; ghost; reach ring; cooling digit; cancelling state; kill preview in greyscale; telegraph and spokes; Ready ticks at quarter scale.
 
-**Checked by code review, not tests:** HeroInput acts only through `pin` and `burst`; `burst_safe_distance` and `hero_share_bound` have no code.
+**Checked by code review, not tests:** HeroInput acts only through `pin` and `burst`; `burst_safe_distance` and `hero_share_estimate` have no code.
 
 ## Open Questions
 
@@ -449,4 +452,5 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | Should an early thumb wait on a cooling button instead of being dead? UX proposed tracking it | Playtest | First playable |
 | Is a hollow kill mark readable at 22 px, and are alpha 0.6 dots clear on a phone? | art-director | First phone build |
 | Does the technical director accept the HeroSim and HeroInput split, which changes Input Rule 11? | technical-director | Input ADR |
+| The hero cannot be hurt at MVP (Combat, user decision), so its only stake is the burst's cooldown and where it stands. Does a person feel the hero is on the field, or a cursor with a ring? A known gap, not a fault. Fallback: a threat to the hero, such as an enemy that disables it, at Vertical Slice | Non-developer test | First playable |
 | Is an exclusion radius of 60 enough on a phone, or does a hero pinned beside a button take presses meant for it? Fallback: 104 for the active hand's line only | Pillar 4 phone test | First phone build |

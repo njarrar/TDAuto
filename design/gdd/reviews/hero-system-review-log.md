@@ -154,3 +154,40 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md 4eb1db4b0072cb030f6e13b8bf1c8dd4
 User decisions: (A) the UX rule replaces the Start/Call disable: a press inside the hero's grab disc is the hero's, decided at press, and only that overlap is dead; the same rule makes the hero outrank the burst button in Input. (B) the game designer's exclusion: only the active hand's burst line refuses pins, and every shape shrinks from 104 to 60, the hero's 56 plus 4, so no button's centre lies in the hero's disc.
 Blockers: tick step 5 acts only while Cooling; a walk over the burst button is an edge case with a criterion; the unpinned hero shows its grab ring, not its leash; clamp_pin returns the current pin when no candidate is valid and skips degenerate pieces; the bot table now matches the script's wait, ceiling and intermission; burst damage is at least normal and fast HP; OFF_FIELD cites Enemy & Wave Rule 4 and the grid reaches 540 and 960; the clamp examples are recomputed. Also amended: Battle HUD Rule 10, Rule 12, the layout note and criterion 9; Input's priority table, Hero row and criterion 28; Data's pin_exclusion rule.
 The script re-ran in both hands: every bot result is unchanged, and clamp_pin matches boundary sampling with a worst excess of 0.012. Recommended items from the review stay open.
+
+## Review — 2026-11-02 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
+Blocking items: 4 | Recommended: 9
+Summary: No pillar concerns, and review 4's eight edits hold. Four short text fixes remain: the attack report has no named Combat call, criterion 14 passes an invalid clamp, the "Pins near a button" row cannot pass, and the manual list contradicts Rule 1. Four specialist blockers were refuted against existing text (own-position first pin, halted mid-burst, to_ticks undefined, zero cooldown); a targeted re-check of the edits is enough.
+Prior verdict resolved: Yes, all eight review 4 blockers hold.
+Findings:
+- [BLOCKING] Core Rules, Tick steps 4 and 7; Dependencies: name Combat's call that emits attack_fired, with its arguments per source.
+- [BLOCKING] Acceptance Criteria 14: assert the result is a valid pin for every finger, and compare distances both ways.
+- [BLOCKING] Deferred criteria, Pins near a button: "within 40 of the finger" cannot pass below y 928 or inside a shape.
+- [BLOCKING] Acceptance Criteria, Manual: "unpinned prompt and leash" contradicts Rule 1.
+- [RECOMMENDED] Open Questions: record the invulnerable hero as a known gap (third review asking).
+- [RECOMMENDED] Formulas, burst_safe_distance: add dt; output can go negative; strictly below radius.
+- [RECOMMENDED] Formulas, hero_share_bound: an estimate, not a bound; burst_mean 324; 40% gate for mid-skill only.
+- [RECOMMENDED] Formulas, Rule 16: cite Enemy & Wave's to_ticks; define repins.
+- [RECOMMENDED] Deferred criteria, Best moment: add a count threshold.
+- [RECOMMENDED] Visual/Audio: grab ring near buttons, cancelling reticle shape, Reduce Motion gaps, contrast floors.
+- [RECOMMENDED] Content rules: no path within 64 of the button centre less (0, 100), the aim the cancel ring blocks.
+- [RECOMMENDED] Player Fantasy: write a short section; Summary's "kills most" excludes heavies.
+- [RECOMMENDED] Formulas: state effective reach as reach plus walk_speed times telegraph.
+Reviewed-Content-Hash: design/gdd/hero-system.md 33be01b73bfae6771218f1f0be47cf520d033e50
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 3d5b79031d45c84e007b288e1998a9df110c0ac2
+Reviewed-Content-Hash: design/gdd/combat-damage.md 6752d513d2ea4eca4d31747a1087005417d40ee7
+Reviewed-Content-Hash: design/gdd/enemy-wave.md b54c78785944be6bfd376a6a80eca92dca9c770f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md cc7be8f00ae5d16f5fefd3430a328adf3dde22d7
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md e36b8c7a04b724ebf610ebfcedbda7f839e66f87
+Reviewed-Content-Hash: design/gdd/battle-hud.md 1b140d9f6ac912e83e0fdad2caf8f19b63d8e187
+
+## Revision — 2026-11-02 — Four blockers and four text fixes applied, targeted re-check pending
+Blockers: Combat Rule 12 gains `report_attack(source_kind, source_id, origin, impact, radius)`, the one call that emits `attack_fired`, before the first `deliver`; Hero's tick steps 4 and 7 name it with their arguments, and Hero's, Combat's and Tower's tables list it (Tower's step 4 had the same gap). Criterion 14 asserts `pin` is `OK` at every result and compares distances both ways. "Pins near a button" now measures each pin against `clamp_pin` of the release point, over at least 20 drags. The manual list shows the unpinned grab ring, not a leash.
+Also applied: an Open Questions row for the invulnerable hero; burst_safe_distance gains `dt`, cites Enemy & Wave's `to_ticks`, and states it can go negative; hero_share_bound renamed hero_share_estimate, with burst_mean 324 and the 40% gate for mid-skill only; `repins` defined as `OK` pins after the first. Still open: Best moment threshold, UX feedback items, the aim content rule, Player Fantasy, effective reach.

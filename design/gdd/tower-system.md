@@ -86,7 +86,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
    1. If `cooldown_left` is above 0, subtract 1. If it is still above 0, go to the next slot, with no reads.
    2. Read `range`. Pick from Enemy & Wave's `targets()` with Combat's `first_in`. A `slow` tower asks first among enemies with `speed_factor` 1, then, if none of those is in range, among all of them. No target: hold at 0, emit nothing and read nothing more.
    3. Read every other stat this attack needs, before changing anything. A bad read halts here with nothing half done.
-   4. Set `cooldown_left = to_ticks(attack_interval)`, then report the attack so Combat emits `attack_fired`, then `deliver` one event per victim. A `slow` tower then calls `apply_slow` per victim, passing seconds, since Combat converts them. Its `damage` of 0 applies nothing and can kill nobody.
+   4. Set `cooldown_left = to_ticks(attack_interval)`, then call Combat's `report_attack`, which emits `attack_fired`, then `deliver` one event per victim. A `slow` tower then calls `apply_slow` per victim, passing seconds, since Combat converts them. Its `damage` of 0 applies nothing and can kill nobody.
 10. **Ready and holding.** A timer counts on every tick that runs, Intermission included. A ready tower holds at 0, and it fires on the first tick that has a target, so a tower fires every N ticks exactly under constant fire.
 11. **A new tower starts ready.** It gives instant feedback, and without selling the exploit is five free shots at most.
 12. **An upgrade leaves the timer alone.** New damage, range and role values apply from the tower's next read, because stats are read at use time, and a new interval applies at the next reload. There is no free shot and no lost progress.
@@ -170,7 +170,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 |---|---|---|---|
 | Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions` | Enemy & Wave |
-| Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired` | Combat (API); this system (when, whom, values) |
+| Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack` | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; forwards `wave_called_early(seconds_left)` | Flow (order); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
@@ -287,7 +287,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 |---|---|
 | Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
-| Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`, tick slot |
+| Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack`, tick slot |
 | Input & Gesture Resolver | Target registry, `tap`, `pressed` (TowerInput only) |
 | Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
 
