@@ -179,7 +179,7 @@ There is no reload transition: a data change applies on the next run.
 | System | Data interface |
 |---|---|
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
-| Combat & Damage (soft) | Reads `max_hp` at spawn (Combat's seed exception); callers pass other values in |
+| Combat & Damage (soft) | Gets `max_hp` passed in by Enemy & Wave at spawn (Combat's seed exception); callers pass other values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
 | Tower System | Tower levels via the accessor |
 | Hero System | Hero and Burst via the accessor; `hero_start`, `pin_rect`, `pin_exclusion` and the Options record directly |

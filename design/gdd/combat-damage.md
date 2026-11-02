@@ -72,7 +72,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Tower System | calls | `deliver`, `apply_slow`, targeting helpers | Combat (API); Tower (when, whom, values) |
-| Hero System | calls | `deliver` for attacks and burst, targeting helper | Combat (API); Hero (when, whom, values) |
+| Hero System | calls | `deliver` for attacks and burst, targeting helper, `hp_left`, the Hero-and-burst tick slot | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
@@ -150,7 +150,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 - **If a pause or cancel lands mid-slow**: the clock stops, so the slow simply waits. Slows cannot stick.
 - **If enemies spawn on one tick**: `spawn_id` is battle-wide and assigned in group order, so ties stay deterministic.
 - **If an enemy is killed in the tick it would have leaked**: impossible under the tick order, since leaks resolve first.
-- **If a fatal leak ends the stage**: the rest of the tick is skipped (Flow Rule 15), so nothing fires and no bounty is paid.
+- **If a fatal leak ends the stage**: the rest of the tick is skipped (Flow Rule 15), so nothing fires and no bounty is paid. Combat needs no `halted()` of its own: Flow's tick loop skips its slots once an outcome latches.
 - **If `dealt_total` is 0 at the outcome**: share is 0 and the result reads as no damage dealt.
 - **If two enemies tie on path distance**: the lowest `spawn_id` wins, in every helper.
 - **If floats differ between x86 and ARM**: results may too (unverified), so bot baselines are kept per architecture.
@@ -159,14 +159,14 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 **Upstream (hard):** Game State & Stage Flow, which builds Combat, ticks it in its slot, reads its counters.
 
-**Upstream (soft):** Data & Config Pipeline: `max_hp` comes from Data's Enemy record, passed in by Enemy & Wave at spawn (Rule 9). Combat reads no other data, which corrects the systems index (callers read and pass values in).
+**Upstream (soft):** Data & Config Pipeline: `max_hp` comes from Data's Enemy record, passed in by Enemy & Wave at spawn (Rule 9). Combat reads no other data.
 
 **Downstream (hard):**
 
 | System | Interface |
 |---|---|
 | Tower System | `deliver`, `apply_slow`, helpers |
-| Hero System | `deliver`, helpers |
+| Hero System | `deliver`, helpers, `hp_left`, the Hero-and-burst tick slot |
 | Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
 | Battle HUD (soft) | `damage_applied`; the per-source counters for the result |
 | Visual Feedback & VFX (VS) | `damage_applied` |
@@ -241,7 +241,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 |---|---|---|
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; a burst commanded between ticks leaves no moving corpse |
-| Pillar 2 bots | Hero stories | Hero-only fails; never-pinned is identical to towers-only; pinned-once ends the stage with fewer lives than active play (Pillar 2, user ruling 2026-11-02); the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
+| Pillar 2 bots | Hero stories | Hero alone, slow-only fails (Hero Deferred); never-pinned is identical to towers-only (Hero CI criterion 29); pinned-once ends the stage with fewer lives than active play (Pillar 2, user ruling 2026-11-02); the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Hero stories | `burst_spike` is at least 2 in the content test, and on the 2 single, 2 splash, 1 slow build, `dealt_burst`'s share is at least 75% of its share on single only (Hero Deferred, `dealt_burst`) |
 

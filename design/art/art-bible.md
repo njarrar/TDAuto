@@ -173,7 +173,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Build/upgrade affordance.** No modal popup. Slot tap opens three 56 px role-polygon discs in an arc above the slot (never below, where the thumb is); tapping one builds and the arc collapses in 120 ms. Tower tap shows a cost chip for 1.5 s, with a draining bar; a tap on the chip or a second tap on the tower commits. Insufficient gold: the chip dims and the cost is struck through, no magenta (danger only). The chip-then-tap step is the mis-spend safeguard; the Tower GDD and its UX spec own the final call.
 
-**Ground tap (UX).** No success feedback. For the first three taps of a battle, a tiny unanimated dim ring fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. Motion-light so it never reads as a button (Principle 3).
+**Ground tap (UX).** No success feedback. For the first three taps of a battle, a tiny unanimated dim ring, dotted and never solid so it cannot pass for the hero's solid pin ring, fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. Motion-light so it never reads as a button (Principle 3).
 
 **Lives and wave.** Lives are two rows of five dashes at top-left, one 16×3 dp dash each; a lost dash fades to alpha 0.2 in 200 ms and stays countable, with urgency carried by the in-field chevrons. Waves are pills at top-centre, not discs, since discs would match enemy glyphs: filled done, outlined current, dotted upcoming (the tree-node grammar). Gold is the number at top-right.
 

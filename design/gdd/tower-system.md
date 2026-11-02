@@ -291,7 +291,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Input & Gesture Resolver | Target registry (slots and towers TAP 200; upgrade chip TAP 300, Rule 8), `tap`, `pressed` (TowerInput only) |
 | Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
 
-**Downstream (Battle HUD has a GDD that confirms its interface; the Vertical Slice rows have no GDD yet, so they stay provisional until they confirm them):**
+**Downstream (hard unless noted; Battle HUD has a GDD that confirms its interface; the Vertical Slice rows have no GDD yet, so they stay provisional until they confirm them):**
 
 | System | Interface |
 |---|---|
@@ -413,6 +413,9 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
 | Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
 | Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |
+| Wave 6 pays 174 of 510 bounty, when spending matters least, and gold does not carry over. Accepted for MVP; first-playable logs report gold left at Won, and if most of wave 6's bounty is never spent, bounty moves into waves 3 to 5 | Tower GDD + human logs | First playable |
+| The early-call bonus is at most 8 per call and 40 per stage, under the cheapest tower. Accepted for MVP; the early-call checks (Flow Rule 9, Hero Deferred) decide whether calling needs a cost or a bigger reward | Hero GDD | First playable |
+| Does slow earn its slot? One slow ties zero slows on the mid-skill bot and two cost lives. The gate is Hero's Deferred "Slow value" row | Hero GDD + bots | First playable |
 | Does a wrong disc happen often enough to need undo? | Pillar 4 phone test | First phone build |
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |
 | Does the hexagon read apart from the square at quarter scale? | art-director | First render |

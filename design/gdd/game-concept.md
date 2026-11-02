@@ -74,7 +74,7 @@ The hook is protected by a scarcity rule (see Pillar 1) stated as a fraction of 
 ### Core Mechanics
 
 1. **Tower placement and upgrade** on fixed build slots along a lane path; tap slot → pick a tower from an in-field arc; tap tower → cost chip, second tap commits (no modal popup; the chip is the mis-spend safeguard, per art bible §7).
-2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 world units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle, within reach of where the hero stands (Hero GDD); a drag that never goes past 64 from its press point, or comes back within 48 of it, cancels, and a hero drag cancels the same way (Hero Rules 13 and 14); a tap on the button does nothing (the burst is drag-only, so a resting thumb never spends the cooldown; Input GDD review 2026-11-01). Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
+2. **Hero control (confirmed by hero-pin)**: drag the hero → it **pins** there and fights only enemies inside a leash (~90 field units on the 540×960 reference field; density-independent); drag from one large burst button → **aim** the burst with an offset reticle, within reach of where the hero stands (Hero GDD); a drag that never goes past 64 from its press point, or comes back within 48 of it, cancels, and a hero drag cancels the same way (Hero Rules 13 and 14); a tap on the button does nothing (the burst is drag-only, so a resting thumb never spends the cooldown; Input GDD review 2026-11-01). Tap on ground does nothing. No pathfinding: an unpinned hero idles off the path. Hero auto-attacks inside the leash.
 3. **Wave system**: 8–12 waves per stage (MVP: 6) defined in data files; a stage waits for the player to start wave 1, then a timer runs between waves, which the player can beat by calling the next wave early for bonus gold; each stage varies path geometry and/or attack pattern (fast rushers, armoured, flying, splitters, lane-switchers).
 4. **Three skill trees** (Towers / Weapons / Hero), persistent, free respec between stages, one full tree, never two, at each tier's last stage (see Unique Hook). Modifiers carry a source tag, a target stat and an optional condition (the first cross-buff is an aura: towers near the hero), resolving in a fixed order: base → flat adds → percent multipliers → overrides, through one pure, unit-testable function. 
 5. **Stage progression**: 20 hand-authored stages, stage preview shows path + attack type, 1–3 stars per clear, hero weapons unlock by stage.
@@ -104,7 +104,7 @@ Quantic Foundry lens: **Strategy** (planning, decision-making) and **Mastery** (
 
 - **Onboarding curve** (from Vertical Slice; the MVP's one stage offers all three towers): Stage 1 has one path, three slots, one tower type, and the hero; the first wave cannot be lost. Stage 2 introduces the slow tower; stage 3 the first skill point. No tutorial text beyond one-line prompts.
 - **Difficulty scaling**: each stage introduces one new variable (path shape *or* enemy type *or* attack pattern), never two. Skill-point income is tuned so a reasonable build clears with 1 star; 3 stars needs a build that fits the stage.
-- **Feedback clarity**: upgrades add geometry (visible level); the end-of-stage screen shows damage by source (towers vs hero vs each tower type), which is also the balance telemetry.
+- **Feedback clarity**: upgrades add geometry (visible level); the MVP result screen shows damage by source as Towers, Hero and Burst (Battle HUD Rule 15), which is also the balance telemetry; per-type rows come with the report screen at Vertical Slice.
 - **Recovery from failure**: retry is instant; respec is free; a lost stage shows which wave broke and which enemy types got through.
 
 ---
@@ -156,8 +156,8 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 ### Anti-Pillars (What This Game Is NOT)
 
 - **NOT a roguelite**: trees are permanent and runs do not reset. A reset would compromise *Growth You Can See*.
-- **NOT an idle/clicker**: no offline income, no wait timers. Idle play removes the active hero and compromises *One Hero, Not an Army*.
-- **NOT a hero action game**: the hero cannot solo a stage. Would compromise *One Hero, Not an Army* by making towers decorative.
+- **NOT an idle/clicker**: no offline income, no wait timers. The between-wave countdown is not a wait timer: the player can always cut it short. Idle play removes the active hero and compromises *One Hero, Not an Army*.
+- **NOT a hero action game**: the hero cannot solo a stage. Its bot test is hero-alone losing; a skilled player's hero share is capped by the ceiling-bot gate (Hero GDD, Deferred, Share). Would compromise *One Hero, Not an Army* by making towers decorative.
 - **NOT multiplayer in v1**: scope and *Thumb-First* both suffer.
 
 ---

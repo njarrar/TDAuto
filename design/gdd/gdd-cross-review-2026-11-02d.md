@@ -131,3 +131,15 @@ Both rules agents reported after the body above was written. Rules slice 2 also 
 Minor: Input's ADR note (`:78`) still says "so a pause menu cannot strand a gesture"; there is no pause button (HUD Rule 4).
 
 **Revised verdict: FAIL, three blocking issues (K1, K2, K16).** Required actions add: 3. K16: define the emit and cancel time for a Fatal latched between ticks, and add a Fatal row to Flow's stage table.
+
+## Resolution, 2026-11-02: blockers, warnings and recommended rulings applied, re-run pending
+
+User instruction: apply the recommended option for every open ruling.
+
+- **K1:** Flow emits `phase(Build)` once after a battle is built and its views connect (Rules 6, 15, 16; criteria 1 and 16); Battle HUD Rule 11 and its state table treat it as Build beginning.
+- **K2:** the Hidden row arms only with the arc closed and goes Disabled with it open.
+- **K16:** a Fatal latched outside a tick stops the clock, emits `phase(Fatal)` and requests `cancel()` at that frame's end (Rules 15, 18; criterion 17); Flow's stage table has a Fatal row.
+- **K3 to K21, E3, E4:** applied as listed. Flow's tick loop checks `halted()` between slots, so Combat needs none of its own. Records group by launch ID plus `attempt_seq`, are keyed on a `wave_index()` change, and flush on focus loss.
+- **Rulings (recommended options):** D1 at least 5 called and 5 waited waves per index, a 0-against-0 tie ignored; D2 each arc disc shows a looping icon of its role; E1 prompt 3 in Wave only; E2 the ground-tap ring is the "rejection ring", dotted and never solid, in the HUD, Input and the art bible; G2 the slow hint is removed until Hero's new "Slow value" gate passes; G3 human re-pin rate is logged against lives; G4 and G10 a ceiling-bot gate at 45% brings a burst-victim cap forward; G6 and G11 accepted for MVP, with first-playable checks in Tower; G7 accepted as a finale, with a dip tested on stage 2; G8 Flow's Summary and the concept's result line reworded; G9 the countdown is not a wait timer, since Call can always end it; X9 a new `bursts_emptied` counter, taken out of the phone miss rate.
+
+Nothing from the earlier runs is left open.
