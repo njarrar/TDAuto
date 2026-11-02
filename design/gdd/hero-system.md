@@ -41,10 +41,10 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 **The burst.**
 
 6. **`burst(aim_point)` commits at once.** It returns `HALTED`, `BUILD_PHASE`, `NOT_PINNED`, `NOT_READY`, `BAD_POSITION`, `OFF_FIELD` (outside 0 to 540 and 0 to 960, edges included, as in Enemy & Wave Rule 4), `OUT_OF_REACH` (over `reach` from the hero's current position) or `OK`, in that order, so state is checked before geometry. On `OK`, it reads `telegraph_duration`, holds `aim_point` fixed and starts `max(1, to_ticks(telegraph_duration))` ticks of telegraph. There is no cancel after release.
-7. **Reach ties the burst to the pin.** The aim must lie within `reach`, 160 units, of the hero's current position, so a walking hero's reach moves with it. It is tested once, at command, so a hero walking through the telegraph can land a burst up to 220 from where it ends up, which is accepted. The auto-attack is too small to make standing anywhere matter, so with no limit the best single pin ends only 1, 0, 1 and 3 lives below an active player on the four mixed builds, and at 200, 1, 0, 3 and 1. At 160 it ends 3, 2, 5 and 1 lower. So re-pinning is worth about 3 lives on one path. The user accepted that for MVP (2026-11-02), and Enemy & Wave's lanes remain the fallback (Open Questions).
+7. **Reach ties the burst to the pin.** The aim must lie within `reach`, 160 units, of the hero's current position, so a walking hero's reach moves with it. It is tested once, at command, so a hero walking through the telegraph can land a burst up to 220 from where it ends up, which is accepted. The auto-attack is too small to make standing anywhere matter. So with no limit, the best single pin ends only 1, 0, 1 and 5 lives below an active player on the four mixed builds, and at 200, 0, 1, 1 and 1. At 160 it ends 1, 1, 4 and 3 lower, and the fixed pin at (270, 480) ends 5, 7, 7 and 9 lower, one of them a loss. So on one path, re-pinning is worth 1 to 4 lives, a median of 2, down from about 3 on the earlier stage. The user accepted this for MVP (2026-11-02, then 2026-11-02 again on the moved stage), and Enemy & Wave's lanes remain the fallback (Open Questions).
 8. **Release.** When the telegraph ends, in the Hero-and-burst slot (Combat Rule 2), victims are `all_in_radius` of `aim_point` over `targets()`, using current positions. Each gets one `deliver` with source kind BURST and the Burst's ID. An auto-attack uses source kind HERO and the Hero's ID. An enemy can walk out during the telegraph, and a fast one moves 27.5 units. A burst that lands on nobody still spends its cooldown, since a cancel before release is free.
 9. **Cooldown runs from release, and not during the telegraph.** So one full cycle is `telegraph_duration + cooldown`, which is what Enemy & Wave's intermission rule compares against. The timer ticks wherever ticks run, so Intermission restores it, and Build does not. The burst starts Ready, and it is refused in Build (Flow Rule 10). That rule is also why a first burst is never wasted before wave 1 starts.
-10. **A small, lethal burst keeps a 10 s cooldown inside the share target.** The user set 10 s (2026-11-02). Share is damage × victims × number of bursts, so with twice the bursts a wide one cannot stay near Pillar 2's target: radius 130 reached about 45% in an earlier run. So the radius is 70 and damage 130: each burst kills every `fast` and `normal` it touches, and a `heavy` loses about a sixth of its HP. Fewer victims keep share down, and a small ring makes aim the skill. Results are sensitive to radius: at reach 160, 65 gave a median share of 24%, below the band, and 75 gave 32%, above it. Overkill counts for nothing, as ever.
+10. **A small, lethal burst keeps a 10 s cooldown inside the share target.** The user set 10 s (2026-11-02). Share is damage × victims × number of bursts, so with twice the bursts a wide one cannot stay near Pillar 2's target: radius 130 reached about 45% in an earlier run. So the radius is 70 and damage 130: each burst kills every `fast` and `normal` it touches, and a `heavy` loses about a sixth of its HP. Fewer victims keep share down, and a small ring makes aim the skill. Results are sensitive to radius: at reach 160, 65 gave a median share of 24.9%, below the band, and 75 gave 31%, above it. Overkill counts for nothing, as ever.
 
 **Aim, in HeroInput.**
 
@@ -82,7 +82,7 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 
 **Enemy & Wave and Tower are amended to fit.** Enemy HP is now `normal` 125, `fast` 60 and `heavy` 750, every `intermission_duration` is 15 s, and Tower's `early_call_seconds_per_gold` is 1.8, which keeps the bonus cap. Single's level 2 damage is 21, so upgrading competes with filling every slot (Tower System).
 
-**Simulated results.** A throwaway script, `tools/balance-sim/hero_bots.py`, on the starter stage with the fixed tick and tick order, and scripted bots. It is not game code: the Hero stories build the real bots to this table, and the script decides any detail the table leaves out. All bots buy in the listed order as gold allows, level 1s first, in slot order 1, 0, 2, 3, 4 and then upgrades, and none is random.
+**Simulated results.** A throwaway script, `tools/balance-sim/hero_bots.py`, on the starter stage (top path row at y 226, slot 0 at y 320, per Enemy & Wave's revision) with the fixed tick and tick order, and scripted bots. It is not game code: the Hero stories build the real bots to this table, and the script decides any detail the table leaves out. All bots buy in the listed order as gold allows, level 1s first, in slot order 1, 0, 2, 3, 4 and then upgrades, and none is random.
 
 | Bot | Re-pin | Burst fires when | Aim |
 |---|---|---|---|
@@ -91,30 +91,30 @@ HeroInput changes the battle only through the two commands. This amends Input Ru
 | Best single pin | Never; the best valid point on a 40-unit grid, x 70 to 470 and y 200 to 840, so its lives are a lower bound | As mid-skill | As mid-skill |
 | Ceiling | Every 1.5 s | As mid-skill, with no 2 s wait | Exact |
 
-During intermission the script runs only the cooldowns: the hero does not walk and a telegraph in flight waits, which is slightly pessimistic for bots that re-pin. Bots play the right hand, and the left hand gives the same table. The new exclusion shapes left every result unchanged. Bots skip the finger offset, so they can aim lower than a thumb can. Limiting them to a thumb's y 860 left every mixed build unchanged, and took splash only from 6 lives to 5 (Open Questions). A loss counts as 0 lives.
+During intermission the script runs only the cooldowns: the hero does not walk and a telegraph in flight waits, which is slightly pessimistic for bots that re-pin. Bots play the right hand, and the left hand gives the same table. The new exclusion shapes left every result unchanged. Bots skip the finger offset, so they can aim lower than a thumb can. Limiting them to a thumb's y 860 left every mixed build unchanged, and took splash only from 6 lives to 3 (Open Questions). A loss counts as 0 lives.
 
 | Build | Towers only | Pinned once, bursts | Mid-skill | Ceiling | Towers only, always calling | Mid-skill, always calling |
 |---|---|---|---|---|---|---|
-| Single only | Lost W3 | Lost W4 | Won, 7 | Won, 10 | Lost W3 | Won, 9 |
-| Splash only | Lost W2 | Lost W3 | Won, 6 | Won, 7 | Lost W2 | Won, 6 |
-| Slow only | Lost W2 | Lost W4 | Lost W4 | Lost W5 | Lost W2 | Lost W4 |
-| 3 single, 1 splash, 1 slow | Lost W5 | Won, 6 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
-| 2 single, 2 splash, 1 slow | Lost W3 | Won, 5 | Won, 9 | Won, 10 | Lost W3 | Won, 9 |
-| 3 single, 2 splash | Lost W5 | Won, 4 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
-| 2 single, 1 splash, 2 slow | Lost W5 | Won, 6 | Won, 9 | Won, 10 | Lost W5 | Won, 9 |
+| Single only | Lost W3 | Lost W5 | Won, 7 | Won, 9 | Lost W3 | Won, 9 |
+| Splash only | Lost W2 | Lost W6 | Won, 6 | Won, 7 | Lost W2 | Won, 6 |
+| Slow only | Lost W2 | Lost W5 | Lost W5 | Lost W5 | Lost W2 | Lost W5 |
+| 3 single, 1 splash, 1 slow | Lost W4 | Won, 4 | Won, 9 | Won, 9 | Lost W5 | Won, 9 |
+| 2 single, 2 splash, 1 slow | Lost W3 | Won, 2 | Won, 9 | Won, 9 | Lost W3 | Won, 9 |
+| 3 single, 2 splash | Lost W5 | Won, 2 | Won, 9 | Won, 9 | Lost W5 | Won, 9 |
+| 2 single, 1 splash, 2 slow | Lost W4 | Lost W6 | Won, 9 | Won, 9 | Lost W5 | Won, 9 |
 
-The pinned-once column stands at (270, 480). Searching for the best single pin on a grid of 40, per build, gives 8, 8, 7 and 6 lives on the four mixed builds, against mid-skill's 9 on each. Slow only cannot win at any skill, and it is a trap build by design, since a slow tower kills nothing.
+The pinned-once column stands at (270, 480). Searching for the best single pin on a grid of 40, per build, gives 8, 8, 5 and 6 lives on the four mixed builds, against mid-skill's 9 on each. Slow only cannot win at any skill, and it is a trap build by design, since a slow tower kills nothing.
 
 | Measure, mid-skill on mixed builds | Result | Gate |
 |---|---|---|
-| Hero share | 25%, 35%, 24%, 25%; median 25.1% unrounded | Median 25% to 30%, none above 40%: passes, at the band's floor |
-| Burst alone | 20% to 30% | Reported, since it decides the spike |
-| Median kills, bursts hitting 3 or more, per build | 3.5 to 4 | At least 2: passes |
+| Hero share | 25%, 32%, 25%, 25%; median 25.2% unrounded | Median 25% to 30%, none above 40%: passes, at the band's floor |
+| Burst alone | 20% to 27% | Reported, since it decides the spike |
+| Median kills, bursts hitting 3 or more, per build | 4 | At least 2: passes |
 | Bursts per stage | 10 to 11 | None |
-| Burst share in 2, 2 and 1 against single only | 30% against 25% | At least 75% of it: passes |
-| Stage length | 5.0 to 5.3 min; 3.6 to 3.8 with every call | Concept's 5 to 8: passes uncalled |
+| Burst share in 2, 2 and 1 against single only | 27% against 25% | At least 75% of it: passes |
+| Stage length | 5.0 to 5.3 min; 3.7 to 3.8 with every call | Concept's 5 to 8: passes uncalled |
 
-Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect aim gave 29% to 44% and all 10 lives, and reacting in 3 s, 50 units off, gave 18% to 24% and 7 to 9 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 26% to 41%. Without the burst, the mid-skill bot lost on wave 5 or 6 on every mixed build, so the burst is what wins.
+Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect aim gave 28% to 36% and 9 lives on each, and reacting in 3 s, 50 units off, gave 18% to 23% and 3 to 9 lives. So the 25% to 30% band describes one skill level, not every player. Hero alone loses on wave 3. The ceiling bot took 28% to 40%. Without the burst, the mid-skill bot lost on wave 4 or 6 on every mixed build, so the burst is what wins.
 
 **Calling is still close to free for a bot.** On mixed builds it changed no lives and fired at most 1 more burst, and it cuts the stage to under 4 minutes, below the concept's 5 to 8. Single only gains 2. Bots need no preparation, and enemies take many seconds to arrive. So whether a person pays a cost moves to logs at first playable (Acceptance Criteria), with Flow's overlapping waves as the fallback.
 
@@ -413,13 +413,13 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 |---|---|---|
 | Hero alone, slow-only | Hero stories | Both lose |
 | Towers-only | Hero stories | On the mixed builds, the towers-only bot without calling ends with 3 lives or fewer, a loss being 0; mid-skill at least 4 above it on each |
-| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 3 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
+| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 4 lives lower, which the user accepted for MVP. If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
 | Share | Hero stories | Median of mixed builds 25% to 30%, none above 40%, at the mid-skill bot. It moves with skill, so ±1 s and ±25 aim are reported, not gated. Human logs replace it at first playable; if it cannot be held, the user decides whether to amend the pillar |
 | Burst outcome | Hero stories | On each mixed build, the median of `kills_on_hit_3` is at least 2; an empty list fails |
 | `dealt_burst` | Hero stories | 2, 2 and 1 share at least 75% of single-only's |
 | Dominant build | Hero stories | On mid-skill, at least two mixed builds within 2 lives of the best one |
-| Upgrade order | Hero stories | On mid-skill, over every placement of each mixed build, the median with upgrading in pairs is at least the median with filling first. Today 9, 9, 9 and 6 against 8, 8, 8.5 and 5 (Tower System) |
-| Placement | Hero stories | On mid-skill, filling first, each mixed build's best placement ends at least 3 lives above its worst. Today 3 to 10 |
+| Upgrade order | Hero stories | On mid-skill, over every placement of each mixed build, the median with upgrading in pairs is at least the median with filling first. Today 9, 9, 9 and 6 against 7, 9, 9 and 5 (Tower System) |
+| Placement | Hero stories | On mid-skill, filling first, each mixed build's best placement ends at least 3 lives above its worst. Today 4 to 10 |
 | Mono-role | Hero stories | Towers-only: every mono build loses. Mid-skill: every mono build ends below the best mixed build |
 | Always-call, bots | Hero stories | Towers-only flips no loss and gains at most 2 lives; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Single only gains 2 today, from the gold, and is not gated |
 | Always-call, humans | User, first playable | Log `seconds_left`, burst readiness and next-wave lives lost per call. If frequent callers lose no more than waiters, the user decides on Flow's overlap fallback |
@@ -446,7 +446,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | One build sits at 35%, and a better player reaches 44%. Is a single band right for players who improve? If it cannot hold, the user rules on the pillar's target | Human logs | First playable |
 | Calling is nearly free for bots, against the concept's promised cost. Does a person feel preparation time? | Human logs | First playable |
 | Should a pin use a finger offset? UX puts the top half out of a thumb's reach at 0 and proposes 100. MVP is on desktop, so 0 stands, and the phone test compares 0 and 100, including top-half pins | Pillar 4 phone test | First phone build |
-| A thumb's aim stops at y 860, so a burst reaches the path only to y 930, leaving its last 30 units, and more with an inset, out of reach. Limiting the bots this way barely moved them. Does a person feel it as a lost save? | Pillar 4 phone test | First phone build |
+| A thumb's aim stops at y 860, so a burst reaches the path only to y 930, leaving its last 30 units, and more with an inset, out of reach. Limiting the bots this way left every mixed build unchanged, but took splash only from 6 lives to 3. Does a person feel it as a lost save? | Pillar 4 phone test | First phone build |
 | Can a thumb re-grab a hero pinned near the top? The offset extends a drop, not a grab | Pillar 4 phone test | First phone build |
 | Should an early thumb wait on a cooling button instead of being dead? UX proposed tracking it | Playtest | First playable |
 | Is a hollow kill mark readable at 22 px, and are alpha 0.6 dots clear on a phone? | art-director | First phone build |

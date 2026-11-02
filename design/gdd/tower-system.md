@@ -117,13 +117,13 @@ Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per g
 
 **This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 7 or 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
-**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early leads on all four mixes, single alone stays behind and every gate passes. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
+**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early led on all four mixes on the earlier stage. On the moved stage (Enemy & Wave's revision) it leads on two and ties on two, so filling first never comes out ahead; single alone stays behind and every gate passes. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
 
 | Mix | Placements | Fill first: median, range | Upgrade in pairs: median, range |
 |---|---|---|---|
-| 3 single, 1 splash, 1 slow | 20 | 8, 2 to 9 | 9, 1 to 10 |
-| 2 single, 2 splash, 1 slow | 30 | 8, 2 to 10 | 9, 3 to 10 |
-| 3 single, 2 splash | 10 | 8.5, 6 to 9 | 9, 4 to 9 |
+| 3 single, 1 splash, 1 slow | 20 | 7, 0 to 10 | 9, 1 to 10 |
+| 2 single, 2 splash, 1 slow | 30 | 9, 0 to 10 | 9, 4 to 10 |
+| 3 single, 2 splash | 10 | 9, 5 to 9 | 9, 4 to 9 |
 | 2 single, 1 splash, 2 slow | 30 | 5, 0 to 10 | 6, 0 to 10 |
 
 Upgrading in pairs means build two, upgrade both, and repeat. A new single still offers more damage per gold, 0.40 against the upgrade's 0.25, but only while it stands where the enemies are. So the same towers can end anywhere from 0 to 10 lives, and placement matters more than order. These are scripted fixed orders, so whether people find this waits for first playable.

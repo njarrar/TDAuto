@@ -199,7 +199,7 @@ The **arc_disc** formula is defined as:
 | `a_k` | angle | −60°, 0°, 60° | constant | Fan angle per disc |
 
 **Output Range:** inside x 72 to 468, and y 228 to `slot y − 38` under tightened L1.
-**Example:** slot (270, 305): (204.2, 267), (270, 229), (335.8, 267).
+**Example:** slot (270, 320): (204.2, 282), (270, 244), (335.8, 282).
 
 The **display_seconds** formula is defined as:
 
@@ -371,7 +371,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across the lifecycle signal does nothing. Paused resumes on release.
 22. (Rule 18) Retry twice: one latch; the handler frees nothing; Fatal first.
 23. (Rule 19) One record per attempt and per call, all fields, the call's written at the next clear; burst state not through Tower; a sink failure is non-fatal.
-24. (arc_disc) Slot (270, 305): the three example points.
+24. (arc_disc) Slot (270, 320): the three example points.
 25. (display_seconds) 600→10, 541→10, 540→9, 1→1, 0→0.
 26. (burst_y) 0→888, 72→816, 200→816.
 27. (chip_bar) 0→1, 750→0.5, 1,500→0, 2,000→0.
