@@ -74,7 +74,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Tower System | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`; its shots raise `attack_fired`; runs in the Towers-by-slot-index slot of the tick | Combat (API); Tower (when, whom, values) |
 | Hero System | calls | `deliver` for attacks and burst, `nearest_in`, `all_in_radius`, `hp_left`, the Hero-and-burst tick slot; its attacks raise `attack_fired` | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead`; uses the reap, `spawn_id`, `deliver` for test kills | Combat (state); Enemy & Wave (roster, reap) |
-| Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
+| Game State & Stage Flow | builds, ticks (Status slot), reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads per-source counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
 | Battle HUD | listens, reads | `damage_applied` for hit marks; the per-source counters for the result | Combat (API); HUD (drawing) |
 | Data & Config | reads (soft) | `max_hp`, passed in by Enemy & Wave at spawn | Data (values) |
@@ -105,7 +105,7 @@ The **hero_share** formula is defined as:
 | `dealt_hero`, `dealt_burst` | float | 0 and up | calculated | Sums of `applied` by source kind |
 | `dealt_total` | float | 0 and up | calculated | `dealt_tower + dealt_hero + dealt_burst`, so rounding cannot push share above 1 |
 
-**Output Range:** 0–1. Target 0.25–0.30, unproven: no human data exists, and the Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, median 26.2% (Hero, Simulated results). The prototype's 39% came from one tower type and a bug, and is history only. Read the share as a lower bound, because towers resolve first and a burst finishing softened enemies is credited only with what it dealt. The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
+**Output Range:** 0–1. Target 0.25–0.30, unproven: no human data exists, and the Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25% (rounded), median 26.2% (Hero, Simulated results). The prototype's 39% came from one tower type and a bug, and is history only. Read the share as a lower bound, because towers resolve first and a burst finishing softened enemies is credited only with what it dealt. The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
 **Example:** 200 hero + 100 burst of 1,000 total = 0.30.
 
 The **speed_factor** formula is defined as:
@@ -172,7 +172,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 | Visual Feedback & VFX (VS) | `damage_applied` |
 | Stage Progression & Stars (VS) | Counters (soft) |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. All eight MVP GDDs list this one.
+Per the bidirectional rule, each of these GDDs must list this one when authored. Every GDD in this table lists this one.
 
 ## Visual/Audio Requirements
 
@@ -244,6 +244,8 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Pillar 2 bots | Hero stories | Hero alone, slow-only fails (Hero Deferred); never-pinned is identical to towers-only (Hero CI criterion 29); for pinned-once, Hero's Deferred criteria, "Pinned once", hold the threshold; the always-call bots pass Flow Rule 9's gates |
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Hero stories | Pointer: Hero's Deferred `dealt_burst` row owns this check, with the `burst_spike` condition |
+| Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result |
+| Micro-battle | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 
 **Manual** (frame-stepped screenshots retained in `production/qa/evidence/`): tower and hero hits distinct in greyscale; static splash ring at its true radius; slow drag lines; damaged core at 22 px and above; burst clearance, with no tower flash or ring. On the first phone build, a non-developer identifies hero kills from tower kills with sound off. This proves the hits are legible, not that they are satisfying, which only playtests can judge.
 
@@ -254,7 +256,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Question | Owner | Resolve by |
 |---|---|---|
 | Does the technical director accept cutting ProjectileSpawner and the tick order? Both override existing notes | technical-director | App Lifecycle ADR |
-| Does the bots' hero share hold for humans? The Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, median 26.2% (Hero, Simulated results), which closes the bot question. The prototype's 39% (one tower type, bot-fitted values, a bug) is history only | qa-lead | First playable |
+| Does the bots' hero share hold for humans? The Hero GDD's re-run with all three tower roles gives 26%, 33%, 27% and 25%, rounded; the median of 26.2% comes from the unrounded values (Hero, Simulated results), which closes the bot question. The prototype's 39% (one tower type, bot-fitted values, a bug) is history only | qa-lead | First playable |
 | Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Hero GDD + bots (Hero's Open Questions carry the row) | First playable |
 | Instant hits leave weapon upgrades a thin 100 ms line to show growth on (Pillar 1). What makes them visible? | Weapons GDD (Vertical Slice) | Vertical Slice |
 | Do full-strength hero flashes during a burst hold up on a device, and does the 0.6 tower flash read? | art-director | First phone build |

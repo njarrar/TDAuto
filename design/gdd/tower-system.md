@@ -100,7 +100,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `upgrade_refused(slot_index)` for the chip's refused tap (Rule 8), `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. Battle HUD listens to `tower_built` and `tower_upgraded` to redraw the slot and the chip. TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `upgrade_refused(slot_index)` for the chip's refused tap (Rule 8), `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it. Its three signals are wrapper-only on Flow's list, and the TowerInput wiring story test (Deferred) proves them with a fake resolver, including that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking the level count, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -168,12 +168,12 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Data & Config | reads | Tower stats through the accessor by `def_id` and level; `starting_gold`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
+| Data & Config | reads | Tower stats through the accessor by `def_id` and level; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` directly from Stage | Data (values); this system (meaning, balance) |
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions`; `gold_upper_bound` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `attack_fired`; runs in the Towers-by-slot-index slot of the tick | Combat (API); this system (when, whom, values) |
-| Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
+| Game State & Stage Flow | built, listens | Builder builds TowerSim and ticks it in order; routes the bots' `build` command; injects `halted()`; wires `enemy_killed(bounty)` to gold; forwards `wave_called_early(seconds_left)`; emits `phase` (for the chip) | Flow (order, wiring); this system (bonus) |
 | Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200 and the upgrade chip as TAP 300 (Rule 8), disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
-| Battle HUD | listens, calls | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `slot_tapped`, `upgrade_refused`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
+| Battle HUD | listens, calls | `gold()`, `gold_changed`, `tower_built`, `tower_upgraded`, `slot_state(slot_index)`, `chip_state()`, `slot_tapped`, `upgrade_refused(slot_index)`, `tower_inspected` (Rule 17); calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots, `burst_spike` and Hero's Deferred gates | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
 
@@ -295,7 +295,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 
 | System | Interface |
 |---|---|
-| Battle HUD & Build UI | `gold()`, `gold_changed`, `slot_state`, `chip_state()`, `slot_tapped`, `upgrade_refused`, `tower_inspected` (Rule 17); calls `build` |
+| Battle HUD & Build UI | `gold()`, `gold_changed`, `tower_built`, `tower_upgraded`, `slot_state(slot_index)`, `chip_state()`, `slot_tapped`, `upgrade_refused(slot_index)`, `tower_inspected` (Rule 17); calls `build` |
 | Hero System (soft) | Hero: none directly; balanced against through bots and `burst_spike` |
 | Stat & Modifier (Vertical Slice) | Reads through the same accessor |
 | Skill Tree, Synergy Hook (Vertical Slice) | Tags and accessor context with the live tower |
@@ -335,7 +335,7 @@ Battle HUD draws these; this system supplies the data.
 
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
-- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta. Under Reduce Motion the nudge becomes a 120 ms alpha blink, on the disc or button, never on a panel, so every refused tap still answers on the next frame (Battle HUD).
+- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta. Under Reduce Motion the nudge becomes a 120 ms alpha blink, on the disc, chip or button, never on a panel, so every refused tap still answers on the next frame (Battle HUD).
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
 📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: the chip's window has no visible clock (answered: Battle HUD Rule 9's draining bar), a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
@@ -360,7 +360,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 **CI: Logic**
 1. (Rule 1) **GIVEN** `sim()`, **WHEN** `build` each role, **THEN** `OK`, with no unlock read.
 2. (Rule 2) **GIVEN** `A`, **WHEN** `upgrade`, **THEN** gold falls 40 and the next shot deals 15.
-3. (Rule 3) **GIVEN** `C` and a target, **WHEN** T, **THEN** `attack_fired, deliver(0), apply_slow(0.5, 1.0)`.
+3. (Rule 3) **GIVEN** `C` and a target, **WHEN** T, **THEN** `attack_fired, deliver(0), apply_slow(enemy, 0.5, 1.0)`.
 4. (Rule 4) **GIVEN** a built slot, **WHEN** `build`, **THEN** `SLOT_OCCUPIED`, with no refund.
 5. (Rule 5) **GIVEN** paired faults, **THEN** `HALTED`, `BAD_SLOT` (−1 and the count), `BAD_TOWER` (an enemy's ID), `SLOT_OCCUPIED`/`NO_TOWER`, `MAX_LEVEL`, `NO_GOLD` in that order. ID refusals read nothing, and the log is empty.
 6. (Rule 5) **GIVEN** gold 30, **THEN** `OK`, gold 0, `gold_changed(0), tower_built(0, A)`. Gold 29: `NO_GOLD`. A changed cost: the second use reflects it. A latch in the cost read: `HALTED`, unchanged.
@@ -380,7 +380,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 20. (Rule 14) A `HERO` kill pays; a leak pays nothing; after `halted()`, a kill and a call pay nothing. A bonus of 0 emits nothing.
 21. (Rule 15) **GIVEN** gold 26 and a corpse worth 4, **THEN** `NO_GOLD` before the reap, `OK` after.
 22. (Rule 16, Flow row) **GIVEN** the builder, **WHEN** called twice, **THEN** one bonus, before the first spawn. Start in Build pays nothing.
-23. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; `slot_state` empty, then `A`, 1, 0.
+23. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; `slot_state(slot_index)` empty, then `A`, 1, 0.
 24. (early_call_bonus) `dt` 0.25, rate 1.0: 3.0, 2.75, 0.75 pay 3, 2, 0. `dt` 1/60, rate 1.8: 900, 863, 108, 107 ticks pay 8, 7, 1, 0.
 25. (gold_before_wave) A starter-shaped factory: 160, 216, 296, 368, 496; final 670.
 26. (burst_spike) 130, 70, 30, 75, interval 0.5, speed 72, `n` 6: 520 / 90. `n` 4 is unchecked.
@@ -398,7 +398,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Burst state (Flow) | Hero stories | Pointer: Hero's Deferred "Bypass, burst state" row owns this check |
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
 | TowerInput wiring | Tower UI story | With a fake resolver, taps reach `ChipWindow`, a built slot is disabled, `slot_tapped` fires, and `phase` closes the chip |
-| Arc, damage by source | Battle HUD stories | A disc builds once; an unaffordable one does nothing; counters are shown; screenshots retained |
+| Arc, damage by source | Battle HUD stories | A disc builds once; an unaffordable one builds nothing and nudges (Battle HUD Rule 7); counters are shown; screenshots retained |
 | Phone test (Input P1) | Producer | No accidental upgrades or wrong discs on the first phone build |
 
 **Manual** (retained in `production/qa/evidence/`): a level-2 upgrade changes shape within one wave; two towers are ranked by level with no digit; triangle, hexagon, square and an empty slot are told apart at full and quarter scale in greyscale.

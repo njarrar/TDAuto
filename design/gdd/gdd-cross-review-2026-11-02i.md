@@ -84,3 +84,10 @@ Blockers per run: 4, 1, 2, 3, 2, 1, 3, 4, 3. Since run 5 every blocker has come 
 1. I1: the reader leaves out any attempt with a record marked `call_prompt_shown`, and the open wave record is marked when the prompt first shows.
 2. I2: the app root holds `call_prompt_done` across Retry.
 3. I3: make the allowlist's members and their listeners agree, and mark the TowerInput signals wrapper-only.
+
+## Resolution, 2026-11-02: the three blockers and every warning applied, re-run pending
+
+- **I1:** the open wave record is marked `call_prompt_shown` when the prompt first shows; the reader leaves out an attempt if any record is marked.
+- **I2:** the app root holds `call_prompt_done` across Retry (Flow Rule 1), the one exception to HUD Rule 13's "nothing has to survive a rebuild".
+- **I3:** Battle HUD listens to `tower_built`, `tower_upgraded` and `hero_pinned` (prompt 1 hides on the first pin), and both sides' rows say so; Flow lists the sim members and marks TowerInput's signals wrapper-only, proved by Tower's "TowerInput wiring" row.
+- **K1 to K12:** applied: `final` and `tester_id` on records, a quit request writes provisional records, a broken first launch writes a Fatal record, First run is read before the switch, "disc, chip or button", `apply_slow(enemy, 0.5, 1.0)`, Hero Rule 2 matches Input Rule 4, `lifecycle_changed(state)` named in Input and Flow, interface names and notes aligned, duplicate rows made pointers, Combat's rounded figures labelled, the anti-idle pillar notes Call is always on screen, and the Slow value bot reports skipped weaker slows.

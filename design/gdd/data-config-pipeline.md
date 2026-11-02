@@ -128,7 +128,7 @@ There is no reload transition: a data change applies on the next run.
 
 | System | Reads | Interface owner |
 |---|---|---|
-| Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
+| Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it and the failure handler (injected) | This system (load, lookup); Game State (injection) |
 | Combat & Damage | Nothing directly; Enemy & Wave passes `max_hp` in at spawn. Callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
 | Tower System | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` directly from Stage (Enemy & Wave serves `slot_positions`) | This system |
@@ -178,7 +178,7 @@ There is no reload transition: a data change applies on the next run.
 
 | System | Data interface |
 |---|---|
-| Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
+| Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue and the failure handler (injected) |
 | Combat & Damage (soft) | Gets `max_hp` passed in by Enemy & Wave at spawn (Combat's seed exception); callers pass other values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
 | Tower System | Tower levels via the accessor; `is_tower(id)`; `starting_gold`, `early_call_seconds_per_gold` (Enemy & Wave serves `slot_positions`) |

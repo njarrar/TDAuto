@@ -327,7 +327,7 @@ The **gold_upper_bound** formula is defined as:
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules (soft) |
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. All eight MVP GDDs list this one.
+Per the bidirectional rule, each of these GDDs must list this one when authored. Every GDD in this table lists this one.
 
 ## Visual/Audio Requirements
 

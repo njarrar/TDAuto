@@ -156,7 +156,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 ### Anti-Pillars (What This Game Is NOT)
 
 - **NOT a roguelite**: trees are permanent and runs do not reset. A reset would compromise *Growth You Can See*.
-- **NOT an idle/clicker**: no offline income, no wait timers. The between-wave countdown is not a wait timer: the player can always cut it short. Idle play removes the active hero and compromises *One Hero, Not an Army*.
+- **NOT an idle/clicker**: no offline income, no wait timers. The between-wave countdown is not a wait timer: the player can always cut it short. Start/Call shows Call and its bonus throughout the countdown, so the way to cut it short is always on screen. Idle play removes the active hero and compromises *One Hero, Not an Army*.
 - **NOT a hero action game**: the hero cannot solo a stage. Its bot test is hero-alone losing; the bot ceiling's hero share is gated (Hero GDD, Deferred, Share). Would compromise *One Hero, Not an Army* by making towers decorative.
 - **NOT multiplayer in v1**: scope and *Thumb-First* both suffer.
 
