@@ -124,14 +124,14 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 
 | Check | Bound | Starter |
 |---|---|---|
-| L1 (Enemy & Wave), tightened | Slot x 138 to 402, y at least 304, so every arc disc stays on the field and no flip code is needed | Pass, 170 to 370 and 305 |
+| L1 (Enemy & Wave), tightened | Slot x 138 to 402, y at least 304, so every arc disc stays on the field and no flip code is needed | Pass, 170 to 370 and 320 |
 | Arc disc to the burst line, either hand | At least 84 | 155 |
 | Start/Call to any slot's hit disc | At least 16 clear | 17.3 |
 | Start/Call to `hero_start` | At least 48 | 60 |
 | Start/Call to the path's edge | Rect clear of it | 4 |
 | Next-wave line | At most 3 types at true size | 3 |
 | Waves in a stage, starting lives | At most 6, and at most 10, the pips and dashes that fit. Larger waits for a later stage's layout | 6, 10 |
-| Arc panels against the band | Clear at inset 0; a large inset is the Mobile GDD's, since the starter's top panel reaches y 149 | Pass |
+| Arc panels against the band | Clear at inset 0; a large inset is the Mobile GDD's, since the starter's top panel reaches y 164, 10 into the band at the largest top inset | Pass at inset 0 |
 
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.

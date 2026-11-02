@@ -1,7 +1,7 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
 > **Status**: In Review (fourth design review 2026-11-02 NEEDS REVISION; eight blockers and two user decisions applied, re-review pending)
-> **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, now about 3 lives, and set the first-run target; the burst was reworked to fit, after the gate.
+> **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, about 3 lives then and a median of 2 on the moved stage, and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
 > **Last Verified**: 2026-11-02

@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: Revised after first design review (2026-11-02, NEEDS REVISION, 7 blocking items addressed); pending re-review
+> **Status**: Revised after second design review (2026-11-02, NEEDS REVISION, 3 blocking and 5 recommended items addressed); pending re-review
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
@@ -29,7 +29,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 **Layout rules, checked by the content test.** All numbers are proposed and in field units on the 540 × 960 field. Insets are converted at the narrowest supported width, 360 dp, where 1 dp is 1.5 units (Input, Battle HUD), because a fixed dp inset is largest in field units there. So the rules allow up to 72 units (48 dp) at the bottom and 102 units (68 dp) at the top, which puts the top band's lower edge at 174 (Battle HUD). A 59 pt notch on a 390 pt phone is about 82 units, inside that. The insets are unverified on devices. L1 and L6 keep a margin of 16 at the starter stage.
 
-**Nothing outside the field is ever shown.** On a screen taller or wider than 9:16, everything outside the 540 × 960 field is masked, so the path's off-field ends stay unseen on every shape. How it is masked is the stretch mode decision record's (Open Questions); this rule is what that record must meet. So L5 tests against the field, not the screen.
+**Nothing outside the field is ever shown.** On a screen taller or wider than 9:16, everything outside the 540 × 960 field is masked, so the path's off-field ends stay unseen on every shape. How it is masked is the stretch mode decision record's (Open Questions); this rule is what that record must meet. So L5 tests against the field, not the screen. The two ways to mask treat insets differently. With letterbox bars, the notch and gesture areas fall in the bars and the in-field insets are near 0. With panels over a width-fit view, the insets above apply in full. The rules assume the second, the worse case. A screen scaled by height, wider than 9:16, shrinks the dp per unit below 0.667, Input's floor, and would push a 68 dp inset past 102 units, so the record must either keep the scale at or above that floor or recheck L1 and L6. Presses in the bars reach Input as positions outside the field, which Input's adapter already allows (Input ADR).
 
 | # | Rule | Starter stage |
 |---|---|---|
@@ -100,7 +100,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 | 3 | normal×12 @0.7 +0; fast×8 @0.5 +0 | 1,980 | 15 | First two fronts |
 | 4 | heavy×2 @3 +0; normal×8 @0.6 +8 | 2,500 | 15 | A packet catches the heavies, mostly in the hairpin |
 | 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,710 | 15 | An early leak, then a convergence |
-| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Everything converges before the exit |
+| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Catches run the whole path: the first normals reach the heavies from about 100, and the fasts reach both from about 600; the last normals catch only the last heavy, from about 1,550, near the exit |
 
 Each wave's total HP is 1.26 to 1.64 times the last.
 
@@ -268,7 +268,7 @@ The **catch_up** formula is defined as:
 | `delay` | float, seconds | 0–600 | data file | How much later the faster enemy spawns |
 
 **Output Range:** the distance where they meet. It is evaluated only when `v_fast` is above `v_slow`: at equal or reversed speeds the gap never closes, so there is no meeting point and the formula is not used. They never meet on this path if the result exceeds `path_length`. Slows move this point, so re-derive it once towers exist.
-**Example:** heavy 38, normal 60, delay 8: 829, inside the starter hairpin (644 to 1,294).
+**Example:** heavy 38, normal 60, delay 8: 829, inside the starter hairpin (644 to 1,294). Wave 4's second heavy spawns at 3 s, so against the first normal the delay is 5 and the catch is 518, on the first descent before the hairpin. Of the 16 catches between wave 4's 8 normals and 2 heavies, 13 fall in the hairpin, so its Intent says "mostly".
 
 The **lives_at_risk** formula is defined as:
 
@@ -308,7 +308,7 @@ The **gold_upper_bound** formula is defined as:
 | `bounty`, `count` | int | 0–100,000; 1–500 | data file | Per group |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and excludes the early-call bonus, which belongs to the Tower GDD, as does any bound on this value.
-**Example:** through wave 5: 456. Through wave 6: 630. A full board costs at least 550 at the Tower GDD's prices, so a player cannot have everything before the last wave, which is a source of decisions.
+**Example:** through wave 5: 456. Through wave 6: 630. A full board, all 5 slots built and at level 2, costs at least 550 at the Tower GDD's prices (all single). Gold before wave 6 is at most 496, with every call's bonus (Tower), so a player cannot have everything before the last wave, which is a source of decisions. Wave 6's 174 arrives during the last wave, so it buys only mid-wave upgrades, and after the last kill it buys nothing.
 
 ## Edge Cases
 
@@ -422,11 +422,11 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 3. (Rule 9, d_next) **GIVEN** `e`, **WHEN** T0, **THEN** `d` is 10, so it moved on its spawn tick; at factor 0.5 the next step is 5.
 4. (Rules 5, 9, 10, 11) **GIVEN** a spy accessor doubling `move_speed` after T0, **THEN** T1 gives `d` 30. Changed `lives_cost` and `bounty` reach their events. A changed `max_hp` leaves current HP alone.
 5. (Rule 10) **GIVEN** a group of `e` then a group of `h`, both at +0, **WHEN** T5, **THEN** `enemy_leaked(1), enemy_leaked(2), wave_cleared(2.0)`, and during the first event the roster holds only `h`.
-6. (Rule 13) **GIVEN** a listener latching halt on that first event, **THEN** `enemy_leaked(1)` only, and the second stays. **GIVEN** the spy latching during the move to `d` 60, **THEN** an empty log and position (10, 980). **GIVEN** a corpse and the latch, **WHEN** reap, **THEN** an empty log. **GIVEN** the spy latching during the second member's `max_hp` read, **THEN** that enemy is not added and no later member spawns.
+6. (Rule 13) **GIVEN** a listener latching halt on that first event, **THEN** `enemy_leaked(1)` only, and the second stays. **GIVEN** the spy latching on the sixth `move_speed` read (T5's move, from `d` 50), **THEN** an empty log, `d` 50, position (10, 970), and `e` still in `roster()`, since the halt check follows the read and the value is never used. **GIVEN** the spy latching on the `lives_cost` read at T5, **THEN** an empty log, `d` 60, position (10, 980), and `e` still in `roster()`, clamped and unseen. **GIVEN** a corpse and the latch, **WHEN** reap, **THEN** an empty log. **GIVEN** the spy latching during the second member's `max_hp` read, **THEN** that enemy is not added and no later member spawns.
 7. (Rule 11) **GIVEN** one `e` and no kills, **THEN** T0 to T4 log nothing and T5 logs `enemy_leaked(1), wave_cleared(2.0)`. **GIVEN** the same on the last wave position, **THEN** T5 logs `enemy_leaked(1), waves_complete()`.
 8. (Rule 11) **GIVEN** before a start, after a clear, and Finished, **WHEN** 100 T, **THEN** nothing is appended.
 9. (Rules 11, 15) **GIVEN** `e` ×2 @2.0 with the first killed at T0, **THEN** T0 logs `enemy_killed(4)`, T1 to T7 log nothing despite the empty roster, and the second member spawns at T8. **GIVEN** a kill listener calling add-enemy, **THEN** no clear until that enemy goes.
-10. (Rules 11, 12) **GIVEN** two enemies killed highest `spawn_id` first, **WHEN** reap, **THEN** bounties in ascending `spawn_id` order, both removed, neither moved. **WHEN** a clear fires, **THEN** listeners already see Waiting or Finished.
+10. (Rules 11, 12) **GIVEN** a group of `e`×1 then a group of `e5`×1 (`e` with bounty 5), both at +0, with `e5` killed first and then `e` in T0, **WHEN** T0's reap, **THEN** the log is `enemy_killed(4), enemy_killed(5), wave_cleared(2.0)`, both are removed, and neither moved after T0's move. **GIVEN** a listener reading wave state on `wave_cleared`, **THEN** it sees Waiting. **GIVEN** the same on a one-entry `wave_ids`, **THEN** the log ends `waves_complete()` and the listener sees Finished.
 11. (Rule 11) **GIVEN** `wave_ids` [a, b, a], each one `e`, with `intermission_duration` 2.0 on a and 3.0 on b, **WHEN** each wave is started and its enemy leaks, **THEN** the log is `enemy_leaked(1), wave_cleared(2.0), enemy_leaked(1), wave_cleared(3.0), enemy_leaked(1), waves_complete()`.
 12. (Rule 7) **GIVEN** a start and no tick, **THEN** Active at `wave_tick` 0 with nothing spawned; **WHEN** T0, **THEN** tick-0 members exist. **WHEN** a start during Active or Finished, **THEN** unchanged, with one development error.
 13. (to_ticks, spawn_tick) **GIVEN** `dt` 1/60, in place of the factory's, **THEN** 0.9 s spawns at 0, 54, 108; 0.1 s has member 3 at 18; 0.125 s spawns at 0, 8, 15, 23; `to_ticks(5.0)` is 300. **GIVEN** the factory's `dt` 0.25, **THEN** `to_ticks(0.125)` is 1. No interval below the factory's tick is used as a `spawn_interval` here, since two members would share a tick; the validator rejects that in a real stage.
@@ -450,9 +450,9 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Mono-role | Tower stories | Every mono-role build ends below the best mixed build |
 | Always-call | Tower stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all |
 | Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
-| Two fronts | Hero stories | In waves 3, 5 and 6, two of `targets()` are over 2 × `leash_radius` apart at some tick |
+| Two fronts | Hero stories | In waves 3, 5 and 6, at some tick a `fast` and a non-`fast` in `targets()` are over 2 × `leash_radius` apart, straight-line. A string of one type does not count, since wave 1's alone spans over 180 |
 | No input | This system's stories | With only Start pressed, the run survives wave 1 |
-| Stage length (advisory) | Hero stories | The mid-skill driven hero on each mixed build ends a won stage in 5 to 8 minutes with no early calls, and in at least 3.5 minutes with every wave called. Measured in ticks, not wall time. A miss reopens wave counts and intermissions here; it does not block a story. The simulation gives 5.0 to 5.3 and 3.7 to 3.8 |
+| Stage length (advisory) | Hero stories | The mid-skill driven hero (Hero System, Simulated results) wins on each of the four mixed builds, and each run lasts 5 to 8 minutes with no early calls and at least 3.5 minutes with every wave called. Length is ticks × `dt` from the first Start to the Won tick, rounded to 0.1 minute. A lost run fails the row. A miss reopens wave counts and intermissions here; it does not block a story. The simulation gives 5.0 to 5.3 and 3.7 to 3.8, so one build sits on the floor with no margin |
 | Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough |
 | L10, L11, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass |
 | Retry (Flow) | This system's stories | A retried battle's snapshot equals a fresh one, the old battle's `weakref` is null, and only the catalogue is shared |
@@ -461,7 +461,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | Catalogue unchanged (Data) | Tower, this system's stories | Unchanged after a battle where an enemy spawned and died |
 | Never cache (Data) | Tower, Hero, HUD stories | The second use reflects the spy |
 
-**Manual** (screenshots retained in `production/qa/evidence/`): the path is drawn on its points; entry and exit are unseen; the three types are told apart in grey at minimum size; dormant and active exit strip.
+**Manual** (screenshots retained in `production/qa/evidence/`): the path is drawn on its points; entry and exit are unseen; the three types are told apart in grey at minimum size; dormant and active exit strip. **Masking:** a screenshot at 9:19.5 and one at 4:3 while an enemy is entering and one is leaving. Each passes if no pixel of the path or of an enemy outside the 540 × 960 field is visible, the exit at y 960 to 980 included, and fails otherwise.
 
 **Checked by code review, not tests:** one distance per enemy (Rule 1), nothing stored on records (Rule 7), and lists unmodified and not kept (Rule 14).
 
@@ -472,7 +472,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
 | The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
-| Lives never come back, so an early leak's cost lasts the whole stage, and the lost bounty adds to it. The gold side is bounded: a surviving player leaks at most 9 lives, worth 68 gold, about two build or upgrade decisions (Tower System), and that bound, not instant retry, is why the loss is accepted. Open: does a player who leaks in wave 2 still feel the stage can be won, or do they retry at once? Log the wave of first leak and whether the player retried before the outcome | qa-lead | First playable |
+| Lives never come back, so an early leak's cost lasts the whole stage, and the lost bounty adds to it. The gold side is bounded: a surviving player leaks at most 9 lives, worth at most 68 gold (worst case 4 heavies and 1 normal), about one tower; typical early leaks are normals at 4 gold each (Tower System). That bound, not instant retry, is why the loss is accepted. The real cost is the tower that gold would have bought in harder waves, a loop that reinforces itself. Open: does a player who leaks in wave 2 still feel the stage can be won, or do they retry at once? Log the wave of first leak and whether the player retried before the outcome | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The spacing target assumes a splash radius of at most 75 and no stacked slows; a slow tightens a whole group only if it covers every member | Tower GDD + bots | First playable |
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
