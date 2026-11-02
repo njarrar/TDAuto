@@ -32,6 +32,7 @@ project:
 modes:
   rigor: full
   automation: autonomous
+  workflow: standard
 
 engine:
   name: "Godot"
