@@ -226,7 +226,7 @@ The **gold_before_wave** formula is defined as:
 | 5 | 120 | 456 | 496 |
 | 6 | 174 | 630 | 670 at the end |
 
-That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call. A surviving player can leak at most 9 lives, worth 68 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold, and instant retry is its answer until a playtest says otherwise.
+That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call. A surviving player can leak at most 9 lives, worth 68 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold. This bound, not instant retry, is why the compounding loss is accepted; lives never come back, and whether an early leak still feels winnable is Enemy & Wave's Open Question.
 
 The **tower_dps** formula is defined as:
 
