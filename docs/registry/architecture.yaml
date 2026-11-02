@@ -107,6 +107,19 @@ interfaces:
       - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
     added: 2026-11-02
     revised: ""
+  - contract: battle_signal_wiring
+    status: active
+    pattern: signal
+    producer: every battle system (StageFlow, WaveSim, TowerSim, HeroSim, Combat), GestureResolver, TowerInput, HeroInput, BattleWrapper
+    consumers:
+      - battle systems (connected in BattleBuilder.build)
+      - views and Battle HUD (connected in BattleWrapper)
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    signal_signature: "Canonical table in ADR-0002 section 4; typed parameters; connected only in BattleBuilder.build or BattleWrapper with signal.connect(bound_method); each battle system declares const VIEW_SIGNALS"
+    referenced_by:
+      - docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -177,6 +190,16 @@ api_decisions:
       - docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
     added: 2026-11-02
     revised: ""
+  - purpose: wiring_test_signal_set
+    status: active
+    api: "(get_script() as Script).get_script_signal_list() and get_signal_connection_list(name) over battle.systems() and every wrapper-built object"
+    not: "a hand-written list of signals in the test"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    reason: "A derived set covers new signals with no edit; a hand list goes stale"
+    referenced_by:
+      - docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+    revised: ""
 
 # Example:
 #
@@ -226,6 +249,36 @@ forbidden_patterns:
     description: "Data files load only from the explicit manifest, never by scanning a directory"
     why: "Data GDD Rule 4: exported builds rename and package files"
     adr: docs/architecture/adr-0001-catalogue-storage-and-stat-accessor.md
+    added: 2026-11-02
+  - pattern: event_bus_autoload
+    status: active
+    description: "No global signal hub or event-bus autoload; signals are declared on their owner and connected in BattleBuilder.build or BattleWrapper"
+    why: "Hidden global; breaks headless fixtures and the derived wiring test"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+  - pattern: string_signal_connect
+    status: active
+    description: "No connect(\"name\", ...) by string; use emitter.signal.connect(bound_method) on statically typed references"
+    why: "Deprecated since 4.0; the parser cannot catch a misspelt name"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+  - pattern: listener_order_dependence
+    status: active
+    description: "No result may depend on which of two listeners of one signal runs first; a sim signal has at most one sim listener"
+    why: "Listener order is NOT SOURCEABLE from the pinned reference (ADR-0002 S1)"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+  - pattern: deferred_or_awaited_gameplay_signals
+    status: active
+    description: "Gameplay signals are synchronous: no CONNECT_DEFERRED, no CONNECT_ONE_SHOT, no await on a signal in gameplay code"
+    why: "Tick order and determinism (Flow Rule 4, ADR-0003)"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
+    added: 2026-11-02
+  - pattern: system_holds_battle
+    status: active
+    description: "No battle system holds a reference to Battle; halted() reaches systems through the shared HaltLatch"
+    why: "A RefCounted cycle would keep the old battle alive after Retry"
+    adr: docs/architecture/adr-0002-signal-contracts-and-wiring-conventions.md
     added: 2026-11-02
 
 # Example:
