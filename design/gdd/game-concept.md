@@ -175,7 +175,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 
 **Colour philosophy:** dark neutral field (near-black blue); pure saturated hues reserved for meaning — hero white/gold, towers cool (cyan/teal), enemies warm (orange/red), danger magenta. One hue per gameplay fact.
 
-**Orientation:** portrait. Enemies path top-to-bottom; the hero is pinned by a drag and holds a leash drawn as a thin dashed ring; the burst is aimed by a drag from a bottom-corner button with the reticle offset from the thumb; slots tapped in the field; panels only in the top band so the thumb never hides the lower lane; UI anchored to safe areas. Full rules: `design/art/art-bible.md` §3, §7.
+**Orientation:** portrait. Enemies enter below the top band and exit at the bottom; the hero is pinned by a drag and holds a leash drawn as a thin dashed ring; the burst is aimed by a drag from a bottom-corner button with the reticle offset from the thumb; slots tapped in the field; panels only in the top band so the thumb never hides the lower lane; UI anchored to safe areas. Full rules: `design/art/art-bible.md` §3, §7.
 
 **Labour:** LOW — engine primitives or 5-minute vector shapes; no textures or animation frames. Risk: can feel sterile; mitigate with hero-burst VFX, not asset count.
 
@@ -219,7 +219,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 | **Audio Needs** | Minimal in MVP; moderate at Small Ship (SFX per tower/hero action, one loop per stage family) |
 | **Networking** | None |
 | **Content Volume** | Full vision: 20 stages, 6–8 towers, 4+ hero weapons, ~40 tree nodes, ~3–5 hours. Small Ship: 8 stages, 4 towers, 2 weapons, ~15 nodes, ~1.5 hours. |
-| **Procedural Systems** | None. Stages hand-authored in the engine's tile editor; waves and stats in data files. Procedural paths rejected (more work, worse quality). |
+| **Procedural Systems** | None. Stages hand-authored as point lists in data files, with their look in the scene (Enemy & Wave GDD); waves and stats in data files. Procedural paths rejected (more work, worse quality). |
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Status**: In Review (design reviews 2026-11-01: NEEDS REVISION four times; the fourth review's 4 blocking items applied, re-review pending)
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-01
+> **Last Updated**: 2026-11-02
 > **Last Verified**: 2026-11-01
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (`visual_key` on Enemy and Hero, art bible mapping, Open Questions widened)
 > **Implements Pillar**: Enabling system for all four pillars (Pillar 1 and 3 most directly: growth and stage variety are data)
@@ -28,12 +28,12 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Tower | `tags`; `levels[]`, each with absolute values (never deltas): `cost`, `damage`, `range`, `attack_interval`, `visual_key`, and role fields where relevant (`splash_radius`, `slow_strength`, `slow_duration`) |
 | Enemy | `max_hp`, `move_speed`, `bounty`, `lives_cost`, `visual_key`, `tags` |
 | Wave | `groups[]`, each with `enemy_id`, `count`, `spawn_interval`, `start_delay`; `intermission_duration`, the time before the next wave, ignored on the last wave |
-| Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives` |
+| Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives`, `path_points[]`, `slot_positions[]`, `path_width` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `cooldown`, `telegraph_duration` |
 | Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |
 
-**Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD is expected to add routes, locomotion and armour or resist this way.
+**Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
 **Field domains.** These are invariants against typos and broken simulation, not balance. Balance ranges belong to the owning GDDs. All ceilings and the floor are proposed.
 
@@ -54,8 +54,11 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `edge_reject_margin` | float, world units | 0 | 48 | Input |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
+| `path_width` | float, world units | above 0 | 2,000 | Enemy & Wave |
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
+
+`path_points` holds at least 2 points with no repeated consecutive point, and `slot_positions` at least 1. Every coordinate is finite and within −2,000 to 2,000. These are boot-fatal, since a zero-length segment would divide by 0; layout rules are the content test's (Enemy & Wave GDD).
 
 **Tower levels and cost.** Levels are numbered from 1. `cost` at level N is the price of reaching N from N-1, so level 1's `cost` is the build price. The Tower GDD may overturn this, and it owns level count and sell or refund.
 
@@ -80,7 +83,7 @@ A role field without its tag is rejected, because dead data could still be targe
 
 Stage has no row: its fields are structural and read directly (Rule 10). Role keys apply only to a tower holding that role's tag: reading `splash_radius` on a `slow` tower is an inapplicable key.
 
-**Stage visuals are not catalogue values.** Field hue, base value, path curve, path width and grid tilt (`design/art/art-bible.md` §6) are presentation and live in the stage scene. MVP has one path per stage.
+**Stage visuals are not catalogue values.** Field hue, base value and grid tilt (`design/art/art-bible.md` §6) are presentation and live in the stage scene. Path points, slot positions and path width are on the Stage record, because they set time to leak and tower coverage (Rule 1), and the builder runs with no scene. MVP has one path per stage.
 
 There is no separate economy record: gold values sit on the records that spend or earn them. Weapon, tree node and modifier records are reserved for Vertical Slice in prose only, with no empty fields or loaders now. Entity `tags` exist from MVP because modifiers will select their targets by tag ("nearby towers") and a source tag alone cannot express that.
 
@@ -94,8 +97,8 @@ There is no separate economy record: gold values sit on the records that spend o
 6. **Read-only after load.** No system writes to a definition. Mutable state (current HP, cooldown, target, current level) lives on the runtime instance, which holds `def_id`, and level for Towers. The engine does not enforce this, so it is a rule with a test (see Acceptance Criteria).
 7. **Validate everything, collect all errors, then fail.** Every error has the structure `{code, source, record_id, field}`, where `source` is the file, or a label for code-built fixtures. Manifest and file errors stop before any record checks, since records from a broken manifest would only produce noise. A record type with no records is detected once every file is parsed and before any record is validated; it counts as a manifest-tier error and stops record checks the same way. An unknown tag suppresses that record's role checks, so one typo gives one error. Checks: ID format, duplicate IDs, dangling or wrong-type references, missing fields, unknown properties (a field no record type declares), unknown tags, a tower without exactly one role tag, role fields missing for or present without their tag, empty lists, fractional integers, and every number finite (checked first) and inside the field-domain table. From Vertical Slice, modifier stat keys are checked against the vocabulary. There are two tiers and no warning tier, since a solo developer learns to ignore warnings: these boot-fatal invariants, and the CI content test for everything else (Rule 9).
 8. **No fallbacks, in any build.** A silently defaulted value corrupts balance and the hero-share metric. A development run names every error by file, record and field. Content ships inside the build, with no mods or network, so the CI content test (Rule 9) and the exported-build check in Acceptance Criteria guard against shipping bad data; if it still happens, the player sees a generic fatal screen that uses no catalogue data, and saves are never opened.
-9. **Scene content is checked by the content test, not at boot.** A stage's path and slots live in its scene; checking them at load would mean instancing every stage. The CI content test opens each `scene_ref` and verifies the scene exists and has a path and build slots (slot counts per stage belong to Enemy & Wave). The same test enforces a non-empty `rationale` on every record and any balance range an owning GDD declares. Art-bible range and consecutive-stage checks join it at Vertical Slice. A stage scene that is still broken at runtime gives a fatal screen at stage start, naming the stage in a development run.
-10. **One stat accessor.** Any number a modifier could target (damage, range, cost, bounty, leash radius) is read through one accessor taking a **read context** and a stat key, and returning the type the stat-key table declares for that key. The context always holds `def_id`; for a Tower it also holds the level, since Towers are the only MVP record with levels. A level passed for an Enemy, Hero or Burst is a bad call. The context holds the live entity when one exists; a HUD cost preview has none and passes `def_id` and level alone. At MVP the accessor returns the base value for that context. The system also exposes each tower's level count, so callers never ask past the maximum. The context allows a live entity, not just a definition, because the first cross-buff ("towers near the hero") depends on instance and position; a definition-only form would mean rewriting every call site at Vertical Slice. Callers read at use time and never cache at spawn: when a spy accessor changes its value between uses, the consumer's next use reflects it (checked in the Tower, Hero and HUD stories). Structural data (a wave's groups) and every Stage field (`scene_ref`, `wave_ids`, `starting_gold`, `starting_lives`) are read directly, not through the accessor: Stage has no stat-key row. A modifier that targets a stage start value ("+50 starting gold") is a Stat GDD question and would add a Stage row then. A bad call (unknown key, key inapplicable to that record, out-of-range or unexpected level, unresolved `def_id`) calls an injected failure handler, naming the cause. **The handler is the contract:** in the game it reaches the fatal screen, and tests replace it. The value returned after a bad call is unspecified and no caller may use it, since typed GDScript cannot express "this returns a number or nothing". The check must survive release builds (mechanism in the ADR; the pinned engine reference does not cover assert behaviour).
+9. **Scene content is checked by the content test, not at boot.** Checking scenes at load would mean instancing every stage. The CI content test opens each `scene_ref` and verifies the scene exists, and applies the Enemy & Wave GDD's layout and wave rules to the records. The same test enforces a non-empty `rationale` on every record and any balance range an owning GDD declares. Art-bible range and consecutive-stage checks join it at Vertical Slice. A stage scene that is still broken at runtime gives a fatal screen at stage start, naming the stage in a development run.
+10. **One stat accessor.** Any number a modifier could target (damage, range, cost, bounty, leash radius) is read through one accessor taking a **read context** and a stat key, and returning the type the stat-key table declares for that key. The context always holds `def_id`; for a Tower it also holds the level, since Towers are the only MVP record with levels. A level passed for an Enemy, Hero or Burst is a bad call. The context holds the live entity when one exists; a HUD cost preview has none and passes `def_id` and level alone. At MVP the accessor returns the base value for that context. The system also exposes each tower's level count, so callers never ask past the maximum. The context allows a live entity, not just a definition, because the first cross-buff ("towers near the hero") depends on instance and position; a definition-only form would mean rewriting every call site at Vertical Slice. Callers read at use time and never cache at spawn: when a spy accessor changes its value between uses, the consumer's next use reflects it (checked in the Tower, Hero and HUD stories). Structural data (a wave's groups) and every Stage field (`scene_ref`, `wave_ids`, `starting_gold`, `starting_lives`, `path_points`, `slot_positions`, `path_width`) are read directly, not through the accessor: Stage has no stat-key row. A modifier that targets a stage start value ("+50 starting gold") is a Stat GDD question and would add a Stage row then. A bad call (unknown key, key inapplicable to that record, out-of-range or unexpected level, unresolved `def_id`) calls an injected failure handler, naming the cause. **The handler is the contract:** in the game it reaches the fatal screen, and tests replace it. The value returned after a bad call is unspecified and no caller may use it, since typed GDScript cannot express "this returns a number or nothing". The check must survive release builds (mechanism in the ADR; the pinned engine reference does not cover assert behaviour).
 11. **Stat-key vocabulary.** This system owns the list of valid stat keys (the table above). An unknown key fails at the accessor (Rule 10) and, from Vertical Slice, in modifier validation.
 12. **Injection, not a global.** The app root (Game State & Stage Flow) holds the Ready catalogue across retries, and the battle builder hands it to consumers. Tests build small fixture catalogues in code with no file I/O; a separate integration suite validates the real data files.
 13. **Tuning loop.** Edit a value, save, run: the new value is in the game within 10 seconds (proposed), with no code touched. Changes apply on the next run; there is no live reload.
@@ -146,6 +149,7 @@ There is no reload transition: a data change applies on the next run.
 - **If a group's `count` is below 1**: Fail. It is never skipped.
 - **If `start_delay` is negative**: Fail. Unordered or overlapping groups are legal; delays count from wave start.
 - **If `wave_ids` is empty**: Fail. Repeated wave IDs are legal.
+- **If `path_points` has fewer than 2 points or repeats a consecutive point, or `slot_positions` is empty**: Fail.
 - **If a tower has zero levels**: Fail. Any count above zero passes here; the Tower GDD's content test enforces how many levels a tower must have.
 - **If a tag is unknown**: Fail with one error for that tag, and skip that record's role checks.
 - **If a role field its known tag implies is missing on any level**: Fail.
@@ -213,7 +217,7 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 **CI: Logic**
 1. (Rules 2, 3) **GIVEN** fixtures with a cross-type duplicate ID, a dangling reference and a `burst_id` naming an enemy, **WHEN** validated, **THEN** the state is Failed and each error is a `{code, source, record_id, field}` value (one per record for duplicates). Fixtures supply a label as `source`.
-2. (Rule 7) **GIVEN** table-driven fixtures (missing field, unknown property, unknown tag, role field missing on one level, role field without its tag, tower with no role tag, ID not in snake_case, empty `wave_ids` or `levels`, fractional integer), **WHEN** validated, **THEN** each yields exactly its one expected `{code, record_id, field}`, including a single error for an unknown tag on a tower with no other tag.
+2. (Rule 7) **GIVEN** table-driven fixtures (missing field, unknown property, unknown tag, role field missing on one level, role field without its tag, tower with no role tag, ID not in snake_case, empty `wave_ids` or `levels`, a path of one point or with a repeated consecutive point, fractional integer), **WHEN** validated, **THEN** each yields exactly its one expected `{code, record_id, field}`, including a single error for an unknown tag on a tower with no other tag.
 3. (Rule 7) **GIVEN** boundary values, **WHEN** validated, **THEN** an interval below one tick, `max_hp` 0, cost -1, `start_delay` -1, `count` 0, `starting_lives` 0, `slow_strength` 0, 1 and 1.01 and any value above its ceiling fail; NaN and infinity report non-finite, not bounds; cost 0, `lives_cost` 0, delay 0, `slow_strength` 0.5, values exactly at an inclusive floor or ceiling, repeated wave IDs and overlapping groups pass.
 4. (Rule 7) **GIVEN** a fixture seeded with 5 unrelated errors, **WHEN** validated once, **THEN** the reported set equals those 5 `{code, source, record_id, field}` values, in any order.
 5. (Rule 5) **GIVEN** an empty manifest, a type with no records, a repeated path or an empty file, each alongside an otherwise invalid record, **WHEN** loaded, **THEN** there is one manifest or file error, no record error is reported, the state is Failed and no lookup is served. **GIVEN** a valid fixture, **THEN** the state is Ready.
@@ -223,7 +227,7 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 **CI: Integration**
 9. (Rules 4, 7) **GIVEN** the real manifest plus a valid data file not listed in it, **WHEN** loaded, **THEN** there are zero errors, every listed record is present, and the unlisted record is absent. This proves manifest logic only, not export behaviour.
-10. (Rule 9) **GIVEN** every Stage record, **WHEN** the content test opens each `scene_ref`, **THEN** each exists with a path and at least one slot; a broken fixture scene fails, naming its stage.
+10. (Rule 9) **GIVEN** every Stage record, **WHEN** the content test opens each `scene_ref`, **THEN** each exists; a broken fixture scene fails, naming its stage.
 11. (Rule 6, detector self-test) **GIVEN** a deep catalogue snapshot including wave groups, **WHEN** a test deliberately changes a nested fixture value, **THEN** the comparison reports that field; with no change it reports none.
 12. (Rules 8, 10) **GIVEN** an injected handler, **WHEN** a bad accessor call occurs, **THEN** the handler is invoked and the catalogue stays Ready. The fatal screen itself is owned by Game State (see deferred criteria).
 
@@ -248,8 +252,7 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 |---|---|---|
 | Storage format and read-only enforcement (recommended: typed Resources), confirmed by a real Android export | technical-director, `/architecture-decision` | Technical Setup gate |
 | Can the hero die? No hero HP field exists until this is decided | Hero GDD | Hero GDD |
-| Routes and enemy behaviour: `path_id` or lanes, locomotion, armour and resist, splitter spawn reference, wave-to-wave timing, optional bounty multiplier, `introduces`, stage gold-budget test. Must be resolved before Vertical Slice | Enemy & Wave GDD | Enemy & Wave GDD |
-| Art bible §6 says one continuous path, but its previews show forks and parallel lanes | art-director + Enemy & Wave GDD | Enemy & Wave GDD |
+| Locomotion, armour and resist, splitter spawn reference, `introduces`. Answered for MVP by the Enemy & Wave GDD: none are needed yet | Vertical Slice GDDs | Vertical Slice |
 | Sell or refund, level count, whether refund and cost chip share one accessor call; gold faucets beyond starting gold and bounty | Tower GDD (faucets: Tower or Enemy & Wave) | Tower GDD |
 | Preview data: `attack_type`, `display_name`, stage order | Stage Progression GDD | Vertical Slice |
 | `leash_radius` minimum policy | Hero GDD | Hero GDD |

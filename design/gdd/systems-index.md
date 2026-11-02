@@ -2,7 +2,7 @@
 
 > **Status**: Draft
 > **Created**: 2026-11-01
-> **Last Updated**: 2026-11-01
+> **Last Updated**: 2026-11-02
 > **Source Concept**: design/gdd/game-concept.md (design-review 2026-11-01: NEEDS REVISION — this index follows the *confirmed* hero model from `prototypes/hero-pin-concept/REPORT.md`, not the concept's stale tap-to-move text)
 > **TD-SYSTEM-BOUNDARY**: CONCERNS 2026-11-01 — applied inline (see Dependency Map notes)
 > **CD-SYSTEMS**: CONCERNS (accepted) 2026-11-01 — recorded beneath Priority Tiers
@@ -28,7 +28,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
 | 3 | Game State & Stage Flow (inferred) | Core | MVP | Designed | design/gdd/game-state-stage-flow.md | Data & Config |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | — |
-| 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Not Started | — | Data & Config, Combat, Game State |
+| 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Not Started | — | Enemy & Wave, Combat, Input, Data & Config, Game State |
 | 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Not Started | — | Input, Combat, Enemy & Wave, Data & Config |
 | 8 | Battle HUD & Build UI (inferred) | UI | MVP | Not Started | — | Game State, Tower, Hero, Input |
@@ -97,7 +97,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Feature Layer
 
-1. Enemy & Wave — depends on: Data, Combat, Game State. Each emitter declares its own signals (Data owns none, per the Data & Config GDD); the composition root wires them.
+1. Enemy & Wave — depends on: Data, Combat, Game State. Each emitter declares its own signals (Data owns none, per the Data & Config GDD); the composition root wires them. Path and slots moved from the stage scene to the Stage record, technical-director to confirm.
 2. Tower System — depends on: Enemy & Wave, Combat, Input, Data, Game State. Gold income from `enemy_killed(bounty)`.
 3. Hero System — depends on: Input, Combat, Enemy & Wave, Data. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
 4. Stage Progression & Stars — depends on: Game State, Enemy & Wave, Combat (per-source counters for the report), Data. **TD note:** stars are lives-based, not damage-based.
@@ -177,10 +177,10 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Metric | Count |
 |--------|-------|
 | Total systems identified | 22 |
-| Design docs started | 4 |
+| Design docs started | 5 |
 | Design docs reviewed | 0 |
 | Design docs approved | 0 |
-| MVP systems designed | 4/8 |
+| MVP systems designed | 5/8 |
 | Vertical Slice systems designed | 0/11 |
 
 ---

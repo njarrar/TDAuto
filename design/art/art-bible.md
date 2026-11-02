@@ -54,7 +54,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Damaged | Dark inner core disc growing from 0 to 60% of body radius |
 | Slowed | Two trailing parallel drag lines plus a 15% size-pulse wobble (tinted violet) |
 | Armoured | Thick 2 dp outer ring that breaks into an arc as armour is stripped |
-| Danger | Pulsing chevrons at the exit plus a double outline on the threatened element |
+| Danger | Pulsing chevrons at the exit plus a double outline on the exit strip |
 
 ## 3. Shape Language
 
@@ -64,7 +64,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 - Triangle: precision, single-target.
 - Square: sustained rapid fire.
 - Hexagon: area and control, including slow.
-- Enemies are circles only. Type is told by size and notch: fast = smallest with one forward V-notch; normal = plain; armoured = largest with a thick outer ring; flying = an offset shadow ring that lags its body in motion (one feature; notches dropped per AD-ART-BIBLE); splitter = a centre seam in the field colour; lane-switcher = one flat chord edge on the side it will move toward.
+- Enemies are circles only. Type is told by size and notch: fast = smallest with one forward V-notch; normal = plain; heavy = largest, plain; armoured = equally large with a thick outer ring; flying = an offset shadow ring that lags its body in motion (one feature; notches dropped per AD-ART-BIBLE); splitter = a centre seam in the field colour; lane-switcher = one flat chord edge on the side it will move toward.
 
 **Hero.** The only asymmetric shape: one long axis and one off-centre point so it never reads as a regular polygon; its facing is its long tip; the only persistent glow; never smaller than 44 px visible; no supporting shape may share its contour.
 
@@ -85,7 +85,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 | Build slot | 56 px | 72 px |
 | Burst button | 84 px | 96 px |
 | Build-arc disc | 56 px | 72 px |
-| Enemy | 16 px (fast) to 30 px (armoured) | none |
+| Enemy | 16 px (fast) to 30 px (heavy, armoured) | none |
 
 ## 4. Color System
 
@@ -130,7 +130,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Weapons by accretion, never recolour** (Principle 2). Each Vertical Slice weapon adds one element to the kite's contour and never alters fill, glow or long axis: weapon A adds a short barb pair at the cross-point; weapon B adds an inset secondary kite outline. Rule for any future weapon: one added element, attached at the cross-point or blunt end, never at the tip, and the 44 px silhouette must still contain exactly one tip. Weapons are visible from the first frame of a stage so the preview is honest about loadout. (Weapon names are placeholders until the Hero Weapons GDD exists.)
 
-**Enemy distinguishing features.** All enemies are circles; type is carried by size and one edge feature per Section 3. *Feature budget:* one type-feature per enemy plus at most one state cue from Section 2 (damaged core, slow drag lines, armour arc). A third mark is forbidden: at 16–30 px three edge features merge into noise. Where a type-feature and a state cue would share an edge (armoured ring vs armour arc), the state cue replaces the type-feature; size still says "armoured".
+**Enemy distinguishing features.** All enemies are circles; type is carried by size and one edge feature per Section 3. *Feature budget:* at most one type-feature per enemy (size, flashes and the keyline do not count) plus at most one state cue from Section 2 (damaged core, slow drag lines, armour arc). A third mark is forbidden: at 16–30 px three edge features merge into noise. Where a type-feature and a state cue would share an edge (armoured ring vs armour arc), the state cue replaces the type-feature; size still says "armoured".
 
 **Expression through motion.** Each enemy has exactly one motion trait: fast ones jitter forward; flyers bob ±2 px with the shadow ring lagging; armoured ones do not bob; splitters pulse the seam before splitting; lane-switchers lean toward the chord 0.5 s before switching. Telegraphs are motion, not colour, so they survive colour-blindness and sound-off.
 
@@ -148,7 +148,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Prop density: zero.** One exception: the lane exit carries the danger chevron strip permanently in a dormant state (static, alpha 0.3) so the player always knows where leaks happen; it animates only in danger. It is shared by every stage, so it is not bespoke scenery. Anything else decorative is a scope request to the producer, not an art decision.
 
-**Environmental storytelling without text.** The stage preview tells its attack type through path and lattice alone: a flying-heavy stage shows a path with a visible gap only flyers cross; a splitter stage forks and rejoins; a lane-switcher stage shows two close parallel lanes; a fast stage is short and straight; an armoured stage is a long serpentine. The preview is the real field geometry rendered small, so what it promises is what the player gets.
+**Environmental storytelling without text.** The stage preview tells its attack type through path and lattice alone: a fast stage is short and straight; an armoured stage is a long serpentine. The preview is the real field geometry rendered small, so what it promises is what the player gets. Forks, parallel lanes and flyer gaps wait until after Vertical Slice (Enemy & Wave GDD).
 
 **Legibility rule.** No field, path or slot element may exceed V 20% (base cap 14% plus the 6% edge lift) or carry hue within 30° of cyan, orange, gold, magenta or status violet (#8E7CFF, hue ~248, sits inside the 170–280 field range and is excluded by this rule). Every entity therefore sits at 5:1 or better against anything beneath it, and the dimmest entity (an enemy over a lifted path) is brighter than the brightest environment line.
 
@@ -190,7 +190,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Batching rules.** Godot 2D batches consecutive CanvasItems sharing texture, material, blend mode and z-index (unverified). Batching breaks on per-node materials, z-index interleaving, CanvasLayer changes and Light2D; uniform `modulate` is fine. Max **3 distinct CanvasItem shaders** per scene (hit flash, chevron pulse, outline); everything else `null` material. The 2 Hz pulse uses one shared `TIME`-driven material, so all pulsing elements pulse in sync. Outline zones are a second, slightly larger Polygon2D behind each shape with the same material, not a shader. Drag lines for slowed enemies come from one `draw_multiline` call.
 
-**Pooling and particles.** Pool at scene load: 64 tracers (hits are instant, so nothing flies), 48 enemies, 8 glow bursts, 16 hit-flash markers, dropping the oldest flash if they run out; never `instantiate()` mid-wave. VFX are animated shapes, not particles: burst ring = one tweened arc matching the radius preview; hit flash = an 80 ms white disc over the body, at alpha 1.0 for hero hits and about 0.6 for tower hits, so towers never outshine the hero; chevrons = three drawn polygons; tower fire = a 100 ms fading segment drawn by the one tracer `_draw()` node, not a Line2D node per shot; tower splash = a static 2 px unfilled ring at the true radius for 100 ms, which never expands, so it cannot read as a burst. Particles only for the enemy death pop, **CPUParticles2D**, at most 32 per emitter and **300 live particles total** (GPUParticles2D on Android drivers is a known risk; ideal, re-test later).
+**Pooling and particles.** Pool at scene load: 64 tracers (hits are instant, so nothing flies), 48 enemies, 8 glow bursts, 16 hit-flash markers, dropping the oldest flash if they run out; never `instantiate()` mid-wave, except when the enemy pool is empty: create one and log an error, since an invisible enemy is worse than a hitch. VFX are animated shapes, not particles: burst ring = one tweened arc matching the radius preview; hit flash = an 80 ms white disc over the body, at alpha 1.0 for hero hits and about 0.6 for tower hits, so towers never outshine the hero; chevrons = three drawn polygons; tower fire = a 100 ms fading segment drawn by the one tracer `_draw()` node, not a Line2D node per shot; tower splash = a static 2 px unfilled ring at the true radius for 100 ms, which never expands, so it cannot read as a burst. Particles only for the enemy death pop, **CPUParticles2D**, at most 32 per emitter and **300 live particles total** (GPUParticles2D on Android drivers is a known risk; ideal, re-test later).
 
 **Lines.** Godot 4.7 draws CanvasItem lines with no AA feather and they look thinner (`breaking-changes.md`): widen every line that relied on it by ~1 px. Line2D `antialiased` costs a second pass on Mobile (unverified): prefer width ≥ 2 px with AA off, or a 1 px feather baked into a 4×1 gradient texture. *Ideal:* `antialiased = true` everywhere, re-test.
 
@@ -206,7 +206,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 |---|---|---|---|
 | Hero | code + halo PNG | 1 | glow, dimmed outline (defeat) |
 | Towers | code | 3 roles × 3 levels | ready, cooling |
-| Enemies | code (one batched drawer if > 40) | 6 types | damaged, slowed, armoured |
+| Enemies | code (one batched drawer if > 40) | 7 types | damaged, slowed, armoured |
 | Build slot | code | 1 | free, blocked, selected |
 | Path | code (Line2D) | 1 per stage | draw-in entry |
 | Zones | code | leash, reticle, preview | in/out of zone |

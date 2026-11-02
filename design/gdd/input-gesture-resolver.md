@@ -313,7 +313,7 @@ The quantitative feel criterion is the concept's phone test (the Pillar 4 gate),
 None owned. This system has no screen, panel or widget; it supplies gestures to the systems that do. Two constraints on UI that other systems must honour are recorded here because the resolver assumes them:
 
 - The burst button is a registered disc owned by Hero System and placed by the HUD, not a Control, so it competes in this system's priority order rather than the engine's Control ordering; the HUD's top-band panels and pause button are Controls that consume their own events before the adapter sees them (art bible §7 panel placement: bottom 30% holds only the button and the field).
-- No build slot may sit so close to the burst button that their hit discs overlap at any supported safe-area inset: the button's priority would make part of that slot untappable. Owner: whoever authors slot positions per stage (Enemy & Wave / stage scenes). See Open Questions.
+- No build slot may sit so close to the burst button that their hit discs overlap at any supported safe-area inset: the button's priority would make part of that slot untappable. Owner: the Enemy & Wave GDD's layout rule L3, enforced by the content test on the Stage record's `slot_positions`.
 
 ## Cross-References
 
@@ -396,7 +396,6 @@ P1. **GIVEN** the Rule 13 gesture log and Tower's chip log, at least two non-dev
 |---|---|---|
 | Adapter: which Godot path feeds the five calls, and how moves and releases of the active index survive a `mouse_filter = STOP` Control mid-drag (the adapter contract in Dependencies); touch event field names and `canceled`; emulation settings (one event family only); whether positions arrive in the stretched 540×960 space and which stretch mode; lifecycle notifications for `cancel()`; Control `mouse_filter` ordering. None is in the pinned reference | technical-director, `/architecture-decision` | Before the first input story |
 | Do the 15-unit slop and the 36/48-unit radii hold on a phone with a non-developer tester? All evidence is one developer on a mouse (CD-PLAYTEST) | producer + Hero/Tower stories | First phone build (Pillar 4 test) |
-| No slot's hit disc may overlap the burst button's at any supported safe-area inset. Who owns slot positions per stage, and where is this constraint written so it exists? | Enemy & Wave GDD (stage scenes) + art bible §6/§7 | Enemy & Wave GDD |
 | Does a palm resting on a real tap target lock input often enough to matter? It holds by design (Rule 1). The reverse also needs watching: a second touch replaces an unmoved hero or burst press and can then tap a tower | qa-lead | First phone build |
 | Hero: pin at the finger position means the thumb covers the pin at release. If the phone test shows pin misses, does Hero route pins through its offset function too? | Hero GDD | First phone build |
 | Hero: should re-pinning be instant or a short walk? If "walk", the hero needs path-following and the concept's "no pathfinding" claim is revisited (concept Open Questions). The resolver is unaffected either way | Hero GDD | Hero GDD |

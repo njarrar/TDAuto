@@ -41,7 +41,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 8. **Slow is not a stat.** It does not go through the stat accessor, which answers a Data & Config Open Question: the resolver is pure, and a slow is per-instance countdown state. Enemy & Wave reads `move_speed` through the accessor at use time, then multiplies by Combat's `speed_factor(enemy)`.
 9. **No catalogue.** Combat reads no data. Callers read through the stat accessor and pass values in, so Combat depends on nothing and needs only plain fixtures to test. The one value kept from spawn is HP: `max_hp` seeds Health once, an exception to Data & Config's "never cache at spawn", because current HP is state.
 10. **Targeting helpers.** Combat owns three pure helpers over a list the caller passes, with ranges passed in: `first_in` (furthest along the path), `nearest_in` (nearest to the attacker) and `all_in_radius` (every victim of a splash or burst). They compare exact values, break ties by lowest `spawn_id`, scan rather than sort, and skip the dead. Attackers re-pick on every attack and hold no target, so no reference can dangle. Policies are fixed, with no upgrade or UI at MVP (Pillar 4): towers use first along the path, a slow tower prefers the first unslowed enemy so it does not waste slow on a slowed leader, and the hero uses nearest to itself. A hero target must be inside the leash around the pin and inside the hero's attack range; the prototype skipped the leash check, which let the hero hit far past it.
-11. **Tick order.** Flow, then Enemy & Wave (spawn, move, leak), Status countdown (ticked by Flow), Towers by slot index, Hero then burst, then Enemy & Wave's reap (kills, then clear checks). Leaks resolve before fire, as in the prototype, so an enemy reaching the end leaks even if a tower could have killed it that tick, a fatal leak skips the rest of the tick and pays no bounty, and a slow first affects the next tick's move. Enemy & Wave must confirm this.
+11. **Tick order.** Flow, then Enemy & Wave (spawn, move, leak), Status countdown (the battle's tick passes it Enemy & Wave's roster), Towers by slot index, Hero then burst, then Enemy & Wave's reap (kills, then clear checks). Leaks resolve before fire, as in the prototype, so an enemy reaching the end leaks even if a tower could have killed it that tick, a fatal leak skips the rest of the tick and pays no bounty, and a slow first affects the next tick's move. Enemy & Wave confirms this.
 12. **Views listen, combat does not wait.** `attack_fired(source_kind, source_id, origin, impact, radius)` draws lines and rings, even for a zero-damage slow attack. `damage_applied(event, applied, position)` draws flashes. Both carry copied positions, because a killed target is reaped before its flash is drawn. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them; Visual Feedback & VFX takes it over at Vertical Slice.
 
 **Not owned.** Who attacks whom and when: range, attack timers, burst cooldown and telegraph belong to Tower and Hero. Also the enemy roster, movement, gold, lives, and stat reads.
@@ -74,7 +74,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Tower System | calls | `deliver`, `apply_slow`, targeting helpers | Combat (API); Tower (when, whom, values) |
 | Hero System | calls | `deliver` for attacks and burst, targeting helper | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
-| Game State & Stage Flow | builds, reads | Builds it, ticks Status in order, reads counters for the result | Flow (order, result) |
+| Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
 
 ## Formulas
@@ -132,7 +132,7 @@ The **in_radius** formula is defined as:
 **Output Range:** true or false, inclusive, so an enemy exactly on the edge is hit and a primary target at distance 0 always is.
 **Example:** radius 50, enemy at (30, 40): 2,500 ≤ 2,500, a hit.
 
-A slow of duration `d` is stored as `ceil(d / dt)` whole ticks, and affects that many moves, because it first applies on the next tick and counts down after each move. `slow_duration` has a floor of one tick (Data & Config).
+A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Formulas; `ceil` came out a tick high at 4.15, 8.05 and 8.3 s), and affects that many moves, because it first applies on the next tick and counts down after each move. `slow_duration` has a floor of one tick (Data & Config).
 
 ## Edge Cases
 
@@ -157,7 +157,7 @@ A slow of duration `d` is stored as `ceil(d / dt)` whole ticks, and affects that
 
 **Upstream:** none. Combat reads no data, which corrects the systems index (callers read and pass values in).
 
-**Downstream (hard; only Game State and Data have GDDs, so each interface is provisional until its GDD confirms it):**
+**Downstream (hard; Tower, Hero and HUD have no GDD yet, so those interfaces are provisional until their GDDs confirm them):**
 
 | System | Interface |
 |---|---|
@@ -168,7 +168,7 @@ A slow of duration `d` is stored as `ceil(d / dt)` whole ticks, and affects that
 | Battle HUD, Visual Feedback & VFX (VS) | `damage_applied` |
 | Stage Progression & Stars (VS) | Counters (soft) |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. Game State already does.
+Per the bidirectional rule, each of these GDDs must list this one when authored. Game State and Enemy & Wave already do.
 
 ## Visual/Audio Requirements
 

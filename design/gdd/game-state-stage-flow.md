@@ -3,8 +3,8 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-01
-> **Last Verified**: 2026-11-01
+> **Last Updated**: 2026-11-02
+> **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 
 ## Summary
@@ -29,14 +29,14 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Time.**
 
-4. **One way in.** Simulation time enters only through `battle.tick(dt)`. Gameplay systems use no `_process`, engine timers, `await`, wall clock or physics areas, only countdowns and distance checks. Humans and bots run the same fixed tick (60 per second proposed, matching the Data & Config interval floor); the wrapper accumulates real time and clamps a long frame. Prototype numbers came from variable time for humans and 1/30 for bots, so they do not transfer and bots must be re-baselined.
+4. **One way in.** Simulation time enters only through `battle.tick(dt)`. Gameplay systems use no `_process`, engine timers, `await`, wall clock or physics areas, only countdowns and distance checks. Humans and bots run the same fixed tick (60 per second proposed, matching the Data & Config interval floor); the wrapper accumulates real time and clamps a long frame. Prototype numbers came from variable time for humans and 1/30 for bots, so they do not transfer and bots must be re-baselined. Authored durations become whole ticks through one conversion, `to_ticks` (Enemy & Wave GDD), since a repeated float countdown drifts: 5.0 s took 301 ticks.
 5. **Fixed order, commands between ticks.** Systems tick in a fixed order, each owning GDD agreeing its place. Player and bot commands apply only between ticks, never during one. Randomness uses the injected seed: the same stage, seed and command script give an identical result.
 
 **Stage phases.**
 
 6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here.
 7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_complete` instead, so Flow needs no wave count.
-8. **Intermission.** After every wave but the last, a countdown runs (duration owned by Enemy & Wave). The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
+8. **Intermission.** After every wave but the last, a countdown runs. Enemy & Wave owns its duration and sends it as the payload of `wave_cleared`. The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
 9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback if the always-call bot below shows dominance. Bots do not call early unless a mode says so, and a **towers-only, always-call** mode joins the Pillar 2 bot gates.
 10. **Actions are never phase-locked.** Building, upgrading and re-pinning stay live in Build, Wave and Intermission, and a change of phase never cancels a gesture. In Build, towers and pins apply at once, while movement and timers begin on the first tick. The burst is the exception: Hero refuses it in Build, since a stopped clock would never let it recover.
 
@@ -46,7 +46,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 12. **Lost.** The first leak that takes lives to 0 ends the stage on that tick, as Lost.
 13. **Won.** Enemy & Wave's `waves_complete` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_complete`.
 14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_complete` still arrives after that, the stage stays Lost and the event is ignored.
-15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit; the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started, lives left and Combat's damage by source, shown as plain text at MVP.
+15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit; the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The battle exposes one `halted()`, true on Won, Lost and Fatal, for systems whose own loops must stop. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started, lives left and Combat's damage by source, shown as plain text at MVP.
 15a. **Events out of phase.** A `wave_cleared` or `waves_complete` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: development builds log an error and the event is ignored. An `enemy_leaked` in Intermission also logs an error but still applies, because losing a life must never be silently dropped.
 
 **Retry.**
@@ -55,7 +55,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Pause.**
 
-17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
+17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
 
 **Fatal.**
 
@@ -126,18 +126,18 @@ The **lives_after** formula is defined as:
 
 The **intermission_left** formula is defined as:
 
-`intermission_left = max(0, intermission_left − dt)`
+`intermission_left = max(0, intermission_left − 1)`, in whole ticks, starting at `to_ticks(intermission_duration)`; `seconds_left = intermission_left × dt`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `intermission_left` | float, seconds | 0–600 | data file at start (Wave record, added by Enemy & Wave), then calculated | Time before the next wave |
+| `intermission_left` | int, ticks | 0–36,000 | calculated, from the `wave_cleared` payload (Wave record) | Time before the next wave |
 | `dt` | float, seconds | 1/60 proposed | constant | The fixed tick; an engine constant, not a catalogue value |
 
 Flow ticks before Enemy & Wave, and the tick that enters Intermission does not decrement.
 
 **Output Range:** the next wave starts on the tick it reaches 0. A duration of 0 starts it on the next tick. `seconds_left` on an early call is this value, above 0 up to the full duration; a call at 0 is ignored with no signal.
-**Example:** 12.0 s left, player calls: `wave_called_early(12.0)`, and the next wave starts before the next tick.
+**Example:** 720 ticks left, player calls: `wave_called_early(12.0)`, and the next wave starts in the next tick.
 
 The bonus for calling early is the Tower GDD's formula, not this one.
 
@@ -274,8 +274,6 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Exactly where in the bottom band does the Start/Call button sit, clear of the burst and slots? | Battle HUD GDD | Battle HUD GDD |
 | Does the always-call bot dominate? If so, the fallback is allowing overlapping waves | qa-lead + Tower GDD | First playable |
 | How much is the early-call bonus, and does it scale with `seconds_left`? | Tower GDD (economy) | Tower GDD |
-| Does a retry reuse the seed or take a new one? A reused seed is fairer for learning a stage; a new one is more honest for bots | game-designer | Enemy & Wave GDD, if MVP waves use randomness at all |
-| Combat proposes the tick order (leaks before fire); does Enemy & Wave confirm it? | Enemy & Wave GDD | Enemy & Wave GDD |
 | App Lifecycle & Composition ADR: tick rate and clamp, pause mechanism, lifecycle notifications, teardown. All engine behaviour here is from memory | technical-director | Before the first story |
 | Bots must be re-baselined on the fixed tick; the prototype's 10-vs-3 lives result does not transfer | qa-lead | First playable |
 | How do tests take a battle snapshot, enumerate its systems and inject recording ones? The criteria assume all three | technical-director | App Lifecycle ADR |
