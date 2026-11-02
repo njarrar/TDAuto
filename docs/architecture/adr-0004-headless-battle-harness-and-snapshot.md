@@ -25,7 +25,7 @@ Bots, balance gates and every system test need to run a whole battle with no sce
 | **Knowledge Risk** | LOW for the runner (the reference records gdUnit4 6.2.2 running on 4.7.2, with its exit codes). MEDIUM for the suite API and a few engine calls the reference does not cover (H1 to H7) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `current-best-practices.md` ("Command Line", gdUnit4 exit codes 0, 100, 101, 103, 105, `No test cases found`, the first `--import`, `--remote-debug`, `Editor Workflow (4.7)`); `breaking-changes.md` (4.7 typed-return overrides); `deprecated-apis.md`; `.claude/rules/test-standards.md` (naming, `auto_free`) |
 | **Post-Cutoff APIs Used** | `@abstract` (4.5) for `BattleBot` and `TickSlot`; 4.7 typed-return rule (each `decide` and `run` override ends in an explicit `return` where it has a return type). gdUnit4 6.2.2 itself is post-cutoff |
-| **Verification Required** | Sourced: the run command, the exit codes, "101 also means orphan nodes", "zero tests exits 0". **NOT SOURCEABLE** from `docs/engine-reference/godot/` (all `memory, unverified`): (H1) gdUnit4 ignores non-suite scripts under `res://tests/` (memory: it loads only files that extend `GdUnitTestSuite`); if wrong, move `tests/support/` to `res://tests_support/`. (H2) gdUnit4 suite API names other than `auto_free` (`assert_*`, `await_idle_frame`, scene runner). (H3) `Script.get_script_property_list()` lists a script's member variables by name (section 5 member test); if not, the mutation test alone applies. (H4) `weakref()` of a `RefCounted` reads null at once when the last reference drops, of a `Node` only after the freeing frame; if late, the freed check awaits one frame. (H5) A signal connection holds an object id, not a strong reference, to a `RefCounted` target; if it does hold one, `Battle.dispose()` is required, and the Retry gate already tests that path. (H6) `FileAccess`, `DirAccess` and `Script.resource_path` work under `--headless -s` (token scan, baseline recorder). (H7) The call that names the CPU architecture for the baseline key. Same-machine bit-identical floats across process runs are assumed (the Combat GDD already keeps baselines per architecture) |
+| **Verification Required** | Sourced: the run command, the exit codes, "101 also means orphan nodes", "zero tests exits 0". **NOT SOURCEABLE** from `docs/engine-reference/godot/` (all `memory, unverified`): (H1) gdUnit4 ignores non-suite scripts under `res://tests/` (memory: it loads only files that extend `GdUnitTestSuite`); if wrong, move `tests/support/` to `res://tests_support/`. (H2) gdUnit4 suite API names other than `auto_free` (`assert_*`, `await_idle_frame`, scene runner). (H3) `Script.get_script_property_list()` lists a script's member variables by name, filtered by `PROPERTY_USAGE_SCRIPT_VARIABLE` (section 5 member test); if not, the mutation test alone applies. (H4) `weakref()` of a `RefCounted` reads null at once when the last reference drops, of a `Node` only after the freeing frame; if late, the freed check awaits one frame. (H5) A method `Callable` holds an object id, not a strong reference; lambda captures and `.bind()` arguments are strong references; if a method connection does hold one, `Battle.dispose()` is required, and the Retry gate already tests that path. (H6) `FileAccess`, `DirAccess` and `Script.resource_path` work under `--headless -s` (token scan, baseline recorder). (H7) The call that names the CPU architecture for the baseline key. Same-machine bit-identical floats across process runs are assumed (the Combat GDD already keeps baselines per architecture) |
 
 ## ADR Dependencies
 
@@ -122,22 +122,33 @@ static func build(data: Dictionary, errors: Array[CatalogueError]) -> Catalogue 
 - Unit tests use `FixtureCatalogue`. Integration tests may call `CatalogueLoader.load_manifest("res://data/catalogue/manifest.json", ...)` on the real files.
 
 ### 4. Enumerating systems and injecting recording ones
-`Battle.systems()` returns the systems in tick order (ADR-0002 table). A test can read every system through it and through the typed reads (`flow()`, `tower()` and the rest).
+`Battle.systems()` returns the systems in tick order (ADR-0002 table): the order of first appearance in the slot list. A test can read every system through it and through the typed reads (`flow()`, `tower()` and the rest).
 
-Injecting recording systems needs a seam that does not add a gameplay branch to the builder (Flow Rule 3). Decision: the tick loop of `Battle` runs an ordered list of `TickSlot` objects that the builder passes in; `Battle` itself holds no system-specific tick code.
+Injecting recording systems needs a seam that adds no gameplay branch to the builder (Flow Rule 3). Decision: `Battle` runs an ordered list of `TickSlot` objects and receives all its parts in one record that the builder fills; `Battle` holds no system-specific tick code.
 
 ```gdscript
 @abstract
 class_name TickSlot extends RefCounted
 @abstract func run() -> void              # one slot of architecture 3.1, called once per counted tick
+@abstract func owner() -> RefCounted      # the system this slot ticks (for systems())
+
+class_name BattleParts extends RefCounted
+var latch: HaltLatch
+var slots: Array[TickSlot]
+var flow: StageFlow       # typed, nullable
+var combat: Combat        # typed, nullable
+var wave: WaveSim         # typed, nullable
+var tower: TowerSim       # typed, nullable
+var hero: HeroSim         # typed, nullable
 
 # Battle (constructor shape; the builder is the production caller)
-func _init(latch: HaltLatch, slots: Array[TickSlot], systems: Array[RefCounted]) -> void
+func _init(parts: BattleParts) -> void
 ```
 
-- The builder creates one `TickSlot` per row of architecture 3.1 (StageFlow, WaveSim advance, Status, TowerSim, HeroSim then burst, WaveSim reap) that calls the owning system. The `systems` array is the same objects in tick order, returned by `systems()`.
-- `Battle.tick` checks `halted()` before the first slot and between slots (ADR-0003 section 3), then runs `slot.run()`. That check is now testable in isolation: Flow criteria 9 and 13 build a `Battle` directly with `RecordingSlot` objects A, B, C, where B's `on_run` callable latches an outcome or fires the fatal handler, and assert C never runs.
-- `RecordingSlot` appends its name to a shared log array and implements `snapshot()` so it can sit in `systems()`. It is a test class and lives in `tests/support/`.
+- The builder creates one `TickSlot` per row of architecture 3.1 (StageFlow, WaveSim advance, Status, TowerSim, HeroSim then burst, WaveSim reap) and fills `BattleParts`. `flow()`, `combat()`, `wave()`, `tower()` and `hero()` return the parts' typed references. `systems()` lists each slot's `owner()` once, at its first appearance.
+- **Clock gate.** `Battle` reads the clock through `parts.flow.clock_running()` (ADR-0003). A hand-built battle with `flow == null` treats the clock as running, so recording-slot tests need no StageFlow.
+- `Battle.tick` checks `halted()` before the first slot and between slots (ADR-0003 section 3), then runs `slot.run()`. Flow criteria 9 and 13 build a `Battle` directly with `RecordingSlot` objects A, B, C, where B's `on_run` callable latches an outcome or fires the fatal handler, and assert C never runs.
+- `RecordingSlot` appends its name to a shared log array, is its own `owner()`, and implements `snapshot()`. It lives in `tests/support/`.
 - Tests that need a normal battle use `BattleBuilder.build`. Tests that need recording slots construct `Battle` by hand. Production code never constructs a `Battle` outside the builder.
 - `SignalTap` attaches a recording listener to a signal in a system's `VIEW_SIGNALS` only, playing the part of a view (for example `damage_applied`, `attack_fired`, `phase`, `lives_changed`). It never taps a sim-only signal, because ADR-0002 allows at most one sim listener. The wiring check (section 10) always runs on a battle with no taps.
 
@@ -154,8 +165,9 @@ Rules for every `snapshot()`:
 3. The snapshot is a copy. Changing it never changes the simulation, and taking it changes nothing.
 4. Anything that is a set or a map in the system (enemies by `spawn_id`, slots by index) becomes an `Array` in an order the system defines (`spawn_id` ascending, slot index ascending). A `Dictionary` is used only for a record of named fields. Hash iteration order is never relied on.
 5. Integers stay `int` and floats stay `float`. `3` and `3.0` are different values.
-6. State derived and rebuilt each tick (a per-tick position cache) is left out. Injected references (the catalogue, the accessor, the `HaltLatch`, other systems) are left out. Every other member variable is in the snapshot under its own name, or is named in `const SNAPSHOT_EXEMPT: Array[StringName]` on that system with the reason in a comment. An empty list is written `[]`, as with `VIEW_SIGNALS`.
-7. No gameplay code calls `snapshot()` (forbidden pattern `snapshot_in_gameplay`).
+6. **Keys.** A member's key is its name with a leading `_` removed. A system may rename a key only through `const SNAPSHOT_KEYS: Dictionary[StringName, StringName]` (member to key). State derived and rebuilt each tick (a per-tick position cache) is left out. Injected references (the catalogue, the accessor, the `HaltLatch`, other systems) are left out. Every other member variable is in the snapshot under its own name, or is named in `const SNAPSHOT_EXEMPT: Array[StringName]` on that system with the reason in a comment. An empty list is written `[]`, as with `VIEW_SIGNALS`.
+7. A holder may embed state another system owns only through that owner's formatter (for example Combat's `enemy_snapshot` inside WaveSim's `enemies`), so one format has one writer.
+8. No gameplay code calls `snapshot()` (forbidden pattern `snapshot_in_gameplay`).
 
 **Whole battle.** `SnapshotTool.take(battle: Battle) -> Dictionary` returns:
 
@@ -166,15 +178,15 @@ Rules for every `snapshot()`:
 
 `take` fails the test with the path of the first bad value if a system has no `snapshot()` (`has_method`), a value breaks rule 2, or a float is NaN or infinite (NaN never equals itself, so it would hide a difference). It adds no key of its own besides these three, so two snapshots of the same battle are equal.
 
-**Comparing.** `SnapshotTool.diff(a: Dictionary, b: Dictionary) -> Array[String]` returns one line per difference, as `path: a_value != b_value` (for example `systems[2].enemies[5].hp: 12.5 != 12.0`), and an empty array when equal. It walks dictionary keys in sorted order and arrays by index, compares `typeof` first and then values, and compares `Vector2` by component. It does not use `==` on a whole dictionary and does not depend on insertion order (so the result does not rest on how the engine orders or compares dictionaries). Tests assert `diff(...)` is empty, so a failure prints the paths.
+**Comparing.** `SnapshotTool.diff(a: Dictionary, b: Dictionary) -> Array[String]` returns one line per difference, as `path: a_value != b_value` (for example `systems[1].enemies[5].health.hp: 12.5 != 12.0`), and an empty array when equal. It walks dictionary keys in sorted order and arrays by index, compares `typeof` first and then values, and compares `Vector2` by component. It does not use `==` on a whole dictionary and does not depend on insertion order (so the result does not rest on how the engine orders or compares dictionaries). Tests assert `diff(...)` is empty, so a failure prints the paths.
 
-**Floats are compared exactly.** The same build, seed and commands on the same machine give the same bits, so any tolerance would hide a real divergence. There is no epsilon in a replay or equivalence test. Stored baselines (section 7) hold only integers and are never compared across architectures.
+**Floats are compared exactly.** Assumption: the same build (debug and release may differ), seed and commands on the same machine give the same bits, so any tolerance would hide a real divergence. There is no epsilon in a replay or equivalence test. Stored baselines (section 7) hold only integers and are never compared across architectures.
 
 
 **Trace.** `TickTrace` (`RigOptions.trace_every`) stores a compact sample (lives, gold, alive count, tower levels, counters) every N ticks. A full snapshot of 48 enemies is about 5 KB (estimate), so a per-tick full trace of a 36 000-tick run would be about 180 MB (estimate); full snapshots are for run ends and short scripts.
 
 **Completeness.** Two tests keep a field from slipping out of a snapshot, derived and not typed by hand:
-- *Member test* (H3): for each object in `battle.systems()`, take its script member names; each must be a key in `snapshot()` or be in `SNAPSHOT_EXEMPT`. A new field with neither fails the test with the name.
+- *Member test* (H3): for each object in `battle.systems()`, take its script member names; its key (the name without a leading `_`, or the `SNAPSHOT_KEYS` entry) must be in `snapshot()`, or the member must be in `SNAPSHOT_EXEMPT`; the test reads both constants and takes only members with `PROPERTY_USAGE_SCRIPT_VARIABLE` (the list also returns inherited and category entries). A new field with neither fails the test with the name.
 - *Mutation test*: for each system, drive a command or a tick that changes it, and assert `diff` of before and after is not empty. This holds even if H3 fails.
 
 ### 6. Replaying the command log
@@ -213,8 +225,7 @@ class_name BotProfile extends RefCounted       # typed record read from tests/fi
 - `BattleRig.play(bot, max_steps) -> BotResult` loops `decide`, `send`, `step` until Won, Lost, Fatal or `max_steps` (TIMEOUT). `BotResult` holds the outcome, lives left, waves cleared, `hero().counters()`, `combat().counters()` and the command log (kills per burst and hero share, TR-hero-005).
 - A bot reads only what a view reads (`flow()`, `tower()`, `hero()`, `wave()`, `combat()`) and builds `BuildCommand`, `UpgradeCommand`, `PinCommand`, `BurstCommand` and `StartNextWaveCommand`. It holds no seed and no clock; no choice is random.
 - Profiles the GDDs name: mid-skill, pinned once, best single pin, ceiling, towers only, towers only always calling, mid-skill always calling, hero alone slow-only, never pinned (Hero Simulated results and Deferred criteria; Flow Rule 9). `tools/balance-sim/hero_bots.py` is a guide for detail the Hero table leaves out, not a spec. Profile values (re-pin every 3 s, aim error, buy order, call mode) are data in `tests/fixtures/bots/`; seconds become ticks through `ticks_for`. Writing the bots is Hero-story work; bot gates are integration tests (`tests/integration/bots/`).
-- **Re-baseline rule (Flow, Deferred "Always-call bot gates"; Enemy and Wave "set at the first baseline").** The python results (for example "Won, 2 lives") do not transfer to the fixed-tick game. Therefore: (a) gates assert the relations the GDDs write (mid-skill at least 4 above towers-only; pinned-once below mid-skill on at least three of four mixed builds; always-call gains at most 2 lives), compared on integers (lives left, waves cleared), never on the python numbers; (b) the first real run writes a baseline, and the thresholds that say "proposed" in the GDDs are then set from it in a GDD edit, not in test code; (c) a stored baseline file is per architecture and holds only integers.
-- **Baseline recording.** `tests/tools/record_baseline.gd` (a SceneTree script run with `-s`, as the reference shows for the parse check) runs every profile on every mixed build and writes `tests/fixtures/baselines/<arch>.json` (H6, H7). The regression test `bots_baseline_test.gd` reads the file for the current architecture. **If there is none, the test fails with `NO BASELINE for <arch>: run record_baseline`.** It does not pass, and it does not skip. The relational gates in (a) assert either way, so a new architecture has gates and no stale numbers.
+- **Baseline policy.** Python results do not transfer to the fixed-tick game. Gates assert the relations the GDDs write on integers (lives left, waves cleared), never the python numbers. `tests/tools/record_baseline.gd` writes per-architecture integer baselines (cast with `int()` on load, since JSON numbers may load as float); a missing baseline fails the test (`NO BASELINE for <arch>`). Thresholds marked "proposed" in the GDDs are then set from the first run in a GDD edit. The full procedure goes in `tests/README.md`.
 
 ### 8. Determinism rules
 1. The only randomness is the injected `seed` in `RigOptions`, passed to `BattleBuilder.build`. MVP waves use none (Enemy and Wave Rule on authored waves). Test code uses no `randi`, `randf`, `randomize` or `shuffle`; a test that needs variety loops over a fixed list of seeds written in the test.
@@ -227,7 +238,7 @@ class_name BotProfile extends RefCounted       # typed record read from tests/fi
 ### 9. Retry, freed objects and orphans
 **Retry test (ADR-0002 rule 7, Flow Retry criterion).** `BattleRig.discard_battle() -> FreedCheck` takes a `weakref` of the battle and of each object in `battle.systems()` (with class names), calls `battle.dispose()` as the wrapper does, and clears the rig's reference. `FreedCheck.leaks() -> Array[String]` names every object whose `get_ref()` is not null (H4); the test asserts the list is empty. A local variable in the test that kept the battle would fail it, which is correct. The test then builds a second battle from the same catalogue and seed and asserts an empty `diff` against a never-used fresh battle, an unchanged `Catalogue.snapshot()`, and that the catalogue is the only shared object (Flow, "only the catalogue is shared"). A meta test holds a reference on purpose and asserts the check names it. For the wrapper, `integration/` repeats the check over its `Node` objects; `free()` timing is ADR-0008's.
 
-**Orphans (exit 101).** A rig battle is `RefCounted`, so it makes no orphan. Any test that creates a `Node` must wrap it in `auto_free(...)` (`.claude/rules/test-standards.md`) or give it to the scene runner. gdUnit4 exits 101 when all tests passed and a node leaked (reference). **CI treats 101 as a failure.** A `RefCounted` cycle leaks without any orphan report, which is why the weakref check exists.
+**Orphans (exit 101).** A rig battle is `RefCounted`, so it makes no orphan. Any test that creates a `Node` must wrap it in `auto_free(...)` (`.claude/rules/test-standards.md`) or give it to the scene runner. gdUnit4 exits 101 when all tests passed and a node leaked (reference). **CI treats 101 as a failure.** A `RefCounted` cycle leaks without any orphan report, which is why the weakref check exists. A method `Callable` holds an object id, but a lambda's captures and `.bind()` arguments are strong references, so a `SignalTap`, a lambda or a test-local `systems()` array can keep a battle alive; the test must drop them first, and a leak the check names is a test or code fault to fix, not to skip.
 
 ### 10. The ADR-0002 wiring tests run here
 `WiringCheck` holds the checks as functions that return findings, so a test asserts the list is empty and a meta test breaks a connection and asserts a finding:
@@ -247,11 +258,7 @@ static func wrapper(objects: Array[RefCounted]) -> Array[String]   # no allowlis
 - **Hero equivalence (TR-hero-005, Hero criterion 28, Input Rule 11).** Battle A takes a script as direct commands through `Battle.enqueue`. Battle B takes the same script as `press`, `move` and `release` calls on the `InputAssembly` of section 10. Both then run the same ticks. The test asserts `diff` of the end snapshots is empty and the two command logs agree on `kind`, `args` and `result`. The script is chosen so both paths agree (no clamped pin); the Hero story writes it.
 
 ### 12. The runner, CI and the harness's own tests
-- gdUnit4 6.2.2 is pinned and committed under `addons/gdUnit4/` so CI does not depend on the Asset Store (4.7 renamed the workspace; the reference says addons install from the Asset Store). `tests/README.md` records the pinned version. This closes Open Question A9 once `/test-setup` has installed it.
-- CI order, as the reference gives: `godot --headless --path . --import` first (a fresh clone has no `.godot/` and a run without it exits 1 having run nothing; the first import crashed on exit in 3 of 17 runs on 4.7.x, so CI retries the import once); then the parse check on `tests/support/`; then
-  `godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode`.
-- **Exit codes.** Only 0 passes. 100 is a failure. 101 (orphan nodes or warnings) is a failure. 105 (a script does not parse) and 103 (`--ignoreHeadlessMode` missing) are failures. 1 is a failure.
-- **Zero tests is not a pass.** The runner exits 0 with `No test cases found`. CI fails the step when that text appears, and `tests/unit/harness/canary_test.gd` (one trivial passing test) must always exist so the count is never zero. The two expected `ERROR:` lines about the remote port are filtered by exact text, not by pattern.
+- gdUnit4 6.2.2 is pinned and committed under `addons/gdUnit4/`, closing Open Question A9 once `/test-setup` installs it. CI runs `--import` first (retried once; the first-import crash was seen on Windows only), then the parse check on `tests/support/`, then the reference's gdUnit4 command. Only exit 0 passes: 100, 101 (orphans), 103, 105 and 1 fail. `No test cases found` fails the step, and `tests/unit/harness/canary_test.gd` always exists. The full procedure goes in `tests/README.md`.
 - **Meta tests (`tests/unit/harness/`)** keep each check known to fail, because a gate not watched failing is not a gate (`.claude/rules/skill-authoring.md`): `diff` reports a doctored field and an int-versus-float change; `take` rejects an `Object` value and a NaN; `Replay` reports a doctored result code, an unknown kind and a stall; `FreedCheck` names a deliberately held reference; `WiringCheck` names a removed connection; the token scan flags a planted token in a fixture script; the member test flags a field left out of a snapshot.
 
 ### Architecture Diagram
@@ -272,7 +279,7 @@ tests/unit, tests/integration  (gdUnit4 suites)
 ```
 
 ### Key Interfaces
-Test side: `BattleRig`, `RigOptions`, `FatalRecorder`, `FixtureCatalogue`, `SnapshotTool`, `Replay`, `CommandFactory`, `WiringCheck`, `FreedCheck`, `RecordingSlot`, `SignalTap`, `TickTrace`, `BattleBot`, `ScriptedBot`, `BotProfile`. Production side: `snapshot() -> Dictionary` and `SNAPSHOT_EXEMPT` on each battle system, `TickSlot`, `Battle._init(latch, slots, systems)`.
+Test side: `BattleRig`, `RigOptions`, `FatalRecorder`, `FixtureCatalogue`, `SnapshotTool`, `Replay`, `CommandFactory`, `WiringCheck`, `FreedCheck`, `RecordingSlot`, `SignalTap`, `TickTrace`, `BattleBot`, `ScriptedBot`, `BotProfile`. Production side: `snapshot() -> Dictionary` and `SNAPSHOT_EXEMPT` on each battle system, `TickSlot`, `Battle._init(parts: BattleParts)`.
 
 ### Implementation Guidelines
 - Tests must drive a battle only through `BattleRig` or its three entry points: `BattleBuilder.build`, `Battle.enqueue`, `Battle.tick(Battle.DT)`.
@@ -333,7 +340,7 @@ Test side: `BattleRig`, `RigOptions`, `FatalRecorder`, `FixtureCatalogue`, `Snap
 ## Risks
 - **ADR-0005 does not honour the snapshot contract.** Mitigation: the contract is stated here and in the Ordering Note; the member and mutation tests fail the first story that skips it.
 - **ADR-0008 does not give the `InputAssembly` seam or builds `Battle` differently.** Mitigation: both are listed as requirements; if refused, the wrapper test and the hero equivalence test run against the wrapper with a scene runner, slower but valid.
-- **Accessor read log and "HeroSim absent" (Hero criterion 29).** The criterion compares an accessor read log and a battle built without HeroSim. ADR-0001 defines no read-log hook on `StatAccessor`, and the builder has no way to omit HeroSim without a gameplay branch. This ADR does not decide either. Both go to the Hero story and to ADR-0001 and ADR-0008 follow-ups; until then criterion 29 is only partly testable (per-tick lives, gold, enemies, towers and the `deliver` and `attack_fired` logs through `SignalTap`).
+- **Accessor read log and "HeroSim absent" (Hero criterion 29).** The criterion compares an accessor read log and a battle built without HeroSim. ADR-0001 defines no read-log hook on `StatAccessor`, and the builder has no way to omit HeroSim without a gameplay branch. This ADR does not decide either. Route: the builder exposes its slots and systems, and a recording `StatAccessor` decorator logs reads; owners are the Hero story and the harness story; until then criterion 29 is only partly testable (per-tick lives, gold, enemies, towers and the `deliver` and `attack_fired` logs through `SignalTap`).
 - **gdUnit4 skips or rejects the support files (H1).** Mitigation: move them to `res://tests_support/`; no other change.
 - **Float drift across process runs on one machine (assumed none).** Mitigation: the first CI run executes the replay test twice in two processes; a difference reopens section 5 (a tolerance is then a decision for a new ADR, not a quiet edit).
 
@@ -359,13 +366,14 @@ Test side: `BattleRig`, `RigOptions`, `FatalRecorder`, `FixtureCatalogue`, `Snap
 ## Migration Plan
 No code exists yet. **These edits land in the same change that marks this ADR Accepted:**
 
-- `docs/architecture/architecture.md`: Required ADRs, ADR-0004 row: Layer `Foundation` becomes `Core`, and the Decision cell adds the `snapshot()` contract, `TickSlot`, the replay and the exit-code rules. 3.1: the six tick rows are `TickSlot` objects built by the builder. 4.3: `Battle._init(latch, slots, systems)` and the `TickSlot` class. 4.3 to 4.5: `snapshot()` and `SNAPSHOT_EXEMPT` on StageFlow, Combat, WaveSim, TowerSim and HeroSim. Open Questions A9 (closed once `/test-setup` installs gdUnit4 6.2.2) and M7's snapshot question (closed).
+- `docs/architecture/architecture.md`: Required ADRs, ADR-0004 row: Layer `Foundation` becomes `Core`, and the Decision cell adds the `snapshot()` contract, `TickSlot`, the replay and the exit-code rules. 3.1: the six tick rows are `TickSlot` objects built by the builder. 4.3: `Battle._init(parts: BattleParts)` and the `TickSlot` class. 4.3 to 4.5: `snapshot()` and `SNAPSHOT_EXEMPT` on StageFlow, Combat, WaveSim, TowerSim and HeroSim. Open Questions A9 (closed once `/test-setup` installs gdUnit4 6.2.2) and M7's snapshot question (closed).
 - `design/gdd/game-state-stage-flow.md`: the Open Questions row on snapshot, enumeration and recording systems marked answered by ADR-0004.
 - `design/gdd/enemy-wave.md`: the Deferred row "Seams the criteria assume ... and the snapshot" marked answered for the snapshot (other seams stay with ADR-0008).
 - `design/gdd/hero-system.md` criterion 29: a note that the accessor read log and the HeroSim-absent build need hooks not yet decided (see Risks).
 - ADR-0003 (Accepted): a cross-reference note, not a change of decision, that the slot loop runs `TickSlot` objects (section 4). ADR-0002 (Accepted): a note that `WiringCheck` implements its section 3 tests.
-- `tests/README.md`: the layout (`tests/support/`, `fixtures/`, `tools/`), the pinned gdUnit4 version and the exit-code rules.
-- `docs/registry/architecture.yaml`: registered with this ADR's write, as Proposed stances.
+- `docs/architecture/architecture.md` 3.4a: the builder builds GestureResolver, which `InputAssembly` contradicts; ADR-0008 settles the builder order.
+- `tests/README.md`: the full CI and baseline procedure, the layout (`tests/support/`, `fixtures/`, `tools/`), the pinned gdUnit4 version and the exit-code rules.
+- `docs/registry/architecture.yaml`: registered with this ADR's write, registered as Proposed stances (ADR-0004 and ADR-0005 together).
 
 ## Validation Criteria
 - A smoke test builds a battle from `FixtureCatalogue.starter_data()`, runs 100 steps with no scene, and sees `phase(Build)` once and no Fatal.
