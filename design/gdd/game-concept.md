@@ -246,7 +246,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 - Store release work (devices, listing, certification) is not in any estimate yet.
 
 ### Open Questions
-- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? In simulation it is worth about 2 lives on one path, with burst reach limited to 160 units, which the user accepted for MVP (Hero GDD). Re-pin cadence: a straight-line walk at 240, which needs no pathfinding. Does the drag model hold on a phone?
+- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? In simulation it is worth about 3 lives on one path, with burst reach limited to 160 units, which the user accepted for MVP (Hero GDD). Re-pin cadence: a straight-line walk at 240, which needs no pathfinding. Does the drag model hold on a phone?
 - Is one tree enough to feel the meta loop? — Vertical slice ships the Hero tree alone.
 - Portrait confirmed? — First phone build; check thumb coverage of the lower third.
 - Monetization — decide before Small Ship; affects store listing and nothing in the loop.

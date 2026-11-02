@@ -72,7 +72,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 
 **UI shape grammar.** Controls are rounded rectangles and discs, never tower polygons or enemy circles. Disc buttons are reserved for hero actions. Tree nodes use the role shape (polygon for tower, asymmetric for hero, circle for economy): owned filled, available outlined, locked dotted.
 
-**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Reach ring: neutral, dotted 3 on and 13 off, 2 px, alpha 0.35. Pin ghost: 2 px unfilled kite. Ground ring: 2 px solid, radius 30. Ready ticks: four static 3 px, 8 long, radius 40 around the hero. Kill mark during aim: body knocked out, steady 2 px white contour. Zones are always thinner than any entity.
+**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Reach ring: neutral, dotted 3 on and 13 off, 2 px, alpha 0.6. Pin ghost: 2 px unfilled kite. Ground ring: 2 px solid, radius 30. Ready ticks: four static 3 px, 8 long, radius 40 around the hero. Kill mark during aim: body knocked out, steady 2 px white contour. Zones are always thinner than any entity.
 
 **Hero vs supporting shapes.** Supporting shapes are flat and unlit. The hero's glow, asymmetry and white-gold fill are exclusive.
 
