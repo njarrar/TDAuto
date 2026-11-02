@@ -131,10 +131,10 @@ There is no reload transition: a data change applies on the next run.
 | Game State & Stage Flow | Stage records; app root triggers load and holds the catalogue; builder injects it | This system (load, lookup); Game State (injection) |
 | Combat & Damage | Nothing directly; Enemy & Wave passes `max_hp` in at spawn. Callers read values and pass them in, and `max_hp` seeds Health once at spawn, the one exception to Rule 10's "never cache" | Combat GDD |
 | Enemy & Wave | Enemy, Wave, Stage | This system |
-| Tower System | Tower levels through the accessor | This system |
+| Tower System | Tower levels through the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` directly from Stage | This system |
 | Hero System | Hero and Burst through the accessor; Stage fields (`hero_start`, `pin_rect`, `pin_exclusion`) and the Options record directly | This system |
 | Input & Gesture Resolver | The Input record, read directly | This system; Input GDD owns its meaning |
-| Battle HUD | Costs for the cost chip through the accessor; the Options record directly | This system |
+| Battle HUD | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly | This system |
 | Stat & Modifier Resolution (VS) | Drops in behind the accessor with no call-site changes | Stat GDD owns the resolver; this system owns the key vocabulary |
 | Save/Load (VS) | Stable IDs; retired-ID list from Vertical Slice | Save/Load owns migration |
 
@@ -181,7 +181,7 @@ There is no reload transition: a data change applies on the next run.
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
 | Combat & Damage (soft) | Gets `max_hp` passed in by Enemy & Wave at spawn (Combat's seed exception); callers pass other values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
-| Tower System | Tower levels via the accessor |
+| Tower System | Tower levels via the accessor; `is_tower(id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
 | Hero System | Hero and Burst via the accessor; `hero_start`, `pin_rect`, `pin_exclusion` and the Options record directly |
 | Input & Gesture Resolver | The Input record |
 | Battle HUD & Build UI | Costs and stats through the accessor; level count; Stage and Wave directly; the Options record directly |
@@ -209,7 +209,7 @@ None beyond the generic fatal screen, owned by Game State & Stage Flow. This sys
 |---|---|---|---|
 | Accessor takes instance context | `design/gdd/game-concept.md` | Core Mechanic 4, first cross-buff at Vertical Slice | Rule dependency |
 | Stable IDs | `design/gdd/game-concept.md` | Save versioning, Technical Considerations | Rule dependency |
-| Prototype values are not balance | `prototypes/hero-pin-concept/REPORT.md` | Creative Director Review: CD-PLAYTEST, item 5 | Ownership handoff |
+| Prototype values are not balance | `prototypes/hero-pin-concept/REPORT.md` | The CD-PLAYTEST review section, item 5 | Ownership handoff |
 | Composition root, injection | `design/gdd/systems-index.md` | TD notes, Dependency Map | Rule dependency |
 | `visual_key` meaning | `design/art/art-bible.md` | §3, §8 | Ownership handoff |
 

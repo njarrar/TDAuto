@@ -72,7 +72,7 @@ Field values are **offsets from the stage's base V** (Section 6 lets a stage aut
 
 **UI shape grammar.** Controls are rounded rectangles and discs, never tower polygons or enemy circles. Disc buttons are reserved for hero actions. Tree nodes use the role shape (polygon for tower, asymmetric for hero, circle for economy): owned filled, available outlined, locked dotted.
 
-**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Reach ring: neutral, dotted 3 on and 13 off, 2 px, alpha 0.6. Pin ghost: 2 px unfilled kite. Ground ring: 2 px solid, radius 30. Ready ticks: four static 3 px, 8 long, radius 40 around the hero. Kill mark during aim: body knocked out, steady 2 px white contour. Zones are always thinner than any entity.
+**Line styles.** Leash: 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Reticle: 3 px solid ring with four ticks, alpha 0.7, drawn offset above the finger. Radius preview: solid unfilled outline. Reach ring: neutral, dotted 3 on and 13 off, 2 px, alpha 0.6. Pin ghost: 2 px unfilled kite. Pin ring: 2 px solid, radius 30. Ready ticks: four static 3 px, 8 long, radius 40 around the hero. Kill mark during aim: body knocked out, steady 2 px white contour. Zones are always thinner than any entity.
 
 **Hero vs supporting shapes.** Supporting shapes are flat and unlit. The hero's glow, asymmetry and white-gold fill are exclusive.
 
@@ -173,7 +173,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Build/upgrade affordance.** No modal popup. Slot tap opens three 56 px role-polygon discs in an arc above the slot (never below, where the thumb is); tapping one builds and the arc collapses in 120 ms. Tower tap shows a cost chip for 1.5 s, with a draining bar; a tap on the chip or a second tap on the tower commits. Insufficient gold: the chip dims and the cost is struck through, no magenta (danger only). The chip-then-tap step is the mis-spend safeguard; the Tower GDD and its UX spec own the final call.
 
-**Ground tap (UX).** No success feedback. For the first three taps of a battle, a tiny unanimated dim ring, dotted and never solid so it cannot pass for the hero's solid pin ring, fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. Motion-light so it never reads as a button (Principle 3).
+**Ground tap (UX).** No success feedback. For the first three taps of a battle, a tiny dim ring, dotted and never solid so it cannot pass for the hero's solid pin ring, fades in over 150 ms as a rejection cue. The fade is its only motion: no shrink, no pulse. It tells new players the touch was not missed. Motion-light so it never reads as a button (Principle 3).
 
 **Lives and wave.** Lives are two rows of five dashes at top-left, one 16×3 dp dash each; a lost dash fades to alpha 0.2 in 200 ms and stays countable, with urgency carried by the in-field chevrons. Waves are pills at top-centre, not discs, since discs would match enemy glyphs: filled done, outlined current, dotted upcoming (the tree-node grammar). Gold is the number at top-right.
 

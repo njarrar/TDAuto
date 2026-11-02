@@ -101,7 +101,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 
 Each wave's total HP is 1.25 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called.
 
-**Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` and `peak_alive_ub` rows need Burst and Tower data, so they join in the Hero and Tower stories.
+**Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` row joins the content test in the Hero stories; `peak_alive_ub` runs in Tower's CI (Tower criterion 27).
 
 | Check | Bound | Starter | Reason |
 |---|---|---|---|
@@ -314,7 +314,7 @@ The **gold_upper_bound** formula is defined as:
 | System | Interface |
 |---|---|
 | Data & Config Pipeline | Enemy through the accessor; Wave and Stage directly; `path_points`, `slot_positions` and `path_width` added to Stage |
-| Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
+| Combat & Damage | Health, Status, `speed_factor`, `is_dead`, the reap, `spawn_id`, `deliver` for test kills; Rule 11's tick order |
 | Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
 
 **Downstream (hard; all eight MVP systems have GDDs, so these interfaces are confirmed there; the Vertical Slice rows stay provisional until their GDDs exist):**
@@ -327,7 +327,7 @@ The **gold_upper_bound** formula is defined as:
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules (soft) |
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. Data, Combat and Game State already do.
+Per the bidirectional rule, each of these GDDs must list this one when authored. All eight MVP GDDs list this one.
 
 ## Visual/Audio Requirements
 

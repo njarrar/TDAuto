@@ -117,3 +117,10 @@ Two blocking issues: P1, a Fatal outside a tick still letting Flow's slot run, w
 
 1. P1: make Flow's tick loop check `halted()` before the first slot, and make "later ticks do nothing" cover Fatal.
 2. P2: add "arc opens → Disabled" to the Arming and Armed rows, and "arc closes → Arming" to Disabled.
+
+## Resolution, 2026-11-02: both blockers and every warning applied, re-run pending
+
+- **P1:** Flow's tick loop checks `halted()` before the first slot as well as between slots, so once an outcome or Fatal is latched, inside or outside a tick, no slot runs, Flow's countdown included; Won, Lost and Fatal are terminal (Rules 15, 18).
+- **P2:** Arming and Armed go to Disabled when the arc opens; Disabled goes to Arming (a new 300 ms arming) when it closes, and to Hidden when its phase ends.
+- **P3 to P17:** applied. Per-wave records open on a `wave_index()` change and are written at the clear or outcome; a focus-loss write is provisional and the reader keeps the last record per key. `phase(Build)` is once per build, with views after they connect, headless when `build` returns. The halted button keeps its last-tick look. The Fatal record comes from reads held at the latch. The pin marker is the "pin ring" in the art bible too.
+- **Q1 to Q7 (recommended options):** per-wave `repins` and Wave seconds and an attempt `gold_left` in the log; an inconclusive early-call result extends the test with testers alternating; the never-call rate is logged, with a fourth prompt if over half never call; a fast-enemy loss gets "Next try: drag the hero to the leak"; the slow hint needs at least one more life; the ceiling gate uses the median of the four mixed builds and the cap's dependent rows are re-run; `bursts_emptied` splits into `bursts_emptied_by_kill` and `bursts_walked_out`, and walk-outs count as misses.

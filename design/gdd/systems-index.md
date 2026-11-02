@@ -26,12 +26,12 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 |---|-------------|----------|----------|--------|------------|------------|
 | 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
 | 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | Needs Revision | design/gdd/game-state-stage-flow.md | Data & Config, Input |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | In Review | design/gdd/game-state-stage-flow.md | Data & Config, Input |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Designed | design/gdd/combat-damage.md | Game State; Data & Config (soft, `max_hp` passed in at spawn) |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Designed | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Designed | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
 | 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State, Tower (soft, bot gates and `burst_spike`) |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Needs Revision | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft) |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Combat (soft), Enemy & Wave (soft) |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
@@ -86,7 +86,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 ### Foundation Layer (no dependencies)
 
 1. Data & Config Pipeline — every gameplay value is data-driven (coding standard); all other systems read it.
-2. Input & Gesture Resolver — depends on: Data (its Input record; both are Foundation, Data is designed first). **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Priority table and gesture rules: `design/gdd/input-gesture-resolver.md`.
+2. Input & Gesture Resolver — depends on: Data (its Input record; both are Foundation, Data is designed first). **TD note:** owns only a registry of hit targets with a priority value; Hero, Tower, slots and the burst button register themselves. Input never names a feature system. Suggested registrations and gesture rules: `design/gdd/input-gesture-resolver.md`.
 3. Mobile Platform & Performance — safe areas, export, tracer and effect pooling, particle caps. Hits are instant, so no projectiles are pooled (Combat GDD; technical-director to confirm).
 
 ### Core Layer
@@ -166,7 +166,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 |--------|-----------|-----------------|------------|
 | Input & Gesture Resolver | Design | Pin drag vs slot tap vs burst drag at fingertip size; untested on a phone (CD-PLAYTEST) | Hit-target registry; drag slop ~10–12 dp; phone test with a non-developer tester before Pillar 4 is claimed |
 | Combat & Damage | Technical | God object; attribution depends on `source` being on every DamageEvent | Four-piece decomposition in the GDD; one unit test per piece |
-| Hero System | Design | Hero share median 26.2% (bot, Hero GDD) vs 25–30% target, 33% on one build and up to 45% at ceiling skill; every MVP build loses without the hero | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
+| Hero System | Design | Hero share median 26.2% (bot, Hero GDD) vs 25–30% target, 33% on one build and up to 45% at ceiling skill; every MVP build loses without the hero (Hero GDD, Simulated results) | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
 | Stat & Modifier Resolution | Technical | Deferred to VS; retrofit cost if MVP code reads stats directly | Single stat accessor enforced from MVP day 1 |
 | Skill Tree / Synergies | Design | Scarcity rule (~60%) undefined per tier; dominant-build risk | Scarcity restated per tier in the concept revision; one cheap cross-buff at VS tests the hook early |
 

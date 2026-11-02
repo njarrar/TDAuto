@@ -133,10 +133,10 @@ Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per g
 | `range` | At most 260 | 165 |
 | `attack_interval` | At least 0.2 | 0.6 |
 | `slow_strength` | At most 0.6 | 0.5 |
-| `burst_spike` | At least 2 at every splash level (Hero stories) | 5.78 |
+| `burst_spike` | At least 2 at every splash level (Tower owns; runs in the Hero stories) | 5.78 |
 | `early_call_seconds_per_gold` | One tick at least (Data, boot-fatal), so the formula never divides by 0 | 1.8 |
 
-Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest slot, and `peak_alive_ub` passes outright at 34. L11 and `burst_spike` wait for the Hero record.
+Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest slot, and `peak_alive_ub` passes outright at 34. L11 and `burst_spike` join the content test in the Hero stories.
 
 **Handed to owning GDDs.**
 - **Hero:** done. It sets the burst's values and owns the bot table.
@@ -393,7 +393,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Bot gates | Hero stories | The Hero GDD's deferred table owns towers-only, hero-only, mono-role, dominant build, share, burst outcome, always-call and `dealt_burst`, with their current results |
+| Bot gates | Hero stories | The Hero GDD owns every row in Hero's Deferred table, with their current results |
 | `burst_spike`, L11, intermission, bypass | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
 | Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
@@ -409,12 +409,11 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Calling early is nearly free for a hero bot, though the concept promises a cost. The pass mark is Hero's "Always-call, humans" row, and the fallback is Flow Rule 9's overlapping waves | Hero GDD | First playable |
+| Calling early is nearly free for a hero bot, though the concept promises a cost. The bonus is at most 8 per call and 40 per stage, under the cheapest tower; accepted for MVP. Hero's "Always-call, humans" row is the pass mark and decides whether calling needs a cost or a bigger reward. The fallback is Flow Rule 9's overlapping waves | Hero GDD ("Always-call, humans" row) | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
 | Is one mix the solved build? Three of four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
 | Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |
 | Wave 6 pays 174 of 510 bounty, when spending matters least, and gold does not carry over. Accepted for MVP; first-playable logs report gold left at Won, and if most of wave 6's bounty is never spent, bounty moves into waves 3 to 5 | Tower GDD + human logs | First playable |
-| The early-call bonus is at most 8 per call and 40 per stage, under the cheapest tower. Accepted for MVP; the early-call checks (Flow Rule 9, Hero Deferred) decide whether calling needs a cost or a bigger reward | Hero GDD | First playable |
 | Does slow earn its slot? One slow ties zero slows on the mid-skill bot and two cost lives. The gate is Hero's Deferred "Slow value" row | Hero GDD + bots | First playable |
 | Does a wrong disc happen often enough to need undo? | Pillar 4 phone test | First phone build |
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |

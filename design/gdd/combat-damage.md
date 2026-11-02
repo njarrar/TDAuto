@@ -77,7 +77,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
 | Battle HUD | listens, reads | `damage_applied` for hit marks; the per-source counters for the result | Combat (API); HUD (drawing) |
-| Data & Config | soft, through Enemy & Wave | `max_hp` at spawn | Data (values) |
+| Data & Config | reads (soft) | `max_hp`, passed in by Enemy & Wave at spawn | Data (values) |
 
 ## Formulas
 
@@ -165,14 +165,14 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 
 | System | Interface |
 |---|---|
-| Tower System | `deliver`, `apply_slow`, helpers |
+| Tower System | `deliver`, `apply_slow`, helpers, the Towers-by-slot-index tick slot |
 | Hero System | `deliver`, helpers, `hp_left`, the Hero-and-burst tick slot |
-| Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
+| Enemy & Wave | Health, Status, `speed_factor`, `is_dead`, the reap, `spawn_id`, `deliver` for test kills; Rule 11's tick order |
 | Battle HUD (soft) | `damage_applied`; the per-source counters for the result |
 | Visual Feedback & VFX (VS) | `damage_applied` |
 | Stage Progression & Stars (VS) | Counters (soft) |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. Game State and Enemy & Wave already do.
+Per the bidirectional rule, each of these GDDs must list this one when authored. All eight MVP GDDs list this one.
 
 ## Visual/Audio Requirements
 
@@ -241,7 +241,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 |---|---|---|
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once; a burst commanded between ticks leaves no moving corpse |
-| Pillar 2 bots | Hero stories | Hero alone, slow-only fails (Hero Deferred); never-pinned is identical to towers-only (Hero CI criterion 29); pinned-once ends the stage with fewer lives than active play (Pillar 2, user ruling 2026-11-02); the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
+| Pillar 2 bots | Hero stories | Hero alone, slow-only fails (Hero Deferred); never-pinned is identical to towers-only (Hero CI criterion 29); for pinned-once, Hero's Deferred criteria, "Pinned once", hold the threshold; the always-call bots pass Flow Rule 9's gates. Hero's Deferred criteria hold the thresholds |
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Hero stories | `burst_spike` is at least 2 in the content test, and on the 2 single, 2 splash, 1 slow build, `dealt_burst`'s share is at least 75% of its share on single only (Hero Deferred, `dealt_burst`) |
 
