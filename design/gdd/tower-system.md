@@ -1,9 +1,9 @@
 # Tower System (incl. Gold Economy)
 
-> **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers and one user decision applied, re-review pending)
+> **Status**: In Review (second design review 2026-11-03 NEEDS REVISION; four blockers and six recommended items applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
@@ -57,7 +57,7 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 | `BAD_TOWER` | Data's `is_tower(id)` is false, `build` only | 3rd |
 | `SLOT_OCCUPIED` / `NO_TOWER` | `build` on a built slot / `upgrade` on an empty one | 4th |
 | `MAX_LEVEL` | Already at the last level, `upgrade` only | 5th |
-| `NO_GOLD` | Gold below the cost | After the cost read |
+| `NO_GOLD` | Gold below the cost | After the cost read, and after `HALTED`'s recheck, so a halt during the cost read returns `HALTED` even when gold is short |
 | `OK` | Applied | Last |
 
 IDs and levels are checked before any accessor read, through Data's non-fatal `is_tower(id)` and `level_count(def_id)` (Data Rule 10), so a bot's bad ID or a last-level upgrade returns a refusal rather than reaching the fatal handler. Cost is read through the accessor at use time, never cached from when the arc or chip opened. On success, in one step and with nothing between: gold falls by the cost, the tower is created or its level raised, then `gold_changed` fires, then `tower_built` or `tower_upgraded`. A refusal changes nothing and emits nothing.
@@ -89,7 +89,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
    4. Set `cooldown_left = to_ticks(attack_interval)`, then call Combat's `report_attack`, which emits `attack_fired`, then `deliver` one event per victim. A `slow` tower then calls `apply_slow` per victim, passing seconds, since Combat converts them. Its `damage` of 0 applies nothing and can kill nobody.
 10. **Ready and holding.** A timer counts on every tick that runs, Intermission included. A ready tower holds at 0, and it fires on the first tick that has a target, so a tower fires every N ticks exactly under constant fire.
 11. **A new tower starts ready.** It gives instant feedback, and without selling the exploit is five free shots at most.
-12. **An upgrade leaves the timer alone.** New damage, range and role values apply from the tower's next read, because stats are read at use time, and a new interval applies at the next reload. There is no free shot and no lost progress.
+12. **An upgrade leaves the timer alone.** New damage, range and role values apply from the tower's next read, because stats are read at use time, and a new interval applies at the next reload. There is no free shot, and an upgrade that shortens the interval still waits out the reload already running.
 13. **Splash.** The victims are `all_in_radius` of the target's position from `targets()`, so a splash cannot hit an enemy outside the field. Its range decides only whom it may aim at.
 
 **Gold.**
@@ -115,9 +115,9 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold at level 1: 0.57 on the two victims its radius reaches at 36 spacing, and 0.86 on three, against single's 0.40. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
 
-**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 7 or 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
+**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. In the Hero table's one fixed placement, a mid-skill hero wins with 9 lives on all four mixed builds; across every placement, the medians are 5 to 9 and the worst runs lose (the table below). Slow alone loses even with a hero, and single or splash alone win with only 7 or 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
-**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early led on all four mixes on the earlier stage. On the moved stage (Enemy & Wave's revision) it leads on two and ties on two, so filling first never comes out ahead; single alone stays behind and every gate passes. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
+**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early led on all four mixes on the earlier stage. On the moved stage (Enemy & Wave's revision) its median leads on two mixes and ties on two; single alone stays behind and every gate passes, the share at its floor (median 25.2%, Hero System, Simulated results). Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
 
 | Mix | Placements | Fill first: median, range | Upgrade in pairs: median, range |
 |---|---|---|---|
@@ -126,7 +126,7 @@ Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per g
 | 3 single, 2 splash | 10 | 9, 5 to 9 | 9, 4 to 9 |
 | 2 single, 1 splash, 2 slow | 30 | 5, 0 to 10 | 6, 0 to 10 |
 
-Upgrading in pairs means build two, upgrade both, and repeat. A new single still offers more damage per gold, 0.40 against the upgrade's 0.25, but only while it stands where the enemies are. So the same towers can end anywhere from 0 to 10 lives, and placement matters more than order. These are scripted fixed orders, so whether people find this waits for first playable.
+Paired placement by placement, upgrading in pairs does better on 22 of the 90, the same on 51 and worse on 17, and its mean is ahead on every mix: +0.60, +0.13, +0.40 and +0.33 lives in the table's order. So filling first is not the answer, but it is not punished either: upgrading early is weakly better, and order matters less than placement. This meets the user's decision as stated, accepted as delivered at the second design review (2026-11-03, autonomous mode, so the user may reopen it); a clearer lead would need another retune, with the share band and single alone as the limits. Upgrading in pairs means build two, upgrade both, and repeat. A new single still offers more damage per gold, 0.40 against the upgrade's 0.25, but only while it stands where the enemies are. So the same towers can end anywhere from 0 to 10 lives, and placement matters more than order. These are scripted fixed orders, so whether people find this waits for first playable.
 
 **Content rules, added to the content test.** All bounds are proposed.
 
@@ -156,7 +156,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 **Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
 
-→ Becomes an ADR: where TowerInput sits in the wrapper, and the order of input against the real-time feed to `ChipWindow`.
+→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper; the order of input against the real-time feed to `ChipWindow` and its clock source; and re-entrancy, that is whether a listener may call a command or read state between `gold_changed` and `tower_built`.
 
 ### States and Transitions
 
@@ -193,6 +193,8 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 The **early_call_bonus** formula is defined as:
 
 `early_call_bonus = to_ticks(seconds_left) div to_ticks(early_call_seconds_per_gold)`, with whole-number division
+
+`to_ticks` is the project's one conversion for authored time (Enemy & Wave, Formulas; Flow Rule 4): `round(seconds / dt)`, halves away from zero, so 1.8 s at 1/60 is 108 ticks and 0.6 s is 36. Every timer in this GDD uses it.
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
@@ -378,7 +380,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 2. (Rule 2) **GIVEN** `A`, **WHEN** `upgrade`, **THEN** gold falls 40 and the next shot deals 15.
 3. (Rule 3) **GIVEN** `C` and a target, **WHEN** T, **THEN** `attack_fired, deliver(0), apply_slow(0.5, 1.0)`.
 4. (Rule 4) **GIVEN** a built slot, **WHEN** `build`, **THEN** `SLOT_OCCUPIED`, with no refund.
-5. (Rule 5) **GIVEN** a fixture with every fault set at once, **WHEN** each command runs and one fault is cleared per call, **THEN** `build` returns `HALTED`, `BAD_SLOT` (−1 and the count), `BAD_TOWER` (an enemy's ID), `SLOT_OCCUPIED`, `NO_GOLD` in that order, and `upgrade` returns `HALTED`, `BAD_SLOT` (−1 and the count), `NO_TOWER`, `MAX_LEVEL`, `NO_GOLD`. Every refusal leaves gold and slots unchanged and the log empty, and no refusal before the cost read makes an accessor read.
+5. (Rule 5) **GIVEN** `sim()` with gold 0, the last slot built and at level 2, and `halted()` latched, **WHEN** these calls run in order, each after the one change named, **THEN** they return: `build(0, A)` `HALTED`; unlatch, then `build(−1, A)` and `build(count, A)` `BAD_SLOT`, since −1 must not wrap onto the built last slot; `build(0, an enemy's ID)` `BAD_TOWER`; `build(last, A)` `SLOT_OCCUPIED`; `build(0, A)` `NO_GOLD`. Latch again: `upgrade(last)` `HALTED`; unlatch, then `upgrade(−1)` and `upgrade(count)` `BAD_SLOT`, not `MAX_LEVEL`; `upgrade(0)` `NO_TOWER`; `upgrade(last)` `MAX_LEVEL`; then build `A` on slot 0 with gold set to 30 and back to 0, and `upgrade(0)` `NO_GOLD`. Every refusal leaves gold and slots unchanged and adds nothing to the log. The spy counts stat and cost reads only, not `is_tower` or `level_count`, and every refusal but `NO_GOLD` shows none.
 6. (Rule 5) **GIVEN** gold 30, **THEN** `OK`, gold 0, `gold_changed(0), tower_built(0, A)`. Gold 29: `NO_GOLD`. A changed cost: the second use reflects it. A latch in the cost read: `HALTED`, unchanged.
 7. (Rule 6) **GIVEN** the builder, **THEN** both commands are `OK` in Build, Wave and Intermission.
 8. (Rule 7) **WHEN** one `build`, **THEN** the tower exists, with no confirm step.
@@ -415,9 +417,9 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
 | TowerInput wiring | Tower UI story | With a fake resolver, taps reach `ChipWindow`, a built slot is disabled, `slot_tapped` fires, and `phase` closes the chip |
 | Arc, damage by source | Battle HUD stories | A disc builds once; an unaffordable one does nothing; counters are shown; screenshots retained |
-| Phone test (Input P1) | Producer | No accidental upgrades or wrong discs on the first phone build |
+| Phone test (Input P1) | Producer + qa-lead | On the first phone build, 3 testers each make 20 builds and 20 upgrades: no unintended upgrade, and at most 1 wrong disc per 20 builds. If a reflexive double tap commits an upgrade, the first fallback is a 300 ms guard, then a larger chip disc |
 
-**Manual** (retained in `production/qa/evidence/`): a level-2 upgrade changes shape within one wave; two towers are ranked by level with no digit; triangle, hexagon, square and an empty slot are told apart at full and quarter scale in greyscale.
+**Manual** (retained in `production/qa/evidence/`, with lead sign-off): screenshots of the chip open, dimmed after `NO_GOLD` and just expired, and of the arc with every disc affordable and with one dimmed; a level-2 upgrade changes shape within one wave; two towers are ranked by level with no digit; triangle, hexagon, square and an empty slot are told apart at full and quarter scale in greyscale.
 
 **Checked by code review, not tests:** no sell command (Rule 4); TowerInput changes state only through `upgrade`; the bonus reads no burst state; `tower_dps` has no code.
 
