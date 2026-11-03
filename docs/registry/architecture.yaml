@@ -232,11 +232,11 @@ interfaces:
     consumers:
       - flow
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
-    signal_signature: "lifecycle_paused() once per away episode, after resolver.cancel(); wrapper connects it to the method Callable flow.pause; never resumes"
+    signal_signature: "lifecycle_paused() once per away episode and on each Android back request, after resolver.cancel(); wrapper connects it to flow.pause, and TapScreen.tapped to flow.resume, through view_wiring.connect_recorded(); never resumes"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
@@ -333,36 +333,36 @@ api_decisions:
     notes: "ADR-0002 is Proposed; binding only once Accepted"
   - purpose: display_stretch
     status: active
-    api: "viewport 540x960, display/window/stretch/mode canvas_items, aspect keep, scale_mode fractional, portrait; set explicitly in project.godot"
+    api: "viewport 540x960, stretch mode canvas_items, aspect keep, scale 1.0, scale_mode fractional, portrait, window mode 0 (mode.mobile 3), Android edge-to-edge on, quit_on_go_back false; effective values checked through ProjectSettings"
     not: "aspect expand or keep_width (4.7 new-project default is expand); Camera2D in the battle"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     reason: "Only keep makes field units equal viewport units with no offset; letterbox absorbs most notch insets"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0003 is Proposed; binding only once Accepted"
   - purpose: pointer_event_source
     status: active
-    api: "emulate_touch_from_mouse false, emulate_mouse_from_touch true; drop device == InputEvent.DEVICE_ID_EMULATION; identify source by event class"
+    api: "emulate_touch_from_mouse false, emulate_mouse_from_touch true; InputAdapter drops device == InputEvent.DEVICE_ID_EMULATION; TapScreen reads the mouse family only, real or emulated, and must not drop it; identify source by event class"
     not: "event.device == 0; touch-only family with mouse emulated as touch 0"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     reason: "One forwarded press per physical press; Controls still get emulated mouse on phones; spike S2 verifies"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0003 is Proposed; binding only once Accepted"
   - purpose: app_lifecycle_pause
     status: active
-    api: "Union of NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_WINDOW_FOCUS_OUT in InputAdapter._notification, latched per episode"
+    api: "Union of NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_WINDOW_FOCUS_OUT in InputAdapter._notification, latched per episode; NOTIFICATION_WM_GO_BACK_REQUEST pauses each time; fallback get_window().focus_exited if spike S5 shows window focus reaches only the Window"
     not: "SceneTree.paused; resume on focus-in"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     reason: "Which notifications fire per platform is unverified (spike S5); pause is idempotent and resume is by tap only"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
@@ -448,7 +448,7 @@ forbidden_patterns:
     notes: "ADR-0003 is Proposed; binding only once Accepted"
   - pattern: input_capturing_wrapper_control
     status: active
-    description: "No Control in the BattleWrapper other than TapScreen may have a mouse_filter other than IGNORE; the wrapper root is never a full-rect Control"
+    description: "Every non-interactive Control in the BattleWrapper has mouse_filter IGNORE, set on each node and linted; only TapScreen is STOP; the wrapper root is never a full-rect Control"
     why: "A STOP or PASS Control over the field swallows presses before the adapter's _unhandled_input"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
