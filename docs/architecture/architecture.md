@@ -3,7 +3,7 @@
 ## Document Status
 - Version: 2
 - Last Updated: 2026-11-03
-- Version 2 applies GF1 to GF11; GF5 (phone spike) stays open.
+- Version 2 applies GF1 to GF11. GF5 (phone spike) is closed by user decision 2026-11-03: the ADRs are accepted on best-guess device assumptions.
 - Engine: Godot 4.7.2 (pinned 4.7; `Installed at pin time` 4.7.2.stable.official.ed1daf0bf), GDScript, Mobile renderer, Godot Physics 2D (not used by gameplay)
 - Run mode: `review_mode full`, `automation autonomous`, `workflow full`, `docs.density thorough`
 - GDDs Covered (all 10 design files in `design/gdd/`; the 10 cross-review reports were not re-reviewed):
@@ -12,7 +12,7 @@
   `enemy-wave.md`, `tower-system.md`, `hero-system.md`, `battle-hud.md`
 - Cross-review state: `design/gdd/gdd-cross-review-2026-11-02j.md`. Blockers L1 to L3 are fixed. Warnings M1 to M11 are carried into
   Open Questions and the Required ADRs below. This run did not re-review the GDDs.
-- ADRs Referenced: ADR-0001 to ADR-0005 are Accepted (ADR-0001 to ADR-0003 on 2026-11-02, ADR-0004 and ADR-0005 on 2026-11-03; their Migration Plan edits are applied). `docs/architecture/` also holds `tr-registry.yaml` (`requirements: []`). Eight ADRs are required, numbered in writing order, plus a deferred Mobile Platform ADR (see Required ADRs). ADR-0006 to ADR-0008 are Proposed.
+- ADRs Referenced: ADR-0001 to ADR-0005 are Accepted (ADR-0001 to ADR-0003 on 2026-11-02, ADR-0004 and ADR-0005 on 2026-11-03; their Migration Plan edits are applied). `docs/architecture/` also holds `tr-registry.yaml` (`requirements: []`). Eight ADRs are required, numbered in writing order, plus a deferred Mobile Platform ADR (see Required ADRs). ADR-0006 to ADR-0008 are Accepted (2026-11-03, on the best guesses in `docs/architecture/device-assumptions.md`; their Migration Plan edits are applied). All eight required ADRs are Accepted.
 - Technical Requirements Baseline: 65 requirements, 0 registered, 65 provisional. They are digests of the Detailed Design, Interactions and
   Dependencies sections, not copies of every acceptance criterion. Stories carry the finer detail.
 - TD-ARCHITECTURE: REVISED after CONCERNS (2026-11-02): the design is sound; the concerns are listed under Gate Findings, and Version 2 settles all but GF5.
@@ -30,10 +30,10 @@ Both director gates returned CONCERNS. Neither blocks ADR writing. Version 2 app
 | GF2 | TD, LP | API Boundaries 4.3: `Battle` exposes no route to its systems, which the HUD and the ADR-0004 harness need. | **Done**: API Boundaries 4.3 (typed `flow()`, `combat()`, `wave()`, `tower()`, `hero()` and `systems()`) |
 | GF3 | TD | The ADR Audit traceability table and the Technical Requirements Baseline disagree on several TR-to-ADR links (input-006, enemy-007, enemy-008, tower-001, hero-001). | **Done**: Technical Requirements Baseline (the source) and ADR Audit, Traceability coverage (derived from it row by row) |
 | GF4 | TD, LP | The HUD ADR's stretch and coordinate-space choice fixes the space the input ADR and `targets()` use, and High items A4 and M6 hang on it. | **Done**: Required ADRs (ADR-0006 is must-have, before ADR-0007; TR-hud-005 and TR-hud-008 go to the deferred Mobile Platform ADR) |
-| GF5 | TD, LP | Touch events, the `canceled` flag, lifecycle notifications, safe-area APIs and catalogue export are NOT SOURCEABLE (A7). | **Open**: Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and JSON catalogue export (ADR-0001 V1) on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. |
-| GF6 | TD | Lifecycle has two owners (InputAdapter and BattleWrapper); the adapter is rebuilt on Retry. No GDD handles the Android back button. | **Decided**, ADR-0008 confirms: Module Ownership, Data Flow 3.2 and 3.5, API Boundaries 4.2 (one owner, the BattleWrapper; back is Pause in a battle) |
+| GF5 | TD, LP | Touch events, the `canceled` flag, lifecycle notifications, safe-area APIs and catalogue export are NOT SOURCEABLE (A7). | **Closed by user decision 2026-11-03: accepted on best-guess assumptions (docs/architecture/device-assumptions.md); the first device build runs its checklist.** |
+| GF6 | TD | Lifecycle has two owners (InputAdapter and BattleWrapper); the adapter is rebuilt on Retry. No GDD handles the Android back button. | **Confirmed, ADR-0008**: Module Ownership, Data Flow 3.2 and 3.5, API Boundaries 4.2 (one owner, the BattleWrapper; back is Pause in a battle) |
 | GF7 | TD, LP | Determinism should not depend on unverified engine event order, and the fixed tick has no clamp, catch-up cap or per-tick budget. | **Done** (ADR-0003 Accepted): Data Flow 3.1, API Boundaries 4.3 (command queue, at most 5 ticks per frame, 2 ms per tick proposed) |
-| GF8 | TD, LP | Data Flow 3.6's "check `halted()` after each accessor read and each signal" cannot be enforced or tested. | **Decided**, ADR-0008 confirms: Data Flow 3.6, API Boundaries 4.1 and 4.5 |
+| GF8 | TD, LP | Data Flow 3.6's "check `halted()` after each accessor read and each signal" cannot be enforced or tested. | **Confirmed, ADR-0008**: Data Flow 3.6, API Boundaries 4.1 and 4.5 |
 | GF9 | LP | The catalogue record type is open ("Dictionary or typed record"); a Dictionary also breaks the read-only rule (TR-data-005). | **Decided**, ADR-0001 confirms: API Boundaries 4.1 (typed read-only records) |
 | GF10 | LP | Canonical signal and read signatures differ between GDDs (M4). | **Done** (ADR-0002 Accepted): Required ADRs (one table of canonical signatures, written before any story); the edits in ADR-0002's Migration Plan are applied in 3.2 and 4.2 to 4.6 |
 | GF11 | TD | ADR numbers do not follow writing order (0008 sits mid-list). | **Done**: Required ADRs (renumbered in writing order, with an old-to-new note) |
@@ -174,13 +174,16 @@ Format: Owns (sole writer), Exposes, Consumes, Engine APIs. Risk tags are from t
 | Validator | The error list `{code, source, record_id, field}` and the all-or-nothing load result | `validate(data: Dictionary, source_label: String) -> Array[CatalogueError]` (ADR-0001) | Plain parsed data, the schema table | None |
 | StatAccessor | The vocabulary of stat keys and their types | `get_int(ctx, key)`, `get_float(ctx, key)` | Catalogue, read context (`def_id`, level, optional live entity) | None |
 | GestureResolver | Target registry, one active pointer, the four-state machine, gesture log | Signals `pressed`, `tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `ground_tap`, `idle`; calls `register`, `unregister`, `set_centre`, `set_enabled`, `cancel`, `cancel_pointer` | Input record | None (pure) |
-| InputAdapter | Translation of engine events into the five resolver calls, including reporting a touch cancel; no lifecycle state | Nothing outward; owns the press-to-release guarantee | `GestureResolver`, engine input events | `Node._input`, touch and mouse events (HIGH, NOT SOURCEABLE), `Control.mouse_filter` (HIGH) |
+| FieldSpace | The 540 x 960 field rect and the canvas-to-field transform (ADR-0006) | `FIELD_SIZE`, `FIELD_RECT`, `make`, `to_field`, `to_canvas`, `contains`, `margin_rects`, `mirror_x` | Visible rect | Viewport visible rect (HIGH, D3) |
+| FieldInsets | Safe-area insets in field units (ADR-0006) | `FieldInsets.from(space, safe)` | FieldSpace, SafeAreaSource | None |
+| SafeAreaSource | The one wrapper of the platform safe-area call (ADR-0006) | `safe_rect_canvas() -> Rect2` | Options record (fallback insets) | `DisplayServer` safe area (NOT SOURCEABLE, D4) |
+| InputAdapter | Translation of engine events into the five resolver calls through `PointerGate` (ADR-0007), including reporting a touch cancel; drops presses outside `FIELD_RECT`; no lifecycle state | Nothing outward; owns the press-to-release guarantee | `GestureResolver`, engine input events | `Node._input`, touch and mouse events (HIGH, NOT SOURCEABLE), `Control.mouse_filter` (HIGH) |
 
 ### Core
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| AppRoot | Catalogue lifetime, launch ID, `attempt_seq`, `call_prompt_done`, the fatal screen, the Retry latch | `fatal(cause)`, `request_retry()`, `set_call_prompt_done()`, `on_lifecycle(state)` | Catalogue load result, lifecycle states forwarded by BattleWrapper | `Node` main scene, `queue_free` or `free` (HIGH, timing unverified) |
+| AppRoot | Catalogue lifetime, launch ID, `attempt_seq`, `call_prompt_done`, the fatal screen, the Retry latch; calls `BattleBuilder.build` (ADR-0008) | `fatal(cause)`, `request_retry()`, `set_call_prompt_done()`, `on_lifecycle(state)` | Catalogue load result, lifecycle states forwarded by BattleWrapper | `Node` main scene, `remove_child` then `free()` (ADR-0008 section 9; L6 fallback `queue_free`) |
 | BattleBuilder | Construction and signal connection of one battle | `build(catalogue, stage_id, seed, fatal_handler) -> Battle` | Every battle system | None (pure function) |
 | StageFlow | Phases, lives, outcome latch, `halted()`, `intermission_left`, `to_ticks` | `tick(dt)`, `start_next_wave()`, `phase`, `lives_changed`, `wave_called_early(ticks_left: int)`, `in_build()`, result | Wave signals, Stage record | None |
 | BattleWrapper | Tick accumulator and clamp, adapter, views, HeroInput, TowerInput; sole owner of app lifecycle (focus lost, focus gained, quit requested, resized, Android back) | `lifecycle_changed(state)`; forwards each state to AppRoot | Battle, engine frame, engine notifications | `Node._process`, `_notification` (HIGH, NOT SOURCEABLE) |
@@ -203,6 +206,8 @@ Format: Owns (sole writer), Exposes, Consumes, Engine APIs. Risk tags are from t
 | Battle HUD | Presentation state only: arc, Start/Call arming, prompts, rejection ring, result text, paused overlay, human debug log | none | Reads of Tower, Hero, Wave, Flow, Combat; signals listed in Data Flow | `Control`, `CanvasLayer`, `_draw`, `Tween` (UI HIGH, Animation MEDIUM), safe area (NOT SOURCEABLE) |
 | Combat view | Tracer lines and flashes | none | `attack_fired`, `damage_applied` | `CanvasItem.draw_line` (Rendering HIGH: thinner lines in 4.7) |
 | Stage scene | Field hue, base value, grid tilt (look only) | none | Stage `scene_ref` | `PackedScene.instantiate()` (LOW) |
+| Curtains | The margin rects outside the field, drawn over (ADR-0006) | none | FieldSpace `margin_rects` | `CanvasLayer`, `_draw` (LOW) |
+| EnemyLayer | Pooled enemy presentation records drawn by one canvas item (ADR-0006) | none | `roster()`, `position()` | `CanvasItem._draw` (LOW) |
 
 ### Dependency diagram (code references, arrows point to what is used)
 
@@ -253,7 +258,7 @@ InputAdapter._input(event)  ---- 5 calls ---->  GestureResolver  --signals-->  H
   |                                              on the input call stack; nothing in the sim runs yet
   v
 AppRoot._process(delta)  ->  wrapper.step(delta):                 budget: 2 ms per tick on the target phone (proposed)
-  a. chip feed        TowerInput.advance_chip(now_ms)
+  a. chip feed        TowerInput.advance_chip(now_ms); hud.advance(min(delta_ms, 100))
   b. lifecycle, then battle.apply_queued()                        every frame, even with the clock stopped
   c. ticks            0 to 5 x battle.tick(DT), DT = 1/60         clock stopped: no tick, accumulator = 0
         halted()? stop                                            also checked at every slot edge below
@@ -269,8 +274,9 @@ AppRoot._process(delta)  ->  wrapper.step(delta):                 budget: 2 ms p
   e. hero disc        HeroInput.set_centre(hero_id, hero position)
   f. views redraw from reads (roster(), position(), cooldown_left(), counters)
   f2. late outcome step for a Fatal latched during f
-  g. cancel the resolver if requested
-AppRoot end of frame: Fatal latch first, else Retry latch (ADR-0008)
+  g. cancel the resolver if requested, then gate.forget_open_presses();
+     then, after a forwarded resized, rebuild FieldSpace and insets
+AppRoot end of frame: Fatal latch first, then the quit check, then the Retry latch (ADR-0008)
 ```
 
 Decided here (GF7), ADR-0003 (Accepted) sets the order and the phone spike measures:
@@ -294,7 +300,7 @@ Decided here (GF7), ADR-0003 (Accepted) sets the order and the phone spike measu
 | `attack_fired(source_kind, source_id, origin, impact, radius)` | Combat | CombatView only (not the Battle HUD) | Signal, copied positions (view allowlist) |
 | `damage_applied(event, applied, position)` | Combat | CombatView, Battle HUD | Signal, copied positions (view allowlist) |
 | `slot_tapped`, `tower_inspected`, `upgrade_refused` | TowerInput | Battle HUD | Signal, wrapper only |
-| `lifecycle_changed(state)`: focus lost, focus gained, quit requested, resized, back | BattleWrapper (sole lifecycle owner, GF6) | StageFlow (pause; Android back in a battle is Pause), HUD; forwarded to AppRoot | Signal |
+| `lifecycle_changed(state)`: focus lost, focus gained, quit requested, resized, back | BattleWrapper (sole lifecycle owner, GF6) | StageFlow (pause; Android back in a battle is Pause), HUD; forwarded to AppRoot by `AppServices.on_lifecycle` (a callable, not a signal connection); `resized` does not pause | Signal |
 | Reads (`gold()`, `slot_state`, `chip_state`, `roster()`, `position()`, `pin_state()`, `cooldown_left()`, `wave_index()`, counters) | Owners | Battle HUD, views, bots | Synchronous read, every frame, compared in whole ticks |
 
 Every connection is written in `BattleBuilder` as an explicit typed `signal.connect(callable)`, so the GDScript parser catches a misspelt name.
@@ -314,11 +320,15 @@ stable IDs and a retired-ID list for it. A Save/Load ADR is deferred to that tie
 2. AppRoot loads Catalogue (Data), validates all records, collects all errors
        fail  -> Fatal screen (uses no catalogue data), absorbing
        ready -> holds Catalogue for the whole session
-3. AppRoot starts InStage: BattleWrapper (scene) calls BattleBuilder.build(catalogue, stage_id, seed, fatal_handler)
-       a. GestureResolver (with Input record), then Combat, WaveSim, TowerSim, HeroSim, StageFlow
-       b. all signal connections
-       c. wrapper loads the stage scene by `scene_ref`, then InputAdapter, views, HeroInput, TowerInput, Battle HUD
-4. StageFlow emits phase(Build) once: after views connect (with views), or when build returns (headless)
+3. AppRoot starts InStage: AppRoot calls BattleBuilder.build(catalogue, stage_id, seed, fatal_handler);
+   the wrapper's prepare() loads the stage scene, then attach() (ADR-0008)
+       a. HaltLatch, StatAccessor and TickConverter first, then Combat, WaveSim, TowerSim, HeroSim, StageFlow
+       b. all signal connections, then one TickSlot per row of 3.1; build returns a Battle, never null
+          (halted() is true after a Fatal, and the root discards it)
+       c. wrapper prepare() loads the stage scene by `scene_ref` (a broken scene is a Fatal, M2);
+          attach() builds InputAssembly (GestureResolver, HeroInput, TowerInput), the gate, InputAdapter, views, Battle HUD
+4. The wrapper calls StageFlow's announce method, which emits phase(Build) once, after views connect;
+   headless, the caller of build calls it (never after a pre-view Fatal)
 5. Clock stays stopped until the player taps Start Wave
 ```
 
@@ -326,20 +336,20 @@ stable IDs and a retired-ID list for it. A Save/Load ADR is deferred to that tie
 
 `Retry` tap sets a latch on AppRoot. The root's frame acts on it: stop the clock, cancel input inline, free the old battle and its views at
 once, build a new battle, new resolver, new adapter, new views. It runs between ticks and never inside a signal. Only the root, its counters
-(`launch ID`, `attempt_seq`, `call_prompt_done`) and the Catalogue survive. The timing of `free()` is unverified (ADR-0008). The BattleWrapper
+(`launch ID`, `attempt_seq`, `call_prompt_done`) and the Catalogue survive. ADR-0008 section 9 sets the sequence: `wrapper.shutdown()` (cancel input, `forget_open_presses()`, block input, disconnect, `battle.dispose()`, drop references), then `remove_child`, then an immediate `free()`, then a new attempt. If L6 shows that `free()` errors or leaves orphans, the fallback is `queue_free()` after `remove_child`. The BattleWrapper
 is rebuilt too. That is safe for lifecycle: the new wrapper subscribes to the engine notifications again, so lifecycle keeps one owner.
 
 ### 3.6 Fatal path
 
 The failure handler is idempotent and keeps the first cause. It latches the battle and the root. `halted()` turns true at once, the tick loop
 skips the remaining slots, the clock stops after the tick returns, and nothing persists. GDScript has no exceptions, so the calling function still
-finishes. Decided here (GF8), ADR-0008 confirms:
+finishes. Decided here (GF8), confirmed by ADR-0008 section 10:
 
 - **Where `halted()` is checked.** The tick loop checks it at every tick-slot edge, and each signal emitter checks it before it emits. Systems do
   not check it after each read. Both checks can be tested.
 - **Reads after Fatal.** The stat accessor returns a typed zero value of the declared type (`0` for `get_int`, `0.0` for `get_float`), so the
   rest of the calling function runs safely to its end.
-- **Runtime Fatal sources.** Only three: the stat accessor (a bad read), the builder (inside `build`), and the BattleWrapper's stage scene load.
+- **Runtime Fatal sources.** Only three: the stat accessor (a bad read), the builder (inside `build`), and the BattleWrapper's stage scene load (in `prepare()`, ADR-0008).
   Catalogue load failure is a boot Fatal, before any battle.
 
 ---
@@ -407,6 +417,17 @@ func cancel() -> void        # host-driven only; resolver has no cancel gesture
 class_name InputAdapter extends Node
 # No signals. Owns no lifecycle state (GF6): it only turns engine events into the five
 # resolver calls, and reports a touch cancel as cancel_pointer. Lifecycle lives in BattleWrapper.
+func setup(gate: PointerGate) -> void
+func _input(event: InputEvent) -> void          # decided: _input on a Node (ADR-0007)
+
+class_name PointerGate extends RefCounted       # pure gate (ADR-0007)
+const MOUSE_INDEX: int = 1024                   # desktop mouse as one pointer
+func set_space(space: FieldSpace, insets: FieldInsets) -> void
+func set_input_blocked(blocked: bool) -> void   # ADR-0006 name; forwards nothing, never cancels
+func forget_open_presses() -> void              # wrapper only, right after resolver.cancel()
+# modal_sink: Callable                          # optional ADR-0006 fallback if D6 fails
+
+class_name FieldSpace extends RefCounted        # Foundation (ADR-0006): FIELD_SIZE, FIELD_RECT, to_field, contains
 ```
 
 Registry calls (`register`, `unregister`, `set_centre`, `set_enabled`) follow the Input GDD (Detailed Rules, fields `centre` and `enabled`):
@@ -423,7 +444,7 @@ Invariants for callers: owners register themselves, the resolver never names a f
 delivered to one target. **Adapter contract (binding):** every `press` the adapter forwards is followed by exactly one `release`, one
 `cancel_pointer` or one `cancel()` of that index, whatever Controls lie under the drag and whatever the OS does. The adapter checks a touch's
 `canceled` flag before treating it as a release. Engine-type flags: touch event classes, `canceled`, and event delivery past a
-`mouse_filter = STOP` Control are **NOT SOURCEABLE** (HIGH). Mouse events must be told apart by event class, not `device == 0` (4.7).
+`mouse_filter = STOP` Control are **NOT SOURCEABLE** (HIGH). Mouse events must be told apart by event class, not `device == 0` (4.7). The adapter drops a press outside `FieldSpace.FIELD_RECT` (ADR-0006). While the press block is on, the gate forwards nothing and never cancels (ADR-0007). **Family lock:** a modal screen, and the gate, accept a release only from the family (touch or mouse) of the press they saw.
 
 ### 4.3 Battle builder and flow (Core)
 
@@ -431,6 +452,7 @@ delivered to one target. **Adapter contract (binding):** every `press` the adapt
 class_name BattleBuilder extends RefCounted
 static func build(catalogue: Catalogue, stage_id: StringName, seed: int,
 		fatal_handler: Callable) -> Battle    # no scene, no real time; bots and tests call this
+# Returns a Battle built from a BattleParts record; it may be halted and is never null. The builder creates the HaltLatch (ADR-0008).
 
 @abstract
 class_name TickSlot extends RefCounted     # one row of 3.1 (ADR-0004 section 4)
@@ -450,12 +472,12 @@ func command_log() -> Array[CommandRecord]    # every drained command, for repla
 func tick_count() -> int                      # ticks that ran slots
 const DT := 1.0 / 60.0
 # StageFlow.clock_running() -> bool            # the wrapper reads it to decide whether ticks run
-# BattleCommand: abstract base (on_result Callable, apply, to_record); five subclasses: Build, Upgrade, Pin, Burst, StartNextWave.
+# BattleCommand: abstract base (on_result Callable, apply, to_record); six subclasses: Build, Upgrade, Pin, Burst, StartNextWave, Resume (ADR-0008).
 # CommandRecord: plain data (tick, kind, args, result); no callbacks.
 func dispose() -> void                        # Retry backstop: disconnects signals and clears the system list
 # Battle declares no signals. Every battle signal lives on a system in systems(), so the wiring test sees it.
-# No system holds Battle. halted() reaches systems through a shared HaltLatch (RefCounted) that Battle creates
-# and hands to each system: systems hold the latch, Battle holds the systems, nothing points back.
+# No system holds Battle. halted() reaches systems through a shared HaltLatch (RefCounted) that the builder creates
+# and hands to Battle and each system: systems hold the latch, Battle holds the systems, nothing points back.
 
 class_name StageFlow extends RefCounted
 func start_next_wave() -> void                # Start/Call; reached through the queue; forwards to WaveSim
@@ -539,7 +561,7 @@ func advance() -> void                     # slot 2: spawn, move, leak, rebuild 
 func reap() -> void                        # slot 6: dead enemies in spawn_id order, then the clear check
 func add_enemy(def_id: StringName) -> EnemyInstance   # the one add step; null if halted; no command reaches it
 func roster() -> Array[EnemyInstance]      # a new typed copy per call, valid for the reader's own tick slot
-func targets() -> Array[EnemyInstance]     # a new typed copy; roster limited to enemies whose centre is inside the field (0..540, 0..960)
+func targets() -> Array[EnemyInstance]     # a new typed copy; roster limited to enemies whose centre is inside FieldSpace.FIELD_RECT (0..540, 0..960)
 func wave_index() -> int
 func got_through_by_type() -> Dictionary   # a copy
 func snapshot() -> Dictionary              # tests only; format: ADR-0004 section 5
@@ -580,7 +602,7 @@ system holds a target between attacks (re-pick every attack, so no reference dan
 
 The HUD exposes nothing. It queues `start_next_wave` and TowerSim `build` and `upgrade` through `Battle.enqueue()`, calls `request_retry()` (the
 Retry latch) and `set_call_prompt_done()` on AppRoot, reads through `Battle.tower()`, `hero()`, `wave()`, `flow()` and `combat()`, and listens to the
-signals in Data Flow 3.2. Invariants: modal screens are full-screen Controls that consume every event before the adapter sees it; all commands
+signals in Data Flow 3.2. Invariants: modal screens are full-screen Controls on layer 20 that take every event in `_gui_input` while the adapter's press block drops it (the block is the backstop, ADR-0006, ADR-0007); the Paused tap queues `ResumeCommand`; all commands
 are queued from the input call stack and drained once per frame before the ticks, so they still run before the frame's ticks; refusals reach the HUD through each command's `on_result` in the same frame; Retry only sets a latch.
 
 ### 4.7 Engine type check (Phase 4 awareness)
@@ -593,7 +615,10 @@ are queued from the input call stack and drained once per frame before the ticks
 | `InputEvent.DEVICE_ID_MOUSE` | InputAdapter | 4.7, confirmed in `breaking-changes.md` |
 | `CanvasItem.draw_line` | CombatView, HUD | 4.7: no antialiasing feather |
 | `Tween` | HUD | `tween_await()` new in 4.7; avoid in simulation |
-| `DisplayServer` safe-area call | HUD | **NOT SOURCEABLE** |
+| `DisplayServer` safe-area call | `SafeAreaSource` (ADR-0006) | **NOT SOURCEABLE** (D4) |
+| Touch `canceled` flag | InputAdapter | **NOT SOURCEABLE** (I3) |
+| `input_devices/pointing/emulate_mouse_from_touch`, `emulate_touch_from_mouse` | `project.godot` | Memory, unverified (I5) |
+| `Node.PROCESS_MODE_ALWAYS` | InputAdapter, AppRoot | Memory, unverified |
 
 ---
 
@@ -680,7 +705,7 @@ ADR Audit and the Covers column in Required ADRs are derived from it.
 | TR-enemy-004 (provisional) | enemy-wave | Leaks fire synchronously in `spawn_id` order, before `waves_complete`; a fatal leak stops the loop | Core | 0005 |
 | TR-enemy-005 (provisional) | enemy-wave | Reap step in the tick: kills in `spawn_id` order emit `enemy_killed(bounty)`; clear check runs every tick while a wave is active | Core | 0005 |
 | TR-enemy-006 (provisional) | enemy-wave | `roster()` and `targets()` are read-only lists valid in the reader's slot; an enemy is targetable only while its centre is inside the field | Core | 0005 |
-| TR-enemy-007 (provisional) | enemy-wave | At most 48 enemies alive at once (`peak_alive_ub`); views pool enemy nodes | Rendering | 0006 |
+| TR-enemy-007 (provisional) | enemy-wave | At most 48 enemies alive at once (`peak_alive_ub`); views pool enemy presentation records (one canvas item) | Rendering | 0006 |
 | TR-enemy-008 (provisional) | enemy-wave | Content test enforces layout rules L1 to L13 and wave rules on real data; checks run in CI, not at boot | Core | 0001 |
 | TR-tower-001 (provisional) | tower-system | TowerSim (pure, built by the builder) and TowerInput (wrapper-built, absent headless) are separate objects; the split is part of battle composition (A2) | Core | 0008 |
 | TR-tower-002 (provisional) | tower-system | Gold changes only through `enemy_killed(bounty)`, build, upgrade and the early-call bonus; one `build` and `upgrade` command shared by the arc and the bots | Core | stories |
@@ -697,7 +722,7 @@ ADR Audit and the Covers column in Required ADRs are derived from it.
 | TR-hero-006 (provisional) | hero-system | Hero exposes `position()`, `pin_state()`, `burst_state()`, `cooldown_left()`, `hero_target_id()`, `hero_pinned`, `burst_started` | UI | stories |
 | TR-hero-007 (provisional) | hero-system | `left_hand` and `reduce_motion` read from the Options record; the burst button mirrors by hand | UI | stories |
 | TR-hero-008 (provisional) | hero-system | HeroInput sits in the wrapper and calls `set_centre` every frame while the hero walks, so the hit disc follows the walking hero; queued commands make the input order against this update safe | Input | 0003 |
-| TR-hud-001 (provisional) | battle-hud | Modal result and Paused screens are full-screen Controls that consume events before the adapter; the HUD holds no gameplay state | UI | 0006 |
+| TR-hud-001 (provisional) | battle-hud | Modal result and Paused screens are full-screen Controls that take every event in `_gui_input` while the adapter's press block drops it; the HUD holds no gameplay state | UI | 0006 |
 | TR-hud-002 (provisional) | battle-hud | Build arc, Start/Call disc, upgrade chip and rejection ring register with the resolver at set priorities (arc discs TAP 300, backdrop TAP 250, Start/Call TAP 350) | Input | 0006 |
 | TR-hud-003 (provisional) | battle-hud | All commands run from the input call stack before the frame's ticks (they are queued there and drained once per frame before the ticks, GF7, ADR-0003); Retry's handler only sets a latch (destroying its own caller is unsafe) | Core | 0003 |
 | TR-hud-004 (provisional) | battle-hud | Layout anchors to safe areas and notches; tap targets at least 44 pt / 48 dp; portrait 540 by 960 reference | UI | 0006 |
@@ -710,7 +735,7 @@ ADR Audit and the Covers column in Required ADRs are derived from it.
 
 ## Required ADRs
 
-ADR-0001 to ADR-0005 are Accepted; ADR-0006 to ADR-0008 are Proposed and wait for the phone spike. These eight are required, numbered in the order they are written. Foundation first. Each ADR must record the engine version
+ADR-0001 to ADR-0005 are Accepted; ADR-0006 to ADR-0008 are Accepted (2026-11-03) on the best guesses in `docs/architecture/device-assumptions.md`, by user decision; the first device build runs its checklist. These eight are required, numbered in the order they are written. Foundation first. Each ADR must record the engine version
 (4.7.2), flag post-cutoff APIs, and list the TR-IDs it covers in "GDD Requirements Addressed". The Covers column is derived from the Technical
 Requirements Baseline. Where a decision cell says **decided here**, this document has made the call and the ADR confirms it.
 
@@ -725,11 +750,11 @@ Requirements Baseline. Where a decision cell says **decided here**, this documen
 | **ADR-0003 Frame Order: Command Queue, Ticks and View Update** | Core | Tick rate, accumulator and clamp; where TowerInput and HeroInput sit in the wrapper; input against the real-time chip feed and the per-frame hero centre update; the command type for `Battle.enqueue` and how a refused command reaches the HUD. **Decided here (GF7):** commands are queued from the input call stack and drained once per frame before the ticks (and first inside `tick` for headless callers), bots included; at most 5 catch-up ticks per frame, the rest dropped and logged in development builds; 2 ms per tick on the target phone (proposed; the phone spike measures it) | TR-flow-003, 004, TR-tower-005, TR-hero-008, TR-hud-003 | HIGH: frame order unverified (no longer load-bearing for determinism). **Done: Accepted 2026-11-02** (the Migration Plan edits are applied to this document) |
 | **ADR-0004 Headless Battle Harness and Snapshot** | Core | How tests snapshot a battle (through `Battle.systems()`, in tick order), enumerate its systems and inject recording ones; bot commands through the builder and the command queue; gdUnit4 on 4.7.2. **Decided:** every battle system has `snapshot() -> Dictionary` (plain data, compared exactly with `SnapshotTool.diff`) and `SNAPSHOT_EXEMPT`; `Battle._init(parts: BattleParts)` runs an ordered list of `TickSlot` objects, so tests inject `RecordingSlot` objects with no builder branch; `Replay` rebuilds the command log and checks every result; gdUnit4 6.2.2 is pinned, and only exit 0 passes (100, 101 orphans, 103, 105 and 1 fail; `No test cases found` fails). **Done: Accepted 2026-11-03** (the Migration Plan edits are applied to this document) | TR-flow-011, TR-tower-007, TR-hero-005 | LOW: gdUnit4 6.2.2 runs on 4.7.2 per the reference |
 | **ADR-0005 Simulation State Attachment: Health, Status and Roster** | Core | How Health and Status attach to an enemy instance; whether a future spawner sits behind `deliver`; roster and `spawn_id` representation. **Decided here:** ProjectileSpawner is cut and the tick order stays (A1); the `Object` enemy parameters are typed (`EnemyInstance`, name confirmed). **Done: Accepted 2026-11-03** (the Migration Plan edits are applied to this document) | TR-combat-001 to 006, TR-enemy-001 to 006 | LOW to MEDIUM (typed arrays, packed array write rule) |
-| **ADR-0006 Stretch Mode, Coordinate Space, Safe Area and HUD Layering** | Presentation (coordinate space used by Foundation) | Stretch mode and aspect (set `display/window/stretch` on purpose); the coordinate space the resolver and `targets()` use; Control layering above the adapter; modal consumption; the Paused resume input route (M6); safe-area API (NOT SOURCEABLE); Control event order against the adapter; enemy and effect pooling; renderer check (Mobile versus Compatibility on low-end Android). Must-have, accepted before ADR-0007 (GF4) | TR-input-006, TR-enemy-007, TR-hud-001, 002, 004, 007 | HIGH: safe area NOT SOURCEABLE; stretch defaults (A4) |
-| **ADR-0007 Input Adapter and Gesture Path** | Foundation | Which Godot input path feeds the adapter (`_unhandled_input` versus Control `_gui_input`); how moves and releases of the active touch survive a `mouse_filter = STOP` Control; touch-cancel handling and how the adapter reports it; desktop mouse as touch; tablet slop. The adapter owns no lifecycle state (GF6) | TR-input-001 to 005, 008 | HIGH: touch events NOT SOURCEABLE; verify against live 4.7 docs |
-| **ADR-0008 App Lifecycle and Battle Composition** | Core | Main scene; app root; builder ownership and lifetime; retry teardown including views and `free()` timing; pause mechanism; which lifecycle notifications fire on iOS and Android; guarantee that the fatal scene loads; Fatal during or after `build` (M2); quit and resize handling (M1). **Decided here:** lifecycle has one owner, the BattleWrapper, forwarding to AppRoot, and Android back in a battle is Pause (GF6); the plain builder and the TowerSim/TowerInput and HeroSim/HeroInput splits (A2); `halted()` at tick-slot edges and in emitters, typed zero reads after Fatal, three runtime Fatal sources (GF8) | TR-flow-001, 002, 005 to 009, TR-input-007, TR-tower-001, TR-hero-001 | HIGH: lifecycle NOT SOURCEABLE; needs a phone run |
+| **ADR-0006 Stretch Mode, Coordinate Space, Safe Area and HUD Layering** | Presentation (coordinate space used by Foundation) | Stretch mode and aspect (set `display/window/stretch` on purpose); the coordinate space the resolver and `targets()` use; Control layering above the adapter; modal consumption; the Paused resume input route (M6); safe-area API (NOT SOURCEABLE); Control event order against the adapter; enemy and effect pooling; renderer check (Mobile versus Compatibility on low-end Android). Must-have, accepted before ADR-0007 (GF4). **Done: Accepted 2026-11-03** on best-guess device assumptions (the Migration Plan edits are applied to this document) | TR-input-006, TR-enemy-007, TR-hud-001, 002, 004, 007 | HIGH: safe area NOT SOURCEABLE; stretch defaults (A4) |
+| **ADR-0007 Input Adapter and Gesture Path** | Foundation | Which Godot input path feeds the adapter (decided: `_input` on a Node, feeding a pure `PointerGate`; emulation off; the press block is the main modal route); how moves and releases of the active touch survive a `mouse_filter = STOP` Control; touch-cancel handling and how the adapter reports it; desktop mouse as touch; tablet slop. The adapter owns no lifecycle state (GF6). **Done: Accepted 2026-11-03** on best-guess device assumptions (the Migration Plan edits are applied to this document) | TR-input-001 to 005, 008 | HIGH: touch events NOT SOURCEABLE; verify against live 4.7 docs |
+| **ADR-0008 App Lifecycle and Battle Composition** | Core | Main scene; app root; builder ownership and lifetime; retry teardown including views and `free()` timing; pause mechanism; which lifecycle notifications fire on iOS and Android; guarantee that the fatal scene loads; Fatal during or after `build` (M2); quit and resize handling (M1). **Decided here:** lifecycle has one owner, the BattleWrapper, forwarding to AppRoot, and Android back in a battle is Pause (GF6); the plain builder and the TowerSim/TowerInput and HeroSim/HeroInput splits (A2); `halted()` at tick-slot edges and in emitters, typed zero reads after Fatal, three runtime Fatal sources (GF8). **Done: Accepted 2026-11-03** on best-guess device assumptions (the Migration Plan edits are applied to this document) | TR-flow-001, 002, 005 to 009, TR-input-007, TR-tower-001, TR-hero-001 | HIGH: lifecycle NOT SOURCEABLE; needs a phone run |
 
-ADR-0006, 0007 and 0008 are drafted only after the phone spike (GF5, Open Question A7).
+ADR-0006, 0007 and 0008 were drafted before any phone test and accepted on best-guess device assumptions (GF5 and A7 closed by user decision 2026-11-03).
 
 ### Should have before the relevant system is built
 
@@ -769,25 +794,25 @@ Warnings M1 to M11 come from `design/gdd/gdd-cross-review-2026-11-02j.md`. They 
 
 | ID | Summary | Priority | Resolution path |
 |---|---|---|---|
-| M1 | Nothing handles `lifecycle_changed` "quit requested" and "resized"; the provisional HUD record has no writer | High | ADR-0008 (the BattleWrapper owns lifecycle, GF6); then a Flow GDD fix routing both through Rule 17 |
-| M2 | A broken stage scene cannot Fatal "during `build`"; the wrapper loads `scene_ref` after `build` returns; who writes the Fatal record before views connect is unstated | High | ADR-0008 (the wrapper's scene load is a runtime Fatal source, GF8) |
+| M1 | Nothing handles `lifecycle_changed` "quit requested" and "resized"; the provisional HUD record has no writer | High | **Closed: decided by ADR-0008** (the BattleWrapper owns lifecycle; quit is checked at the AppRoot frame end; `resized` cancels without a pause). Flow Rule 17 routes both |
+| M2 | A broken stage scene cannot Fatal "during `build`"; the wrapper loads `scene_ref` after `build` returns; who writes the Fatal record before views connect is unstated | High | **Closed: decided by ADR-0008** (the root builds; the wrapper's `prepare()` scene load is a runtime Fatal source, and the root writes the record) |
 | M3 | `chip_state()` during `upgrade` (current or next level) is undefined | Medium | Tower stories; HUD story |
 | M4 | Interface names and signatures differ between GDDs (`lifecycle_changed(state)`, `start_next_wave()`, `slot_tapped(slot_index)`, `chip_state()` fields, `bursts_started`, owner column) | Medium | **Closed: decided by ADR-0002** (one canonical signature table; the GDD fixes in its Migration Plan are applied) |
 | M5 | HUD Rule 10 states the pin cancel more loosely than Hero Rule 14 | Low | HUD story: use "within 48 at release, or never passed 64" |
-| M6 | The Paused resume tap has no input route | High | ADR-0006 (overlay is a Control before the adapter) |
+| M6 | The Paused resume tap has no input route | High | **Closed: decided by ADR-0006** (the Paused overlay is a Control on layer 20; its tap queues `ResumeCommand`) |
 | M7 | Stale criteria and questions across GDDs (expired chip tap, wrong-disc question, snapshot question, hero share, ADR names) | Medium | Stories. The snapshot question is **Closed: decided by ADR-0004** |
 | M8 | "First run (challenge)" cannot order attempts across launches (`attempt_seq` resets) | Low | HUD debug-log story: say file order is the timeline, or add a persistent `tester_seq` |
 | M9 | `call_prompt_done` lasts one launch | Low | Design call; the app root holds it for one launch |
 | M10 | The Call prompt may teach a free move | Low | Design call (Hero "Always-call, humans" gate) |
 | M11 | A hero standing still in Build may read as a failed pin | Low | Playtest risk, not an architecture item |
 | A1 | Does the technical director accept cutting ProjectileSpawner and the tick order? | High | **Closed: decided by ADR-0005.** Accepted: ProjectileSpawner is cut and the tick order stays (ADR-0005 section 8) |
-| A2 | Does the technical director accept the composition root as a plain builder, and the HeroSim/HeroInput and TowerSim/TowerInput splits? | High | **Closed: decided.** Accepted: plain builder and both Sim/Input splits. ADR-0008 confirms (TR-tower-001, TR-hero-001) |
+| A2 | Does the technical director accept the composition root as a plain builder, and the HeroSim/HeroInput and TowerSim/TowerInput splits? | High | **Closed: decided by ADR-0008** (plain builder and both Sim/Input splits; TR-tower-001, TR-hero-001) |
 | A3 | Does the technical director accept path and slots moving from the scene to the Stage record? | Medium | **Closed: decided.** Accepted: path and slots live on the Stage record. ADR-0001 confirms the storage form, ADR-0005 uses it (`PathTrack` from `stage.path_points()`, ADR-0005 section 5) |
-| A4 | Stretch mode and aspect are unset in `project.godot`; 4.7 new-project defaults may not apply to this file | High | ADR-0006 (now must-have, GF4) |
+| A4 | Stretch mode and aspect are unset in `project.godot`; 4.7 new-project defaults may not apply to this file | High | **Closed: decided by ADR-0006** (`canvas_items` and `expand`, base 540 x 960, portrait, written in `project.godot`) |
 | A5 | Scene checks run on the project, not on an export (the test runner cannot run on an exported build); is the manual export check enough? | Medium | **Closed: decided** by ADR-0001. Yes for MVP: CI checks scene content, the manual export check covers packing |
-| A6 | Tablet `drag_slop` is 22 dp wide at 800 dp; does it need a scale cap? | Low | ADR-0007 |
-| A7 | Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. | High | **Open** task (GF5); it also measures the 2 ms per-tick budget (GF7) |
-| A8 | Renderer: `project.godot` uses Mobile; the reference calls Forward+ desktop-focused and lists Compatibility as the widest. Confirm Mobile on the lowest target Android | Medium | ADR-0006; Vertical Slice device test |
+| A6 | Tablet `drag_slop` is 22 dp wide at 800 dp; does it need a scale cap? | Low | **Closed: decided by ADR-0007** (no scale cap at MVP; reopen from tablet log data) |
+| A7 | Phone spike: confirm touch event classes, the `canceled` flag, lifecycle notifications, safe-area APIs and Resource export on Godot 4.7.2 on a target phone, and extend `docs/engine-reference/godot/`; needed before drafting ADR-0006, 0007 and 0008. | High | **Closed by user decision 2026-11-03: accepted on best-guess assumptions (docs/architecture/device-assumptions.md); the first device build runs its checklist.** |
+| A8 | Renderer: `project.godot` uses Mobile; the reference calls Forward+ desktop-focused and lists Compatibility as the widest. Confirm Mobile on the lowest target Android | Medium | **Closed: decided by ADR-0006** (keep Mobile), pending D9 on the lowest target Android |
 | A9 | gdUnit4 is not installed; the framework runs on 4.7.2 per the reference | Medium | **Closed: decided by ADR-0004** (gdUnit4 6.2.2, pinned and committed under `addons/gdUnit4/`). The install is a `/test-setup` task |
-| A10 | No GDD handles the Android back button. Decided here: in a battle it is Pause (GF6) | Medium | ADR-0008 confirms; Flow and HUD GDD fixes add the rule |
+| A10 | No GDD handles the Android back button. Decided here: in a battle it is Pause (GF6) | Medium | **Closed: decided by ADR-0008** (Android back in a battle is Pause); the Flow and HUD GDD fixes add the rule |
 | A11 | With commands queued (GF7), a command's result (`build`, `pin`, `burst` enums) is known only at the next tick; how the HUD shows a refusal (the rejection ring) is unstated | Medium | **Closed: decided by ADR-0003** (the result reaches the HUD through each command's `on_result` in the same frame) |

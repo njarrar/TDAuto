@@ -73,7 +73,7 @@ engine delivers input events  (input path chosen by ADR-0007; before or after st
    InputAdapter -> GestureResolver -> HeroInput / TowerInput / HUD
    handlers only ENQUEUE commands or set latches; nothing in the sim runs here
    TowerInput feeds ChipWindow with RealClock.now_ms() when its handler runs (section 5)
-   lifecycle notifications are held by the wrapper and forwarded in step 1b (ADR-0008 confirms)
+   lifecycle notifications are held by the wrapper and forwarded in step 1b
 
 AppRoot._process(delta)
  1. wrapper.step(delta):
@@ -86,7 +86,7 @@ AppRoot._process(delta)
     e. hero disc:      HeroInput.set_centre(hero_id, battle.hero().position())  while the hero walks
     f. views:          views redraw from reads (roster(), position(), cooldown_left(), chip_state(), ...)
     f2. late outcome:  if a Fatal latched during f, run the outcome step d now (once per latch)
-    g. frame end:      if cancel() was requested: resolver.cancel()
+    g. frame end:      if cancel() was requested: resolver.cancel(); gate.forget_open_presses(); after a resize, swap FieldSpace
  2. AppRoot end of frame: Fatal latch first (fatal screen), else Retry latch (ADR-0008 owns the rebuild)
 ```
 
@@ -118,6 +118,7 @@ class_name UpgradeCommand extends BattleCommand        # slot_index: int        
 class_name PinCommand extends BattleCommand            # position: Vector2                      -> HeroSim.pin
 class_name BurstCommand extends BattleCommand          # aim_point: Vector2                     -> HeroSim.burst
 class_name StartNextWaveCommand extends BattleCommand  # (none)                                  -> StageFlow.start_next_wave; returns OK
+class_name ResumeCommand extends BattleCommand        # (none)                                  -> StageFlow.resume; OK, HALTED, NOT_PAUSED (ADR-0008)
 
 # Battle
 func enqueue(command: BattleCommand) -> void   # appends; never applies; legal from any handler
@@ -154,7 +155,7 @@ var result: int              # the code the command returned (HALTED included)
 
 ### 7. The outcome step and the end of frame
 - Step 1d runs once per frame, after the ticks, if an outcome or Fatal latched during this frame (inside a tick, inside a command's apply, or from a view's read in the previous step 1f). It stops the clock, emits `phase(Won|Lost|Fatal)` once (the emit exception of ADR-0002 declaration rule 4), and requests `cancel()`. Paused takes the same request (Flow Rule 17).
-- Step 1g calls `resolver.cancel()` if requested. It is never called inside a tick or inside `apply_queued`.
+- Step 1g calls `resolver.cancel()` if requested, then `gate.forget_open_presses()`, then swaps `FieldSpace` after a resize (ADR-0006, ADR-0007). It is never called inside a tick or inside `apply_queued`.
 - **A Fatal from a view read in step 1f** latches after step 1d has run. Step 1f2 runs the outcome step for it in the same frame (stop the clock, emit `phase(Fatal)`, request `cancel()`), once per latch, so Flow Rules 15 and 18 ("at the end of that frame") hold and step 2 never shows the fatal screen before `phase(Fatal)`, `cancel()` and the debug log's Fatal record.
 - Step 2 is AppRoot's: Fatal first (fatal screen; the debug log's Fatal record is taken here from reads held at the latch, Flow Rule 18), otherwise the Retry latch. How Retry frees and rebuilds is ADR-0008's. Retry's input handler only sets the latch (HUD Rule 18).
 
@@ -172,7 +173,7 @@ AppRoot._process(delta)
 ```
 
 ### Key Interfaces
-`BattleCommand` and its five subclasses, `CommandRecord`, `Battle.enqueue(command: BattleCommand)`, `Battle.apply_queued()`, `Battle.command_log()`, `Battle.tick_count()`, `Battle.DT`, `StageFlow.clock_running() -> bool`, `RealClock.now_ms() -> int`, `TowerInput.advance_chip(now_ms: int)`, `BattleWrapper.step(delta: float)`.
+`BattleCommand` and its six subclasses (`ResumeCommand` is the sixth, ADR-0008), `CommandRecord`, `Battle.enqueue(command: BattleCommand)`, `Battle.apply_queued()`, `Battle.command_log()`, `Battle.tick_count()`, `Battle.DT`, `StageFlow.clock_running() -> bool`, `RealClock.now_ms() -> int`, `TowerInput.advance_chip(now_ms: int)`, `BattleWrapper.step(delta: float)`.
 
 ### Implementation Guidelines
 - Only AppRoot drives simulation time. No sim object, input piece or HUD logic may use `_process` or read engine time; the chip reads only the injected `RealClock`. Views may animate in their own `_process`, reading only.
@@ -282,3 +283,5 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 - Reviews, 2026-11-02: godot-specialist found no blocking issues; five minor notes folded in (illustrative class block, `on_result.is_valid()`, `time_scale` 1.0, rate-limited debug log, a class-cycle parse check as F4). TD-ADR: CONCERNS, eight items; items 1 to 7 revised in this draft (same-frame late outcome step 1f2, plain `CommandRecord` log with cleared callbacks, tick counting and stopped-clock drains, the ADR-0002 note and registry entries, the narrowed `_process` rule with Retry left to ADR-0008, `RealClock` and "exact to delivery", release log writes deferred); item 8 needed no change.
 - Cross-reference to ADR-0004 (Accepted 2026-11-03): the slot loop runs an ordered list of `TickSlot` objects that the builder builds (ADR-0004 section 4). The decision of this ADR is unchanged.
 - Cross-reference to ADR-0005 (Accepted 2026-11-03): the slot names are `StageFlow`, `WaveSim.advance`, `Combat.tick_status`, `TowerSim`, `HeroSim`, `WaveSim.reap`. The decision of this ADR is unchanged.
+- Cross-reference to ADR-0006 (Accepted 2026-11-03): step 1a also calls `hud.advance(min(delta_ms, 100))`, and step 1g swaps `FieldSpace` and the insets after a forwarded `resized`. The frame order is unchanged.
+- Amended 2026-11-03 by ADR-0008 (user sign-off): the command list gains `ResumeCommand` as the sixth subclass; step 1g gains `gate.forget_open_presses()` between `resolver.cancel()` and the `FieldSpace` swap; step 1b loses "(ADR-0008 confirms)". Step 2 order (Fatal, then Retry) is unchanged; the quit check sits between them.

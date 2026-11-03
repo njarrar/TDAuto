@@ -1,7 +1,7 @@
 # ADR-0007: Input Adapter and Gesture Path
 
 ## Status
-Proposed. **Must not be Accepted until the phone spike (architecture Gate Finding GF5, Open Question A7) confirms verification items I1 to I6 and I9 to I11 on a target phone running Godot 4.7.2, and a desktop run confirms I7 and I8.** Touch event classes, the `canceled` flag, delivery past a `mouse_filter = STOP` Control and multi-touch indexes are NOT SOURCEABLE from `docs/engine-reference/godot/`; see Engine Compatibility. ADR-0006 (Proposed) must also be Accepted first (GF4).
+Accepted (2026-11-03, by njarrar, on best-guess device assumptions; no phone test was possible). Every verification item is answered by a best guess in docs/architecture/device-assumptions.md and checked by its First device build checklist; a failed check revises this ADR, it is not worked around.
 
 ## Date
 2026-11-02
@@ -31,10 +31,10 @@ The Gesture Resolver is pure and clock-free, so one engine-facing node must turn
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0002 (Accepted): resolver signal names and shapes, wiring in the wrapper, emit rules. ADR-0003 (Accepted): `Battle.enqueue`, command records, `RealClock`, step 1g `resolver.cancel()`, no `_process` or engine time in input pieces, no `cancel()` inside a tick or `apply_queued`. ADR-0006 (Proposed): `FieldSpace.to_field`, `FIELD_RECT`, `FieldInsets`, the CanvasLayer order (World 0, HudLayer 10, ModalLayer 20), the modal screens' `_gui_input`, `set_input_blocked`, `ResumeCommand`. ADR-0001 (Accepted): the Input record (`drag_slop`, `tap_slop`, `edge_reject_margin`) |
+| **Depends On** | ADR-0002 (Accepted): resolver signal names and shapes, wiring in the wrapper, emit rules. ADR-0003 (Accepted): `Battle.enqueue`, command records, `RealClock`, step 1g `resolver.cancel()`, no `_process` or engine time in input pieces, no `cancel()` inside a tick or `apply_queued`. ADR-0006 (Accepted): `FieldSpace.to_field`, `FIELD_RECT`, `FieldInsets`, the CanvasLayer order (World 0, HudLayer 10, ModalLayer 20), the modal screens' `_gui_input`, `set_input_blocked`, `ResumeCommand`. ADR-0001 (Accepted): the Input record (`drag_slop`, `tap_slop`, `edge_reject_margin`) |
 | **Enables** | ADR-0008 (the wrapper builds, injects and frees the adapter and calls `forget_open_presses` at step 1g); the Input adapter, HeroInput and TowerInput stories; the phone test (TR-input-005) and its gesture log (TR-input-008) |
 | **Blocks** | Input & Gesture Resolver epic (adapter stories); every story that needs real touch input, including the Pillar 4 phone test |
-| **Ordering Note** | ADR-0006 must be Accepted before this one (GF4). **This ADR must not be Accepted until the phone spike (GF5, A7) has run** and confirmed, on Godot 4.7.2 on a target phone: I1 (`_input` sees events before Controls), I2 (touch class and field names), I3 (the cancel flag), I4 (multi-touch indexes), I5 (emulation keys and the double event), I6 (Controls take touch with emulation off), I9 (edge gestures cancel), I10 (focus loss with a finger down), I11 (with ADR-0006 D2). I7 and I8 are closed on desktop by the first adapter story. The spike extends `docs/engine-reference/godot/modules/input.md` with each answer. If I1 fails, see Risks; if I6 fails, the emulation decision in section 6 flips and the family lock carries it |
+| **Ordering Note** | ADR-0006 is Accepted before this one (GF4). Accepted on the best guesses in `docs/architecture/device-assumptions.md` by the user's decision of 2026-11-03, with no phone test: I1 to I6 and I9 to I11 (phone items), and I7 and I8 (desktop items, closed by the first adapter story). The first device build runs that file's checklist and adds each answer to `docs/engine-reference/godot/modules/input.md`. If I1 fails, see Risks; if I6 fails, the emulation decision in section 6 flips for menus outside the battle (see Risks) and the family lock carries it |
 
 ## Context
 
@@ -264,7 +264,7 @@ class_name PointerLogEntry extends RefCounted   # plain values only
 - **I1 fails (a Control can stop `_input`, or `_input` runs after the GUI).** Mitigation: the gate does not change; the adapter becomes a `Viewport`-level hook chosen by the spike, and if no path sees events before the GUI, the adapter adds a synthetic `cancel_pointer` for any open press when a STOP Control is visible (the GDD's second option). Only `InputAdapter` changes.
 - **I3 fails (no cancel flag).** Mitigation: `_decode` treats the cancel flag as false; the spike records how Android delivers a cancel (for example a release at the edge with no flag) and `_decode` maps that to `canceled = true`. Until then the phone test logs any `tap` or `drag_ended` from an edge release as a candidate mis-fire.
 - **I4 fails (indexes collide with 1024 or are renumbered).** Mitigation: change `MOUSE_INDEX`; renumbering would need a map in the gate, still pure.
-- **I6 fails.** Mitigation: turn `emulate_mouse_from_touch` on (section 6); the adapter is already correct; ADR-0006's modals adopt the family lock.
+- **I6 fails.** Mitigation: turn `emulate_mouse_from_touch` on (section 6); the adapter is already correct; ADR-0006's modals adopt the family lock. The battle uses no stock `Button` (ADR-0006: modals use `_gui_input`, other HUD Controls IGNORE), so I6 failing does not flip the emulation decision for the battle; it matters only for menus outside the battle.
 - **A HUD blocks input without a cancel request.** Mitigation: the rule in section 5 and the step 1g debug check; the next press of the index still recovers (Rule 1).
 - **Edge rejection removes real presses on a phone with large insets.** Mitigation: insets and margin are data; the gesture log records each `rejected` press with its reason.
 
@@ -311,7 +311,7 @@ These edits land in the same change that marks this ADR Accepted:
 - Named cases: cancel flag true gives `cancel_pointer`, never `release`; re-press of an open index gives `cancel_pointer` then `press`; mouse motion without the left button gives `cancel_pointer(1024)`; a touch during an open mouse press is dropped, and the reverse; a press outside the field, in the edge margin or in an inset strip opens nothing and logs `rejected`; while blocked nothing is forwarded and no cancel is called; after `forget_open_presses` a release is dropped.
 - A test that `InputAdapter` and `PointerGate` declare no signals, and a source check that they contain no `_process`, `Time.`, `set_input_as_handled` or `device == 0`.
 - Wrapper integration test (`tests/integration/input/`): a modal mount with an open press, then step 1g, ends with `drag_cancelled` and `idle` once, and the debug check fires when a block has no cancel request.
-- Phone spike: I1 to I6 and I9 to I11 confirmed and written into `modules/input.md`; a scripted run of edge swipes, palm touches and focus loss with a finger down gives zero `tap` or `drag_ended` from a cancel.
+- First device build (device-assumptions.md checklist): I1 to I6 and I9 to I11 confirmed and written into `modules/input.md`; a scripted run of edge swipes, palm touches and focus loss with a finger down gives zero `tap` or `drag_ended` from a cancel.
 - Pillar 4 phone test (TR-input-005): zero mis-fires and at most 5% misses over 20 attempts, from the gesture log.
 
 ## Related

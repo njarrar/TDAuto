@@ -64,7 +64,7 @@ The cross-review (warning M4) and the architecture gate (GF10) found the same in
 4. A sim emitter inside a tick checks `halted()` and emits nothing once it is true (GF8). Two named exceptions: StageFlow emits the outcome `phase(Won)`, `phase(Lost)` or `phase(Fatal)` once, after the latch (Flow Rule 18); and the resolver emits `drag_cancelled` and `idle()` from the end-of-frame `cancel()` that follows an outcome. Emitting is synchronous; no gameplay signal uses `CONNECT_DEFERRED` or `CONNECT_ONE_SHOT`.
 5. Each battle system declares `const VIEW_SIGNALS: Array[StringName]`: the signals the GDDs mark as read by a view. An empty list is written out as `[]`, never left out.
 6. **Signal owners.** StageFlow declares `phase`, `lives_changed` and `wave_called_early`, and owns `start_next_wave()`. `Battle` declares no signals; it only holds the systems and the queue. This keeps every battle signal inside `battle.systems()`, so the wiring test sees it.
-7. **No reference cycles.** No system holds `Battle`. `halted()` reaches systems through a small shared `HaltLatch` (`RefCounted`) that `Battle` creates and hands to each system; systems hold the latch, `Battle` holds the systems, and nothing points back. On Retry the wrapper calls `Battle.dispose()`, which disconnects and clears its system list as a backstop.
+7. **No reference cycles.** No system holds `Battle`. `halted()` reaches systems through a small shared `HaltLatch` (`RefCounted`) that the builder creates (the `StatAccessor` needs it before `Battle` exists, ADR-0008) and hands to `Battle` and each system; systems hold the latch, `Battle` holds the systems, and nothing points back. On Retry the wrapper calls `Battle.dispose()`, which disconnects and clears its system list as a backstop.
 
 ### 2. Wiring rules
 1. **Two places connect signals, and only these two.** `BattleBuilder.build` connects sim to sim (headless). `BattleWrapper` connects sim to view, and the wrapper-only signals of TowerInput and HeroInput. No system connects itself to another system, and no view connects to anything outside the wrapper.
@@ -106,7 +106,7 @@ Sources are the GDDs; where the architecture gate decided a change, the change w
 | `attack_fired(source_kind: int, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` | Combat | none | CombatView (view); not the HUD |
 | `damage_applied(event: DamageEvent, applied: float, position: Vector2)` | Combat | none | CombatView, Battle HUD (view) |
 | `slot_tapped(slot_index: int)`, `tower_inspected(slot_index: int)`, `upgrade_refused(slot_index: int)` | TowerInput (wrapper only) | none | Battle HUD |
-| `lifecycle_changed(state: StringName)`: `focus_lost`, `focus_gained`, `quit_requested`, `resized`, `back` **(gate, GF6)** | BattleWrapper | none | StageFlow (through the wrapper), Battle HUD; forwarded to AppRoot |
+| `lifecycle_changed(state: StringName)`: `focus_lost`, `focus_gained`, `quit_requested`, `resized`, `back` **(gate, GF6)** | BattleWrapper | none | StageFlow (through the wrapper), Battle HUD; forwarded to AppRoot through `AppServices.on_lifecycle` (a callable, not a signal connection); `resized` does not pause (ADR-0008) |
 | `pressed(best_tap: int, best_drag: int, pos: Vector2)` | GestureResolver | none | HeroInput, TowerInput, Battle HUD |
 | `tap(target_id: int, pos: Vector2)` | GestureResolver | none | TowerInput, Battle HUD |
 | `ground_tap(pos: Vector2)` | GestureResolver | none | Battle HUD |
@@ -143,6 +143,7 @@ Sources are the GDDs; where the architecture gate decided a change, the change w
 | `pin(position: Vector2) -> int` | HeroSim | `OK`, `HALTED`, `BAD_POSITION`, `OUT_OF_BOUNDS`, `BUTTON_ZONE` |
 | `burst(aim_point: Vector2) -> int` | HeroSim | `OK`, `HALTED`, `BUILD_PHASE`, `NOT_PINNED`, `NOT_READY`, `BAD_POSITION`, `OFF_FIELD`, `OUT_OF_REACH` |
 | `start_next_wave() -> void` | StageFlow (forwards to WaveSim); not on `Battle` | none |
+| `resume() -> int` (queued as `ResumeCommand`, ADR-0006, ADR-0008) | StageFlow | `OK`, `HALTED`, `NOT_PAUSED` |
 
 **AppRoot calls** (not queued; the app root is not a battle system): `request_retry() -> void` sets the Retry latch (Flow Rule 1, HUD Rule 3); `set_call_prompt_done() -> void` sets `call_prompt_done` (Flow Rule 1, HUD Rule 13). The GDDs name the state but not the functions; these names are fixed here.
 
@@ -273,3 +274,4 @@ No code exists yet. **These edits are a condition of acceptance and land in the 
 - Refinement by ADR-0003: commands drain once per frame before the ticks (and inside `tick` for headless callers), instead of only "at the start of the next tick". The decision of this ADR is unchanged.
 - Cross-reference to ADR-0004 (Accepted 2026-11-03): its `WiringCheck` implements the section 3 tests. Each system's `snapshot()` is a test-only read. The decision of this ADR is unchanged.
 - Cross-reference to ADR-0005 (Accepted 2026-11-03): WaveSim returns a new typed copy per call, and the record field lists are in its section 4. `Combat.attach` and `Combat.report_attack` are direct calls, not signals. The decision of this ADR is unchanged.
+- Amended 2026-11-03 by ADR-0008 (user sign-off): rule 7, the builder (not `Battle`) creates the `HaltLatch`; the command table gains `resume() -> int` (`ResumeCommand`); the `lifecycle_changed` row names the AppRoot recipient `AppServices.on_lifecycle` and says `resized` does not pause.

@@ -250,7 +250,7 @@ static func wrapper(objects: Array[RefCounted]) -> Array[String]   # no allowlis
 ```
 
 - The headless test is `tests/unit/wiring/battle_wiring_test.gd` on `BattleBuilder.build` with a fixture catalogue, with no `SignalTap` attached. The wrapper test is in `tests/integration/wiring/`.
-- **Requirement on ADR-0008:** the wrapper builds its input pieces through one function that loads no stage scene and creates no `InputAdapter` or views, for example `InputAssembly.build(battle, catalogue, clock)`, returning the resolver, `HeroInput` and `TowerInput` with their connections. The wrapper calls the same function, so the wrapper test and the hero equivalence test (section 11) test the real wiring.
+- **Requirement on ADR-0008:** the wrapper builds its input pieces through one function that loads no stage scene and creates no `InputAdapter` or views, for example `InputAssembly.build(battle, catalogue, clock)`, returning the resolver, `HeroInput` and `TowerInput` with their connections. The wrapper calls the same function, so the wrapper test and the hero equivalence test (section 11) test the real wiring. Met by ADR-0008 section 8: `InputAssembly.build(battle, catalogue, clock)`.
 - **Meta test (Flow Deferred "Listener test"):** a test-only helper removes one connection and the test asserts `headless` names that system and signal; the output is kept (watched failing once). Per-signal argument-type tests (ADR-0002 S3) use `SignalTap` on view signals.
 
 ### 11. Content, peak and equivalence tests
@@ -394,3 +394,4 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 - ADR-0001, ADR-0002, ADR-0003 (all Accepted). ADR-0005 (parallel; must honour section 5). ADR-0008 (the `InputAssembly` seam and the builder passing `TickSlot` objects).
 - GDDs: `game-state-stage-flow.md` (Rules 2, 4, 5, 6, 9, 17; CI criteria; Deferred criteria; Open Questions), `hero-system.md` (Simulated results; Deferred criteria; criteria 28, 29), `tower-system.md` (criteria 27, 28), `enemy-wave.md` (Deferred criteria), `combat-damage.md` (determinism; x86 and ARM), `input-gesture-resolver.md` (Rule 11).
 - Engine: `docs/engine-reference/godot/current-best-practices.md` ("Command Line, Tests and Parse Check"); `.claude/rules/test-standards.md`; `.claude/rules/skill-authoring.md` (obligations 1, 4, 5 and the watched-failing rule).
+- Amended 2026-11-03 by ADR-0008 (user sign-off): the section 9 requirement on ADR-0008 is met by `InputAssembly.build(battle, catalogue, clock)`; the sim directories the token scan (section 8 rule 5) derives are named in ADR-0008 section 1.

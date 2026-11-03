@@ -1,7 +1,7 @@
 # ADR-0006: Stretch Mode, Coordinate Space, Safe Area and HUD Layering
 
 ## Status
-Proposed. **Must not be Accepted until the phone spike (architecture Gate Finding GF5, Open Question A7) confirms verification items D2 to D7, D9, D10 and D12 on a target phone running Godot 4.7.2, and a desktop run confirms D1 and D8.** Touch events, safe-area APIs and part of the stretch behaviour are NOT SOURCEABLE from `docs/engine-reference/godot/`; see Engine Compatibility.
+Accepted (2026-11-03, by njarrar, on best-guess device assumptions; no phone test was possible). Every verification item is answered by a best guess in docs/architecture/device-assumptions.md and checked by its First device build checklist; a failed check revises this ADR, it is not worked around.
 
 ## Date
 2026-11-02
@@ -31,10 +31,10 @@ The resolver, `targets()`, the views and the HUD need one coordinate space, a st
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0002 (Accepted): canonical signals, reads and commands, the wiring rules, `VIEW_SIGNALS`. ADR-0003 (Accepted): the frame steps, `Battle.enqueue`, `BattleCommand`, `RealClock`, step 1g `cancel()`. ADR-0001 (Accepted) for the Options and Stage records. Soft: ADR-0005 (Proposed), since the enemy pool is keyed by `spawn_id` |
+| **Depends On** | ADR-0002 (Accepted): canonical signals, reads and commands, the wiring rules, `VIEW_SIGNALS`. ADR-0003 (Accepted): the frame steps, `Battle.enqueue`, `BattleCommand`, `RealClock`, step 1g `cancel()`. ADR-0001 (Accepted) for the Options and Stage records. Soft: ADR-0005 (Accepted), since the enemy pool is keyed by `spawn_id` |
 | **Enables** | ADR-0007 (the adapter converts every position through `FieldSpace` and honours the press block); ADR-0008 (the wrapper builds the layers named here and forwards `resized`); the Mobile Platform ADR (deferred: device budgets, tall-phone margin look) |
 | **Blocks** | Battle HUD epic; every story that converts a screen position (Input adapter, TowerInput, HeroInput); the enemy and combat view stories; the `project.godot` display keys |
-| **Ordering Note** | Accepted before ADR-0007 (GF4). **This ADR must not be Accepted until the phone spike (GF5, A7) has run** and confirmed, on Godot 4.7.2 on a target phone: D2 (event positions under `canvas_items`), D3 (visible rect and extra-area placement), D4 (safe-area call and units; Android edge-to-edge), D5 (resize and safe-area notifications), D6 (modal Control receives touch and stops it), D7 (IGNORE passes touch), D9 (Mobile renderer on the lowest target Android, or the fallback), D10 (dp width). D1 and D8 are closed on desktop by the first display-keys story. The spike extends `docs/engine-reference/godot/` with each answer. If D6 fails, the fallback route in section 5 becomes the primary route before acceptance |
+| **Ordering Note** | Accepted before ADR-0007 (GF4). Accepted on the best guesses in `docs/architecture/device-assumptions.md` by the user's decision of 2026-11-03, with no phone test: D2 to D7, D9, D10 and D12 (phone items), and D1 and D8 (desktop items, closed by the first display-keys story). The first device build runs that file's checklist and adds each answer to `docs/engine-reference/godot/`. If D6 fails, the fallback route in section 5 becomes the primary route |
 
 ## Context
 
@@ -292,7 +292,7 @@ wrapper step 1g: resolver.cancel(); gate.forget_open_presses(); if resized: new 
 
 ## Risks
 - **D2 wrong (positions in window pixels).** Mitigation: `event_to_canvas` absorbs it; a unit test feeds both.
-- **D6 fails.** Mitigation: the block keeps gameplay safe; the fallback route makes resume work. Decided on the spike before acceptance.
+- **D6 fails.** Mitigation: the block keeps gameplay safe; the fallback route makes resume work. The first device build checks D6 (device-assumptions.md checklist step 5).
 - **D4 has no usable API on one platform.** Mitigation: authored insets through `SafeAreaSource`.
 - **Burst `pin_exclusion` data assumes y 888 while `I_bottom` moves the button to 816.** Mitigation: the content test checks exclusion against the worst inset the Mobile GDD sets (Enemy & Wave L3/L7 recheck).
 - **A tap fully inside a resize frame.** Accepted; rare on a portrait-locked phone.
@@ -350,7 +350,7 @@ No code exists yet. **These edits land in the same change that marks this ADR Ac
 - Integration test: while blocked the adapter forwards nothing and calls no cancel; the press closes at step 1g.
 - An enemy pool test runs a 48-enemy fixture with no node created after build.
 - Retained screenshots in `production/qa/evidence/`: desktop 540x960 HUD; a 9:20 window showing curtains and the bottom-anchored field; left-handed burst.
-- Phone spike records D2 to D7, D9, D10; desktop records D1, D8.
+- The first device build (device-assumptions.md checklist) records D2 to D7, D9, D10 and D12; desktop records D1, D8.
 
 ## Related
 - Architecture: `docs/architecture/architecture.md` Gate Findings GF4, GF5; Open Questions A4, A7, A8, M6; API Boundaries 4.2, 4.5, 4.6, 4.7; Required ADRs row ADR-0006.
