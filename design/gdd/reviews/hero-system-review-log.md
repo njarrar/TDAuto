@@ -157,3 +157,37 @@ The script re-ran in both hands: every bot result is unchanged, and clamp_pin ma
 
 ## Revision — 2026-11-02 — Tower review's changes applied, re-review still pending
 Single's level 2 damage is now 21 (Tower System, user decision), so the bot table and results are refreshed and two gates are added, upgrade order and placement. `report_attack` names the call behind `attack_fired`, closing the logged gap. Every gate passes, with the share median at 25.1%, the band's floor.
+
+## Review — 2026-11-03 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
+Blocking items: 4 | Recommended: 8
+Summary: No pillar problems and the arithmetic holds; the script reproduces every table row (median share 25.2%, so the earlier 25.1% note was stale). But the share gate measured restraint: a bot that fires whenever Ready keeps one more life and reaches a median of 29.8%, and with exact aim 34% to 41%. The other blockers were the kill preview's timing basis, the cancel ring's radius and stale figures.
+Prior verdict resolved: Yes; all eight review-4 blockers fixed
+Findings:
+- [BLOCKING] Simulated results and Share gate: the gate measures the mid-skill trigger, not the cooldown; firing on Ready is better play and lifts share to 28% to 38% (41% with exact aim); rounding and inclusivity unstated.
+- [BLOCKING] Visual/Audio, kill preview: positions at lift or at landing unstated; a fast enemy moves 27.5 in the telegraph.
+- [BLOCKING] UI Requirements and Rule 13: the ring at 64 is called the cancel boundary, but a Live aim cancels at 48, so a lift at 55 fires.
+- [BLOCKING] Open Questions line 446 and the revision note: 35% and 44% and 25.1% are stale (32%, 40%, 25.2%).
+- [RECOMMENDED] Left-hand Start/Call is 7.2 units (4.8 dp) from the mirrored button (Battle HUD).
+- [RECOMMENDED] A thumb cannot aim below y 860, hiding the leak-save near the exit.
+- [RECOMMENDED] Wording: "the pin decides which stretch" while re-pinning is free; "release" meant lift and landing.
+- [RECOMMENDED] Acceptance Criteria: tick numbering unstated; criteria 16, 19, 21, 24, 26, 27 need numeric THENs; one array name per burst-outcome gate; real bots not tied to the script; human rows lack sample sizes; Manual list misses rows and sign-off.
+- [RECOMMENDED] Prompts retire on a first burst that hits nobody.
+- [RECOMMENDED] Engine: retry teardown (gameplay-programmer rated blocking; held as for Tower); handlers-issue-no-commands unenforced; update() contract; button "centre" point; Vector2 precision unverified.
+- [RECOMMENDED] Reduce Motion leaves a dead press silent; reach ring contrast unspecified; one input path for the burst.
+- [RECOMMENDED] Formulas: burst_safe_distance assumes the slow outlasts the telegraph; hero_start valid for both hands; clamp's 0.03 bound only for starter shapes; cooldown_left floor is Data's one tick (gameplay-programmer rated blocking; fixture only).
+Disagreements: gameplay-programmer's two blockers (stuck Cooling, retry teardown) held at recommended, since Data floors the cooldown and Tower's teardown item was held today; qa-lead's real-bot, counter-value and array-name blockers held at story level as in review 4, while the share tolerance stayed blocking because the greedy median sits at 30%.
+Fixed in the same session, with three user decisions (2026-11-03): the share gate runs on a greedy bot (fires when Ready at any victim, mid-skill aim and re-pin), median 25% to 30% inclusive and unrounded, none above 40%, today 29.81% and 37.7%; the greedy ceiling above 40% is accepted as skill; `hero_bots.py --greedy` reproduces and asserts it. The kill preview projects positions to landing, with criterion 32. The ring is at 64 while Cancelling and 48 while Live, read through `aim_ring_radius()`, in criterion 13. Stale figures replaced; tick numbering stated; "release" means the landing. Tower's line 120 now cites the greedy gate.
+Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
+Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 2890a42203fd47a724a105634efd2349ba0b18bf
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md 2b6f6a42bcfb5c3598682e28cc32b16c150eef2d
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009

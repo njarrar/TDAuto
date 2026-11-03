@@ -5,6 +5,7 @@ Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check
      python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
      python3 tools/balance-sim/hero_bots.py --orders (fill first against upgrading in pairs, every placement)
+     python3 tools/balance-sim/hero_bots.py --greedy (the share gate's bot: fires whenever Ready with any enemy in the disc)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
 import itertools
@@ -307,6 +308,19 @@ def orders():
         fl=[_lives(fill(p,ORD)) for p in ps]; pr=[_lives(pairs(p,ORD)) for p in ps]
         print(f"{lab:27} placements {len(ps)} | fill first median {median(fl)} range {min(fl)}-{max(fl)} | upgrade in pairs median {median(pr)} range {min(pr)}-{max(pr)}")
         assert median(pr)>=median(fl) and max(fl)-min(fl)>=3
+GREEDY=dict(MID,need=1)
+def greedy():
+    # Hero GDD share gate: mid-skill re-pin and aim, but fires whenever Ready with any enemy in the disc
+    sh=[]
+    for lab,hb in (('greedy',GREEDY),('greedy ceiling',dict(CEIL,need=1))):
+        rs=[]
+        for b,o in MIXED.items():
+            BLOG.clear();r=run(F,o,hero=dict(hb,reach=160.0));k3=[k for hh,k in BLOG if hh>=3]
+            rs.append(r['hs'])
+            print(f"{lab:18} {b:27} {fm(r)} share {r['hs']*100:.1f} burst {r['bs']*100:.1f} bursts {len(BLOG)} kills3+ {median(k3) if k3 else 0} {r['mins']:.1f}m")
+        print(f"{lab}: median share {median(rs)*100:.2f}, max {max(rs)*100:.1f}")
+        if hb is GREEDY: sh=rs
+    assert .25<=median(sh)<=.30 and max(sh)<=.40
 if __name__=='__main__':
     assert valid_pin(START) and valid_pin((270,480))
     check_clamp()
@@ -319,6 +333,8 @@ if __name__=='__main__':
             print(lab,[(b,fm(r:=run(F,o,hero=dict(MID,reach=160.0,**mm))),round(r['hs']*100)) for b,o in MIXED.items()])
     elif '--orders' in sys.argv:
         orders()
+    elif '--greedy' in sys.argv:
+        greedy()
     elif '--left' in sys.argv:
         HAND='left'; table()
     else:
