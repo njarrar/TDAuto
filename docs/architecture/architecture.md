@@ -346,7 +346,8 @@ skips the remaining slots, the clock stops after the tick returns, and nothing p
 finishes. Decided here (GF8), confirmed by ADR-0008 section 10:
 
 - **Where `halted()` is checked.** The tick loop checks it at every tick-slot edge, and each signal emitter checks it before it emits. Systems do
-  not check it after each read. Both checks can be tested.
+  not check it after each read, except WaveSim's `add_enemy`, leak and reap loops, which check it right after each accessor read and stop
+  (ADR-0005). Both checks can be tested.
 - **Reads after Fatal.** The stat accessor returns a typed zero value of the declared type (`0` for `get_int`, `0.0` for `get_float`), so the
   rest of the calling function runs safely to its end.
 - **Runtime Fatal sources.** Only three: the stat accessor (a bad read), the builder (inside `build`), and the BattleWrapper's stage scene load (in `prepare()`, ADR-0008).

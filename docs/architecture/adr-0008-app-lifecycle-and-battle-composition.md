@@ -237,7 +237,7 @@ var tower_input: TowerInput
 
 `InputAssembly.build` makes the resolver, registers `HeroInput` and `TowerInput` with it, connects `flow.phase` to `TowerInput` (the chip), and connects the resolver's signals to the two input objects. Both input objects queue commands with `battle.enqueue` and read the sim through the typed reads; neither holds the `Battle` reference beyond construction. `TowerInput` emits `slot_tapped`, `tower_inspected` and `upgrade_refused` (wrapper only, ADR-0002); `WiringCheck.wrapper` covers them.
 
-`InputAssembly` is the wrapper's own wiring, delegated to one function: only `BattleWrapper.attach()` and tests call it. ADR-0002 rule 1 (the builder and the wrapper are the two places that connect) therefore still holds, and no amendment is needed. `attach()` builds in this order: resolver, `HeroInput`, `TowerInput` (the three through `InputAssembly.build`), then `PointerGate.create(resolver, catalogue.input().edge_reject_margin, clock, log_sink)` with `log_sink` taken from the debug log in debug builds and a no-op otherwise, then `InputAdapter`, then the views and HUD. Headless callers never call it, except the hero equivalence test.
+`InputAssembly` is the wrapper's own wiring, delegated to one function: only `BattleWrapper.attach()` and tests call it. ADR-0002 rule 1 (the builder and the wrapper are the two places that connect) therefore still holds, and no amendment is needed. `attach()` builds in this order: resolver, `HeroInput`, `TowerInput` (the three through `InputAssembly.build`), then `PointerGate.create(resolver, catalogue.input().edge_reject_margin, clock, log_sink)` with `log_sink` taken from the debug log in debug builds and an empty `Callable()` otherwise (a no-op callable would still pass `is_valid()`), then `InputAdapter`, then the views and HUD. Headless callers never call it, except the hero equivalence test.
 
 ### 9. Retry: stop, cancel, dispose, free, rebuild
 `_retry()` runs at step 2c, from the latch, outside any signal and any input call:
@@ -263,7 +263,7 @@ func _retry() -> void:
 ### 10. `halted()` rules (GF8)
 - The tick loop in `Battle.tick` checks `halted()` before the first slot and at every slot edge (ADR-0003 section 3).
 - Every system checks `halted()` before it emits a signal. An emit after Fatal is a defect that a test finds by tripping the latch and asserting a `SignalTap` records nothing.
-- No system checks `halted()` after each read. The `StatAccessor` returns a typed zero after Fatal (`0`, `0.0`), so the calling function finishes safely.
+- No system checks `halted()` after each read, except WaveSim's `add_enemy`, leak and reap loops, which check the latch right after each accessor read and stop (ADR-0005). The `StatAccessor` returns a typed zero after Fatal (`0`, `0.0`), so the calling function finishes safely.
 - Runtime Fatal has three sources only: the `StatAccessor` (a bad read), `BattleBuilder.build`, and the wrapper's `prepare()` scene load. Catalogue load failure is a boot Fatal before any battle. `FatalRelay.report` is the one entry for all four.
 - A Fatal latched outside a tick takes the same second step at the end of the frame (ADR-0003 steps d and f2).
 
@@ -384,3 +384,4 @@ Other edits that follow from this ADR:
 - ADR-0001, ADR-0002, ADR-0003 (Accepted); ADR-0004 to ADR-0007 (Accepted).
 - `docs/architecture/architecture.md`: Module Ownership rule 7, Data Flow 3.1, 3.2, 3.4, 3.5, 3.6, API Boundaries 4.2 and 4.3; Gate Findings GF6, GF8; Open Questions M1, M2, A2, A10.
 - `design/gdd/game-state-stage-flow.md` Rules 1, 2, 3, 6, 15, 16, 17, 18; `design/gdd/gdd-cross-review-2026-11-02j.md` M1, M2.
+- Corrected 2026-11-03 (user sign-off): wording aligned with ADR-0005 and ADR-0007, found by the control manifest review; no decision changed.
