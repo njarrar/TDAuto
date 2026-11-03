@@ -91,12 +91,13 @@ state_ownership:
     status: active
     owner_system: data-config
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
-    interface: "Catalogue typed lookups (tower(id), stage(id), towers(), heroes(), inputs() ...) return RefCounted records; lists read-only; null on unknown ID; no handler"
+    # was: interface without hero(id) and without the exactly-one rule (before TD-ADR and godot reviews)
+    interface: "Catalogue typed lookups (tower(id), hero(id), stage(id), towers(), heroes(), inputs() ...) return RefCounted records; containers read-only; null on unknown ID; no handler; exactly one Input and one Hero (boot-fatal)"
     write_access: data-config-loader-only
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0002 is Proposed; binding only once Accepted"
   - state: field_insets
     status: active
@@ -189,11 +190,12 @@ interfaces:
       - app-root
       - content-test
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
-    signal_signature: "Catalogue.load_manifest(manifest_path: String) -> LoadResult; Catalogue.from_documents(docs: Array[Dictionary]) -> LoadResult for tests; LoadResult{ok, errors: Array[ValidationError], catalogue}"
+    # was: load_manifest(manifest_path) and from_documents(docs) only (before TD-ADR review)
+    signal_signature: "Catalogue.load_manifest(manifest_path: String, data_root: String = DATA_ROOT) -> LoadResult reads bytes only; from_texts(manifest_text, file_texts: Dictionary, data_root) runs Tier 0a with no I/O; from_documents(docs: Array[Dictionary]) runs Tier 0b to 4; LoadResult{ok, errors: Array[ValidationError], catalogue}"
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-03"
     notes: "ADR-0002 is Proposed; binding only once Accepted"
   - contract: validation_error_shape
     status: active
