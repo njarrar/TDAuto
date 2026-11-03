@@ -37,33 +37,847 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 1
-last_updated: ""
+version: 2
+last_updated: "2026-11-03"
 
-requirements: []
-
-# --- EXAMPLE ENTRIES (remove when first real entries are added) ---
-#
-# - id: TR-combat-001
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Player takes damage from enemies based on attack power minus defence"
-#   created: 2026-03-10
-#   revised: ""
-#   status: active
-#
-# - id: TR-combat-002
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Combo window timing is 0.4 seconds between hits"
-#   created: 2026-03-10
-#   revised: "2026-04-01"
-#   status: active
-#
-# - id: TR-combat-003
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Old damage formula using raw stats"
-#   created: 2026-03-10
-#   revised: ""
-#   status: "superseded-by: TR-combat-001"
+requirements:
+- id: TR-data-001
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Typed read-only records keyed by a stable snake_case ID unique across all record types; records reference each other by typed ID, never by file path"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-002
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "The storage format, or a check on top of it, detects a missing field, a fractional integer and an unknown property"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-003
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "The catalogue loads from an explicit manifest of data files, never a directory scan, and loads correctly from an Android export"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-004
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Loading is once and all-or-nothing (Unloaded, Loading, Ready/Failed), started by the app root before the first gameplay scene, with no reload"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-005
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-006
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "No fallbacks in any build; a load failure shows a catalogue-free fatal screen that never opens saves, and dev runs name each error"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-007
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Definitions are read-only after load and mutable state lives on runtime instances holding def_id; a deep-snapshot test proves the catalogue is unchanged after a battle"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-008
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Every modifiable value is read through one stat accessor (read_context, stat_key) at use time, never cached, so Stat & Modifier Resolution can replace its internals with no call-site change"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-009
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "A bad accessor call goes to an injected, test-replaceable failure handler that survives release builds (not assert)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-010
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Data owns the stat-key vocabulary and int/float type per key, and exposes non-fatal level_count(def_id) and is_tower(id)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-011
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "No autoload or global: the app root holds the Ready catalogue across retries and the battle builder injects it"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-012
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Logic tests build fixture catalogues in code with no file I/O; a separate integration suite validates the real data files"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-013
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "A CI content test opens each Stage scene_ref, applies layout and wave rules, and checks rationale fields and owning-GDD balance ranges"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-014
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "The data store emits no signals; each emitter declares its own and the composition root wires them"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-015
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "Load-time targets: Loading to Ready median at most 1000 ms on an Adreno 5xx-class device; edit-to-in-game at most 10 s"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-001
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "The resolver is a pure, scene-free, clock-free object driven only by press, move, release, cancel_pointer and cancel"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-002
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "One thin adapter node is the only engine-facing input code; it maps Godot touch and mouse events to the five calls in 540x960 field units"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-003
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Every forwarded press is followed by exactly one release or cancel for that index, even under a mouse_filter STOP Control; the canceled flag is honoured"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-004
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "The adapter runs PROCESS_MODE_ALWAYS and calls cancel() on app pause, focus loss and viewport resize, forwarding one lifecycle signal to Game State"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-005
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Touch and mouse use one event family: emulation settings stop duplicate presses, the mouse pointer index never collides with touch index 0, non-left buttons are dropped"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-006
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "The adapter rejects presses inside edge_reject_margin and platform safe-area insets via DisplayServer.get_display_safe_area(), converted to field units"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-007
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "A registry of disc hit targets {id, centre, radius, accepts, priority, enabled, sink}; register, unregister, set_centre and set_enabled are legal in any state and apply at once"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-008
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "A four-state machine (Idle, Pressed, Dragging, Dead) with one active pointer freezes TAP and DRAG winners at press and classifies by per-press slop"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-009
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Signal API pressed, tap, ground_tap, drag_started, drag_moved, drag_ended, drag_cancelled, idle; every exit to Idle emits idle() last"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-010
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "State commits before emit; gesture calls made inside a handler queue FIFO and drain synchronously in the outermost call"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-011
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Slops come by injection through static validate() and a create() factory returning null on bad input; non-finite positions are dropped with push_error"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-012
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Game State builds the resolver and adapter per battle from the Input record and injects the one resolver into Hero, Tower and HUD wrappers"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-013
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Burst button, build arc and world targets are resolver discs, not Controls; HUD Controls consume their events before the adapter, so routing order is fixed"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-014
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Identical call lists give identical signal logs; tests use a recording fake, not assert_signal; bots call commands directly plus one resolver equivalence test"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-015
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification for the Pillar 4 phone test"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-input-016
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "Minimum width 360 dp by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-001
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "A minimal main-scene app root with no autoload triggers the catalogue load, holds the Ready catalogue, owns the fatal screen, and alone survives a retry"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-002
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "A scene-free builder build(catalogue, stage_id, seed, fatal_handler) wires every battle system by explicit signal connections and runs headless; a thin wrapper adds tick loop, adapter and views"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-003
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Simulation time enters only through battle.tick(dt) at a fixed rate; no _process, Timers, await, wall clock or physics areas in gameplay; the wrapper clamps owed ticks"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-004
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Systems tick in one fixed documented order and player and bot commands apply only between ticks"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-005
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "All randomness comes from an injected seed so stage, seed and command script give an identical result"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-006
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost) with a result readable after the outcome"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-007
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Committing an outcome sets state, stops the clock, calls input.cancel(), then emits phase; remaining systems skip the rest of that tick"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-008
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Flow listens to synchronous wave_cleared, waves_complete and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-009
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Retry destroys the whole battle and builds a new one between ticks, driven by a latch on the app root; a weakref to the old battle must be null"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-010
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Focus loss or backgrounding enters Paused: ticks stop, input cancels, the accumulator is zeroed, and a resume tap reaches nothing beneath"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-011
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "One idempotent fatal handler keeps the first cause, latches, halts the tick and discards a partial build; the fatal screen is guaranteed to load"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-012
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Authored durations become whole ticks through one to_ticks conversion; countdowns are integer tick counters"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-013
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Tests can enumerate a battle's systems, inject recording fakes, snapshot a battle, and fail when any battle signal has no listener (views on an allowlist)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-014
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Wrapper-side presentation timers (Lost delay, Won beat, button arming) run on the frame clock outside the simulation"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-001
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Combat is three pieces: a DamageEvent value (target, amount, source_kind, source_id), one Health and one Status per enemy; no ProjectileSpawner"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-002
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "The enemy object exposes spawn_id, cached distance and position, and removed, and stays a valid reference after removal, so it cannot be a freed Node"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-003
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Every HP change goes through deliver(event) inside a tick, applying min(amount, hp) after guards in fixed order with named push_error codes"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-004
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Death is immediate at HP 0 or below; dead enemies cannot be targeted; the reap step removes the corpse and emits enemy_killed(bounty) once"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-005
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Per-source damage counters expose dealt_by_id, dealt_by_kind, dealt_total and hero_share, readable until the battle is destroyed"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-006
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Slow is per-instance whole-tick countdown state with replace/equal/ignore rules; movement multiplies move_speed by speed_factor(enemy)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-007
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Combat reads no catalogue data; callers pass values in and its only dependency is the pure to_ticks with dt injected"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-008
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Pure targeting helpers first_in, nearest_in and all_in_radius use an inclusive squared-distance test, tie-break by lowest spawn_id and never mutate input"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-009
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Tick order is Flow, Enemy & Wave advance, tick_status, Towers by slot, Hero then burst, reap; leaks resolve before fire"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-010
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "View-only attack_fired and damage_applied emit after commit with copied positions; listeners never call deliver, and results match with or without listeners"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-011
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "The Combat view draws primitives from one _draw() per kind with no shaders or particles and a 16-marker flash pool on the frame clock"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-012
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Errors use push_error, asserted with gdUnit4 assert_error().is_push_error() and the push_error report setting on; invariant I checks damage sums"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-013
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Per-tick targeting stays within budget on a low-end phone at the catch-up clamp (about 400 range checks, under 2 ms, unmeasured)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-combat-014
+  system: combat
+  gdd: design/gdd/combat-damage.md
+  requirement: "Determinism holds per CPU architecture only; bot baselines are kept per architecture"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-001
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "The Stage record holds gameplay geometry (path_points, slot_positions, path_width, requires_bend, early_call_seconds_per_gold); the scene holds only the look"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-002
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Fixed tick dt with one to_ticks (round half away from zero); spawn ticks come from an absolute schedule, never a float countdown"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-003
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Enemy & Wave has two tick entries, advance (spawn, move, leak) and reap, in Combat's tick order; the battle passes the roster to tick_status"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-004
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "enemy_leaked, enemy_killed, wave_cleared and waves_complete fire synchronously (no CONNECT_DEFERRED) in spawn_id order after commit; leaks come before the clear"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-005
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "The builder injects a halted() callable checked after every accessor read and signal; the system never references Flow"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-006
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Every enemy stat is read through the accessor at use time with a reused per-enemy read context; Wave and Stage records are read directly and never written"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-007
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Waves use no randomness and never read the sim seed; cosmetic jitter uses a separate RNG; retry rebuilds identical spawn_id and schedule"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-008
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "The roster solely owns its enemies, exposes read-only roster() and targets() in spawn_id order, and enemies keep no back-references so retry frees them"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-009
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "How Health and Status attach to an enemy (spawn_id, def_id, distance, position, removed) is decided by ADR"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-010
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Position comes from distance along a polyline via a cached cumulative-length array, crossing several segments per step and clamped to the end"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-011
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "An enemy is targetable only while its centre is inside the 540x960 field rectangle, a defined constant or injected value"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-012
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Wave control is a Waiting/Active/Finished machine with start_next_wave() logging to an injected dev-error sink, not assert"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-013
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "One add-enemy step handles schedule spawns and future splitter children, joining atomically before the clear check"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-014
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "A headless content test checks layout rules L1-L14 and wave rules on in-memory records; unit tests use fakes and no scene or files"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-enemy-015
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Views read roster() and the path each frame; fixed three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-001
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "TowerSim (builder-made, headless) holds gold, slots, towers and the tick; TowerInput (wrapper-made, absent headless) changes state only through upgrade"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-002
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "build(slot_index, tower_id) and upgrade(slot_index) are the only mutation API, run between ticks and return a typed result enum in fixed check order"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-003
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Tower IDs and levels are validated with is_tower and level_count before any accessor read; cost and stats are read at use time"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-004
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Command commit is atomic: state commits before gold_changed then tower_built or tower_upgraded; a refusal changes and emits nothing"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-005
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Towers tick in ascending slot index; cooldown_left is an integer tick counter that runs on every tick, Intermission included"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-006
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "The injected halted() is checked after every read and signal; all stats are read before any mutation so a bad read halts with nothing half done"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-007
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Targeting and damage go only through Combat's API; splash victims come only from targets()"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-008
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Gold is one non-negative integer owned by TowerSim, fed by starting_gold, enemy_killed(bounty) and wave_called_early; gold freezes once halted"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-009
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "The early-call bonus is pure integer tick math, to_ticks(seconds_left) div to_ticks(rate)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-010
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "The upgrade chip window runs on real time while the sim clock is stopped, via a pure ChipWindow.advance(ms) fed by the wrapper"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-011
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "TowerInput registers slots and the chip disc with the resolver, disables built slots, closes the chip on phase, and ignores taps while halted"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-012
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Signals have typed signatures (tower_id type undecided); gameplay may not depend on them and results match with or without listeners"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-013
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "Retry teardown leaves no old battle alive through a signal connection; a listener-count wiring test names any missing connection"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-014
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "All logic is unit-testable headless with spy accessor, recording fake and fake halted(); the content test enforces tower and gold rows"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-tower-015
+  system: tower
+  gdd: design/gdd/tower-system.md
+  requirement: "All towers draw from one _draw() node with primitive polygons, level inset and a cooldown ring, with Reduce Motion fallbacks"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-001
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "Hero splits into HeroSim (builder-made, headless) and HeroInput (wrapper-only), which changes battle state only through pin() and burst()"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-002
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "pin() and burst() run between ticks and return ordered enum result codes, state checked before geometry; a refusal mutates nothing"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-003
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "HeroSim ticks in the Hero-and-burst slot (walk, attack, cooldown, telegraph, release), uses to_ticks, and returns at once when halted()"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-004
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim, HeroInput and the HUD"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-005
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "Hero and Burst stats are read through the accessor at use time; hero_start, pin_rect and pin_exclusion come straight from the Stage record"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-006
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "PinGeometry is a plain scene-free class computing in float scalars only (no Vector2 methods) with stated tolerances and tie-breaks"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-007
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "Hero uses deliver with HERO/BURST source kinds, report_attack before deliver, and nearest_in, all_in_radius, is_dead, hp_left over targets()"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-008
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "hero_pinned and burst_started emit after state is set and are on Flow's view allowlist; handlers never issue commands"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-009
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "HeroSim exposes read-only queries and per-run counters (repins, bursts, victims, kills) for HUD, bots, logs and Stage Progression"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-010
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "HeroInput registers hero DRAG, button DRAG and sink TAP discs, updates the walking hero's hit centre each frame, and hit-tests cancel hysteresis"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-011
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "HeroInput's aim state machine and cooldown_digit() advance through an explicit update(), not engine frames"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-012
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "A resolver-driven script and a direct-command script give tick-identical HeroSim state; a never-pinned run equals a HeroSim-absent run"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-013
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "Pause stops the sim clock so walk and telegraph resume exactly; aims get drag_cancelled; Build runs no ticks, Intermission does"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-014
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "Content tests enforce hero and burst rules (leash, telegraph, intermission, reach, hero_start, pin_exclusion, one Hero record), each proven on a broken fixture"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hero-015
+  system: hero
+  gdd: design/gdd/hero-system.md
+  requirement: "burst_button_centre() is owned by the HUD, read once by HeroInput at registration, and injectable by tests"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-001
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The HUD is HudLogic (plain), HudTopBand (display-only Controls) and HudField (one _draw, targets as resolver discs), absent headless and rebuilt on retry"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-002
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Result and Paused screens are full-screen modal Controls that consume every event before the Input adapter sees it"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-003
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "A Control fires only on a release whose press it saw while Armed, and clears that press on lifecycle or focus-loss signals"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-004
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The HUD holds presentation state only and no reset path; full sim state is identical with or without the HUD"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-005
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Each frame runs input commands, then real-time models, then ticks, then views, so the displayed bonus equals the paid bonus"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-006
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Retry sets an idempotent latch on the app root and never frees its caller; the root's next frame checks Fatal, stops, cancels, frees and rebuilds"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-007
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Armed buttons go Hidden, Arming, Armed on a real-time advance(ms) clock clamped to 100 ms and frozen while Paused"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-008
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The build arc registers and unregisters resolver targets on open and close, disables Start/Call while open, and closes on outcome, Paused or Fatal"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-009
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The resolver's pressed payload exposes both best_tap and best_drag so the HUD can ignore a Start/Call tap that also hits the hero"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-010
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and new view-only queries; phase and lives_changed join the view allowlist"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-011
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Costs are read through the accessor on arc open and gold_changed; a read that finds halted() is abandoned for the Fatal screen"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-012
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "The result screen and log come from one snapshot built the frame after the outcome"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-013
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Debug builds append JSON lines to user://run_log.jsonl through an injectable sink; a write failure is non-fatal and release builds never write"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-014
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Layout is in 540x960 field units with safe-area insets converted to field units; burst_y = clamp(888 - I_bottom, 816, 888)"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-015
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "HUD budget about 8 (max 12) of 60 draw calls and at most 3 text draws; hit targets at least 72 units (48 dp), text at least 21 units"
+  created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-hud-016
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Content tests enforce HUD layout rules (slot bounds, clearances, at most 3 next-wave types, 6 waves, 10 lives)"
+  created: 2026-11-03
+  revised: ""
+  status: active
