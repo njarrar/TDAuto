@@ -76,7 +76,7 @@ The cross-review (warning M4) and the architecture gate (GF10) found the same in
 7. On Retry the wrapper drops the old battle and views and wires the new ones; it never re-connects into a freed battle (architecture 3.5).
 
 ### 3. The wiring test (TR-flow-010)
-The covered set is derived, not listed:
+The covered set is derived, not listed (refined by ADR-0004):
 
 - **Headless test.** Build a battle with `BattleBuilder.build` and a fixture catalogue. For each object in `battle.systems()`, take every signal from `(get_script() as Script).get_script_signal_list()` (S2), converting each `name` with `StringName(...)`. Each must have at least one connection (`get_signal_connection_list(name).size() > 0`) unless its name is in that system's `VIEW_SIGNALS`, and **at most one** (only sim listeners exist headless; rule 2.4). A new signal with no listener fails the test without anyone editing it.
 - **Allowlist check.** Every name in a `VIEW_SIGNALS` is a real script signal of that system (catches a typo in the list).
@@ -123,16 +123,16 @@ Sources are the GDDs; where the architecture gate decided a change, the change w
 | `Catalogue` (ADR-0001) | `tower`, `enemy`, `wave`, `stage`, `hero`, `burst`, `input`, `options`, `is_tower(def_id) -> bool`, `level_count(def_id) -> int`; stats through `StatAccessor` |
 | `Battle` | `halted() -> bool`, `in_build() -> bool`, `flow()`, `combat()`, `wave()`, `tower()`, `hero()`, `systems()` |
 | `StageFlow` | `state() -> StringName`, `lives() -> int`, `intermission_left() -> int` (ticks), `result() -> BattleResult`, `to_ticks(seconds: float) -> int` |
-| `WaveSim` | `roster() -> Array[EnemyInstance]`, `targets() -> Array[EnemyInstance]` (each a read-only array, valid for the reader's own tick slot), `wave_index() -> int`, `got_through_by_type() -> Dictionary[StringName, int]` (a read-only copy) |
+| `WaveSim` | `roster() -> Array[EnemyInstance]`, `targets() -> Array[EnemyInstance]` (each a read-only array, valid for the reader's own tick slot; refined by ADR-0005: a new typed copy per call), `wave_index() -> int`, `got_through_by_type() -> Dictionary[StringName, int]` (a read-only copy) |
 | `TowerSim` | `gold() -> int`, `slot_state(slot_index: int) -> SlotState` (`tower_id`, empty when unbuilt; `level`; `cooldown_left` ticks) |
 | `TowerInput` (wrapper) | `chip_state() -> ChipState` (`slot_index`, `-1` when closed; `elapsed_ms: float`, real time, as battle-hud.md writes it; `level: int`) |
 | `HeroSim` | `position() -> Vector2`, `pin_state() -> int`, `pin_target() -> Vector2`, `burst_state() -> int`, `cooldown_left() -> int` (ticks), `counters() -> HeroCounters` |
 | `HeroInput` (wrapper) | `aim_state() -> int`, `aim_point() -> Vector2`, `hero_target_id() -> int`, `cooldown_digit() -> int` |
 | `Combat` | `hp_left`, `is_dead`, `speed_factor` (architecture 4.4), `counters() -> CombatCounters` (per source) |
 
-`SlotState`, `ChipState`, `HeroCounters`, `CombatCounters` and `BattleResult` are small read-only `RefCounted` records, not Dictionaries (registry `mutable_catalogue_records` applies the same reason). Their fields are the GDD fields; the owning story adds a field by updating this table.
+`SlotState`, `ChipState`, `HeroCounters`, `CombatCounters` and `BattleResult` are small read-only `RefCounted` records, not Dictionaries (registry `mutable_catalogue_records` applies the same reason). Their fields are the GDD fields; the owning story adds a field by updating this table. ADR-0005 section 4 lists the fields (refined by ADR-0005). Every battle system also has `snapshot() -> Dictionary`, a read for tests only, in the format of ADR-0004 section 5 (refined by ADR-0004).
 
-**Returned collections.** A read that returns an `Array` or `Dictionary` returns one the caller cannot write into the simulation: either a copy, or the owner's array after `make_read_only()` (memory, unverified on 4.7.2; if it is missing or costly, the owner returns `.duplicate()`). The first WaveSim story picks one and records it here.
+**Returned collections.** A read that returns an `Array` or `Dictionary` returns one the caller cannot write into the simulation: either a copy, or the owner's array after `make_read_only()` (memory, unverified on 4.7.2; if it is missing or costly, the owner returns `.duplicate()`). The first WaveSim story picks one and records it here. Recorded by ADR-0005: WaveSim returns a new typed copy per call (`.duplicate()`); `make_read_only()` is not used (refined by ADR-0005).
 
 **Commands** (queued through `Battle.enqueue` and applied at the start of the next tick, GF7 (refined by ADR-0003); bots call the same commands through the same queue). The result codes are each command's own contract and are what the command returns when the queue applies it. How a refusal reaches the HUD, given that `enqueue` does not return it, is ADR-0003's to decide (Open Question A11).
 
@@ -271,3 +271,5 @@ No code exists yet. **These edits are a condition of acceptance and land in the 
 - ADR-0001 (Accepted): record and ID names.
 - Reviews, 2026-11-02: godot-specialist found no blocking issues; nine minor notes folded in (inherited script signals, `String` names, typed dictionaries in 4.4, read-only returns, reference cycles, `waves_complete`). TD-ADR: CONCERNS, nine items; items 1 to 7 revised in this draft (outcome and cancel emit exceptions, the derived wrapper test, StageFlow owns the Flow signals, result codes and A11, the full migration list as a condition of acceptance, at-most-one sim listener, typed wiring variables); items 8 and 9 needed no change.
 - Refinement by ADR-0003: commands drain once per frame before the ticks (and inside `tick` for headless callers), instead of only "at the start of the next tick". The decision of this ADR is unchanged.
+- Cross-reference to ADR-0004 (Accepted 2026-11-03): its `WiringCheck` implements the section 3 tests. Each system's `snapshot()` is a test-only read. The decision of this ADR is unchanged.
+- Cross-reference to ADR-0005 (Accepted 2026-11-03): WaveSim returns a new typed copy per call, and the record field lists are in its section 4. `Combat.attach` and `Combat.report_attack` are direct calls, not signals. The decision of this ADR is unchanged.

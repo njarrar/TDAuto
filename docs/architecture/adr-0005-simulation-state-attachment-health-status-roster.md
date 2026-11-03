@@ -1,7 +1,7 @@
 # ADR-0005: Simulation State Attachment: Health, Status and Roster
 
 ## Status
-Proposed
+Accepted (2026-11-03, by njarrar; accepted together with the other of ADR-0004 and ADR-0005; the Migration Plan edits landed in the same change)
 
 ## Date
 2026-11-02

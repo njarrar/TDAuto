@@ -277,7 +277,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 |---|---|---|
 | Does calling early cost a person anything? Hero's "Always-call, humans" row owns this; on a fail, overlapping waves come forward (Rule 9) | Hero GDD, from human logs | First playable |
 | App Lifecycle & Composition ADR: tick rate and clamp, pause mechanism, lifecycle notifications, teardown. All engine behaviour here is from memory | technical-director | Before the first story |
-| How do tests take a battle snapshot, enumerate its systems and inject recording ones? The criteria assume all three | technical-director | App Lifecycle ADR |
+| How do tests take a battle snapshot, enumerate its systems and inject recording ones? The criteria assume all three | technical-director | **Answered by ADR-0004** (snapshot format, `systems()` in tick order, `TickSlot` and `RecordingSlot`) and ADR-0005 (what each system puts in its snapshot) |
 | Does the technical director accept moving the composition root from the battle scene to a plain builder? | technical-director | Input and Game State ADR |
 
 **Closed (kept for history).**
