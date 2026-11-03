@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: ""
+last_updated: "2026-11-03"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -53,7 +53,40 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: session_catalogue
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "Ready Catalogue held by AppRoot and passed to BattleBuilder.build() on every build; no autoload or global"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - state: app_state
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "AppRoot.state() -> AppState (BOOT, IN_STAGE, FATAL); FATAL is absorbing"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - state: fatal_cause
+    status: active
+    owner_system: fatal-latch
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "FatalLatch.fatal(cause) idempotent, keeps first cause; is_fatal(), first_cause(); signal latched(cause) once. One per battle plus one on AppRoot"
+    write_access: fatal-latch-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -81,7 +114,50 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: fatal_handler
+    status: active
+    pattern: direct_call
+    producer: any-sim-builder-accessor
+    consumers:
+      - fatal-latch
+      - app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "fatal(cause: String) -> void, injected as the battle FatalLatch method Callable"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - contract: halted_injection
+    status: active
+    pattern: direct_call
+    producer: halt-gate
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - hud-logic
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "HaltGate.halted() -> bool, injected as a method Callable; never Battle.halted"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - contract: battle_wiring
+    status: active
+    pattern: signal
+    producer: battle-builder
+    consumers:
+      - battle
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "Wiring.connect_recorded(sig: Signal, target: Callable); Battle.unwire() disconnects all at teardown"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -141,7 +217,18 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: battle_wrapper_teardown
+    status: active
+    api: "set_process(false), remove_child(wrapper), wrapper.queue_free(), from AppRoot._process"
+    not: "wrapper.free()"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    reason: "Acts outside the wrapper call stack; remove_child stops callbacks at once; queue_free deletes at frame end"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -167,7 +254,35 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_singleton
+    status: active
+    description: "project.godot must have no [autoload] section; no global holds catalogue or game state"
+    why: "Hidden globals break headless tests and leak state across retries"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - pattern: capturing_lambda_or_bind_in_wiring
+    status: active
+    description: "The Builder and wrapper must inject method Callables only; no lambda and no bind() with a sim object argument"
+    why: "Captures are strong references and can keep an old battle alive after retry"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - pattern: sim_back_reference
+    status: active
+    description: "No sim object holds a reference to Battle, AppRoot or any Node"
+    why: "A back-reference forms a cycle so the retry weakref check fails"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - pattern: assert_for_release_checks
+    status: active
+    description: "assert must never guard a release-relevant check; use the injected fatal handler or dev-error sink"
+    why: "Exported builds strip assert"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-03
+    notes: "ADR-0001 is Proposed; binding only once Accepted"
 
 # Example:
 #
