@@ -87,6 +87,17 @@ state_ownership:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - state: catalogue_records
+    status: active
+    owner_system: data-config
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    interface: "Catalogue typed lookups (tower(id), stage(id), towers(), heroes(), inputs() ...) return RefCounted records; lists read-only; null on unknown ID; no handler"
+    write_access: data-config-loader-only
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -159,6 +170,35 @@ interfaces:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - contract: catalogue_load
+    status: active
+    pattern: direct_call
+    producer: data-config
+    consumers:
+      - app-root
+      - content-test
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    signal_signature: "Catalogue.load_manifest(manifest_path: String) -> LoadResult; Catalogue.from_documents(docs: Array[Dictionary]) -> LoadResult for tests; LoadResult{ok, errors: Array[ValidationError], catalogue}"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - contract: validation_error_shape
+    status: active
+    pattern: shared_resource
+    producer: data-config
+    consumers:
+      - app-root
+      - fatal-screen
+      - content-test
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    signal_signature: "ValidationError{code: StringName, source: String, record_id: StringName, field: StringName, detail: String}; tests compare the first four, never detail"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -230,6 +270,28 @@ api_decisions:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - purpose: catalogue_storage_format
+    status: active
+    api: "JSON files in res://assets/data/catalogue/, listed in manifest.json, read with FileAccess.open + get_as_text and parsed by a JSON instance; one schema table per record type"
+    not: ".tres/.res Resources, load() or ResourceLoader for catalogue data"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    reason: "A .tres load hides a missing field, an unknown property and a fractional int before any check can see them"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - purpose: catalogue_read_only_snapshot
+    status: active
+    api: "CatalogueSnapshot.take() schema walk into fresh containers, CatalogueSnapshot.diff(); make_read_only() on every record Array and Dictionary"
+    not: "duplicate() or duplicate_deep() for the snapshot"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    reason: "Records are RefCounted, so duplicate_deep() (a Resource method) does not apply; duplicate() on nested arrays is shallow"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -284,6 +346,27 @@ forbidden_patterns:
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-03
     notes: "ADR-0001 is Proposed; binding only once Accepted"
+  - pattern: runtime_directory_scan
+    status: active
+    description: "No runtime code under src/ uses DirAccess; the catalogue reads only the files manifest.json lists"
+    why: "Exports rename and pack files; a scan finds different files on device"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - pattern: catalogue_record_write
+    status: active
+    description: "No code outside src/foundation/data/ assigns a record field or mutates a record list"
+    why: "Definitions are shared by every battle and retry; mutable state lives on runtime instances holding def_id"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - pattern: catalogue_holds_battle_reference
+    status: active
+    description: "The Catalogue holds no FatalLatch, handler, battle or node; each battle gets its own StatAccessor"
+    why: "The Catalogue outlives every battle, so a battle reference would leak across retries"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-03
+    notes: "ADR-0002 is Proposed; binding only once Accepted"
 
 # Example:
 #

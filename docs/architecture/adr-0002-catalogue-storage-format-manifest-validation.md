@@ -98,7 +98,7 @@ No code. `src/` holds only a `CLAUDE.md`. No `assets/` folder and no `export_pre
 - Two entry points, one path:
   - `Catalogue.load_manifest(manifest_path: String) -> LoadResult` reads the manifest and each listed file into documents `{source: String, type: String, records: Array}`, then calls `from_documents`. This is the only code that touches `FileAccess`.
   - `Catalogue.from_documents(docs: Array[Dictionary]) -> LoadResult` validates and builds. Logic tests call it with documents made by fixture factories, with a label as `source` and no file I/O (Data Rule 12).
-- The method is named `load_manifest`, not `load` as in architecture.md and ADR-0001, because `load` is a GDScript global function and a method of that name shadows it.
+- The method is named `load_manifest`, not `load` as in architecture.md, because `load` is a GDScript global function and a method of that name shadows it. ADR-0001 now says only "load the catalogue", so it needs no change.
 - Load is synchronous, runs once from AppRoot `_ready()` (ADR-0001), and has no reload. The GDD states map to the result: Unloaded before the call, Loading during it, Ready when `ok` is true and `catalogue` is set, Failed when `ok` is false. A failed result carries no catalogue, so no lookup can be served (Data AC 5).
 - **Tier 0, manifest and files.** Any error here stops the load before any record check. Codes: `manifest_unreadable`, `manifest_invalid` (not JSON, no `files` list, a non-string entry), `manifest_empty`, `manifest_path_repeated`, `manifest_path_outside` (outside the data folder or not `.json`), `file_unreadable`, `file_empty`, `file_invalid_json` (line in `detail`), `file_bad_shape` (no `type` or `records`, or `records` not a list), `unknown_record_type`, and `record_type_empty` (a known type with no records once every file is parsed).
 - **Tiers 1 to 4, records.** All run, and all errors are collected. Within one field, the first failing check wins and later checks on that field are skipped, so one typo gives one error.
@@ -107,7 +107,7 @@ No code. `src/` holds only a `CLAUDE.md`. No `assets/` folder and no `export_pre
   3. **Tags**: `tag_unknown` (and that record's role checks are skipped), `role_tag_count` (a tower without exactly one role tag), `role_field_missing` (on any level), `role_field_without_tag`.
   4. **References**: `ref_dangling`, `ref_wrong_type` (`burst_id` naming an enemy).
 - `ValidationError` is a `RefCounted` value: `code: StringName`, `source: String` (file path or fixture label), `record_id: StringName` (empty for file errors), `field: StringName` (a path such as `levels[1].splash_radius`), and `detail: String`, a free-text note for the debug fatal screen only. Tests compare the first four fields; `detail` is never asserted.
-- `LoadResult` is a `RefCounted` value: `ok: bool`, `errors: Array[ValidationError]` (made read-only before return), `catalogue: Catalogue` (null unless `ok`). On a failed load, the app latch keeps the `LoadResult`, so `FatalScreen.show_cause()` can list its errors in a debug build (ADR-0001 Decision 6). Nothing else holds it.
+- `LoadResult` is a `RefCounted` value: `ok: bool`, `errors: Array[ValidationError]` (made read-only before return), `catalogue: Catalogue` (null unless `ok`). On a failed load, AppRoot keeps the `LoadResult` and passes its errors to `FatalScreen.show_cause()`, which lists them in a debug build (ADR-0001 Decisions 1 and 6). Nothing else holds it.
 
 ### 6. Read-only proof: a schema-walk snapshot
 - `CatalogueSnapshot.take(catalogue) -> Dictionary` walks every record in manifest order through the schema tables and builds a fresh tree of plain values (`int`, `float`, `bool`, `String`, `StringName`, `Vector2`, `Rect2`, and new `Array` and `Dictionary` containers). It holds no reference into the catalogue, so a later write to a record cannot change the snapshot.
@@ -152,9 +152,9 @@ No code. `src/` holds only a `CLAUDE.md`. No `assets/` folder and no `export_pre
                                                   ▼
                          LoadResult{ok=true, catalogue}
                                                   │
-     AppRoot (ADR-0001) holds it ──► BattleBuilder.build(catalogue, ...) per battle
+     AppRoot (ADR-0001) holds it ──► BattleBuilder.build(catalogue, stage_id, rng_seed, ...)
                                        └─► fresh StatAccessor(catalogue, battle latch) (ADR-0005)
-     failed: app FatalLatch keeps LoadResult ──► FatalScreen lists errors (debug)
+     failed: AppRoot keeps LoadResult, app FatalLatch latched ──► FatalScreen lists errors (debug)
 
  CI only: test_content_real_data ── rule sets per GDD ── each rule has a broken-fixture test
           ci_export_smoke .pck ── load_manifest + instance scene_refs (X1)
@@ -233,7 +233,7 @@ The Builder takes `heroes()[0]` and `inputs()[0]`; the content test guarantees t
 - **Description**: Keep `.tres`, but give every field a sentinel default (NaN, -1) and check for sentinels after load.
 - **Pros**: Keeps inspector editing. Catches most missing fields.
 - **Cons**: Still blind to unknown properties and fractional integers. A sentinel can collide with a legal value (cost 0 and -1 are both bounds cases). Every field needs a hand-picked sentinel.
-- **Rejection Reason**: Catches one of the three cases out of three required, and adds a rule per field.
+- **Rejection Reason**: Catches only one of the three required cases, and adds a rule per field.
 
 ### Alternative 3: `ConfigFile` (`.cfg`) data
 - **Description**: Godot's INI-like format with Variant values; it keeps `int` and `float` apart as written.
@@ -250,7 +250,7 @@ The Builder takes `heroes()[0]` and `inputs()[0]`; the content test guarantees t
 ### Alternative 5: Read-only by setters with a sealed flag
 - **Description**: Every record field has a setter that reports an error once the record is sealed.
 - **Pros**: Catches scalar writes at runtime.
-- **Cons**: One setter per field (about 60). In 4.7, packed-array element writes skip setters, and typed `Array` element writes do not call the owner's setter either, so lists still need another guard.
+- **Cons**: One setter per field (about 60). In 4.7, packed-array element writes skip setters, and an element write or `append()` on a typed `Array` changes the list in place without assigning the property, so lists still need another guard.
 - **Rejection Reason**: High cost for partial cover. `make_read_only()` on lists, the lint and the snapshot test cover the same ground.
 
 ## Consequences
@@ -271,7 +271,7 @@ The Builder takes `heroes()[0]` and `inputs()[0]`; the content test guarantees t
 
 ### Neutral
 - Records are `RefCounted`, not `Resource`, which settles B0's open choice.
-- The method is `load_manifest`, not `load`, against architecture.md and ADR-0001 text.
+- The method is `load_manifest`, not `load`, against architecture.md text.
 
 ## Risks
 - **JSON files are not packed, or are packed under another path, in an Android export.** Mitigation: the explicit include filter, X1 in CI on every push, X2 on the first device build. If X2 fails, the fatal screen shows (no fallback), which is the correct failure.
@@ -308,9 +308,8 @@ Open questions closed: QQ-03 (format, missing and fractional detection, read-onl
 ## Migration Plan
 No code exists, so nothing migrates. When this ADR is Accepted, these documents need edits to match. This ADR does not make them:
 1. `docs/architecture/architecture.md`: B0 sets record classes to `RefCounted`, adds `catalogue` and `detail` to `LoadResult` and `ValidationError`, and adds `CatalogueSnapshot`; Module Ownership (Catalogue row) changes `load(manifest)` to `load_manifest(path)` and the engine API cell to JSON plus `FileAccess`, dropping `duplicate_deep()`; Data Flow 4 step 2 uses `load_manifest`; QQ-03 and QQ-19 marked resolved by ADR-0001 and ADR-0002.
-2. ADR-0001 Decision 1 and Data Flow text: `Catalogue.load(manifest)` becomes `Catalogue.load_manifest(manifest_path)`.
-3. `design/gdd/data-config-pipeline.md`: the "Becomes an ADR" note and the Open Questions rows for storage format, snapshot mechanics and scene checks point to ADR-0002, and the recommendation reads JSON; Rule 7's "unknown properties (a field no record type declares)" becomes "a field the record's type does not declare"; the content test gains the exactly-one Input record, case-exact manifest and unlisted-file rules.
-4. `design/gdd/input-gesture-resolver.md`: where it names `tap_slop > drag_slop`, add that the CI content test checks it and the Builder sends a null resolver to fatal.
+2. `design/gdd/data-config-pipeline.md`: the "Becomes an ADR" note and the Open Questions rows for storage format, snapshot mechanics and scene checks point to ADR-0002, and the recommendation reads JSON; Rule 7's "unknown properties (a field no record type declares)" becomes "a field the record's type does not declare"; the content test gains the exactly-one Input record, case-exact manifest and unlisted-file rules.
+3. `design/gdd/input-gesture-resolver.md`: where it names `tap_slop > drag_slop`, add that the CI content test checks it and the Builder sends a null resolver to fatal.
 
 ## Validation Criteria
 Headless gdUnit4 tests (ADR-0007 places them; names proposed):
@@ -331,7 +330,7 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 **Reviews still owed.** This run had no way to spawn review agents, so the godot-specialist check (Step 5.5) and the technical-director TD-ADR gate (Step 5.6) did not run. Both must run before acceptance. `review_mode` is `full`, so TD-ADR is required. Questions for the godot-specialist: E1, E2, E3, the `.json` export packing default, and the `-s` with `--main-pack` form in X1.
 
 ## Related
-- ADR-0001 (depends on): AppRoot load, app `FatalLatch`, `FatalScreen.show_cause()`, Builder null-resolver fatal
+- ADR-0001 (depends on): AppRoot load and kept `LoadResult`, app `FatalLatch`, `FatalScreen.show_cause()`, per-battle `StatAccessor`, Builder null-resolver fatal
 - ADR-0005 (enabled): stat accessor built per battle over this catalogue
 - ADR-0007 (enabled): hosts C1, C2, the snapshot test and lint rules L-DATA-1 and L-DATA-2
 - ADR-0009 (enabled): reads `StageRecord` geometry
