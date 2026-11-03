@@ -200,3 +200,83 @@ The user chose the recommended fix for all four blockers. Applied, pending `/rev
 - **Scenario 4:** `wave_index()` is defined in Enemy & Wave Rule 14 (1-based, 0 before a start, set at commit, unchanged by a clear). The HUD's pips and "Broke on wave N" and Flow's result all use it, with Flow's value injected by the builder.
 
 Statuses: Input and Enemy & Wave are In Review; Flow and Battle HUD are back to Designed, since neither has had a review.
+
+---
+
+## Consistency Re-check: 2026-11-03
+
+Date: 2026-11-03
+GDDs Reviewed: 8 of 8 present
+Not read: none. Each GDD was read by section; the text the four fixes changed (commit 1687498) was read in full, with the tables that point at it.
+Focus: consistency only. Design theory not run, so D1 to D13 above stay as written.
+Systems Covered: Data & Config, Input & Gesture Resolver, Game State & Stage Flow, Combat & Damage, Enemy & Wave, Tower, Hero, Battle HUD
+
+**Inputs and limits.** The entity registry is still empty, so the checks rest on the GDD text alone. No GDD under `design/gdd/` changed after commit 1687498, so the change set is that commit. The consistency pass ran in this session, not in a sub-agent. Scenarios 2 and 4 were walked again because the fixes touch them; 1, 3 and 5 rest on text the fixes left alone.
+
+### The four blockers
+
+| Blocker | Status | Evidence |
+|---|---|---|
+| B1 bot path | Closed | Input Rule 11, its Interactions row, its deferred row and its edge case on two gestures now all say headless bots call the commands directly, with one equivalence test through the resolver. Hero Core Rules and criterion 27 say the same. Flow's Tower handoff and its Cross-References row now say "bots on direct commands". No GDD still says bots run through the resolver. One loose phrase is left (N1). |
+| B2 HUD cooldown total | Closed | HUD Rule 12 defines the wedge as `cooldown_left() / to_ticks(cooldown)`, clamped to 1, with Burst `cooldown` read through the accessor. Data's Burst record has `cooldown` in seconds, and Hero step 7 sets `cooldown_left = to_ticks(cooldown)`, so both sides use one unit. Flow's Hero row passes the Burst's ID to the HUD. The "Hero: exposes the cooldown's total" handoff is gone, and HUD criterion 15 tests half a wedge. The Start/Call glyph shows "the same state as the button", so scenario 2's wedge is defined too. Table rows lag (N2). |
+| B3 chip log | Closed | Input Rule 13's harness listens to `tower_upgraded` and reads `chip_state()`, and P1 cites only the Rule 13 log. Tower Rule 17 defines both names. The mis-fire rule "any upgrade commit not prompted" can now be counted from the log. Table rows lag (N3). |
+| Scenario 4 `wave_index()` | Closed | Enemy & Wave Rule 14 makes it 1-based, 0 before a start, set when `start_next_wave` commits, and unchanged by a clear or an outcome; criteria 24, 30 and 33 test it. Rule 7 ignores a start during a wave or past the last, so the index cannot skip. HUD Rule 15 says N is `wave_index()`, the Pips row maps each phase to it, and criteria 2 and 19 test both. Flow Rule 15 and its edge case on reading the result after a loss take the result's wave from it. A Lost can only come from a leak, and a wave clears only when its enemies are gone, so "Wave and Lost have W − 1 done and W current" covers every Lost. Table rows lag (N4). |
+
+### Consistency Issues
+
+#### Blocking
+
+None. No fix added a rule that another GDD breaks, and no fix cites a mechanic that does not exist.
+
+#### Warnings: new, from the fixes
+
+- ⚠️ **N1. A bot still presses the resolver in one edge case.** `input-gesture-resolver.md` Edge Cases, "If an owner calls `cancel()` or `press` inside a handler": "A `press` from a `tap` handler (a bot) starts after that gesture's `idle()`." Rule 11 and the edge case two bullets down say no bot reaches the resolver. Change "(a bot)" to "(a resolver fixture)". Rule 2c, stale reference; the rule it names is unchanged, so it does not block.
+- ⚠️ **N2. The wedge's new inputs are missing from the tables.** HUD Rule 12 now needs Burst `cooldown`, `to_ticks` and a fixed `dt`, and the Burst's ID from the builder. HUD Dependencies list neither `to_ticks` (Enemy & Wave Formulas) nor who gives the HUD `dt`, and its Flow row omits the Burst's ID. Data's Interactions and Dependencies rows for the HUD still say "Costs" only. Flow's Dependencies row for the HUD omits the ID that its Interactions row passes. Rule 2a. Also a note for Stat & Modifier at Vertical Slice: Hero fixes `cooldown_left` at release, while the HUD reads `cooldown` each frame, so a cooldown modifier that changes mid-cooldown makes the wedge jump; the clamp only stops it going past full.
+- ⚠️ **N3. Input's harness now names Tower, and neither side says so.** Input Rule 13 reads `tower_upgraded` and `chip_state()`, but Input's Dependencies and Cross-References have no Tower row for them, and Tower's Dependencies do not list the harness. The systems index TD note says "Input never names a feature system". The harness is outside the resolver, so the note still holds for the resolver, but Rule 13 should say the harness is the test story's, not the resolver's. Rule 2a.
+- ⚠️ **N4. `wave_index()` readers are not in Enemy & Wave's tables.** Enemy & Wave's Dependencies row for the HUD lists burst coordinates and Wave records only, and its Interactions row for views lists `roster()` and the path; neither names `wave_index()` or `got_through_by_type()`. The HUD lists Enemy & Wave as soft, though its pips read `wave_index()` in every phase. Flow's Dependencies row for Enemy & Wave omits the read its Rule 15 now makes. This widens C17. Rule 2a.
+
+#### Warnings: carried over
+
+C1 to C19 are all still open. No GDD text they cite changed, apart from the lines above. Spot checks confirm C3 and C11 (Input's Interactions, HUD row), C12 (Input Rule 9, "Three data fields"), C13 (Flow Rule 16, "skipping the path's draw-in"), C16 (Input's re-pin open question, Enemy & Wave's Reduce Motion question) and C18 ("Design docs approved | 2", "Four-piece decomposition"). C17 now also covers N4.
+
+### Cross-System Scenario Issues
+
+Scenarios walked: 2
+1. Scenario 2: wave clears with an aim or telegraph in flight, then a call
+2. Scenario 4: first run, Start with no pin, then Lost
+
+#### Blockers
+
+None.
+
+#### Warnings
+
+None new. Scenario 3's `cancel()` caller (C2) is unchanged and was not walked again.
+
+#### Info
+
+ℹ️ **Scenario 4.** Build shows pip 1 current with `wave_index()` 0. Start commits wave 1, so pip 1 stays current. A leak in wave 3 that ends the run gives pips 1 and 2 done and 3 current, and "Broke on wave 3 of 6" from the same snapshot. Retry rebuilds the battle, so the index is 0 again. Every step has one source.
+
+ℹ️ **Scenario 2.** On the clear, `wave_index()` stays at N and the Intermission pips show N done and N + 1 current. The Start/Call glyph and the burst button share Rule 12's wedge.
+
+### GDDs Flagged for Revision
+
+| GDD | Reason | Type | Priority |
+|-----|--------|------|----------|
+| input-gesture-resolver.md | N1; N3; C1 to C3, C6, C7, C11, C12, C16, C17 | Consistency | Warning |
+| battle-hud.md | N2; N4; C4, C5, C16, C17 | Consistency | Warning |
+| enemy-wave.md | N4; C6, C9, C10, C14 to C17 | Consistency | Warning |
+| game-state-stage-flow.md | N2; N4; C1, C2, C13, C15, C17 | Consistency | Warning |
+| data-config-pipeline.md | N2; C1, C7, C9, C17 | Consistency | Warning |
+| tower-system.md | N3; C5, C9 | Consistency | Warning |
+| hero-system.md | C4, C8, C9 | Consistency | Warning |
+| combat-damage.md | C15, C17 | Consistency | Warning |
+| systems-index.md | C18 | Consistency | Warning |
+
+Systems index statuses were left as they are: every flag is a warning, and "Needs Revision" would reset Approved GDDs over table rows.
+
+### Verdict: CONCERNS (consistency only; design theory not run)
+
+The four blockers are closed and the fixes added no new blocker. Warnings remain: C1 to C19 and four new table and wording gaps, N1 to N4.
+
+**Status note.** Enemy & Wave's review log keeps it In Review "until `/review-all-gdds consistency` passes". Its `wave_index()` change is clean, so the user can return it to Approved. Input stays Revised, pending its own `/design-review`. Flow and Battle HUD stay Designed, since neither has had one.
