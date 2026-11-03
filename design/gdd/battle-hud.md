@@ -56,7 +56,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Burst button.**
 
-12. **Look only.** HudField draws the button at the active hand's shape in Stage's `pin_exclusion`, in every phase. HeroInput registers it and decides what a press means. Locked (dotted) comes from `in_build()` and `pin_state()`; otherwise `burst_state()` gives Ready, or Cooling with its wedge and digit, and Telegraphing draws as an empty wedge. The press responses are the Hero GDD's.
+12. **Look only.** HudField draws the button at the active hand's shape in Stage's `pin_exclusion`, in every phase. HeroInput registers it and decides what a press means. Locked (dotted) comes from `in_build()` and `pin_state()`; otherwise `burst_state()` gives Ready, or Cooling with its wedge and digit, and Telegraphing draws as an empty wedge. The wedge is `cooldown_left() / to_ticks(cooldown)`, clamped to 1, reading Burst `cooldown` through the accessor at use time with the ID the builder injects, so Hero needs no extra read. The press responses are the Hero GDD's.
 
 **Prompts.**
 
@@ -73,7 +73,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Result.**
 
-15. **Plain text, fixed order, same weight.** A transparent modal Control mounts at the outcome, so input is dead at once. The text appears 400 ms after a Lost and 1,000 ms after a Won. All values come from one snapshot built on the frame after the outcome, so every leak is counted, and it also feeds the log, so screen and log cannot disagree.
+15. **Plain text, fixed order, same weight.** A transparent modal Control mounts at the outcome, so input is dead at once. The text appears 400 ms after a Lost and 1,000 ms after a Won. N is `wave_index()`. All values come from one snapshot built on the frame after the outcome, so every leak is counted, and it also feeds the log, so screen and log cannot disagree.
 
 | Order | Lost | Won |
 |---|---|---|
@@ -137,7 +137,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.
 - **Flow:** exposes reads of lives, phase, `intermission_left` and the result; the root takes the retry latch.
-- **Hero:** exposes the cooldown's total for the wedge; prompt text moves here.
+- **Hero:** prompt text moves here.
 - **Tower:** Rule 8 gains the chip's target, `chip_state()` and `tower_inspected`.
 - **Technical director:** stretch mode. 540 × 960 is 9:16 and a 360 × 800 dp phone is taller, so insets must be converted to field space. MVP is on desktop at 540 × 960, so every inset here is 0 until the Mobile Platform GDD.
 
@@ -171,7 +171,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Lives | Flow read, `lives_changed` | Signal | Flow |
 | Pips, Start/Call, overlays | Flow reads, `phase`, `wave_index()`, `wave_ids` size | Signal | Flow, Enemy & Wave |
 | Countdown, bonus | `intermission_left` through Tower's formula | Frame, comparing whole ticks | Flow, Tower |
-| Digit, wedge, ticks | `cooldown_left()`, `burst_state()` | Frame, comparing whole ticks | Hero |
+| Digit, wedge, ticks | `cooldown_left()`, `burst_state()`; Burst `cooldown` through the accessor for the wedge | Frame, comparing whole ticks | Hero, Data |
 | Arc and chip costs, range rings | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
 | Next-wave line | Wave records directly | On phase change | Enemy & Wave |
 | Result | Flow result, Combat counters, `got_through_by_type()`, `slows_applied()` | Once at the outcome | Flow, Combat, Enemy & Wave, Tower |
@@ -300,7 +300,7 @@ Primitives only, and nothing has been rendered. Text sits on panel. Tower and He
 | Element | Visual |
 |---|---|
 | Lives | Neutral dashes, gap 3. A lost dash goes to alpha 0.2 in 200 ms, still countable |
-| Pips | 20 × 10 pills, since discs would match the glyphs below. Filled done, outlined current, dotted upcoming |
+| Pips | 20 × 10 pills, since discs would match the glyphs below. Filled done, outlined current, dotted upcoming. With `wave_index()` W: Build has pip 1 current; Wave and Lost have W − 1 done and W current; Intermission has W done and W + 1 current; Won has all done; Paused shows the phase it left |
 | Gold | 16 dp tabular digits |
 | Next-wave line | Neutral glyphs at true size, 16, 22 and 30, with the fast's notch, because at a smaller size normal and heavy merge. Counts 14 dp |
 | Start/Call | Panel rect, 2 px neutral outline, two 14 dp lines. Arming: alpha 0.5, reaching full at 300 ms. Burst glyph 16 px neutral |
@@ -352,7 +352,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 
 **CI: Logic**
 1. (Rule 3; Data, Enemy & Wave rows) **GIVEN** a spy changing cost, **WHEN** the arc reopens, **THEN** the new cost shows; a new instance holds nothing.
-2. (Rule 4) **GIVEN** each phase, **THEN** HudLogic's visible set is exact, with the burst button in all.
+2. (Rule 4; Pips row) **GIVEN** each phase, **THEN** HudLogic's visible set is exact, with the burst button in all, and the pips match `wave_index()` as that row states.
 3. (Rule 5) **GIVEN** split groups, **THEN** one total per type, in fixed order.
 4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled. A disc press at 199 ms is ignored, and at 200 ms it counts.
 5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges; `HALTED` closes; others close and log an error. One tap, one `build`.
@@ -365,11 +365,11 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 12. (Arming) 299 no, 300 Armed; `advance(5000)` counts 100; phase end Hidden; Paused holds, and return does not restart it. Retry likewise.
 13. (Armed) A counted tap: one command; phase end Hidden.
 14. (Arc states) Closed: no targets. Open: all registered. An arc across Wave's end: Start/Call registers disabled, and enables on close.
-15. (Rule 12) Build, unpinned, Ready, Telegraphing and Cooling each map to their look; x 456, left 84.
+15. (Rule 12) Build, unpinned, Ready, Telegraphing and Cooling each map to their look; x 456, left 84; 300 ticks left of a 600-tick cooldown draws half a wedge.
 16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome.
 17. (Prompt states) Each act advances; None is final after the first burst.
 18. (Rule 14) Three rings, then none; a dismissal draws none; a rebuild resets.
-19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0; Slowed appears only with a slow tower built, and reads 0 if it never fired.
+19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; a Lost in wave 3 reads "Broke on wave 3 of 6"; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0; Slowed appears only with a slow tower built, and reads 0 if it never fired.
 20. (Rule 16) Each next-try line in order; a fixture where count and lives disagree; ties heavy, normal, fast; a built role gives no line.
 21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across the lifecycle signal does nothing. Paused resumes on release.
 22. (Rule 18) Retry twice: one latch; the handler frees nothing; Fatal first.

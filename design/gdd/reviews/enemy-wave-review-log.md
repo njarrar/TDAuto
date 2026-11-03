@@ -121,3 +121,6 @@ Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452
 Reviewed-Content-Hash: design/gdd/hero-system.md 6c42e0f35c803d364a8156eb02ebd5a781b47949
 Reviewed-Content-Hash: design/gdd/battle-hud.md 5ff2bdf88fd457f664e6a0e6602cc491fed05edc
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+
+## Revision — 2026-11-03 — `wave_index()` defined after the cross-GDD review, re-check pending
+Cross-GDD review blocker (design/gdd/gdd-cross-review-2026-11-03.md, scenario 4). Rule 14 now gives its base and update time; the Flow interface row and criteria 24, 30 and 33 follow. No balance value changed. Status returns to In Review until `/review-all-gdds consistency` passes.

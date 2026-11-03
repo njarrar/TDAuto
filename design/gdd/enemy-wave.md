@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: Approved 2026-11-03 (lean design review, third pass: no blocking items; the 2026-11-02 and 2026-11-03 NEEDS REVISION verdicts were revised, six recommended items remain in the review log)
+> **Status**: In Review (lean design review 2026-11-03 APPROVED, then the cross-GDD review added the `wave_index()` definition; re-check pending in `/review-all-gdds consistency`. Six recommended items remain in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-03
@@ -74,7 +74,7 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 11. **Kills and clearing.** In the reap slot, dead enemies are handled in ascending `spawn_id` order: `bounty` is read through the accessor, `enemy_killed(bounty)` fires, and the corpse is removed. Then comes the clear check. **It runs every tick, not only on a kill**, or a wave whose last enemy leaks would never clear, and only while a wave is active, or an empty field would emit forever. A wave is clear when its schedule is exhausted and the roster is empty, with no separate counter that could disagree. By index, not ID, the last wave emits `waves_complete()` and any other emits `wave_cleared(intermission_duration)`, with the state committed first. Leak events therefore always precede the clear, as Flow Rule 13 requires.
 12. **Tick order confirmed.** Combat Rule 11 stands: Flow, then this system's advance slot (spawn, move, leak), Status countdown, towers by slot index, hero then burst, then this system's reap slot. So this system has two tick entries, and the battle's tick passes the roster to Combat's countdown, since Flow owns no roster. A corpse is reaped on the tick it dies, so it never moves.
 13. **Halting.** The builder injects Flow's `halted()`, true on Won, Lost and Fatal (Flow Rules 15 and 18), so this system needs no reference to Flow. It is checked immediately after every accessor read, before the value is used, and after every signal. Spawn, move, leak and reap return at once when it is true, so nothing follows a fatal leak, and a bad read can never persist a garbage value or emit one. Enemies left on the roster at an outcome freeze where they are.
-14. **Reading the enemies.** `roster()` is every enemy not yet removed, corpses awaiting the reap included, in `spawn_id` order. `targets()` is that list limited to those inside the field. Tower and Hero pass `targets()` to Combat's helpers, which skip the dead, and the burst uses it too. Both lists are read-only by rule and never kept past the reader's slot. An enemy exposes `spawn_id`, `def_id`, `distance`, `position` and `removed`, which this system sets when it leaves the roster by leak or reap (Combat Rule 3). Views also read `wave_index()` and `got_through_by_type()`, kept for the result and never reset per wave. `wave_state()` (Waiting, Active or Finished) and `wave_tick()` are reads too, for tests and any view. How Health and Status attach is left to Combat's ADR.
+14. **Reading the enemies.** `roster()` is every enemy not yet removed, corpses awaiting the reap included, in `spawn_id` order. `targets()` is that list limited to those inside the field. Tower and Hero pass `targets()` to Combat's helpers, which skip the dead, and the burst uses it too. Both lists are read-only by rule and never kept past the reader's slot. An enemy exposes `spawn_id`, `def_id`, `distance`, `position` and `removed`, which this system sets when it leaves the roster by leak or reap (Combat Rule 3). Views also read `wave_index()` and `got_through_by_type()`, kept for the result and never reset per wave. `wave_index()` is the 1-based position in `wave_ids` of the last wave started: 0 before the first start, set when `start_next_wave` commits (Rule 7), and unchanged by a clear or an outcome, so it reads N through wave N and the Intermission after it. `wave_state()` (Waiting, Active or Finished) and `wave_tick()` are reads too, for tests and any view. How Health and Status attach is left to Combat's ADR.
 15. **Room for splitters, nothing built.** One add-enemy step serves the schedule, and the clear test looks only at the schedule and the roster. So splitter children at Vertical Slice can join atomically before the clear check, with new `spawn_id`s, with no fields or code added now.
 
 **Starter values.** These are fixtures, not balance. The Tower and Hero GDDs ran them through a scripted simulation with towers and a hero, and raised HP about 3 times, because at the first values a hero alone and towers alone both won, and set every intermission to 15 s, so that waiting restores the burst (Hero System, Simulated results). They replace the prototype's, whose top entry and 6 slots do not carry over.
@@ -156,7 +156,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Data & Config | reads | Enemy through the accessor; Wave and Stage directly | Data (values); this system (meaning, balance ranges) |
-| Game State & Stage Flow | commanded, emits | `start_next_wave()`; `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Flow owns lives, the countdown and the wave count it reports | This system (signals); Flow (phases, wiring) |
+| Game State & Stage Flow | commanded, emits | `start_next_wave()`; `enemy_leaked(lives_cost: int)`, `wave_cleared(intermission_duration: float)`, `waves_complete()`. Flow owns lives and the countdown, and reads `wave_index()` for the result | This system (signals); Flow (phases, wiring) |
 | Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`. Counts down Status through `tick_status`, from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
 | Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions` | This system (signals, list); Tower (gold, targeting) |
 | Hero System | serves | `targets()` for attack and burst | This system (list); Hero (targeting) |
@@ -417,16 +417,16 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 21. (Rule 13) **GIVEN** a spy latching during a `bounty` read, **THEN** an empty log.
 22. (Edge cases) **GIVEN** an outcome with enemies on the roster, **WHEN** 10 T, **THEN** they stay where they are, and the log is empty.
 23. (Rule 11) **GIVEN** one `e` and no kills, **THEN** T0 to T4 log nothing, and T5 logs `enemy_leaked(1), wave_cleared(2.0)`.
-24. (Rule 11) **GIVEN** before a start, **WHEN** 100 T, **THEN** an empty log.
+24. (Rule 11) **GIVEN** before a start, **WHEN** 100 T, **THEN** an empty log, and `wave_index()` is 0.
 25. (Rule 11) **GIVEN** after a clear, **WHEN** 100 T, **THEN** nothing is appended.
 26. (Rule 11) **GIVEN** Finished, **WHEN** 100 T, **THEN** nothing is appended.
 27. (Rule 11) **GIVEN** `e` at +0 and +2.0 with the first killed at T0, **THEN** `enemy_killed(4)`, nothing more through T12 despite the empty roster at T1 to T7, and T13 logs `enemy_leaked(1), wave_cleared(2.0)`.
 28. (Rule 15) **GIVEN** a kill listener calling add-enemy, **WHEN** that kill is reaped, **THEN** `enemy_killed(4)` and no clear, and the clear follows that enemy's leak.
 29. (Rules 11, 12) **GIVEN** two enemies killed highest `spawn_id` first, **WHEN** reap, **THEN** bounties in ascending `spawn_id` order, then `wave_cleared(2.0)`, both removed, neither moved.
-30. (Rule 11) **WHEN** a non-last wave clears, **THEN** its listener already reads `wave_state()` as Waiting.
+30. (Rule 11) **WHEN** a non-last wave clears, **THEN** its listener already reads `wave_state()` as Waiting, and `wave_index()` is unchanged.
 31. (Rule 11) **WHEN** the last wave clears, **THEN** its listener already reads `wave_state()` as Finished.
 32. (Rule 11) **GIVEN** `wave_ids` [a, b, a], a's intermission 2.0 and b's 3.0, **WHEN** all clear, **THEN** `wave_cleared(2.0), wave_cleared(3.0), waves_complete()`.
-33. (Rule 7) **GIVEN** a start and no tick, **THEN** `wave_state()` is Active, `wave_tick()` is 0, and `roster()` is empty.
+33. (Rules 7, 14) **GIVEN** a start and no tick, **THEN** `wave_state()` is Active, `wave_tick()` is 0, `wave_index()` is 1, and `roster()` is empty.
 34. (Rule 7) **WHEN** T0, **THEN** tick-0 members exist, and `wave_tick()` is 1.
 35. (Rule 7) **WHEN** a start during Active, **THEN** unchanged, with one development error.
 36. (Rule 7) **WHEN** a start during Finished, **THEN** unchanged, with one development error.

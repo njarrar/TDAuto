@@ -94,3 +94,6 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md a01044c2f537a73009c286
 Reviewed-Content-Hash: design/gdd/game-concept.md fb783d19a70f043637feb7dddc161acdef4ecdd1
 Reviewed-Content-Hash: design/art/art-bible.md ff8234976852a8fc2333127c515cf19ab439e048
 Reviewed-Content-Hash: design/gdd/systems-index.md bdde32bd2e24d37db0ad44a7fa73149025d063d1
+
+## Revision — 2026-11-03 — Two cross-GDD blockers applied, re-review still pending
+From design/gdd/gdd-cross-review-2026-11-03.md. B1: the deferred row and edge case now say headless bots call commands directly, matching Rule 11. B3: Rule 13's harness logs `tower_upgraded` and `chip_state()`, and P1 no longer cites a Tower chip log.
