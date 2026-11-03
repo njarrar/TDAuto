@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 2
+version: 3
 last_updated: "2026-11-03"
 
 requirements:
@@ -247,9 +247,9 @@ requirements:
 - id: TR-input-015
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification for the Pillar 4 phone test"
+  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, plus each tower_upgraded commit and chip_state() at each tower prompt, for the Pillar 4 phone test"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-03"
   status: active
 - id: TR-input-016
   system: input
@@ -559,6 +559,13 @@ requirements:
   created: 2026-11-03
   revised: ""
   status: active
+- id: TR-enemy-016
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "Enemy & Wave exposes view-only wave_index() (1-based last wave started, 0 before the first start, set when start_next_wave commits, unchanged by a clear or an outcome) and got_through_by_type(), never reset per wave; the builder injects wave_index() into Flow's result"
+  created: 2026-11-03
+  revised: ""
+  status: active
 - id: TR-tower-001
   system: tower
   gdd: design/gdd/tower-system.md
@@ -842,9 +849,9 @@ requirements:
 - id: TR-hud-011
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Costs are read through the accessor on arc open and gold_changed; a read that finds halted() is abandoned for the Fatal screen"
+  requirement: "Costs are read through the accessor on arc open and gold_changed, and the burst wedge reads Burst cooldown through the accessor at use time with the builder-injected Burst ID; a read that finds halted() is abandoned for the Fatal screen"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-03"
   status: active
 - id: TR-hud-012
   system: hud
