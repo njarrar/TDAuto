@@ -181,7 +181,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 |---|---|---|---|
 | Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` | Input (API); HUD (meaning) |
 | Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
-| Hero System | reads | State and timers; HeroInput registers the button | Hero |
+| Hero System | reads, serves | State and timers; HeroInput reads `burst_button_centre()` and registers the button | Hero |
 | Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase` | Flow |
 
 Headless wiring tests are unaffected, since the HUD is absent, and `phase` and `lives_changed` join Flow's view allowlist.
@@ -226,6 +226,8 @@ The **burst_y** formula is defined as:
 
 **Output Range:** 816 to 888, the whole line `pin_exclusion` already covers, so the simulation is unchanged by a device.
 **Example:** inset 0: 888. Inset 72, or 48 dp: 816.
+
+`burst_button_centre() -> Vector2` returns x 456, or 84 left-handed, and `burst_y`. It is the one centre for the hit disc, Hero's cancel distances and the ring (Hero Rule 15).
 
 The **chip_bar** formula is defined as:
 
@@ -323,7 +325,7 @@ A purchase, a tap and a press all answer on the next frame, and nothing bounces.
 This whole document is UI. Tower's and Hero's UI Requirements stand, and are drawn here.
 
 - 120 ms: arc, presses, arming. 200 ms: dash, 12-unit panel slides, with opacity fixed. Paused is instant.
-- Reduce Motion cuts slides, while fades and clock bars stay. It is a data flag until Settings exists.
+- Reduce Motion cuts slides, while fades and clock bars stay. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record.
 - Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size. Modals add about 4. Unverified.
 - Font: one medium-weight geometric humanist sans with tabular numerals, not yet chosen.
 - Text floor 14 dp, or 21 units at a 360 dp width; hit targets 48 dp, or 72 units, which every target here meets with no margin at that width.

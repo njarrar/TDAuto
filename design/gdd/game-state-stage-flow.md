@@ -3,7 +3,7 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 
@@ -103,7 +103,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; Won, Lost, Paused, Fatal and retry call `cancel()`; adapter forwards a lifecycle signal | Input (API); this system (composition) |
 | Enemy & Wave | wires, commands | Listens to `wave_cleared`, `waves_complete`, `enemy_leaked`; calls start next wave | Enemy & Wave (signals) |
 | Tower System | wires | Forwards `wave_called_early(seconds_left)`; connects kills to gold | Tower (bonus value) |
-| Hero System | wires | Builds and ticks it | Hero |
+| Hero System | wires | Builds and ticks it; injects `halted()` and `in_build()`; reads `left_handed` from Data's Input record and the one Hero record's ID and `burst_id`, passing the IDs and the hand to HeroSim, and the hand to the wrapper's HeroInput and HUD (Hero Rules 2, 8) | Hero |
 | Combat & Damage | wires, reads | Reads per-source counters for the result | Combat |
 | Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
 | Bots and tests | call | `build`, `tick`, commands, read result; timeouts belong to the harness | Harness |
@@ -176,7 +176,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 | Input & Gesture Resolver | Built per battle; cancelled on outcome, pause, fatal and retry; forwards lifecycle |
 | Enemy & Wave | Emits the wave signals; owns durations |
 | Tower System | Early-call bonus; kills to gold; direct build command |
-| Hero System | Built and ticked here |
+| Hero System | Built and ticked here; receives `halted()`, `in_build()`, the hand and the Hero's and Burst's IDs |
 | Combat & Damage | Per-source counters readable after the outcome |
 | Battle HUD & Build UI | Draws phases, lives, countdown, result; sends commands |
 | Stage Progression & Stars (VS) | Reads the result (soft at MVP) |

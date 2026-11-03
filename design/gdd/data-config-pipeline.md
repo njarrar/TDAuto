@@ -31,7 +31,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | Stage | `scene_ref`, `wave_ids[]`, `starting_gold`, `starting_lives`, `early_call_seconds_per_gold`, `path_points[]`, `slot_positions[]`, `path_width`, `requires_bend` (bool, for layout rule L11), `hero_start`, `pin_rect`, `pin_exclusion` |
 | Hero | `damage`, `attack_interval`, `leash_radius`, `walk_speed`, `burst_id`, `visual_key` |
 | Burst | `damage`, `radius`, `reach`, `cooldown`, `telegraph_duration` |
-| Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin` |
+| Input (one record, added by the Input GDD; read directly, not through the stat accessor) | `drag_slop`, `tap_slop`, `edge_reject_margin`, `left_handed`, `reduce_motion` (bools, both false by default, the data flags until Settings exists at Alpha; Hero and Battle HUD) |
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
