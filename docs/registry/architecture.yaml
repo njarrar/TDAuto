@@ -80,7 +80,7 @@ state_ownership:
     status: active
     owner_system: fatal-latch
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
-    interface: "FatalLatch.fatal(cause) idempotent, keeps first cause; is_fatal(), first_cause(); signal latched(cause) once. One per battle plus one on AppRoot"
+    interface: "FatalLatch.fatal(cause) idempotent, keeps first cause; first call forwards (battle latch) or push_errors (app latch), then emits latched(cause) once; is_fatal(), first_cause(). One per battle plus one on AppRoot"
     write_access: fatal-latch-only
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
@@ -151,8 +151,9 @@ interfaces:
     producer: battle-builder
     consumers:
       - battle
+      - battle-wrapper
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
-    signal_signature: "Wiring.connect_recorded(sig: Signal, target: Callable); Battle.unwire() disconnects all at teardown"
+    signal_signature: "Wiring.connect_recorded(sig: Signal, target: Callable) for every sim-signal connection, Builder record and wrapper view_wiring; both undone at teardown (view_wiring.disconnect_all(), Battle.unwire())"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-03
@@ -220,10 +221,10 @@ performance_budgets: []
 api_decisions:
   - purpose: battle_wrapper_teardown
     status: active
-    api: "set_process(false), remove_child(wrapper), wrapper.queue_free(), from AppRoot._process"
+    api: "process_mode = PROCESS_MODE_DISABLED, view_wiring.disconnect_all(), remove_child(wrapper), wrapper.queue_free(), then battle.unwire(), from AppRoot._process"
     not: "wrapper.free()"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
-    reason: "Acts outside the wrapper call stack; remove_child stops callbacks at once; queue_free deletes at frame end"
+    reason: "Acts outside the wrapper call stack; remove_child stops processing and input at once; queue_free deletes at frame end"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-03
@@ -271,7 +272,7 @@ forbidden_patterns:
     notes: "ADR-0001 is Proposed; binding only once Accepted"
   - pattern: sim_back_reference
     status: active
-    description: "No sim object holds a reference to Battle, AppRoot or any Node"
+    description: "No sim object holds a reference to Battle, AppRoot or any Node; every object behind an injected Callable is a member of Battle or AppRoot"
     why: "A back-reference forms a cycle so the retry weakref check fails"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-03
