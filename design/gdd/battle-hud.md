@@ -114,7 +114,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 | Next-wave line | x 165 to 395, row centre `I_top + 53` |
 | Burst button | x 456, or 84 left-handed; `y = clamp(888 − I_bottom, 816, 888)` |
 | Start/Call | (186, 800), rect 88 × 72, corner 24, hit radius 48, for both hands |
-| Prompt | Panel 300 × 34, one line, centre (270, `I_top + 89`), between the band and the path, touching the path's edge at the largest inset (L6) |
+| Prompt | Panel 300 × 34, one line, centre (270, `I_top + 89`), between the band and the path, clear of the path's edge up to `I_top` 68 units, or 45 dp. Above that it overlaps the lane, by 34 at most at `I_top` 102, and the Mobile Platform GDD owns it (L6) |
 | Lost panel | x 48 to 492, y 200 to 752; Retry 128 × 72 at (270, 700) |
 | Won panel | Compact, x 48 to 492, y 752 to 944, so the finished build stays visible above it (Pillar 1); Play again 128 × 72 at (270, 904) |
 

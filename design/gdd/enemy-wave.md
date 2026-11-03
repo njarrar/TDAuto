@@ -1,10 +1,10 @@
 # Enemy & Wave
 
-> **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eleven blockers, one user decision and all recommended items applied, re-review pending)
+> **Status**: Approved 2026-11-03 (lean design review, third pass: no blocking items; the 2026-11-02 and 2026-11-03 NEEDS REVISION verdicts were revised, six recommended items remain in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
-> **Last Verified**: 2026-11-02
+> **Last Updated**: 2026-11-03
+> **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 3 (Every Stage Reads Differently); Pillar 2 (waves are tuned assuming the hero)
 
 ## Summary
@@ -15,7 +15,7 @@ The enemies and the stage they walk: one authored path, build slots, three enemy
 
 ## Overview
 
-Enemy & Wave is what the player defends against. It holds the stage's one path and build slots, sends authored waves down that path, moves each enemy, and reports every enemy that dies or leaks. Enemies never attack: they walk, and the only threat is reaching the exit. Players meet it as pressure with a shape. Fast enemies pull ahead and open a second front, heavy ones soak tower fire so followers slip past, and packets catch up at points worth a burst. It exists so that wave shape, not hidden stat growth, is what gives the player's towers and hero something to decide. Waves are tuned with the hero in, so the hero stays needed (Pillar 2). It owns the path, the roster, spawning, movement, leaks and wave clearing. It does not own damage, lives, gold, the intermission clock, or who attacks whom.
+Enemy & Wave is what the player defends against. It holds the stage's one path and build slots, sends authored waves down that path, moves each enemy, and reports every enemy that dies or leaks. Enemies never attack: they walk, and the only threat is reaching the exit. Players meet it as pressure with a shape. Fast enemies pull ahead and open a second front, heavy ones soak tower fire while they lead, then trail the followers that pass them, and packets catch up at points worth a burst. It exists so that wave shape, not hidden stat growth, is what gives the player's towers and hero something to decide. Waves are tuned with the hero in, so the hero stays needed (Pillar 2). It owns the path, the roster, spawning, movement, leaks and wave clearing. It does not own damage, lives, gold, the intermission clock, or who attacks whom.
 
 ## Detailed Design
 
@@ -36,11 +36,11 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 | L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, confirmed by Battle HUD), at least 92, the slot's hit radius 36 plus the hero's grab 56, the same clearance as Hero's `hero_start` | 144 |
 | L4 | Slot to slot at least 72 | 160 |
 | L5 | First and last path points at least 16 outside the field, since the largest enemy's radius is 15: it enters and exits unseen | 40, 20 |
-| L6 | In-field path clear of the top band and Battle HUD's prompt panel at the largest inset: `y − path_width / 2` at least 174 | 174, no margin |
+| L6 | In-field path clear of the top band at the largest inset, `I_top` 102 units or 68 dp, where the band ends: `y − path_width / 2` at least 174. Battle HUD's prompt panel clears this edge only up to `I_top` 68 units, or 45 dp; above that it overlaps the lane, by 34 at most, and the Mobile Platform GDD owns it (Open Questions) | 174, no margin |
 | L7 | Path centreline to the burst button's centre line at least `path_width / 2 + 64`, a proposed margin with no derivation: the button's hit radius 48 plus 16 | 100 needed, 186 |
 | L8 | Non-adjacent path segments at least `path_width + 60` apart | 132 needed, 160 |
 | L9 | In-field length at least 800 | 1,660 |
-| L10 | Each slot covers at least 200 of path at the lowest level-1 tower range | 223 at range 150 |
+| L10 | Each slot covers at least 200 of path in total, not necessarily contiguous, at the lowest level-1 tower range | 223 at range 150 |
 | L11 | On a stage with `requires_bend`, some disc of burst radius, searched on a grid of 10, holds at least 2.5 × that radius of path, so a bend exists to burst. A new Stage flag, since a straight stage cannot pass | 196 against 175, at radius 70 |
 | L12 | 3 to 5 slots, as in the concept | 5 |
 | L13 | Interior points inside the field; the path enters by the left or right edge and leaves by the bottom, crossing the boundary exactly twice; no segment doubles back on the one before | Pass |
@@ -52,7 +52,7 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 
 **Entry and exit.**
 
-4. **Enemies enter and leave unseen.** The path starts off a side edge below the top band, so it never runs under a panel, and ends off the bottom. The starter stage enters from the left. An enemy is **targetable only while its centre is inside the field**, edges included (0 to 540, 0 to 960), so nothing is hit before it can be seen. Body radius is not data, so an enemy partly visible at the edge may briefly be untargetable, which is accepted. Art bible §7's "never routed under a panel" is why the prototype's top entry is not reused.
+4. **Enemies enter and leave unseen.** The path starts off a side edge below the top band, so it never runs under the band, and ends off the bottom. The starter stage enters from the left. An enemy is **targetable only while its centre is inside the field**, edges included (0 to 540, 0 to 960), so nothing is hit before it can be seen. Body radius is not data, so an enemy partly visible at the edge may briefly be untargetable, which is accepted. Art bible §7's "never routed under a panel" is why the prototype's top entry is not reused.
 
 **Enemies.**
 
@@ -102,7 +102,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 | 3 | normal×12 @0.7 +0; fast×8 @0.5 +0 | 1,980 | 15 | First two fronts |
 | 4 | heavy×2 @3 +0; normal×8 @0.6 +8 | 2,500 | 15 | A packet catches the heavies from before the hairpin through it (518 to 1,264) |
 | 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,710 | 15 | An early leak, then a convergence |
-| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Fronts stagger along the whole path (meeting points 104 to 1,552) |
+| 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Fronts stagger from the entry to past the last slot |
 
 Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called.
 
@@ -119,6 +119,7 @@ Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, 
 | Stage's total `lives_at_risk` | At least `starting_lives` | 128 against 10 | Stronger than Flow's "some cost above 0", since one 1-cost enemy against 10 lives cannot lose |
 | Any `lives_cost` | At most `ceil(starting_lives / 3)` | 3 against 4 | One miss does not end the stage |
 | `peak_alive_ub` | At most 48 | 34 | Art bible §8's enemy pool |
+| Spawn ticks within a group | Strictly increasing | Pass | Float noise can break `to_ticks`'s no-sharing claim at an interval of exactly `dt` |
 
 Bot gates sit in Acceptance Criteria, since they cannot run until towers and the hero exist.
 
@@ -177,7 +178,7 @@ The **to_ticks** formula is defined as:
 **Output Range:** 0 and up, in whole ticks. Any interval at or above the one-tick floor gives at least 1.
 **Example:** 0.9 s gives 54. 5.0 s gives 300, where a repeated subtraction takes 301.
 
-This is the one conversion for authored time (Flow Rule 4). `ceil` is not used: floating point pushes exact products just over a whole number, so 3 × 0.1 s at 1/60 gives 19 rather than 18, and 409 of 6,240 tested spawn times came out a tick late. With `round`, none of 7,000 tested times was off by more than half a tick, and no two members of a group shared one, which holds for any interval at or above `dt`.
+This is the one conversion for authored time (Flow Rule 4). `ceil` is not used: floating point pushes exact products just over a whole number, so 3 × 0.1 s at 1/60 gives 19 rather than 18, and 409 of 6,240 tested spawn times came out a tick late. With `round`, none of 7,000 tested times was off by more than half a tick, and no two members of a group shared one, which holds for any interval above `dt`. At exactly `dt` with a half-tick offset, float noise can put two on one tick, so the content test requires strictly increasing ticks.
 
 The **spawn_tick** formula is defined as:
 
@@ -202,7 +203,7 @@ The **d_next** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `d` | float, units | 0 to `path_length` | calculated | Distance travelled |
 | `move_speed` | float, units/s | above 0, up to 2,000 | data file via the accessor | Read at use time |
-| `speed_factor` | float | above 0, up to 1 | Combat | Slow |
+| `speed_factor` | float | `1 − max_slow` up to 1 | Combat | Slow. Slows do not stack (Combat Rule 7), so this is its floor, and `peak_alive_ub` relies on it. A `max_slow` near 1 would stall a wave, so Combat keeps it well below |
 | `path_length` | float, units | above 0 | calculated | Sum of segment lengths |
 
 **Output Range:** a step of above 0 to 33.33 units. Overshoot is discarded. The `time_to_exit` floor keeps a path from being crossed in one step, and caps a real stage near 143 units/s on the starter path, so 2,000 is code-built only.
@@ -234,7 +235,7 @@ The **packet_length** formula is defined as:
 | `speed_factor` | float | above 0, up to 1 | Combat | Slow tightens a fully slowed group |
 
 **Output Range:** 0 for one enemy. The design target is `splash_radius < packet_length`, so a packet outlasts one splash, and Burst fit (criterion 60) tests what a burst catches. Splash reaches one radius rather than two, because its impact is the leader. Whether uncapped splash lets it hold is unproven.
-This is a design aid for authoring waves, with no code behind it, as is `catch_up`. **Example:** 6 at 0.6 s and speed 60: 180, wider than a burst of radius 70, so a burst takes about 4 of 6. **A wave of 8 at 1.5 s and speed 60 has gaps of 90 and is a string, not a packet.** A burst hits 3 or more whenever the spacing is at most 70 and three are alive, with room to spare, so "3 or more" barely tests aim. The prototype's bursts hitting 3 or more every time likely reflect this, so the gates here use 4, the most a burst holds at wave 2's spacing: five at spacing 36 span 144, over a 140 disc.
+This is a design aid for authoring waves, with no code behind it, as is `catch_up`. **Example:** 6 at 0.6 s and speed 60: 180, wider than a burst of radius 70, so on a straight a burst takes about 4 of 6. **A wave of 8 at 1.5 s and speed 60 has gaps of 90 and is a string, not a packet.** A burst hits 3 or more whenever the spacing is at most 70 and three are alive, with room to spare, so "3 or more" barely tests aim. The prototype's bursts hitting 3 or more every time likely reflect this, so the gates here use 4, the most a burst holds on a straight at wave 2's spacing: five at spacing 36 span 144, over a 140 disc. A bend holds 6 (criterion 60).
 
 The **catch_up** formula is defined as:
 
@@ -357,7 +358,7 @@ The MVP minimum, using primitives with no shaders or particles. All sizes and ti
 | Occupied slot | Hidden under its tower. No stage rule disables slots at MVP, so the blocked hairline never shows | §6 |
 | Exit strip, dormant | Three downward chevrons at the last path point's x, ending at y 888; static at alpha 0.3 | §6, §7 |
 | Exit strip, in danger | Alpha 0.75 to 1.0 at 2 Hz, plus a double outline | §2, §7 |
-| Leak | The enemy is already unseen (L5). The chevrons scale to 1.25 and return in 200 ms; a repeat restarts this, at most once per 350 ms | §2 |
+| Leak | The enemy is already unseen (L5). The chevrons scale to 1.25 and return in 200 ms; a repeat restarts this, at most once per second, so pulse plus pop stay at or below 3 per second | §2 |
 | Entry | No effect: it walks in along the path | §6 |
 
 **The heavy wears no ring.** Art bible §2's ring promises armour that strips, and the heavy has none. At Vertical Slice a true `armoured` type gets 30 px plus the ring, and the heavy never gains it. Telling 22 px from 30 px by size alone must still pass §5's grey test.
@@ -390,7 +391,7 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 
 ## Acceptance Criteria
 
-A recording fake logs the four signals, and each THEN is the entire log, empty unless it says otherwise. Combat's Health, Status and `deliver`, Flow's `halted()` and the development-error sink are fakes, so these run before those systems exist. Factories build `stage()`: `dt` 0.25, path `P` of (−20, 950), (10, 950), (10, 980), length 60; enemy `e` with speed 40 (a step of 10), bounty 4, cost 1; intermission 2.0. `T` is advance then reap, counted from T0, and kills use `deliver` between them. No scene, catalogue files or time assertions, except where a criterion names real records.
+A recording fake logs the four signals, and a THEN that names an event or the log is the entire log; a THEN about state alone says nothing of the log. Combat's Health, Status and `deliver`, Flow's `halted()` and the development-error sink are fakes, so these run before those systems exist. Factories build `stage()`: `dt` 0.25, path `P` of (−20, 950), (10, 950), (10, 980), length 60; enemy `e` with speed 40 (a step of 10), bounty 4, cost 1; intermission 2.0; `wave_ids` [w, w] with `e` in w unless a criterion says otherwise, so the first clear emits `wave_cleared`. `T` is advance then reap, counted from T0, and kills use `deliver` between them. No scene, catalogue files or time assertions, except where a criterion names real records.
 
 **CI: Logic**
 1. (Rule 4) **GIVEN** `e`, **WHEN** T0, T2, T4, **THEN** positions are (−10, 950), (10, 950), (10, 970).
@@ -401,15 +402,15 @@ A recording fake logs the four signals, and each THEN is the entire log, empty u
 6. (position) **GIVEN** that path and speed 60, **WHEN** T0, **THEN** a step across two corners lands at (10, 5).
 7. (Rule 9) **GIVEN** `e`, **WHEN** T0, **THEN** `d` is 10, so it moved on its spawn tick.
 8. (d_next) **GIVEN** factor 0.5, **WHEN** T, **THEN** the step is 5.
-9. (d_next) **GIVEN** factor 0.5, **THEN** `d` 55 leaks on the next T, and `d` 54.5 does not.
+9. (d_next) **GIVEN** `d_next` called directly at factor 0.5, **THEN** `d` 55 gives 60 and leaks, and `d` 54.5 gives 59.5 and does not.
 10. (Rule 9) **GIVEN** a spy doubling `move_speed` after T0, **THEN** T1 gives `d` 30.
 11. (Rule 10) **GIVEN** a spy changing `lives_cost` to 2, **WHEN** T5, **THEN** `enemy_leaked(2), wave_cleared(2.0)`.
-12. (Rule 11) **GIVEN** a spy changing `bounty` to 7 and a kill, **WHEN** reap, **THEN** `enemy_killed(7)`.
+12. (Rule 11) **GIVEN** a spy changing `bounty` to 7 and a kill, **WHEN** reap, **THEN** `enemy_killed(7), wave_cleared(2.0)`.
 13. (Rule 5) **GIVEN** a spy changing `max_hp` after spawn, **THEN** current HP is unchanged.
 14. (Rule 10) **GIVEN** two stacked enemies with costs 1 and 2, **WHEN** T5, **THEN** `enemy_leaked(1), enemy_leaked(2), wave_cleared(2.0)`.
 15. (Rule 10) **GIVEN** that stack, **THEN** during the first event the roster holds only the second.
 16. (Rule 13) **GIVEN** that stack and a listener latching halt on the first event, **THEN** `enemy_leaked(1)` only, and the second stays.
-17. (Rule 13) **GIVEN** a spy latching during the move to `d` 60, **THEN** an empty log and position (10, 980).
+17. (Rule 13) **GIVEN** an enemy at `d` 50 and a spy latching during its `move_speed` read, **WHEN** the move, **THEN** an empty log, `d` 50 and position (10, 970).
 18. (Rule 13) **GIVEN** a corpse and the latch, **WHEN** reap, **THEN** an empty log.
 19. (Rule 13) **GIVEN** a spy latching during the second member's `max_hp` read, **THEN** that enemy is not added and no later member spawns.
 20. (Rule 13) **GIVEN** a spy latching during a `lives_cost` read, **THEN** an empty log.
@@ -421,7 +422,7 @@ A recording fake logs the four signals, and each THEN is the entire log, empty u
 26. (Rule 11) **GIVEN** Finished, **WHEN** 100 T, **THEN** nothing is appended.
 27. (Rule 11) **GIVEN** `e` at +0 and +2.0 with the first killed at T0, **THEN** `enemy_killed(4)`, nothing more through T12 despite the empty roster at T1 to T7, and T13 logs `enemy_leaked(1), wave_cleared(2.0)`.
 28. (Rule 15) **GIVEN** a kill listener calling add-enemy, **WHEN** that kill is reaped, **THEN** `enemy_killed(4)` and no clear, and the clear follows that enemy's leak.
-29. (Rules 11, 12) **GIVEN** two enemies killed highest `spawn_id` first, **WHEN** reap, **THEN** bounties in ascending `spawn_id` order, both removed, neither moved.
+29. (Rules 11, 12) **GIVEN** two enemies killed highest `spawn_id` first, **WHEN** reap, **THEN** bounties in ascending `spawn_id` order, then `wave_cleared(2.0)`, both removed, neither moved.
 30. (Rule 11) **WHEN** a non-last wave clears, **THEN** its listener already reads `wave_state()` as Waiting.
 31. (Rule 11) **WHEN** the last wave clears, **THEN** its listener already reads `wave_state()` as Finished.
 32. (Rule 11) **GIVEN** `wave_ids` [a, b, a], a's intermission 2.0 and b's 3.0, **WHEN** all clear, **THEN** `wave_cleared(2.0), wave_cleared(3.0), waves_complete()`.
@@ -439,22 +440,22 @@ A recording fake logs the four signals, and each THEN is the entire log, empty u
 44. (gold_upper_bound) 120 + 8×4 gives 152.
 45. (peak_alive_ub) **GIVEN** `dt` 0.25, length 100, speed 40, `max_slow` 0.5 and three members, **THEN** interval 2.5 s gives 2.
 46. (peak_alive_ub) **GIVEN** the same, **THEN** interval 2.25 s gives 3.
-47. (packet_length) 6 at 0.6 s, speed 60, factor 1 gives 180.
-48. (catch_up) 38, 60, delay 8 gives 829 within 1; delay 5 gives 518 within 1.
+47. (packet_length) A design aid with no code, so no test; Formulas' worked example stands.
+48. (catch_up) A design aid with no code, so no test; Formulas' worked example stands.
 49. (Rule 14) **WHEN** an enemy leaks and a later wave starts, **THEN** `got_through_by_type()` keeps its count and `wave_index()` has risen.
 50. (Edge cases) **GIVEN** a wave of one enemy, **THEN** `spawn_interval` is unused, and the clear follows its leak.
 51. (Edge cases) **GIVEN** a path shorter than one step, **WHEN** T0, **THEN** `enemy_leaked(1), wave_cleared(2.0)`, never in `targets()`.
-52. (Edge cases) **GIVEN** `lives_cost` 0, **WHEN** it leaks, **THEN** `enemy_leaked(0)`, and it leaves the roster.
+52. (Edge cases) **GIVEN** `lives_cost` 0, **WHEN** it leaks, **THEN** `enemy_leaked(0), wave_cleared(2.0)`, and it leaves the roster.
 53. (Edge cases) **GIVEN** two same-speed enemies spawned on one tick, **THEN** `roster()` orders them by `spawn_id`.
 54. (Rule 14) **GIVEN** a corpse before the reap, **THEN** it is in `roster()`.
-55. (Combat Rule 11) **GIVEN** an enemy leaking on a tick a kill would land, **THEN** `enemy_leaked` and no `enemy_killed`.
+55. (Combat Rule 11) **GIVEN** an enemy leaking on a tick a kill would land, **THEN** `enemy_leaked(1), wave_cleared(2.0)`, with no `enemy_killed`.
 56. (Edge cases) **GIVEN** a new battle after a finished one, **THEN** index, `spawn_id` and schedule restart identically.
-57. (Danger) **GIVEN** the view's pure rule, **THEN** an enemy at 240 from the end sets danger, one at 241 does not, it holds 1.5 s, and Won or Lost ends it at once.
+57. (Danger) **GIVEN** the view's pure rule with `now` passed as an argument, **THEN** an enemy at 240 from the end sets danger, one at 241 does not, a fall in lives sets it with no enemy near, it is true 1.49 s after the last trigger and false at 1.5 s, and Won or Lost ends it at once.
 
-**CI: Integration**
+**CI: Integration.** 58 to 61 need the content test and real records. 62 to 64 need the builder, so they run in its story, not before it exists.
 58. (Layout and wave rules) **GIVEN** the real stage as in-memory records, **THEN** one case per row of L1 to L9, L12, L13 and the wave rules passes.
 59. (Layout and wave rules) **GIVEN** a copy with one field broken per row, **THEN** each fails naming its row, with boundary pairs where a bound is exact: L6 at 174 passes and 173.99 fails, and `lives_cost` 4 passes and 5 fails.
-60. (Burst fit) **GIVEN** the real waves, no kills and no slow, **THEN** in each of waves 2 to 6, at least 4 of `targets()` fit in a disc of radius 70 at some tick. Today 4, 7, 6, 10 and 12.
+60. (Burst fit) **GIVEN** the real waves, no kills and no slow, **THEN** in each of waves 2 to 6, at least 4 of `targets()` fit in a disc of radius 70 at some tick, searching disc centres on L11's grid of 10. Today 6, 7, 8, 12 and 14.
 61. (Two fronts) **GIVEN** the same, **THEN** in waves 3, 5 and 6, two of `targets()` are over 180, or 2 × `leash_radius`, apart at some tick. Today 761, 784 and 758.
 62. (Rule 7) **GIVEN** the builder, **THEN** a countdown's end spawns in that same tick, and a call spawns on the next.
 63. (Rule 12) **GIVEN** the builder, **THEN** Combat's `tick_status` receives this system's roster.
@@ -504,17 +505,21 @@ A recording fake logs the four signals, and each THEN is the entire log, empty u
 | Question | Owner | Resolve by |
 |---|---|---|
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
-| Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them | level-designer | Before Vertical Slice stages |
+| Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them. They pass only if they differ in the bottom third, and a mirror does not count; if the rules forbid that, amend the rows, which are data | level-designer | Before Vertical Slice stages |
 | The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Tower GDD + bots | First playable |
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
 | Stretch mode and the minimum supported width in dp: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. L6's zero margin at the largest inset is unverified on devices | technical-director | Input ADR |
-| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, and the snapshot | technical-director | App Lifecycle ADR |
+| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check; and where the Reduce Motion setting lives | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
-| Wave 6 pays 174 of 510 bounty gold after the last purchase that matters, and HP per gold in stock climbs from 8.3 to 12.3 across waves. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
+| Wave 6 pays 174 of 510 bounty gold. At most 496 is held at its start, 54 short of the cheapest full board and 254 of the dearest, so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |
 | Nothing restores a lost life, so early leaks shrink the cushion for wave 6. Is that fair? | Playtest | First playable |
 | Wave 2's packets are 12 s apart against a 10.25 s burst recovery, so 1.75 s of slack. Does a real thumb make it? | Pillar 4 phone test | First phone build |
+| Prompt panel at insets above 45 dp overlaps the entry lane, by 34 at 68 dp. Fix it in the HUD, or move the entry to y 244, which needs a re-simulation with the share median at its floor | Mobile Platform GDD | Before the first phone build |
+| Tower reach: 29.8% of the in-field path is out of every level-1 tower's range, and 20.8% at level 2; past 1,571 only the hero can hit, and slot 5's coverage is a strict subset of slot 4's. Rule 1 intends a leaking lane, but is this much right, and does slot 5 earn its place? Slots are simulation-sensitive, so test any move | Bots at first baseline | First playable |
+| Human checks the bots cannot make: the 3 s sight target on waves 4 to 6, how often a heavy leaks, and whether a strong run falls under the concept's 5 minutes | qa-lead | First playable |
+| No entry for this system's cues in `design/accessibility-requirements.md`, which does not exist yet | Settings & Accessibility | When that file is authored |
 | Starter waves are one scripted simulation, on a path 19% longer than the prototype's with one fewer slot, with no human data. Every convergence point moves with real towers | Bots at first playable | First playable |
