@@ -98,6 +98,17 @@ state_ownership:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - state: field_insets
+    status: active
+    owner_system: battle-wrapper
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    interface: "FieldInsets (top, bottom, left, right; field units; read-only) from SafeAreaMath.field_insets once per battle, mobile only, desktop zero; injected into InputAdapter and HudLogic"
+    write_access: battle-wrapper-only
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -199,6 +210,32 @@ interfaces:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - contract: input_adapter_to_resolver
+    status: active
+    pattern: direct_call
+    producer: input-adapter
+    consumers:
+      - input-resolver
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    signal_signature: "press from _unhandled_input; move, release, cancel_pointer from _input for forwarded pointers only; cancel() on lifecycle and resize; mouse is pointer MOUSE_POINTER (1 << 16)"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
+  - contract: lifecycle_paused
+    status: active
+    pattern: signal
+    producer: input-adapter
+    consumers:
+      - flow
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    signal_signature: "lifecycle_paused() once per away episode, after resolver.cancel(); wrapper connects it to the method Callable flow.pause; never resumes"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -292,6 +329,39 @@ api_decisions:
     added: 2026-11-03
     revised: ""
     notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - purpose: display_stretch
+    status: active
+    api: "viewport 540x960, display/window/stretch/mode canvas_items, aspect keep, scale_mode fractional, portrait; set explicitly in project.godot"
+    not: "aspect expand or keep_width (4.7 new-project default is expand); Camera2D in the battle"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "Only keep makes field units equal viewport units with no offset; letterbox absorbs most notch insets"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
+  - purpose: pointer_event_source
+    status: active
+    api: "emulate_touch_from_mouse false, emulate_mouse_from_touch true; drop device == InputEvent.DEVICE_ID_EMULATION; identify source by event class"
+    not: "event.device == 0; touch-only family with mouse emulated as touch 0"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "One forwarded press per physical press; Controls still get emulated mouse on phones; spike S2 verifies"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
+  - purpose: app_lifecycle_pause
+    status: active
+    api: "Union of NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_WINDOW_FOCUS_OUT in InputAdapter._notification, latched per episode"
+    not: "SceneTree.paused; resume on focus-in"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "Which notifications fire per platform is unverified (spike S5); pause is idempotent and resume is by tap only"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    revised: ""
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
 #
@@ -367,6 +437,20 @@ forbidden_patterns:
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-03
     notes: "ADR-0002 is Proposed; binding only once Accepted"
+  - pattern: pointer_input_outside_adapter
+    status: active
+    description: "No gameplay or HUD node other than InputAdapter reads pointer events in _input or _unhandled_input; modal screens use TapScreen._gui_input only"
+    why: "A second reader breaks the exactly-once press contract and the routing order"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
+  - pattern: input_capturing_wrapper_control
+    status: active
+    description: "No Control in the BattleWrapper other than TapScreen may have a mouse_filter other than IGNORE; the wrapper root is never a full-rect Control"
+    why: "A STOP or PASS Control over the field swallows presses before the adapter's _unhandled_input"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-03
+    notes: "ADR-0003 is Proposed; binding only once Accepted"
 
 # Example:
 #
