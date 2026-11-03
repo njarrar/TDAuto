@@ -535,6 +535,12 @@ forbidden_patterns:
     why: "It must show when data or scenes are broken"
     adr: docs/architecture/adr-0008-app-lifecycle-and-battle-composition.md
     added: 2026-11-02
+  - pattern: src_depends_on_tests
+    status: active
+    description: "No code outside tests/ imports or preloads anything under res://tests/ (the harness lives in tests/support/)"
+    why: "Shipping code must not depend on test tooling"
+    adr: docs/architecture/adr-0004-headless-battle-harness-and-snapshot.md
+    added: 2026-11-03
 
 # Example:
 #
