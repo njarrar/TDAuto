@@ -163,7 +163,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | **AppRoot** (main scene, no autoload) | App states Boot, InStage, Fatal (Game State GDD). The Ready catalogue for the session. The app-level FatalLatch. The retry latch. Reduce Motion location (QQ-09). | Starts the catalogue load; builds battles and drops them | Catalogue, FatalLatch | `Node`, `PackedScene`, `Object.free()` vs `queue_free()` timing for the wrapper on retry (**MEDIUM, NEEDS VERIFICATION**), `weakref()` (LOW) |
-| **Builder** (`build(catalogue, stage_id, seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4; Callable reference semantics **NEEDS VERIFICATION**, QQ-17) |
+| **Builder** (`build(catalogue, stage_id, rng_seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4; Callable reference semantics **NEEDS VERIFICATION**, QQ-17) |
 | **BattleWrapper** (scene) | The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
 | **Fatal screen** (scene) | Catalogue-free, guaranteed to load. Shown by AppRoot. | None | AppRoot FatalLatch cause (development builds show it) | `PackedScene` (LOW) |
 
@@ -271,7 +271,7 @@ Engine starts main scene ──► AppRoot._ready
        Failed ─► fatal screen (no fallbacks, no save access)
   3. (VS) Save/Load boot: inject loaded progression into progression systems
   4. AppRoot holds Ready catalogue, picks stage_id and seed. AppRoot state: InStage
-  5. Builder.build(catalogue, stage_id, seed, fatal_handler)
+  5. Builder.build(catalogue, stage_id, rng_seed, fatal_handler)
        a. Create the per-battle FatalLatch first, so a fatal during build has somewhere to land
        b. Validate stage inputs; InputResolver.create(drag_slop, tap_slop) (null on bad slops: fatal)
        c. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim
