@@ -48,3 +48,46 @@ Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc8769
 ## Revision — 2026-11-04 — after the review above (not a new verdict)
 User accepted every recommendation ("All recommended"). Decisions: `R` 96 with L1 x 156 to 384 (156, not ux-designer's 155, keeps discs clear of the edge margin) and provisional 80 x 56 panels for `/ux-design`; keep the Start/Call rule and fix its text (the 36% recomputed); build refund deferred; Won in two columns with the burst button hidden on results. Applied: all 6 blocking and most recommended items. Moved to Open Questions rather than changed: chip second tap (the 'sample at press' fix), reach and occlusion, panels as targets, contrast.
 Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: ux-designer, ui-programmer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 4 | Recommended: 14
+Summary: The six prior blockers are fixed and the systems designer verified every formula, example and clearance. Four local contradictions remained: the Paused screen could never arm, the Won panel's "build stays visible" claim fails once a bottom inset exceeds 8 units, the criteria's "complete list of fake calls" cannot hold beside per-frame reads, and single advance steps cannot reach boundaries under the 100 ms clamp. The creative director routed the other specialist blockers to architecture.md B9/B10, ADR-0003 and /ux-design, and reopened no user decision.
+Prior verdict resolved: Yes (all 6 prior blocking items)
+Findings:
+- [BLOCKING] Rules 2, 17, States table: the Paused screen counts only while Armed but its clock is frozen, so it can never resume.
+- [BLOCKING] Layout, Won panel: the "finished build stays visible" claim is false once B > 8 (bottom towers reach y 736).
+- [BLOCKING] Acceptance Criteria preamble: "recorded fake calls are the complete list" cannot pass with per-frame reads.
+- [BLOCKING] Rule 11, AC 4, 8, 12, 19: name the clamped clocks; tests step at most 100 ms.
+- [RECOMMENDED] Arc panel word outside the hit disc: a safe miss; /ux-design decides disc plus panel (downgraded from ux-designer's blocker).
+- [RECOMMENDED] Content rules: early-call bonus cap enforced as one digit over the stage's waves.
+- [RECOMMENDED] Formulas: burst_y and Play again clamp into insets above 72 (Mobile Platform GDD).
+- [RECOMMENDED] Content rules: L1 and burst-line bounds as formulas over edge_reject_margin 0 to 48.
+- [RECOMMENDED] Rule 10: 36% holds at rest only.
+- [RECOMMENDED] Formulas: ticks_per_second as to_ticks(1.0); chip window read from ChipWindow.
+- [RECOMMENDED] Formulas: cite Hero Rules 13 and 15.
+- [RECOMMENDED] Rule 15: omit an empty "Got through" row on Won.
+- [RECOMMENDED] Rule 7: a non-motion NO_GOLD cue under Reduce Motion.
+- [RECOMMENDED] Rule 10: feedback for a swallowed dead-overlap tap; Lost panel compaction (/ux-design).
+- [RECOMMENDED] Rules 10, 11: describe one dead-gesture flag.
+- [RECOMMENDED] Rule 1: `phase` vs `phase_changed` (ADR-0006, QQ-07).
+- [RECOMMENDED] Acceptance Criteria: Rule 13 act-ends, Rule 1 build order, Rule 9 chip target and untested edges; split compound criteria; move criterion 30's latch part to 35; Manual pass conditions.
+- [RECOMMENDED] Architecture B9/B10: modal press inputs and move events, lifecycle route to HudLogic, Retry callable, log reads, static burst_button_centre(), reduce_motion, signal list (routed, not GDD).
+Reviewed-Content-Hash: design/gdd/battle-hud.md a8f89fe590ea44636a835021accab97e365ff7f3
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d79fe3bf982a1d15a806cc0725421521a6a735d5
+Reviewed-Content-Hash: design/gdd/tower-system.md 83803cb361c7fe6971b87874234be4f565d8651c
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 4c34ae187a1d77212e8c66bd6454c8d7a170ad95
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d14444df535b375764cb42
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied in autonomous mode: all 4 blocking items (Paused screen does not arm and counts a press begun after it showed, Rule 2, Rule 17, States table, AC21; Won panel claim restated with the inset trade; criteria preamble limited to commands, registrations and log writes, with diagnostics sink and injected values; one clamped HudLogic clock named in Rule 11 and steps of at most 100 ms in the criteria) and recommended: bottom anchoring line, bonus cap of 9 as a content rule, 36% at rest, empty Won row omitted, NO_GOLD cost flash, ticks_per_second as to_ticks(1.0), chip window from ChipWindow, Hero Rules 13 and 15, arc panel hit shape added to Open Questions for /ux-design.
+Not done: criteria splits and new criteria, margin formulas, inset clamps, dead-gesture flag wording, Lost panel, and the items routed to architecture.md B9/B10, ADR-0003 and /ux-design.
+Re-review pending: the GDD hash above is of the reviewed text, not this revision.
