@@ -16,13 +16,17 @@ Proposed
 > that confirmation exists. An agent that believes an ADR is ready says so and
 > escalates; it does not edit this field.
 >
-> Acceptance preconditions: (1) ADR-0009 and ADR-0010 are Accepted; (2) V1 to V5
+> Acceptance preconditions: (1) ADR-0009 and ADR-0010 are Accepted; (2) V1 to V6
 > below have recorded results in `docs/engine-reference/godot/modules/rendering.md`
 > (each runs in the standalone prototype `prototypes/adr-0011-render-budget/`,
 > not as a story; V1, V2 and V4 also need a run on the user's phone); (3) the
-> user confirms or overturns each choice in Decision 11. Until all three hold,
-> this ADR stays `Proposed`, because the batching, line and counter behaviours it
-> relies on are not sourced in the pinned reference.
+> user confirms or overturns each choice in Decision 11; (4) art-director and
+> technical-artist sign off the art bible §8 edits (cascade a6), and the user,
+> art-director (§6 owner) and game-designer (Enemy & Wave owner) confirm the
+> path-geometry limit of Decision 5 and its move into Stage validation. Until all
+> four hold, this ADR stays `Proposed`, because the batching, line and counter
+> behaviours it relies on are not sourced in the pinned reference and the art and
+> geometry rules are design content.
 >
 > After acceptance: A1 (the real game's worst-case frame on the phone, shared
 > with ADR-0004 V6 and ADR-0007 M7). Reopen trigger: Decision 9.
@@ -37,11 +41,11 @@ Proposed
 
 ## Decision Makers
 
-User (njarrar, project owner), technical-director (TD-ADR gate), godot-specialist (engine check). Authored with the /architecture-decision flow in autonomous mode.
+User (njarrar, project owner), technical-director (TD-ADR gate), godot-specialist (engine check). Authored with the /architecture-decision flow in autonomous mode. TD-ADR returned CONCERNS (T1 to T8; T1 and T2 blocking) and the engine check returned two before-acceptance items (E1, E2) plus minor notes; the user's delegate chose "Revise flagged items" for all, and all are applied in this revision (2026-11-04).
 
 ## Summary
 
-The battle field (path, slots, towers, enemies, combat feedback, hero) and the HUD must draw inside 60 draw calls and 3.0 ms of frame step 4 on a low-end Android phone, while every view stays a read-only observer that holds no sim object and can be torn down on retry. This ADR decides seven `_draw` nodes (one per kind) in a fixed sibling order on one canvas with no CanvasLayer, z-index or material; a pure `RefCounted` model behind each node that copies sim reads into preallocated buffers in frame step 4 (the "pools": enemies 48 growing with a dev error, flash markers 16, tracers 64, death discs 48); the path as a mitred quad strip baked once at attach; zero CanvasItem shaders (QQ-10); a one-pixel line-width bias for the 4.7 line change; and per-node draw-call ceilings that total 34 of 60, all pending device verification.
+The battle field and HUD must draw inside 60 draw calls and step 4's 3.0 ms on a low-end Android phone, with every view a read-only observer that keeps no sim object and tears down on retry. Decided: seven per-kind `_draw` nodes in a fixed order on one canvas with no layer, z-index, material, shader or particle (QQ-10); a `RefCounted` model per node that copies reads into preallocated buffers (enemies 48 growing with a dev error, flashes 16, tracers 64, death discs 48); the path as a mitred quad strip with its geometry rule in Stage validation; a provisional line-width bias; and per-node ceilings totalling 34 of 60, all pending device verification.
 
 ## Engine Compatibility
 
@@ -53,7 +57,7 @@ The battle field (path, slots, towers, enemies, combat feedback, hero) and the H
 | **Knowledge Risk** | MEDIUM (`architecture.md` Engine Knowledge Gap Summary, Rendering row) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `modules/rendering.md` (4.7 `CanvasItem` lines lose the AA feather; nothing on 2D batching, draw counters or `_draw` cost); `breaking-changes.md` 4.7 Rendering rows (line feather, `LinearToSRGB`, `get_format()`, particles rename, sky layers: only the first applies); `deprecated-apis.md` (nothing in 2D drawing); `current-best-practices.md` § Rendering (4.7); `modules/ui.md` (stretch defaults, already fixed by ADR-0003) |
 | **Post-Cutoff APIs Used** | None new. Relies on one sourced 4.7 behaviour change: `CanvasItem` lines draw without an AA feather and look thinner. Every `draw_*` method used is pre-cutoff; its 4.7 behaviour beyond that note is unsourced |
-| **Verification Required** | V1 to V5 before acceptance; A1 after acceptance (below) |
+| **Verification Required** | V1 to V6 before acceptance; A1 after acceptance (below) |
 
 ### Verification items
 
@@ -61,11 +65,12 @@ NOT SOURCEABLE in `docs/engine-reference/godot/**`: how the Mobile renderer batc
 
 **Before acceptance** (standalone Godot 4.7.2 project `prototypes/adr-0011-render-budget/`, Mobile renderer, 540x960 `canvas_items` / `keep` as ADR-0003 sets; owner: godot-specialist writes it, the user runs it on desktop and on their phone; results go to `modules/rendering.md`; the phone run can share the ADR-0003 device spike session):
 
-- **V1. How to count draw calls.** Candidates: `Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)`, `RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)`, the editor's Monitors tab, and an external frame capture (RenderDoc on desktop, Android GPU Inspector or the vendor profiler on the phone). Method: a scene with an empty field, then 1, 10 and 48 filled discs in one `_draw`, then the same 48 in 48 nodes; compare each counter with the capture. Record which source counts canvas batches. *Branch*: if no in-engine counter counts 2D, the dev overlay (Decision 10) shows frame time only, and draw calls are checked by capture at A1 and at each milestone.
-- **V2. Batching of `_draw` primitives.** The synthetic worst case of Decision 9 (seven drawers, 48 enemies of three styles with keylines, 16 flashes, 64 tracer segments through `draw_multiline_colors`, five towers with rings, the hero with its glow texture, HUD text at three sizes). Record total draw calls (V1's method), each node's share (toggle `visible`), and the p99 of step 4 plus render on the phone. Expected (unsourced): untextured primitives in one node with no material batch into a few calls. *Branch*: if each primitive is its own call (48 enemies alone pass 48), EnemyView and CombatView build one triangle array per frame and submit it with a single `RenderingServer.canvas_item_add_triangle_array` (or `draw_mesh` of a reused `ArrayMesh`), which this prototype tests in the same run; the ADR is revised before acceptance.
-- **V3. Path corners.** The starter `path_points` at width 72 then 68, drawn three ways: `draw_polyline`, a `Line2D` with sharp joints, and Decision 5's baked quads. Zoomed screenshots of each 90 degree corner on desktop and phone. Expected: the baked quads give exact square corners; the record says what the other two do. *Branch*: none for the bake (it uses no joint algorithm); if a convex quad does not fill without seams at the shared edge, the bake emits one closed outline per colour and draws it with `draw_colored_polygon` (triangulation then also recorded).
-- **V4. Line thickness on 4.7.** A 2 px ring, a 2 px dashed leash and a 1 px slot outline, each at `LINE_BIAS` 0.0 and 1.0, with `antialiased` false and true, on desktop and phone. Record screenshots and the frame-time and draw-call difference of `antialiased = true`. The art-director picks the bias (art bible §8 proposes about 1 px). *Branch*: a different bias changes one constant (Decision 6); if AA is cheap and needed, `antialiased` becomes true in the same constant table.
+- **V1. How to count draw calls.** Candidates: `Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)`, `RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)`, `Viewport.get_render_info(Viewport.RENDER_INFO_TYPE_CANVAS, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)` (all NEEDS VERIFICATION), the editor's Monitors tab, and an external frame capture (RenderDoc on desktop, Android GPU Inspector or the vendor profiler on the phone). Method: a scene with an empty field, then 1, 10 and 48 filled discs in one `_draw`, then the same 48 in 48 nodes; compare each counter with the capture. Record which source counts canvas batches. *Branch*: if no in-engine counter counts 2D, the dev overlay (Decision 10) shows frame time only, and draw calls are checked by capture at A1 and at each milestone.
+- **V2. Batching of `_draw` primitives.** The synthetic worst case of Decision 9 (seven drawers, 48 enemies of three styles with keylines, 16 flashes, 64 tracer segments through `draw_multiline_colors`, five towers with rings, the hero with its glow texture, HUD text at three sizes, and 48 `max_hp` accessor reads per frame as CombatViewModel makes them). Record total draw calls (V1's method), each node's share (toggle `visible`), and the p99 of step 4 plus render on the phone. Run it twice: commands in Decision 6's order (primitives, then textures, then text grouped by size) and interleaved, to record what the order is worth; and record whether the three font sizes share one glyph atlas. Expected (unsourced): untextured primitives in one node with no material batch into a few calls. *Branch*: if each primitive is its own call (48 enemies alone pass 48), EnemyView and CombatView build one triangle array per frame and submit it with a single `RenderingServer.canvas_item_add_triangle_array` (or `draw_mesh` of a reused `ArrayMesh`), which this prototype tests in the same run. That revision changes Decision 2, Alternative 5 and RID lifetime on retry, so it goes back through TD-ADR and godot-specialist before acceptance.
+- **V3. Path corners.** The starter `path_points` at width 72 then 68, drawn three ways: `draw_polyline`, a `Line2D` with sharp joints, and Decision 5's baked quads. Zoomed screenshots of each 90 degree corner on desktop and phone. Expected: the baked quads give exact square corners; the record says what the other two do (the engine check already reports that `draw_polyline` at width 72 has no joint modes and notches corners). *Branch*: none for the bake (it uses no joint algorithm); if quads drawn with `draw_primitive` leave seams at the shared edge, the strip is submitted as one triangle array per colour.
+- **V4. Line thickness on 4.7.** The reference does not say whether the lost feather was only on the `antialiased = true` path; if so, AA-off lines did not change and `LINE_BIAS` 1.0 thickens every stroke (engine check E1). Method: a 2 px ring, a 2 px dashed leash and a 1 px slot outline at bias 0.0 and 1.0, AA false and true, on 4.7.2 and a 4.6 build (or against art bible §3's stated widths measured in a screenshot), desktop and phone; record screenshots and the AA cost; also whether a full `draw_arc` (0 to TAU) shows a seam at `ring_points`' counts. The art-director picks the bias. *Branch*: a different bias, 0.0 included, or AA on, changes one constant (Decision 6).
 - **V5. Material cost (informational).** The 16 flash discs drawn plain, then with one shared `ShaderMaterial` on a separate node. Record draw-call and frame-time difference. It cannot change Decision 7; it is the number a Vertical Slice reopen of QQ-10 needs.
+- **V6. Packed-array constants.** `const TEXT_SIZES: PackedInt32Array = [21, 24, 36]   # V6; fallback Array[int]` parses and reads on 4.7.2, headless. *Branch*: `const TEXT_SIZES: Array[int] = [21, 24, 36]`. Owner: godot-specialist.
 
 **After acceptance:**
 
@@ -78,7 +83,7 @@ NOT SOURCEABLE in `docs/engine-reference/godot/**`: how the Mobile renderer batc
 | **Depends On** | ADR-0009 (Proposed): `roster()` read-only buffers, float-pair positions, `view_position()`, `Combat` reads. ADR-0010 (Proposed, in review): the read surface of its Decision 7 and `ResultSnapshot` (Decision 11). Binding and already listed by those: ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007 |
 | **Enables** | None. Feeds Visual Feedback (VS) and the Mobile Platform GDD's budget table |
 | **Blocks** | Every field-view story and the HudField and HudTopBand drawing stories (Battle HUD, Combat view, Enemy view, Tower view epics). HudLogic stories do not wait on it |
-| **Ordering Note** | `architecture.md` allows deferring this ADR to the first phone build; drafting now fixes the node and pool structure so view stories can be written. V1 to V5 need no game code and can run with the ADR-0003 spike. A1 needs the real game |
+| **Ordering Note** | `architecture.md` allows deferring this ADR to the first phone build; drafting now fixes the node and pool structure so view stories can be written. V1 to V6 need no game code and can run with the ADR-0003 spike. A1 needs the real game |
 
 ## Context
 
@@ -88,7 +93,7 @@ Four GDDs and the art bible describe field and HUD visuals, and they disagree on
 
 ### Current State
 
-No view code exists. `architecture.md` lists the field views and HudField with MEDIUM risk and the path joint as NEEDS VERIFICATION. `project.yaml` sets 60 draw calls as an art-bible proposal. ADR-0004 gives step 4 and `_draw` 3.0 ms and leaves draw calls here. The ADR-0003 spike's `field_view.gd` is throwaway.
+No view code exists. `architecture.md` marks the path joint NEEDS VERIFICATION; `project.yaml`'s 60 draw calls is an art-bible proposal; ADR-0004 gives step 4 and `_draw` 3.0 ms and leaves draw calls here.
 
 ### Constraints
 
@@ -103,10 +108,7 @@ No view code exists. `architecture.md` lists the field views and HudField with M
 
 ### Requirements
 
-- One `_draw` per kind for combat feedback, towers and HUD field art; three-pass enemy order; a view pool of at least 48 that grows with a dev error; 16 flash markers on the frame clock; Reduce Motion honoured (TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001).
-- HUD about 8, at most 12 of 60 draw calls, at most 3 text sizes; hit targets at least 72 units; text at least 21 units (TR-hud-015).
-- Step 4 plus `_draw` within 3.0 ms (ADR-0004 Decision 10).
-- Gameplay identical with every view removed (TR-hud-004, TR-combat-010).
+The five TRs in GDD Requirements Addressed; step 4 plus `_draw` within 3.0 ms (ADR-0004 Decision 10); gameplay identical with every view removed (TR-hud-004, TR-combat-010).
 
 ## Decision
 
@@ -125,7 +127,7 @@ The BattleWrapper scene holds these nodes as direct children, in this order (lat
 | 7 | `HudTopBand` | `Control`, `MOUSE_FILTER_IGNORE` | Band panel, lives dashes, wave pips, gold digits in its own `_draw` | `HudLogic` |
 | 8, 9 | `ResultScreen`, `PausedScreen` | `Control`, `STOP` (ADR-0003 Decision 8) | Shown only when open | `ResultSnapshot`, `HudLogic` |
 
-Range rings sit under entities because TowerView draws them first and EnemyView comes later. The kill preview's knock-out covers the damaged core because HeroView follows CombatView. The HUD sits above the field. Burst spokes are drawn by CombatView from its tracer pool (art bible §8), though the Hero GDD lists them. The InputAdapter and Clock draw nothing.
+Range rings sit under entities because TowerView draws them first and EnemyView comes later. The kill preview's knock-out covers the damaged core because HeroView follows CombatView. The HUD sits above the field. Burst spokes are drawn by CombatView from its tracer pool (art bible §8), though the Hero GDD lists them. The InputAdapter and Clock draw nothing. HudTopBand's parent is not a Control, so its anchors would resolve against the viewport: the wrapper sets its `position` and `size` explicitly in `attach` and on `display_changed` (insets, ADR-0003 Decision 7).
 
 ### 2. Model and drawer split
 
@@ -134,7 +136,7 @@ Each drawer is a thin node; its model is a `RefCounted` in `src/presentation/<ki
 - `attach(...)` (called from `BattleWrapper.attach`) receives the reads it needs as objects or method Callables, `reduce_motion`, `dev_error`, and the preallocated capacities. `detach()` drops every reference.
 - `refresh(view_ms: float) -> bool` runs in frame step 4. It reads queries, copies what it will draw into its own buffers (`PackedVector2Array`, `PackedFloat32Array`, `PackedInt32Array`, `PackedColorArray`), advances its view clock and returns whether anything changed.
 - The drawer's `_draw()` reads only its model's buffers. It never calls a sim query, so a redraw after `detach()` draws the last frame or nothing, never a freed object.
-- The wrapper calls `queue_redraw()` on a drawer only when `refresh` returned true. FieldBackdrop returns true only on a change (a built tower hides its slot, danger on or off or pulsing, a field value shift); the others usually every frame.
+- The wrapper calls `queue_redraw()` on a drawer only when `refresh` returned true. FieldBackdrop returns true only on a change (a built tower hides its slot, danger on or off or pulsing, a field value shift); the others usually every frame. `_draw` does not run on an invisible drawer, so one shown again is refreshed in the same step 4 first and never shows a stale frame.
 
 Models and drawers never keep a `Targetable`, `Health`, `Status`, `DamageEvent`, record or sim system past the `refresh` call or handler that read it (ADR-0006 Decision 7 rule 2). What they keep are copies: `Vector2`, `int` `spawn_id`, `float`, `StringName`, enums.
 
@@ -144,11 +146,11 @@ Models read state by polling in `refresh`, which needs no connection and cannot 
 
 - EnemyViewModel: `roster()`, `Enemy.def_id`, `view_position()`.
 - TowerViewModel: `slot_count()`, `slot_tower(i)`, `slot_level(i)`, `slot_cooldown_left(i)`, `slot_position(i)` (ADR-0010 Decision 7); the cooldown total and range through its own per-slot `ReadContext`s and the accessor at use time, with `halted()` after each read, as HudLogic does for the burst cooldown (ADR-0010 Decision 7).
-- CombatViewModel: `Combat.is_dead`, `hp_left`, `speed_factor` per roster entry; `max_hp` through one `ReadContext` per enemy `def_id` made in `attach`, read in `refresh` only.
+- CombatViewModel: `Combat.is_dead`, `hp_left`, `speed_factor` per roster entry; `max_hp` through one `ReadContext` per enemy `def_id` made in `attach`, read in `refresh` only, one read per roster entry (up to 48 a frame). These reads are frame-side cost: they count in step 4's 3.0 ms, not in ADR-0005's 0.5 ms per-tick read ceiling, and V2's synthetic case includes them.
 - FieldBackdropModel: `roster()` distances, `Flow.lives()` and `phase()`, `slot_tower(i)`, `HeroSim.burst_state()` (field dip).
 - HeroViewModel: HeroSim queries and HeroInput's `aim_state()`, `aim_point()`.
 
-CombatViewModel is the one model with connections, made in `BattleWrapper._connect_signals()` and undone in `detach()`: `burst_started` (P7), `attack_fired` (P8), `damage_applied` (P9), as ADR-0006's table already lists. Its handlers write into the pools of Decision 4 with the current view time and never read the accessor. P4 and P6 stay unconnected (their "may poll instead" option). A new view connection is an amendment to ADR-0006's table.
+CombatViewModel is the one model with connections, made in `BattleWrapper._connect_signals()` and undone in `detach()`: `burst_started` (P7), `attack_fired` (P8), `damage_applied` (P9), as ADR-0006's table already lists ("Combat view"); it is one of "the models it holds" that ADR-0006 Decision 8's wrapper test accepts as a listener. Its handlers write into the pools of Decision 4 with the current view time and never read the accessor. No view connects to P4 or P6 (their "may poll instead" option); P4 stays `required_after_attach` yes through TowerInput (ADR-0010). A new view connection is an amendment to ADR-0006's table.
 
 Structural data reaches the views through two new read-only `Battle` members that the Builder sets, as it sets `input_record` (ADR-0005 Decision 8):
 
@@ -157,7 +159,7 @@ Structural data reaches the views through two new read-only `Battle` members tha
 
 The field look (hue, base value, grid tilt) stays in the stage scene (Data & Config: "Stage visuals are not catalogue values"). `scene_ref` names a scene whose root is `StageLook extends Node` with three exported values and no drawing; the wrapper instantiates it in `attach`, hands the values to FieldBackdropModel and frees it.
 
-`attach` returns false (fatal, ADR-0001 Decision 6) if the stage scene fails to load, a look value is outside art bible §6's ranges, a `visual_key` has no entry in `ViewStyles`, or the path bake fails. An integration content test runs the same checks on every Stage record so a player never sees one.
+`attach` returns false (fatal, ADR-0001 Decision 6) if the stage scene fails to load, a look value is outside art bible §6's ranges, a `visual_key` has no entry in `ViewStyles`, or the path bake fails. The path rule itself is a Stage validation rule (Decision 5), so real content fails at catalogue load and in CI, for bots and headless tests too; the `attach` check guards code-built stages only. An integration content test runs the remaining checks (stage scene, look ranges, `visual_key` styles) on every Stage record so a player never sees one.
 
 ### 4. Pools: preallocated buffers, not nodes
 
@@ -175,14 +177,24 @@ One marker per flashing enemy, keyed by `spawn_id`; a retrigger reuses it and ke
 
 ### 5. The path: a mitred quad strip baked at attach
 
-`PathOutline.bake(points: PackedFloat64Array, width: float) -> PackedVector2Array` (pure, `src/presentation/field/path_outline.gd`) returns four points per segment. At each interior point it offsets both neighbouring segments by `width / 2` and intersects the offset lines (a miter), so adjacent quads share one edge exactly; the first and last points (off field) get butt ends. A 90 degree turn gives an exact square corner, which is Enemy & Wave's "sharp joints keep 90 degree corners square" and art bible §6's square or mitred corners. It returns an empty array, and `attach` fails, if: points are unusable (PathTrack's rules), any turn is sharper than 90 degrees, or any segment is shorter than `width` (either would fold a quad). FieldBackdrop bakes twice in `attach` (`path_width` for the edge colour, `path_width - 4` for the body, leaving 2-unit edges) and draws each quad with `draw_colored_polygon`. The bake uses no engine joint algorithm, so V3 only records what `draw_polyline` and `Line2D` would have done.
+`PathOutline.bake(points: PackedFloat64Array, width: float) -> PackedVector2Array` (pure, `src/presentation/field/path_outline.gd`) returns four points per segment. At each interior point it offsets both neighbouring segments by `width / 2` and intersects the offset lines (a miter), so adjacent quads share one edge exactly; the first and last points (off field) get butt ends. A 90 degree turn gives an exact square corner, which is Enemy & Wave's "sharp joints keep 90 degree corners square" and art bible §6's square or mitred corners.
+
+**Geometry rule.** Let `d_k` be the *deflection* at interior point `k` (the angle between the incoming and outgoing directions: 0 for straight on, 90 degrees for a square turn), with `d = 0` at the first and last points. With `w = path_width`:
+
+1. Every `d_k` is at most 90 degrees. This is a style limit, not a fold condition (a miter limit or bevel could draw sharper turns); it bounds the miter length at `w / sqrt(2)` past the corner. Proposed, pending the user, art-director and game-designer (Status precondition 4).
+2. Every segment from point `a` to point `b` has length at least `(w / 2) * (tan(d_a / 2) + tan(d_b / 2))`. Below that, the inner offsets of its two miters cross and the quad folds. Two square turns need `w`; a finely sampled curve with small deflections needs very little, so splines baked to points (Enemy & Wave Rule 2, art bible §6) pass.
+
+The starter path passes: all deflections are 90 degrees and its shortest segment is 160 against 72. The rule belongs to Stage validation, not to this view: ADR-0002 Decision 4's geometry group checks it at catalogue load, using the record's own `path_width` (cascade), so a bot, a test and the game accept the same stages. `PathOutline.bake` re-checks it and returns an empty array for code-built points, and `attach` then fails.
+
+FieldBackdrop bakes twice in `attach` (`path_width` for the edge colour, `path_width - 4` for the body, leaving 2-unit edges; the body passes whenever the edge does) and draws each quad with `draw_primitive` (four points, no triangulation call per quad). The bake uses no engine joint algorithm, so V3 only records what `draw_polyline` and `Line2D` would have done.
 
 ### 6. Lines, widths and antialiasing
 
-- Every stroke width a GDD or the art bible states is drawn as `stated + ViewStyles.LINE_BIAS`. `LINE_BIAS := 1.0` (art bible §8, for the 4.7 thinner lines); V4 sets the final value. No width is edited per call site.
+- Every stroke width a GDD or the art bible states is drawn as `stated + ViewStyles.LINE_BIAS`. `LINE_BIAS := 1.0` is **provisional** (art bible §8, for the 4.7 thinner lines). If 4.7 only removed the feather from the `antialiased = true` path, AA-off lines did not change and the right bias is 0.0; NEEDS VERIFICATION, V4 decides against a 4.6 or stated-width reference. No width is edited per call site.
 - No stroke is drawn thinner than 2.0 units after the bias; negative or zero widths (thin primitives) are never used.
 - `antialiased` is false on every `draw_*` call until V4 says otherwise; 2D MSAA stays at the project default.
 - Rings use `draw_arc` with a point count from `ViewStyles.ring_points(radius)`; dashed and dotted rings and slow drag lines are precomputed segment lists drawn with one `draw_multiline` (or `draw_multiline_colors`) per kind per frame.
+- **Command order inside each `_draw`:** all untextured primitives first, then textured draws (HeroView's glow), then text grouped by size, one group per size. A texture or font switch between primitive passes splits a batch (unsourced). HeroView is the one exception: the glow must sit behind the hero, so it draws zones, then the glow, then the hero body and burst ring, which costs at least 3 calls. The Decision 9 "expected" column assumes this order; V2 measures it.
 - Colours, sizes, widths, durations and point counts live in `ViewStyles` (`src/presentation/view_styles.gd`, `const` only), keyed by `visual_key` stem for entities. They are presentation constants, not gameplay values (Data Rule 1), and each row cites its GDD or art bible line.
 
 ### 7. No CanvasItem shaders or particles at MVP (QQ-10)
@@ -205,18 +217,18 @@ Ceilings are proposals, counted by V1's method, unmeasured until V2 and A1.
 | TowerView | 3 | 1 |
 | EnemyView | 4 | 1 |
 | CombatView | 4 | 1 to 2 |
-| HeroView | 4 | 2 (glow texture) |
-| **Field total** | **18** | **6 to 7** |
-| HudField | 8 | 5 (primitives plus three text sizes) |
+| HeroView | 4 | 3 (primitives, glow texture, hero body) |
+| **Field total** | **18** | **7 to 8** |
+| HudField | 8 | 4 to 5 (one primitive pass, then three text sizes; more if the font sizes do not share an atlas, V2) |
 | HudTopBand | 4 | 3 |
 | **HUD total** (TR-hud-015) | **12** | **8** |
 | ResultScreen or PausedScreen, when open | 4 | 4 |
-| **Sum** | **34** | **18 to 19** |
+| **Sum** | **34** | **19 to 20** |
 | Engine (clear, letterbox, final blit) and headroom | 26 | |
 
 HUD text uses one font at three sizes only, 21, 24 and 36 units (14, 16 and 24 dp), drawn with `draw_string`; a fourth size is a budget change. The synthetic worst case for V2 and A1: 48 alive (mixed styles), 16 flashes, 48 death discs, 64 tracer segments, five towers cooling with one range ring, hero aiming with glow 2, arc or chip open.
 
-Time: step 4 (`hero_input.update()`, every `refresh`) plus every `_draw` fits ADR-0004's 3.0 ms slice; this ADR does not split it further.
+Time: step 4 (`hero_input.update()`, every `refresh`, including CombatViewModel's up to 48 `max_hp` reads and TowerViewModel's per-slot reads) plus every `_draw` fits ADR-0004's 3.0 ms slice; this ADR does not split it further.
 
 **Reopen trigger** (after A1): total above 60, or the HUD above 12, or step 4 plus `_draw` p99 above 3.0 ms. Levers, in order: merge FieldBackdrop and TowerView; drop keylines; fewer ring points; the V2 triangle-array branch for EnemyView and CombatView. If those do not fit, escalate to `technical-director`.
 
@@ -226,38 +238,17 @@ Development builds show an overlay (in `src/presentation/dev/`, created by `DevL
 
 ### 11. Choices made in autonomous mode
 
-Each can be overturned (cascade section d):
-
-1. Seven drawers in Decision 1's order, all in one canvas; no per-entity nodes.
-2. Model and drawer split; `_draw` reads only buffers.
-3. Polling for everything except P7, P8, P9.
-4. `Battle.stage_record` and `Battle.visual_keys`; field look from a `StageLook` scene root.
-5. A presentation failure at `attach` is fatal, with a content test in front of it.
-6. Path as a baked mitred quad strip; turns at most 90 degrees and segments at least `path_width` long.
-7. `LINE_BIAS` 1.0, 2-unit stroke floor, AA off.
-8. Zero shaders and particles; art bible §8's shader budget unused (QQ-10).
-9. Burst spokes drawn by CombatView.
-10. Per-node ceilings summing to 34; HUD text at exactly three sizes.
+Each can be overturned; cascade section d lists them: the seven drawers and their order (1); the model and drawer split (2); polling except P7 to P9, and the two `Battle` members with `StageLook` (3); a fatal `attach` on presentation failure (3); the mitred strip and the Stage geometry rule (5); `LINE_BIAS`, stroke floor and AA off (6); zero shaders and particles (7); spokes in CombatView (1); the per-node ceilings and three text sizes (9).
 
 ### Architecture Diagram
 
 ```
- BattleWrapper._process, step 4 (ADR-0004)                 render (engine)
-   hero_input.update()
-   view_ms = clamp(frame ms, 0, 100), 0 while PAUSED
-   for each model: changed = model.refresh(view_ms) -> drawer.queue_redraw() if changed
-                                                         │
- Battle (read-only)                Models (RefCounted)   │  Drawers, sibling order, one canvas
-   EnemyWave.roster() ─────────►  EnemyViewModel  ──────►│  1 FieldBackdrop  (path quads baked at attach)
-   TowerSim slot reads ────────►  TowerViewModel  ──────►│  2 TowerView
-   Combat is_dead/hp_left ─────►  CombatViewModel ──────►│  3 EnemyView
-     P7, P8, P9 (in ticks) ────►    pools: flash 16, tracer 64, death 48
-   HeroSim, HeroInput ─────────►  HeroViewModel   ──────►│  4 CombatView
-   Flow, lives ────────────────►  FieldBackdropModel ───►│  5 HeroView
-   Battle.stage_record, visual_keys (attach only)         │  6 HudField   (HudLogic)
-                                                          │  7 HudTopBand (Control, IGNORE)
-                                                          │  8,9 Result/Paused (Control, STOP)
- detach(): every model drops its reads; drawers keep only buffers
+ step 4: hero_input.update(); view_ms; each model.refresh(view_ms) -> queue_redraw() if changed
+ Battle reads (roster, slot reads, Combat, HeroSim, Flow) + P7..P9 -> models (RefCounted, buffers)
+ models -> drawers, one canvas, in order:
+   1 FieldBackdrop  2 TowerView  3 EnemyView  4 CombatView  5 HeroView
+   6 HudField  7 HudTopBand (IGNORE)  8,9 Result/Paused (STOP, when open)
+ attach: stage_record, visual_keys, StageLook, path bake;  detach: models drop all reads
 ```
 
 ### Key Interfaces
@@ -274,7 +265,7 @@ func tower(tower_id: StringName, level: int) -> StringName
 func hero() -> StringName
 
 # src/presentation/view_styles.gd
-class_name ViewStyles extends RefCounted     # const only; never instantiated
+class_name ViewStyles extends RefCounted     # const only; never instantiated (@abstract, 4.5+, optional)
 const LINE_BIAS := 1.0
 const MIN_STROKE := 2.0
 const ENEMY_POOL := 48
@@ -282,7 +273,7 @@ const FLASH_POOL := 16
 const TRACER_POOL := 64
 const DEATH_POOL := 48
 const GLOW_POOL := 8
-const TEXT_SIZES: PackedInt32Array = [21, 24, 36]
+const TEXT_SIZES: PackedInt32Array = [21, 24, 36]   # V6; fallback Array[int]
 static func ring_points(radius: float) -> int
 
 # src/presentation/field/path_outline.gd
@@ -321,6 +312,8 @@ For `/create-control-manifest` and `/dev-story`:
 - Must never mutate or keep `roster()`; must use `view_position()` for enemy centres.
 - Must never call the accessor from a P8 or P9 handler; must check `halted()` after every accessor read in `refresh`.
 - Must apply `LINE_BIAS` to every stated stroke width, never draw below `MIN_STROKE`, and pass `antialiased = false`.
+- Must order each `_draw` as untextured primitives, then textures, then text grouped by size (HeroView: zones, glow, hero body).
+- Must draw path quads with `draw_primitive`; the path rule lives in Stage validation, never only in a view.
 - Must take every colour, size, width, duration and pool size from `ViewStyles`.
 - Must run every view duration on `view_ms`; never read `Engine`, `Time`, `Timer` or `delta` in a model.
 - Must call `dev_error` once per battle when the enemy buffers grow.
@@ -336,35 +329,28 @@ For `/create-control-manifest` and `/dev-story`:
 - **Estimated Effort**: Higher (two paths, pool lifecycle).
 - **Rejection Reason**: Contradicts TR-combat-011 and TR-tower-015 and doubles the teardown surface for an unmeasured gain.
 
-### Alternative 2: Polygon2D and Line2D for static shapes
-- **Description**: Art bible §8 constraint: path as two `Line2D` with sharp joints, slots and grid as `Polygon2D`/`Line2D`.
-- **Pros**: No redraw code for static art; editor-visible.
-- **Cons**: Corner shape depends on `Line2D`'s joint and sharp limit (unsourced); about 20 more nodes; the geometry cannot be tested headless.
-- **Estimated Effort**: Similar.
-- **Rejection Reason**: The baked strip gives exact corners by construction and is a pure function with a unit test. V3 still records `Line2D`.
+### Alternative 2: Engine line joints for the path (`Line2D` with sharp joints, or `draw_polyline`), Polygon2D for static shapes
+- **Description**: Art bible §8 constraint: path as two `Line2D` or two `draw_polyline` calls; slots and grid as nodes.
+- **Pros**: Least path code; editor-visible static art.
+- **Cons**: Corner shape rests on an unsourced joint algorithm (the engine check reports `draw_polyline` at width 72 has no joint modes and notches corners); about 20 more nodes; no headless geometry test.
+- **Estimated Effort**: Lower to similar.
+- **Rejection Reason**: The baked strip gives exact corners by construction and is a pure, tested function. V3 records the other two.
 
-### Alternative 3: `draw_polyline` at width 72
-- **Description**: One call per colour from `path_points`.
-- **Pros**: Least code.
-- **Cons**: Joint shape at 90 degrees and width 72 is unsourced, and 4.7 changed line drawing; a notch or overlap at a corner breaks Enemy & Wave's square-corner rule.
-- **Estimated Effort**: Lower.
-- **Rejection Reason**: The rule would rest on an unverified engine detail. V3 records what it does.
-
-### Alternative 4: CanvasItem shaders for flash, pulse and outline (art bible §8 budget of 3)
+### Alternative 3: CanvasItem shaders for flash, pulse and outline (art bible §8 budget of 3)
 - **Description**: A shared flash material, a `TIME`-driven pulse material, an outline shader.
 - **Pros**: Synchronised pulses; GPU work.
 - **Cons**: The Combat GDD forbids shaders; `TIME` ignores Pause and the view clock; per-node materials may break batching (unsourced); shader compile on first use is a hitch risk.
 - **Estimated Effort**: Higher (three shaders, uniforms for Pause and Reduce Motion).
 - **Rejection Reason**: Every effect is reachable with alpha and shapes. V5 measures the cost for a later reopen.
 
-### Alternative 5: One `_draw` for all field art
+### Alternative 4: One `_draw` for all field art
 - **Description**: A single drawer for backdrop, towers, enemies, combat and hero.
 - **Pros**: Fewest CanvasItems.
 - **Cons**: Static backdrop redrawn every frame; four GDDs' visuals in one file; no per-kind measurement; one failure point for every story.
 - **Estimated Effort**: Similar, but larger merge conflicts.
 - **Rejection Reason**: Kept as the first reopen lever in a smaller form (merge FieldBackdrop and TowerView).
 
-### Alternative 6: RenderingServer canvas items or MultiMesh from the start
+### Alternative 5: RenderingServer canvas items or MultiMesh from the start
 - **Description**: Views own RIDs and submit triangle arrays or a `MultiMeshInstance2D`.
 - **Pros**: Fewest draw calls if `_draw` does not batch.
 - **Cons**: Unsourced on 4.7; manual RID lifetime on retry; more code for a solo developer.
@@ -374,30 +360,24 @@ For `/create-control-manifest` and `/dev-story`:
 ## Consequences
 
 ### Positive
-- Every view's logic runs headless; pass order, pools, eviction, clearance, the path bake and Reduce Motion are unit tests.
-- Retry safety is structural: drawers hold buffers, models drop references in `detach()`, and ADR-0001's weakref test covers them.
-- Gameplay cannot depend on a view: three connections, all already allowlisted; everything else is a read.
-- The budget is per node, so A1 shows which drawer is over.
-- No engine time, shader compile or particle cost enters the battle.
+- View logic runs headless (order, pools, eviction, clearance, bake, Reduce Motion are unit tests); retry safety is structural; gameplay cannot depend on a view (three allowlisted connections, the rest reads); the per-node budget shows which drawer is over; no engine time, shader compile or particle cost enters the battle.
 
 ### Negative
 - Every dynamic drawer rebuilds its commands each frame in GDScript; cost unmeasured until V2.
 - Two new `Battle` members and a `StageLook` scene contract; ADR-0001, ADR-0005 and the Data GDD's stage-scene wording need edits.
-- A path with a turn sharper than 90 degrees or a short segment is rejected; curved stages need enough points per curve and at least `path_width` between them.
+- Stage validation gains a path rule: deflection at most 90 degrees and a per-segment miter-overlap length (Decision 5). The 90 degree cap is a style limit that needs design sign-off; finely sampled curves pass.
 - Art bible §8's structure (per-enemy nodes, Line2D path, shader budget) is overridden for MVP.
 
 ### Neutral
-- `slot_state()` in `architecture.md`'s Presentation row is ADR-0010's per-field reads.
 - Letterbox bars are the engine's clear colour; ADR-0003 SP7 records it and art direction decides.
 
 ## Risks
 
-- **`_draw` primitives do not batch on Mobile** (V2). Mitigation: the triangle-array branch, tested in the same prototype before acceptance.
-- **No in-engine counter counts 2D draws** (V1). Mitigation: frame capture at A1 and milestones; the overlay shows frame time.
-- **4.7 lines read too thin or too heavy at bias 1** (V4). Mitigation: one constant; art-director sign-off on screenshots.
+- **`_draw` does not batch** (V2), **no counter counts 2D** (V1), **the line bias is wrong** (V4): each has a branch in its verification item.
 - **Step 4 over 3.0 ms with 48 enemies** (A1). Mitigation: Decision 9 levers; ADR-0004's 2.1 ms headroom is not spent without `technical-director`.
-- **Flash and death discs drift from the body** (positions update per frame from `spawn_id`; a reaped enemy's flash stays put). Accepted: 80 to 120 ms.
-- **A view keeps a sim object by mistake.** Mitigation: `_draw` reads buffers only; the weakref test runs after a battle with all views attached; code review of every model's fields.
+- **Flash and death discs drift from the body**: positions update per frame by `spawn_id`; a reaped enemy's flash stays put for at most 120 ms. Accepted.
+- **A view keeps a sim object by mistake.** Mitigation: `_draw` reads buffers only; the weakref test runs with all views attached; code review of every model's fields.
+- **The geometry limit blocks a stage design.** Mitigation: the 90 degree cap is a style limit; a miter limit or bevel join removes it in `PathOutline` only, with the validator rule changed in the same ADR-0002 edit.
 
 ## GDD Requirements Addressed
 
@@ -407,6 +387,7 @@ For `/create-control-manifest` and `/dev-story`:
 | enemy-wave.md | TR-enemy-015: views read `roster()` and the path each frame; fixed three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured | Decisions 2 and 3 (poll in step 4, copies only), 4 (48 slots, grow plus one `dev_error`), 5 (path from `path_points`), 8 (Reduce Motion); EnemyView draws heavy, normal, fast, each in `spawn_id` order |
 | tower-system.md | TR-tower-015: all towers draw from one `_draw()` node with primitive polygons, level inset and a cooldown ring, with Reduce Motion fallbacks | Decision 1 (TowerView), 3 (slot reads plus the cooldown total through the accessor at use time), 8 (Reduce Motion) |
 | battle-hud.md | TR-hud-001: HudLogic (plain), HudTopBand (display-only Controls), HudField (one `_draw`, targets as resolver discs), absent headless, rebuilt on retry | Decision 1 (HudField `Node2D`, HudTopBand `Control` with `MOUSE_FILTER_IGNORE`); models in the wrapper only; retry rebuilds the wrapper (ADR-0001 Decision 7) |
+| hero-system.md | No TR covers hero visuals (TR-hero-001 to TR-hero-015 checked; TR-hero-008 is the P6/P7 emit rule) | HeroView's place in the order (Decision 1), glow texture (Decision 7) and ceiling (Decision 9) serve the Hero GDD's V/A table; `/architecture-review` may register a TR |
 | battle-hud.md | TR-hud-015: HUD about 8 (max 12) of 60 draw calls, at most 3 text draws; hit targets at least 72 units, text at least 21 units | Decision 9 (HUD ceiling 12, expected 8; text at 21, 24, 36 only), Implementation Guidelines (72-unit targets), V1, V2, A1 |
 
 ## Performance Implications
@@ -417,21 +398,21 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Migration Plan
 
-No view code exists. The ADR-0003 spike's `field_view.gd` and the concept prototypes are not migrated. First stories: `ViewStyles` and `PathOutline` with their tests; then EnemyView and CombatView, which carry the budget risk.
+No view code exists; spike and concept prototype views are not migrated. First stories: `ViewStyles` and `PathOutline` with tests, then EnemyView and CombatView (the budget risk).
 
 **Rollback plan**: If V2 fails, the V2 branch replaces the bodies of EnemyView and CombatView `_draw`; models, order and pools stay. If the per-kind structure itself fails A1, the first lever merges drawers without touching models.
 
 ## Validation Criteria
 
-1. Unit (headless, ADR-0007 harness): EnemyViewModel orders heavy, normal, fast, then `spawn_id`; growing past 48 calls `dev_error` once; FlashPool follows Combat's eviction cases; clearance suppresses tower flashes and splash rings from `burst_started` to 0.15 s after the BURST `attack_fired`; `PathOutline.bake` returns exact square corners for the starter path (within 1e-9) and empty for a 120 degree turn and a short segment; each Reduce Motion row both ways; `view_ms` 0 freezes every clock.
+1. Unit (headless, ADR-0007 harness): EnemyViewModel orders heavy, normal, fast, then `spawn_id`; growing past 48 calls `dev_error` once; FlashPool follows Combat's eviction cases; clearance suppresses tower flashes and splash rings from `burst_started` to 0.15 s after the BURST `attack_fired`; `PathOutline.bake` returns exact square corners for the starter path (within 1e-9) and empty for a 120 degree deflection and for a segment shorter than `(w / 2) * (tan(d_a / 2) + tan(d_b / 2))` (and non-empty just above it); a quarter circle of radius 200 sampled at 16 points bakes at width 96; the same rule rejects and accepts the same fixtures in ADR-0002's validator; each Reduce Motion row both ways; `view_ms` 0 freezes every clock.
 2. Weakref test (ADR-0001) repeated with every model attached and refreshed once, then `detach()`.
 3. Integration content test: every Stage bakes, every `scene_ref` loads a `StageLook` within range, every `visual_key` has a `ViewStyles` entry.
 4. Code review: no drawer calls a sim query; lint rows REND-1 to REND-3 (cascade) once ADR-0007 adds them.
 5. Visual: retained screenshots in `production/qa/evidence/` for each GDD's manual list (Combat, Enemy & Wave, Tower, Battle HUD).
-6. V1 to V5 recorded before acceptance; A1 within Decision 9 after it.
+6. V1 to V6 recorded before acceptance; A1 within Decision 9 after it.
 
 ## Related
 
 - Depends on ADR-0009 (roster, positions, Combat reads) and ADR-0010 (read surface, `ResultSnapshot`). Binding: ADR-0001 (attach, detach, Reduce Motion), ADR-0003 (stretch, no camera, modal Controls), ADR-0004 (step 4, no interpolation, cosmetic randomness, 3.0 ms), ADR-0006 (P7 to P9, listener rules), ADR-0007 (SCENE-1, M7, harness).
-- Amends: ADR-0001 and ADR-0005 (two `Battle` members), ADR-0006 (P4 and P6 polled), art bible §8 (structure and shader budget). Resolves QQ-10 and the draw-call half of QQ-11.
+- Amends: ADR-0002 (Stage path-drawability rule and content checks), ADR-0001 and ADR-0005 (two `Battle` members), ADR-0006 (P4 and P6 polled), art bible §8 (structure and shader budget). Resolves QQ-10 and the draw-call half of QQ-11.
 - `design/gdd/combat-damage.md`, `enemy-wave.md`, `tower-system.md`, `battle-hud.md`, `hero-system.md` (Visual/Audio Requirements); `design/art/art-bible.md` §3, §4, §6, §7, §8.
