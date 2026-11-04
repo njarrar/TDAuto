@@ -22,7 +22,8 @@ Proposed
 >    from a headless check script run outside `src/` (`prototypes/` or a scratch folder),
 >    copied into `docs/engine-reference/godot/`. Where a result takes a branch, this ADR is
 >    revised to it first.
-> 3. The user has confirmed or overturned each item in Decision 11, one by one.
+> 3. MET: The user has confirmed or overturned each item in Decision 11, one by one.
+>    Confirmed by the user, 2026-11-04, as recommended (items 1 to 17).
 >
 > **After acceptance** (they need stories, which stay Blocked while this ADR is Proposed):
 > V5, V6 and V8 run in the stories named in each item. `MAX_TICKS_PER_FRAME = 3` is
@@ -271,6 +272,8 @@ Dev builds time steps 0 to 4 in the wrapper and log them; release builds do not.
 
 Autonomous mode; each is the recommended option, and the user confirms or overturns each before acceptance.
 
+Confirmed by the user, 2026-11-04, as recommended: items 1 to 17, each as written below.
+
 1. 60 Hz tick (against 30 Hz, which breaks the 1/60 floor, and 120 Hz, double cost).
 2. `_process` accumulator; no `_physics_process`.
 3. `MAX_TICKS_PER_FRAME = 3`, provisional, 2 to 4 after V6; slow below 20 fps.
@@ -354,7 +357,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Must advance sim time only through `Battle.tick(dt)`; tick entries are called only from `Battle._run_steps()`, in Decision 4's order, with `halted()` checked before steps 2 to 6.
 - `Battle.tick` must check re-entrancy, `dt`, `halted()`, phase in that order, set `_ticking`, call `_run_steps()`, clear `_ticking` on its one return path.
 - Must never override `_physics_process` in `src/`; `_process` only in `BattleWrapper`, `AppRoot` and (SP12 poll only) `InputAdapter`.
-- Must never use `Timer`, `SceneTree.create_timer`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.*` or `OS.get_ticks_*` in sim code or real-time models (AppRoot's seed read and the wrapper's dev timers excepted).
+- Must never use `Timer`, `SceneTree.create_timer`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.*` or `OS.get_ticks_*` anywhere in `src/` (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers and `src/presentation/dev/` (ADR-0008 `GestureLog`).
 - Must never set `get_tree().paused` or enable `low_processor_mode`; must set `delta_smoothing` off; the wrapper uses `PROCESS_MODE_ALWAYS`.
 - `BattleClock` must start and reset at `0.5 * dt`.
 - Must run Decision 5's frame order: `flush()` first in step 0, `hero_input.update()` first in step 4.

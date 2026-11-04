@@ -25,8 +25,11 @@ Proposed
 > 3. The GDD, `architecture.md`, ADR-0003 and ADR-0009 edits for Decisions 3 and 4 are
 >    applied, or the user overturns them one by one (cascade notes, section d); then
 >    `/architecture-review` runs so the TR registry and the traceability matrix pick up
->    the renames.
-> 4. The user has confirmed or overturned each item in Decision 9.
+>    the renames. User part MET: the section d choices (items 1 to 15) were confirmed by
+>    the user, 2026-11-04, as recommended, so the edits stand. Still open:
+>    `/architecture-review`.
+> 4. MET: The user has confirmed or overturned each item in Decision 9.
+>    Confirmed by the user, 2026-11-04, as recommended (items 1 to 3).
 >
 > **After acceptance:** the listener-count tests (Decision 8) are written by the ADR-0007
 > harness story and by the first story that builds `BattleWrapper`. Reopen trigger: if
@@ -295,6 +298,8 @@ Three choices are design content in the HUD and acceptance criteria, not only ar
 
 The other autonomous choices are listed in the cascade notes, section d, and are approved one by one with the edits (precondition 3).
 
+Items 1 to 3, and the section d choices 1 to 15: confirmed by the user, 2026-11-04, as recommended. Confirmed by the user as project owner, 2026-11-04; the named roles (game-designer, ux-designer) were not consulted separately.
+
 ### Architecture Diagram
 
 ```
@@ -388,7 +393,7 @@ For `/create-control-manifest` and `/dev-story`:
 - An emitter must never emit a signal from inside a listener of that same signal.
 - `Catalogue`, records, `StatAccessor`, `ReadContext`, entity and value classes, `FatalLatch`, `FatalRelay` and `Battle` must declare no signal.
 - A new battle signal must be added to this ADR's table, to `battle_signal_contract.gd`, and to its GDD in the same change.
-- Builder-connected listener methods are public `on_<signal_name>`; each signal has a `##` doc comment with its table ID.
+- Builder-connected listener methods are public `on_<signal_name>`; wrapper-subtree listener methods are `_on_<signal_name>` (ADR-0007 WIRE-8); each signal has a `##` doc comment with its table ID.
 - Recording fakes must log the signal name and every argument, and assert argument types with `typeof()`/`is` (a `StringName` is checked as `TYPE_STRING_NAME`), not only call counts (ADR-0007).
 
 ## Alternatives Considered

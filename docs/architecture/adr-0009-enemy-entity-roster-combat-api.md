@@ -18,7 +18,8 @@ Proposed
 >
 > Acceptance preconditions: ADR-0001 and ADR-0005 are Accepted; the user has
 > confirmed or overturned each item in "Choices pending user confirmation"
-> (end of Decision); and the verification items (Engine Compatibility) are
+> (end of Decision) (MET: confirmed by the user, 2026-11-04, as recommended,
+> items 1 to 7); and the verification items (Engine Compatibility) are
 > split into two groups.
 >
 > Before acceptance: V1, V2, V3, V5, V6 and V7. Each runs as a standalone
@@ -103,7 +104,7 @@ No code exists. `architecture.md` proposes: `Targetable extends RefCounted` with
 
 - Downward dependencies only: Core never names a Feature class (dependency rule 1, rule 5).
 - All sim classes extend `RefCounted`, never `Node` (B0 preamble, TR-combat-002).
-- No RefCounted cycles, no field holding `Battle`, method Callables only, no lambdas or `bind()` (ADR-0001).
+- No RefCounted cycles, no field holding `Battle`, method Callables only, no lambdas in `src/`, no `bind()` for injected or connected callables (ADR-0001).
 - No autoloads, no mutable `static var` (ADR-0001).
 - An entity never holds its own `ReadContext`; stats are read at use time, except `MAX_HP` seeding Health (ADR-0005).
 - Combat reads no catalogue data; its only injected dependency is `to_ticks` (TR-combat-007).
@@ -299,6 +300,8 @@ This ADR was drafted in autonomous mode. These choices are the recommended optio
 5. **`add_enemy` is public for tests** with a rule that no other `src/` class calls it (Decision 7).
 6. **Helpers also skip `removed` targets** (Decision 6), a small addition to Combat Rule 10.
 7. **`advance()` takes no argument** (Key Interfaces), against B7's `advance(tick: int)`.
+
+Items 1 to 7: each confirmed by the user, 2026-11-04, as recommended (the choice as written above).
 
 ### Architecture Diagram
 

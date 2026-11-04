@@ -162,7 +162,7 @@ Causes that take this path: catalogue load failure, bad accessor call, wrapper s
 
 ### 4. Release-safe checks and the dev-error sink
 
-- `assert` is forbidden for any check whose failure matters in a release build. Such a check calls the injected `fatal`, or `dev_error` for a non-fatal contract breach, and then returns.
+- `assert` is forbidden in `src/` (ADR-0007 C5, one flat rule). A check calls the injected `fatal`, or `dev_error` for a non-fatal contract breach, and then returns.
 - `dev_error(msg: String) -> void` is the injected development-error sink. The default (`DevErrorSink.report`) always calls `push_error` and also records the message in an in-memory list. Tests inject a recording fake. It never changes game state.
 - `print_debug` is stripped from release builds and must not carry any error report.
 - Every function that can call `fatal` returns a value the caller cannot confuse with success where the type allows it (null, an enum failure code, `false`), and every caller checks `halted()` before it uses its own results or mutates state (TR-state-011, TR-enemy-005, TR-tower-006).
@@ -191,7 +191,7 @@ Rules for the Builder and for everything it builds:
 
 - **Wiring only.** A branch on a gameplay value inside the Builder or the wrapper is a defect.
 - **`obj.method` only.** Every injected or connected callable is `obj.method` on an object the Builder owns. The string forms `Callable(obj, "method")` and `connect("signal", ...)` are forbidden in `src/`, because the parser cannot check them. ADR-0007's lint rejects them.
-- **No lambdas, no `bind()`.** No lambda and no `bind()` for any injected or connected callable in `src/`, whether or not it captures locals. A lambda may bind `self` implicitly, and a captured `RefCounted` is a strong reference, so either can make a cycle. One flat rule is simpler to follow and to lint. (V1 checks the reference rules.)
+- **No lambdas, no `bind()`.** No lambda anywhere in `src/`, and no `bind()` for any injected or connected callable in `src/`, whether or not it captures locals (ADR-0007 C2; a `sort_custom` takes `obj.method` too). A lambda may bind `self` implicitly, and a captured `RefCounted` is a strong reference, so either can make a cycle. One flat rule is simpler to follow and to lint. (V1 checks the reference rules.)
 - **No reference fields back to `Battle`.** No sim stores `Battle` in a field. Systems reach each other only through injected callables and signals. Callables that point back at `Battle` (`halted`, `in_build`, `cancel_input`) and the mutual `FatalRelay` and Flow callables are allowed only because method Callables are expected to hold an object ID, not a reference. If V1 shows otherwise, the Rollback plan applies before any sim story starts.
 - **Session lifetime.** An object that lives for the session (`AppRoot`, `Catalogue`, any record) must never hold a per-battle callable or connect to a per-battle signal. The stat accessor is per battle (ADR-0005): the Builder creates it with the relay's `fatal`, and it is dropped with the battle. No sim connects to a catalogue signal. Otherwise a retry either leaks the old battle or sends a later fatal to a dead relay.
 - **No mutable `static var`** in any class under `src/`. Static state lives per script, survives a retry and defeats the rebuild.
@@ -294,7 +294,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Must create every sim object only in `BattleBuilder.build`, and must make every sim-to-sim signal connection only there.
 - Must inject every cross-system dependency as an `obj.method` Callable or a constructor argument.
 - Must never use the string forms `Callable(obj, "name")` or `connect("signal", ...)` in `src/`.
-- Must never use a lambda or `bind()` for an injected or connected callable in `src/`.
+- Must never use a lambda anywhere in `src/`, or `bind()` for an injected or connected callable in `src/` (ADR-0007 C2).
 - Must never store `Battle` in a field of a sim object. Must never create a `RefCounted` cycle.
 - Must never let a session-lived object (AppRoot, Catalogue, records) hold a per-battle callable or connect to a per-battle signal; no sim connects to a catalogue signal.
 - Must never declare a mutable `static var` under `src/`.
@@ -302,10 +302,10 @@ For `/create-control-manifest` and `/dev-story`:
 - Must never `preload` a scene in `app_root.gd`; load the fatal and wrapper scenes at run time and null-check.
 - Every node in the wrapper subtree that holds a sim, the resolver or the Battle must implement `detach()` and clear those references in it.
 - Must check `halted()` after every accessor read and every signal emit that can end the battle, and return at once.
-- Must report a release-relevant failure through `fatal` or `dev_error`. Must never use `assert` for it. One scoped exception: Combat's five guard codes (`ERR_REMOVED`, `ERR_BAD_AMOUNT`, `ERR_BAD_SLOW`, `ERR_BAD_MAX_HP`, `ERR_ALREADY_ATTACHED`) use `push_error` directly (ADR-0009 Decision 4).
+- Must report a release-relevant failure through `fatal` or `dev_error`. Must never use `assert` in `src/` (ADR-0007 C5). One scoped exception: Combat's five guard codes (`ERR_REMOVED`, `ERR_BAD_AMOUNT`, `ERR_BAD_SLOW`, `ERR_BAD_MAX_HP`, `ERR_ALREADY_ATTACHED`) use `push_error` directly (ADR-0009 Decision 4).
 - Must never call `fatal` expecting the callee to stop the caller. The caller returns.
 - Must never free the wrapper, or drop the battle, from inside a signal handler or a `fatal` call. Only `AppRoot._process` tears down.
-- Must never use `free()` on a node that took part in the current input or signal call. Use `queue_free()` after `remove_child()` and `detach()`.
+- Must never call `free()` on any object in `src/` (ADR-0007 C5). Use `queue_free()` after `remove_child()` and `detach()` for nodes; `RefCounted` objects are released by dropping references.
 - Must never reload the catalogue after `Ready`.
 - The fatal screen must use no imported asset and no catalogue data.
 - An override of a method with a typed return must contain an explicit `return` (4.7).

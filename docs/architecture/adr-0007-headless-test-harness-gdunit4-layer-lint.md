@@ -25,6 +25,10 @@ Proposed
 >    ADR is revised to that branch first.
 > 3. The user has confirmed or overturned each item in Decision 13, one by one, and **each
 >    confirmed item is reflected in its owning ADR** by the conditional edit in the cascade notes.
+>    MET for the user part: C1 to C7 and D1 to D3 confirmed by the user, 2026-11-04, as
+>    recommended. Owner edits applied 2026-11-04: C2 (ADR-0001, ADR-0003, ADR-0009), C3
+>    (ADR-0006), C4 (ADR-0004), C5 (ADR-0001). Still open: the C6 `.gitignore` edit, which
+>    also waits for V7 to show no secrets (item 2).
 > 4. The cascade edits that need no confirmation are applied: `tests/README.md`, `prototypes/.gdignore`,
 >    the `architecture.md` QQ-13, QQ-15, QQ-16 rows, the "provisional names" lines in ADR-0001 to
 >    ADR-0006, ADR-0008 and ADR-0009, and the ADR-0001 V1 and Risks fixes.
@@ -285,6 +289,8 @@ Autonomous choices by the parent session (logged; the user may overturn them):
 - **D1.** Rules stricter than their owners without a C-item are narrowed to the owner's scope: WIRE-1 bans only `Callable(` with arguments (ADR-0008's `chip_open: Callable = Callable()` passes); WIRE-4 only where callables are connected or injected; WIRE-5, WIRE-7, WIRE-10, WIRE-12 battle signals and emitters only; INPUT-4, INPUT-5, INPUT-7 battle code only; STATE-2 the sim scope; INPUT-3, INPUT-8 pointer polling and safe-area reads only. INPUT-2, ERR-2 and MATH-5 withdrawn to review or tests. C2, C4, C5 stay, each with an owner edit.
 - **D2.** Acceptance needs only ADR-0001 Accepted (plus V items and C-items); the ADR-0006-dependent parts activate with ADR-0006.
 - **D3.** Size: rule catalogue to `adr-0007-lint-rules.md`, V procedures to the prototype README, Decision 9 cut to non-lint rows, Decision 10's name list replaced by a derived scan.
+
+C1 to C7 and D1 to D3: each confirmed by the user, 2026-11-04, as recommended (the choice as written above). The owner amendments for C2 to C5 are applied; C1 and C7 need no edit elsewhere; C6's `.gitignore` edit waits for V7.
 
 ### Architecture Diagram
 

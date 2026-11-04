@@ -23,8 +23,9 @@ Proposed
 >    `docs/engine-reference/godot/modules/input.md` and `modules/ui.md` with
 >    device, OS version and date; and this ADR is revised to every fallback
 >    branch the results chose.
-> 2. The user has confirmed, one by one, each item under **Choices pending user
+> 2. MET: The user has confirmed, one by one, each item under **Choices pending user
 >    confirmation** below. Approving this ADR as a whole does not confirm them.
+>    Confirmed by the user, 2026-11-04, as recommended (C1 to C4).
 > 3. ADR-0001 is Accepted.
 
 ### Choices pending user confirmation
@@ -38,6 +39,10 @@ does, so each needs its own yes or no.
 | C2 | A press outside the 540x960 field, letterbox bars included, is rejected | An Input GDD Edge Case changes: a disc straddling an edge is hit only from its on-field part (no MVP disc straddles one) | Forward off-field presses unmodified; the HUD ignores the off-screen `ground_tapped` |
 | C3 | Taller phones letterbox (bars above and below); the off-field enemy entry is not revealed | About 20% of a 9:20 screen is bars | Alternative 5 (`keep_width` with a field offset), which reopens TR-input-016 and the HUD layout |
 | C4 | The game is locked to portrait | Rotating the phone does nothing | Supersede Decision 4; landscape needs a new layout |
+
+C1, C2, C3 and C4: each confirmed by the user, 2026-11-04, as recommended (the
+option written in the Choice column). The GDD edits held for C1 and C2 are
+applied (Input GDD Rule 7 and the edge case).
 
 ## Date
 
@@ -111,7 +116,7 @@ No code exists. The root `project.godot` sets only the Mobile renderer. 4.7 chan
 ### Constraints
 
 - Godot 4.7.2, GDScript, Mobile renderer, main thread only (TR-state-003).
-- No autoloads; method Callables only, no lambdas or `bind()` in `src/` (ADR-0001).
+- No autoloads; method Callables only; no lambdas in `src/`, no `bind()` for injected or connected callables (ADR-0001).
 - The resolver is pure (no clock, scene or engine events) and cannot recover a stranded gesture, so the adapter must never strand one.
 - MVP is played on desktop first; the first phone build follows.
 - Solo, part-time developer: no extra framework; fallbacks must be small.

@@ -23,7 +23,9 @@ Proposed
 >    script with ADR-0006 V4 and V5. A result that takes a branch revises this ADR first. V7 and V8
 >    need a desktop result; their phone results come at the first phone build.
 > 3. The cascade edits (section a) are applied, or the user overturns them one by one.
-> 4. The user has confirmed or overturned each of the seven choices in Decision 11.
+>    The user overturned none (2026-11-04).
+> 4. MET: The user has confirmed or overturned each of the seven choices in Decision 11.
+>    Confirmed by the user, 2026-11-04, as recommended (choices 1 to 7).
 >
 > **After acceptance:** the Input GDD's 37 Logic criteria become the resolver's unit tests. Reopen
 > trigger: any Validation Criterion that cannot pass as written, or a phone-test log (Pillar 4 gate
@@ -280,6 +282,8 @@ True for 36 and 48 at 360, false for 35. The runtime width check stays ADR-0003'
 ### 11. Choices made in autonomous mode
 
 Each can be overturned (Status step 4; cascade section d):
+
+Confirmed by the user, 2026-11-04, as recommended: choices 1 to 7, each as written below.
 
 1. `Battle.resolver` as a member, not a `resolver()` method.
 2. An optional `dev_error` argument on `create` and `_init`, falling back to `push_error`.

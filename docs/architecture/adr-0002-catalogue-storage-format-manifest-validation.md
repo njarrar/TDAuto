@@ -6,9 +6,9 @@ Proposed
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the
 > user's explicit confirmation. No other agent, and no skill on its own.
-> Acceptance preconditions: (1) the user confirms the format choice (JSON in
+> Acceptance preconditions: (1) MET: the user confirms the format choice (JSON in
 > place of the GDD's recommended typed Resources; it was made in autonomous
-> mode); (2) W1 and W3 have a recorded result in
+> mode). Confirmed by the user, 2026-11-04, as recommended. (2) W1 and W3 have a recorded result in
 > `docs/engine-reference/godot/`, each run as a standalone headless script
 > under `prototypes/` (not as a story), and W2 from an Android export of a
 > throwaway project that reads one JSON file the same way (no game code
@@ -30,7 +30,7 @@ Proposed
 
 ## Decision Makers
 
-User (njarrar, project owner; format confirmation pending), technical-director (TD-ADR gate: CONCERNS on the first draft, finding 1 blocking and findings 2 to 11 advisory, all applied in this revision), godot-specialist (engine check: three blocking notes on the first draft, applied). Authored with the `/architecture-decision` flow in autonomous mode; the format choice is logged in `production/session-logs/decision-log.md`.
+User (njarrar, project owner; format confirmed 2026-11-04, as recommended), technical-director (TD-ADR gate: CONCERNS on the first draft, finding 1 blocking and findings 2 to 11 advisory, all applied in this revision), godot-specialist (engine check: three blocking notes on the first draft, applied). Authored with the `/architecture-decision` flow in autonomous mode; the format choice is logged in `production/session-logs/decision-log.md`.
 
 ## Summary
 
@@ -163,7 +163,7 @@ Codes (the list is closed; a new check adds its code here and in the validator i
 | Record shape | `id_format`, `id_duplicate`, `missing_field`, `unknown_property`, `wrong_type`, `fractional_int`, `empty_list` |
 | Numbers | `non_finite`, `out_of_bounds` |
 | Tags | `unknown_tag`, `role_tag_count`, `role_field_missing`, `role_field_without_tag` |
-| Geometry | `path_too_short`, `path_repeat_point`, `pin_rect_inverted`, `shape_invalid` |
+| Geometry | `path_too_short`, `path_repeat_point`, `path_turn_too_sharp`, `path_segment_too_short`, `pin_rect_inverted`, `shape_invalid` |
 | References | `dangling_reference`, `wrong_reference_type` |
 | CI content tier only | `duplicate_key`, `bom_present` (Decision 8; never raised at boot) |
 
@@ -184,7 +184,7 @@ Checks, grouped (grouping is for reading, not for stopping):
 2. **Shape.** ID present, a string, lowercase snake_case (`^[a-z][a-z0-9_]*$`); unique across all types (reported once per record holding the duplicate). For every field the record type's schema declares: `missing_field` if required and absent; `wrong_type` if the JSON kind is wrong. For every key the record type's schema does not declare: `unknown_property`, naming the key as `field`. Lists that must be non-empty: `empty_list`.
 3. **Numbers.** Every number is checked for finiteness before its bounds. `int` fields: a number whose value is not whole is `fractional_int`. Then the domain bounds.
 4. **Tags and roles.** Unknown tag; a tower with other than exactly one role tag; a role field missing on any level for its tag, or present without its tag.
-5. **Geometry.** `path_points` has at least 2 points and no repeated consecutive point; `slot_positions` at least 1; every coordinate finite and within -2,000 to 2,000; `pin_rect` min below max on both axes; each `pin_exclusion` shape has `radius > 0` and a valid `hand`.
+5. **Geometry.** `path_points` has at least 2 points and no repeated consecutive point; `slot_positions` at least 1; every coordinate finite and within -2,000 to 2,000; `pin_rect` min below max on both axes; each `pin_exclusion` shape has `radius > 0` and a valid `hand`. Path drawability (ADR-0011 Decision 5), skipped if `path_width` failed a number check: with deflection `d_k` at each interior point (the angle between incoming and outgoing directions; 0 straight on, 90 degrees a square turn; `d = 0` at the two end points) and `w = path_width`, every `d_k` is at most 90 degrees (`path_turn_too_sharp`, naming the point index), and every segment from point `a` to point `b` has length at least `(w / 2) * (tan(d_a / 2) + tan(d_b / 2))` (`path_segment_too_short`, naming the segment index). Two square turns need `w`; a finely sampled curve needs little.
 6. **References.** Every `id_ref` resolves, and to the declared type (`burst_id` names a `burst`; a wave group's `enemy_id` an `enemy`; a stage's `wave_ids` each a `wave`).
 
 Number kinds. `wrong_type` means the wrong JSON kind (number, string, bool, array, object, null), never int against float:
@@ -252,6 +252,8 @@ These run only in CI, never at boot, and never as warnings. The rules are define
 ### 9. Fixtures
 
 Logic tests build fixtures in code as dictionaries in exactly the file shape and load them with `Catalogue.from_data("fixture:<name>", data)`, so fixtures pass the same validator and builder with no file I/O (TR-data-012). A small factory in `tests/helpers/` returns a minimal valid catalogue dictionary that a test then edits. A separate integration suite loads the real manifest.
+
+Path drawability fixtures (ADR-0011 Decision 5): one stage with a 120 degree deflection and one with a 100-unit segment between two square turns at `path_width` 120, each producing exactly its one code; and the starter stage plus a 16-point radius-200 quarter circle at width 96 producing none.
 
 ### Architecture Diagram
 

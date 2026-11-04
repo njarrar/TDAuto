@@ -19,11 +19,15 @@ Proposed
 > Acceptance preconditions: (1) ADR-0009 and ADR-0010 are Accepted; (2) V1 to V6
 > below have recorded results in `docs/engine-reference/godot/modules/rendering.md`
 > (each runs in the standalone prototype `prototypes/adr-0011-render-budget/`,
-> not as a story; V1, V2 and V4 also need a run on the user's phone); (3) the
-> user confirms or overturns each choice in Decision 11; (4) art-director and
+> not as a story; V1, V2 and V4 also need a run on the user's phone); (3) MET:
+> the user confirms or overturns each choice in Decision 11 (confirmed by the
+> user, 2026-11-04, as recommended); (4) art-director and
 > technical-artist sign off the art bible §8 edits (cascade a6), and the user,
 > art-director (§6 owner) and game-designer (Enemy & Wave owner) confirm the
-> path-geometry limit of Decision 5 and its move into Stage validation. Until all
+> path-geometry limit of Decision 5 and its move into Stage validation. User part
+> MET: confirmed by the user, 2026-11-04, as recommended; cascade a6, a15 and a18
+> are applied. Role sign-offs: confirmed by the user as project owner, 2026-11-04;
+> the named roles were not consulted separately. Until all
 > four hold, this ADR stays `Proposed`, because the batching, line and counter
 > behaviours it relies on are not sourced in the pinned reference and the art and
 > geometry rules are design content.
@@ -181,7 +185,7 @@ One marker per flashing enemy, keyed by `spawn_id`; a retrigger reuses it and ke
 
 **Geometry rule.** Let `d_k` be the *deflection* at interior point `k` (the angle between the incoming and outgoing directions: 0 for straight on, 90 degrees for a square turn), with `d = 0` at the first and last points. With `w = path_width`:
 
-1. Every `d_k` is at most 90 degrees. This is a style limit, not a fold condition (a miter limit or bevel could draw sharper turns); it bounds the miter length at `w / sqrt(2)` past the corner. Proposed, pending the user, art-director and game-designer (Status precondition 4).
+1. Every `d_k` is at most 90 degrees. This is a style limit, not a fold condition (a miter limit or bevel could draw sharper turns); it bounds the miter length at `w / sqrt(2)` past the corner. Confirmed by the user as project owner, 2026-11-04; art-director and game-designer were not consulted separately (Status precondition 4).
 2. Every segment from point `a` to point `b` has length at least `(w / 2) * (tan(d_a / 2) + tan(d_b / 2))`. Below that, the inner offsets of its two miters cross and the quad folds. Two square turns need `w`; a finely sampled curve with small deflections needs very little, so splines baked to points (Enemy & Wave Rule 2, art bible §6) pass.
 
 The starter path passes: all deflections are 90 degrees and its shortest segment is 160 against 72. The rule belongs to Stage validation, not to this view: ADR-0002 Decision 4's geometry group checks it at catalogue load, using the record's own `path_width` (cascade), so a bot, a test and the game accept the same stages. `PathOutline.bake` re-checks it and returns an empty array for code-built points, and `attach` then fails.
@@ -239,6 +243,8 @@ Development builds show an overlay (in `src/presentation/dev/`, created by `DevL
 ### 11. Choices made in autonomous mode
 
 Each can be overturned; cascade section d lists them: the seven drawers and their order (1); the model and drawer split (2); polling except P7 to P9, and the two `Battle` members with `StageLook` (3); a fatal `attach` on presentation failure (3); the mitred strip and the Stage geometry rule (5); `LINE_BIAS`, stroke floor and AA off (6); zero shaders and particles (7); spokes in CombatView (1); the per-node ceilings and three text sizes (9).
+
+All nine confirmed by the user, 2026-11-04, as recommended (each choice as written above). `LINE_BIAS` stays provisional at 1.0 until V4. The art bible §8 edits and the path rule were confirmed by the user as project owner, 2026-11-04; the named roles (art-director, technical-artist, game-designer) were not consulted separately.
 
 ### Architecture Diagram
 

@@ -16,7 +16,7 @@ Proposed
 > that confirmation exists. An agent that believes an ADR is ready says so and
 > escalates; it does not edit this field.
 
-This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted, and ADR-0007 too, because Decision 9's battle runner and the recording log come from it; (2) the before-acceptance verification items (V1, V2, V3 desktop, V4) have recorded results in `docs/engine-reference/godot/current-best-practices.md`; (3) the user confirms the autonomous choices in Decision 12. The after-acceptance items (V3 Android, Validation Criteria) do not hold acceptance.
+This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted, and ADR-0007 too, because Decision 9's battle runner and the recording log come from it; (2) the before-acceptance verification items (V1, V2, V3 desktop, V4) have recorded results in `docs/engine-reference/godot/current-best-practices.md`; (3) MET: the user confirms the autonomous choices in Decision 12 (confirmed by the user, 2026-11-04, as recommended, choices 1 to 16). The after-acceptance items (V3 Android, Validation Criteria) do not hold acceptance.
 
 **Reopen trigger.** If a bot needs a mutation path the eight commands lack, or the equivalence test needs a test-only branch in production code, this ADR is amended before the next Tower or Hero story closes. Owner: technical-director.
 
@@ -256,6 +256,8 @@ Flow, EnemyWave and Combat reads are B5, B7 and B6 unchanged.
 ### 12. Choices made in autonomous mode
 
 The complete list; each can be overturned (cascade section d):
+
+Confirmed by the user, 2026-11-04, as recommended: choices 1 to 16, each as written below.
 
 1. Between-ticks check in every build, `fatal` plus `HALTED` (Decision 2); widens ADR-0004 Decision 5.
 2. Explicit enum values, names by `find_key` (Decision 3); `StartResult` and `CallResult` names and codes (QQ-18).

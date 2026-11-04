@@ -1120,6 +1120,17 @@ api_decisions:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
+  - purpose: battle_listener_naming
+    status: active
+    api: "Listener of battle signal s is on_s (Builder-connected) or _on_s (wrapper subtree)"
+    not: "any other method name connected to a battle signal"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Lets the lint find listener bodies (WIRE-8, WIRE-9)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -1338,10 +1349,15 @@ forbidden_patterns:
   - pattern: engine_time_in_sim
     # Note (ADR-0008): the development-only GestureLog under src/presentation/dev/ stamps Time.get_ticks_msec(); it is neither sim code nor a real-time model, and the lint must not flag that folder.
     status: active
-    description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* in sim code or in real-time models; _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
+    # Revised 2026-11-04 (ADR-0007 C4, confirmed by the user). Old description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* in sim code or in real-time models; _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
+    description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* anywhere in src/ (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers and src/presentation/dev/ (ADR-0008 GestureLog); _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
     why: "Sim time must enter only through Battle.tick, and the frame order must be one function"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
+    revised: 2026-11-04
   - pattern: float_duration_countdown
     status: active
     description: "No sim countdown is a float; no code subtracts dt from a duration; every authored duration goes through to_ticks once."
@@ -1551,6 +1567,18 @@ forbidden_patterns:
     description: "No view duration reads Engine, Time, Timer, delta or a shader TIME; every view clock runs on view_ms."
     why: "View clocks stop on Pause and clear on retry (Combat V/A)"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+  - pattern: lambda_in_src
+    status: active
+    description: "No lambda anywhere in src/, stored, connected, injected or passed (sort_custom takes obj.method)."
+    why: "Flat form of ADR-0001's callable rule, lintable (WIRE-3)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: assert_or_free_in_src
+    status: active
+    description: "No assert( and no free() on any object in src/; nodes use queue_free() after remove_child() and detach()."
+    why: "assert is stripped in release; free() in a live call runs on freed objects (ERR-1, ERR-4)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
 
 # Example:
