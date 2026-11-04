@@ -16,7 +16,9 @@ Proposed
 > that confirmation exists. An agent that believes an ADR is ready says so and
 > escalates; it does not edit this field.
 
-This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted; (2) verification items V1 to V4 below have recorded results in `docs/engine-reference/godot/current-best-practices.md` (V1 and V2 reuse ADR-0008 V8 and V7, so one run closes both); (3) the user confirms the autonomous choices in Decision 12.
+This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted, and ADR-0007 too, because Decision 9's battle runner and the recording log come from it; (2) the before-acceptance verification items (V1, V2, V3 desktop, V4) have recorded results in `docs/engine-reference/godot/current-best-practices.md`; (3) the user confirms the autonomous choices in Decision 12. The after-acceptance items (V3 Android, Validation Criteria) do not hold acceptance.
+
+**Reopen trigger.** If a bot needs a mutation path the eight commands lack, or the equivalence test needs a test-only branch in production code, this ADR is amended before the next Tower or Hero story closes. Owner: technical-director.
 
 ## Date
 
@@ -28,7 +30,7 @@ This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted;
 
 ## Decision Makers
 
-User (njarrar, project owner), technical-director (TD-ADR gate), godot-specialist (engine check). Authored with the /architecture-decision flow in autonomous mode.
+User (njarrar, project owner), technical-director (TD-ADR gate), godot-specialist (engine check). Authored with the /architecture-decision flow in autonomous mode. TD-ADR returned CONCERNS (T1 to T10) and the engine check returned three blocking findings (E1 to E3) plus minor notes; the parent chose "Revise flagged items" and all are applied in this revision (2026-11-04).
 
 ## Summary
 
@@ -43,17 +45,24 @@ Tower and Hero each need a headless sim half (bots, tests) and a wrapper-only in
 | **Layer** | Core |
 | **Knowledge Risk** | LOW. Plain GDScript `RefCounted` classes, enums, signals and `FileAccess`; the only post-cutoff items are already sourced in the pinned reference |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md` (4.4 `FileAccess.store_*` returns `bool`; 4.7 typed-return overrides), `deprecated-apis.md` (nothing in this domain), `current-best-practices.md`, `modules/input.md` (no engine input here; adapter is ADR-0003) |
-| **Post-Cutoff APIs Used** | `FileAccess.store_string` returning `bool` (4.4, sourced). 4.7 typed-return override rule for test subclasses (`InertHeroSim`, fakes), sourced |
+| **Post-Cutoff APIs Used** | `FileAccess.store_string` returning `bool` (4.4, sourced). 4.7 typed-return override rule: it binds fakes that override `pin()`, `burst()`, `build()` or `upgrade()`, which must return an enum value (sourced; the enum case is V4) |
 | **Verification Required** | V1 to V4 below |
 
 ### Verification items
 
-Owner: godot-specialist writes the scripts; the user runs them headless on 4.7.2 (`godot --headless -s <script>`, outside `src/`) unless a device is named; results go into `current-best-practices.md`. "Expected" is not a source.
+Owner: godot-specialist writes the scripts; the user runs them on 4.7.2; results go into `current-best-practices.md`. "Expected" is not a source.
 
-- **V1. File append (reuses ADR-0008 V8).** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_string` returns `bool`. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
-- **V2. Debug flag (reuses ADR-0008 V7).** `OS.is_debug_build()` is true in an editor run and a debug export and false in a release export (ADR-0001 V4). Branch: if a release export reports true, `DevLogs` creation moves behind an export feature tag (`OS.has_feature`), name decided by the first export story.
-- **V3. Where `user://` lands.** NOT SOURCEABLE in the pinned reference: `OS.get_user_data_dir()` per platform, and whether a tester can copy the file off an unrooted Android phone. Method: a debug build writes one line and prints the directory; the tester retrieves the file. Owner: the user (desktop at first build, Android at first phone build). Branch: if unreachable on Android, Mobile Platform work adds a dev "share log" action; desktop MVP is unaffected.
-- **V4. Explicit enum values and `typeof`.** `enum BuildResult { OK = 0, HALTED = 1, ... }` parses; a value returned from a typed `-> BuildResult` method records as `TYPE_INT` in the ADR-0007 recording log; `BuildResult.keys()[v]` gives the name for logs. Expected yes (pre-cutoff behaviour, unsourced for 4.7). Branch: logs store the `int` only and tests map names from a `const` table.
+**Before acceptance** (standalone scripts under `prototypes/adr-0010-checks/`, none needs a story):
+
+- **V1. File append (reuses ADR-0008 V8; one headless run closes both).** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_string` returns `bool`; `FileAccess.get_open_error()` after a failed open. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
+- **V2. Debug flag (reuses ADR-0008 V7).** `OS.is_debug_build()` is true in an editor run (headless script). The release half is ADR-0001 V4's spike result, recorded here. Branch, decided now: if a release export reports true, `DevLogs` creation moves behind a custom export feature tag `dev_logs` tested with `OS.has_feature("dev_logs")`, set only in debug presets.
+- **V3 (desktop). Where `user://` lands.** NOT SOURCEABLE in the pinned reference: a standalone debug run (`godot --path prototypes/adr-0010-checks`) writes one line and prints `OS.get_user_data_dir()`; the user finds the file on the desktop OS used for MVP, with `application/config/use_custom_user_dir` at its default. Owner: the user.
+- **V4. Enums, standalone.** NEEDS VERIFICATION: `enum E { OK = 0, A = 1, C = 3, B = 2 }` (declaration order differs from values) parses; `typeof()` of a value returned from `-> E` is `TYPE_INT`; `E.find_key(2)` returns `"B"`; an enum-returning override needs an explicit enum `return` (`return null` fails); `PinGeometry` returning `HeroSim.PinResult` while `HeroSim` holds a `PinGeometry` (cyclic `class_name` reference) parses and runs. Branch: names come from a `const` table; the shared enums move to a const-only class `HeroResults`.
+
+**After acceptance:**
+
+- **V3 (Android).** Same script on the first phone build; whether `adb exec-out run-as <pkg>` works on Godot's debug APK (debuggable flag unconfirmed). Owner: the user. Branch: Mobile Platform work adds a dev "share log" action; desktop MVP is unaffected.
+- Validation Criteria 1 to 9, in the Tower, Hero and HUD stories.
 
 Not relied on: `Dictionary` order, sibling `_process` order, engine timers.
 
@@ -64,17 +73,18 @@ Not relied on: `Dictionary` order, sibling `_process` order, engine timers.
 | **Depends On** | ADR-0004 (between-ticks rule, `between_ticks()`, `ticks_run()`, frame order, `to_ticks`, float policy), ADR-0008 (resolver API, registry, `GestureLog`), ADR-0009 (float scalar sim positions, Combat helpers, `targets()`). Binding, also Proposed: ADR-0001 (Builder, injected method Callables, `halted()`, `fatal`, `dev_error`, retry teardown), ADR-0002 (records, `PackedFloat64Array` geometry), ADR-0005 (accessor, `is_tower`, `level_count`, read before mutate), ADR-0006 (signal names, payloads, allowlist, `StageResult`, listener rules), ADR-0007 (battle runner, digest, recording fakes, lint) |
 | **Enables** | ADR-0011 (views read the queries fixed here). Every Tower, Hero, Battle HUD and bot story |
 | **Blocks** | Every Tower System, Hero System and Battle HUD story; the bot balance gates (Hero Deferred criteria); the Pillar 4 gesture-log harness story's sink choice |
-| **Ordering Note** | Write after ADR-0009. ADR-0011 follows. Accept only after ADR-0004, ADR-0008 and ADR-0009 are Accepted. The cascade edits to `architecture.md` B8 to B10 and to three GDDs (cascade notes) land with acceptance |
+| **Amends** | ADR-0006 Decision 5 table: TowerInput joins P1 and P4, RunLog (development builds only) joins P1, P4, P6, P7, and P4 becomes required (Decision 8). ADR-0001: `BattleWrapper.attach` gains optional `dev_logs`. ADR-0004 Decision 5: the between-ticks check runs in every build, not only development builds (Decision 2). ADR-0008 Decision 8: fills its delegated `chip_open` and sink slots. `architecture.md` B9: new `between_ticks` row; `halted` also injected into the input classes. All as exact edits in the cascade notes |
+| **Ordering Note** | Write after ADR-0009. ADR-0011 follows. Accept only after ADR-0004, ADR-0007, ADR-0008 and ADR-0009 are Accepted. The amendments above and the GDD edits land with acceptance |
 
 ## Context
 
 ### Problem Statement
 
-Tower and Hero rules need real time (the 200 to 1500 ms upgrade chip, the aim drag) and the resolver, yet the battle must run headless and deterministic. Each GDD splits its system in two and leaves to this ADR: where the input halves sit, how bots and humans share one door, what the commands return, who owns gold, what the HUD may read, how a bot script is written, and how development builds record human runs. Without this, Tower and Hero stories cannot start (architecture.md Priority).
+Tower and Hero need real time (the upgrade chip, the aim drag) and the resolver, yet the battle must run headless and deterministic. Each GDD splits its system in two and leaves to this ADR where the halves sit, the one door for bots and humans, command results, gold ownership, HUD reads, the bot script and the human run log. Tower and Hero stories wait on it (architecture.md Priority).
 
 ### Current State
 
-No code exists. `architecture.md` B8 sketches the enums and commands; B9 and B10 leave four questions open; ADR-0004, ADR-0006, ADR-0008 and ADR-0009 each hand items here (listed in Decision 12 and the cascade notes). Two documents disagree: Tower Rule 17 puts `chip_state()` on TowerInput, `architecture.md` B8 and B10 put it on TowerSim; B8's `pin(pos: Vector2)` and `position()` meet ADR-0009's float-position rule.
+No code exists. `architecture.md` B8 sketches the enums; ADR-0004, 0006, 0008 and 0009 hand open items here. Tower Rule 17 puts `chip_state()` on TowerInput while B8 and B10 put it on TowerSim; B8's `Vector2` positions meet ADR-0009's float rule.
 
 ### Constraints
 
@@ -102,10 +112,9 @@ The ten TRs in GDD Requirements Addressed, plus: no measurable tick cost (comman
 
 All six extend `RefCounted`. The last three never exist headless unless a test makes them.
 
-- TowerInput and HeroInput are plain objects, not nodes, so tests construct them on a headless battle with the real `battle.resolver` (ADR-0008 builds it in Builder step 2) or a `FakeResolver`. "Absent headless" means the Builder never makes them; the equivalence test makes HeroInput itself.
+- TowerInput and HeroInput are not nodes, so tests build them on a headless battle with `battle.resolver` (ADR-0008 Builder step 2) or a `FakeResolver`.
 - TowerInput changes battle state only through `tower_sim.upgrade`; HeroInput only through `hero_sim.pin` and `hero_sim.burst`; HudLogic only through `tower_sim.build`, `flow.start_wave`, `flow.call_early`. No input class writes a sim field or calls a tick entry.
-- The wrapper builds them in `attach`, after HudLogic (HeroInput needs `burst_button_centre()`), connects their listeners in `_connect_signals()`, and in `detach()` calls each one's `detach()` (unregister its discs, drop every reference) before dropping it. Retry then frees the old battle; ADR-0001's weakref test covers both classes.
-- The wrapper feeds TowerInput in frame step 1 (`tower_input.advance(ms)`) and syncs HeroInput first in step 4 (`hero_input.update()`), as ADR-0004 Decision 5 fixed.
+- The wrapper builds them in `attach` after HudLogic, connects their listeners in `_connect_signals()`, and in `detach()` calls each one's `detach()` (unregister discs, drop references); the ADR-0001 weakref test covers them. `tower_input.advance(ms)` runs in frame step 1, `hero_input.update()` first in step 4 (ADR-0004 Decision 5).
 
 ### 2. Eight commands, checked between ticks
 
@@ -119,11 +128,19 @@ if not _between_ticks.call():
     return BuildResult.HALTED
 ```
 
-`pause()` and `resume()` return after the `fatal` call. The check runs in every build, because a sim may not read `OS.is_debug_build()` and a command inside a tick would break determinism silently in release. It costs one call per command. `fatal` makes `halted()` true, so `HALTED` is the honest return. This closes ADR-0004's "ADR-0010 decides enforcement" (item 15).
+`pause()` and `resume()` return after the `fatal` call. `fatal` makes `halted()` true, so `HALTED` is the honest return. It costs one call per command. This closes ADR-0004's "ADR-0010 decides enforcement" (item 15) and widens ADR-0004 Decision 5's "in development builds" to every build (cascade).
+
+Why `fatal`, in every build:
+
+- The legitimate callers are all outside a tick: gesture listeners in `flush()` at frame step 0, `bot.between(i)` before each runner tick, and `Flow.pause`/`resume` from engine callbacks outside `_process`. The registry already forbids commands from sim listeners and from `drag_cancelled`/`became_idle` listeners. So a mid-tick call can only come from a wiring defect.
+- Architecture Principle 5: no fallbacks in any build, fail loudly once. A sim cannot read `OS.is_debug_build()` anyway.
+- A refusal code would silently drop a player's tap in release and hide the defect, though it would keep determinism just as well.
+
+**Assumption (named).** Lifecycle notifications (`lifecycle_paused` to `Flow.pause`, the Paused tap to `Flow.resume`) never arrive while `Battle.tick` runs; if one did, backgrounding the app would latch a release fatal. ADR-0003 SP10 and SP11 and ADR-0004 V7 record notification timing; the spike kit also logs `battle.between_ticks()` inside the notification handler (cascade note for the kit README). If it is ever false there, `pause()` alone switches to deferring the call to the next frame step 0, by amendment.
 
 ### 3. Result enums
 
-Rules: `OK = 0` first; every value written explicitly; declaration order after `OK` is the GDD's check order; values are never renumbered or reused; a new check takes the next unused number and is declared in its check position. Logs and bot results store the `int`; names come from `keys()` (V4).
+Rules: `OK = 0` first; every value written explicitly; declaration order after `OK` is the GDD's check order; values are never renumbered or reused; a new check takes the next unused number and is declared in its check position, so values stop following declaration order. Logs and bot results store the `int`; names always come from `Enum.find_key(v)`, never `keys()[v]` (V4). Bots keep results in `PackedInt32Array`; code that puts an `int` back into an enum-typed variable casts it explicitly (`as`), to avoid `INT_AS_ENUM_WITHOUT_CAST`.
 
 ```gdscript
 # TowerSim
@@ -138,7 +155,7 @@ enum StartResult   { OK = 0, HALTED = 1, NOT_BUILD = 2 }
 enum CallResult    { OK = 0, HALTED = 1, NOT_INTERMISSION = 2, NOTHING_LEFT = 3 }
 ```
 
-`StartResult.NOT_BUILD` is Game State's "a second tap finds no Build and is ignored"; `CallResult.NOTHING_LEFT` is "a call at 0 is ignored with no signal". `pause()` and `resume()` keep `-> void` (bots never pause; Flow's own state rules decide). `PinGeometry.is_valid` returns `HeroSim.PinResult` (`OK`, `OUT_OF_BOUNDS` or `BUTTON_ZONE`).
+`StartResult.NOT_BUILD` is Game State's "a second tap finds no Build and is ignored"; `CallResult.NOTHING_LEFT` is "a call at 0 is ignored with no signal". `pause()` and `resume()` keep `-> void` (bots never pause; Flow's own state rules decide). `PinGeometry.is_valid` returns `HeroSim.PinResult` (`OK`, `OUT_OF_BOUNDS` or `BUTTON_ZONE`); the cyclic `class_name` reference is in V4, with a const-only `HeroResults` class as its branch.
 
 ### 4. Command bodies
 
@@ -158,7 +175,7 @@ Common shape, binding for all eight: (0) between-ticks check; (1) `halted()` →
 ### 5. Positions at the command boundary
 
 - `pin(pos: Vector2)` and `burst(aim_point: Vector2)` keep `Vector2` arguments, as ADR-0009 allows: after Decision 4 steps 0 and 1 the body reads `var x: float = pos.x`, `var y: float = pos.y`; nothing else touches `pos`. Every stored position (hero position, walk origin, pin target, aim point) is a `float` pair; slot origins are read from `StageRecord.slot_positions` (`PackedFloat64Array`, ADR-0002), never copied into `Vector2`.
-- Reason for `Vector2` over `(x, y)` arguments: the resolver hands `Vector2` payloads (ADR-0008 Decision 3), the Hero GDD's `clamp_pin` "arrives and leaves as `Vector2`" with margins sized for 32-bit rounding, and bots and HeroInput then pass the same type, so the equivalence test compares like with like.
+- Why `Vector2`, not `(x, y)`: Alternative 5.
 - HeroInput computes the aim point, the reach clamp and the ghost in `float` scalars (finger plus offset, field clamp, reach clamp to `reach - 0.01`) and builds a `Vector2` only for the command call, so no `Vector2` operator decides what a command receives.
 - Queries that return positions return a new `Vector2` built from the floats (`position()`, `pin_target()`, `slot_position(i)`). They are view and bot reads; sim code never calls them. The registry entry `sim_position_representation` gains "query returns for views and bots" in its allowed list (cascade).
 
@@ -167,35 +184,35 @@ Common shape, binding for all eight: (0) between-ticks check; (1) `halted()` →
 - `TowerSim._gold: int` is the only gold. Set once at construction from `StageRecord.starting_gold` (a direct read, ADR-0005 Decision 8); no `gold_changed` at construction; the HUD reads `gold()` in `attach`.
 - Faucets: `on_enemy_killed(bounty)` (W2) and `on_wave_called_early(seconds_left)` (W5). Sinks: `build`, `upgrade`. Nothing else writes it. No faucet adds a negative amount; a sink checks `gold >= cost` first, so gold never goes below 0.
 - Both listeners return at once if `halted()` (gold freezes; a fatal leak skips the reap anyway, ADR-0004), add nothing when the amount is 0, emit `gold_changed(gold)` only on a change, then check `halted()`.
-- Early-call bonus (TR-tower-009): `_rate_ticks = to_ticks(stage.early_call_seconds_per_gold)` once at construction (structural field, not a stat; if below 1, `fatal("stage: early_call_seconds_per_gold under one tick")`, which ADR-0002's boot check already prevents for real data). The listener computes `to_ticks(seconds_left) / _rate_ticks`, both `int`, integer division under `@warning_ignore("integer_division")`. Flow sends `seconds_left = intermission_left * dt`, and `to_ticks` returns `intermission_left` exactly for every value up to 600 s (ADR-0004 Validation 3 covers the round trip).
+- Early-call bonus (TR-tower-009): `_rate_ticks = to_ticks(stage.early_call_seconds_per_gold)` once at construction (structural field, not a stat; if below 1, `fatal("stage: early_call_seconds_per_gold under one tick")`, which ADR-0002's boot check already prevents for real data). The listener computes `maxi(0, to_ticks(seconds_left)) / _rate_ticks`, both `int` and non-negative, because `int / int` truncates toward zero; the `@warning_ignore("integer_division")` annotation sits on that statement only. Flow sends `seconds_left = intermission_left * dt`, and `to_ticks` returns `intermission_left` exactly for every value up to 600 s (ADR-0004 Validation 3 covers the round trip).
 - The bonus reads no burst state and no Flow state (Flow Rule 9).
 
 ### 7. The read surface (B10 settled)
 
-Every read below is read-only, allocates nothing unless stated, and is safe to call from views, the HUD, bots, logs and tests. None calls `fatal` except where it reads the accessor, as noted.
+Read-only, allocation-free unless stated, safe from views, HUD, bots, logs and tests; only accessor reads can reach `fatal`.
 
 | Owner | Reads |
 |---|---|
-| TowerSim | `gold() -> int`; `slot_count() -> int`; `slot_tower(i) -> StringName` (`&""` empty); `slot_level(i) -> int` (0 empty); `slot_cooldown_left(i) -> int`; `slot_position(i) -> Vector2`; `slows_applied() -> int`; `state_fields() -> Dictionary` |
-| HeroSim | `position() -> Vector2`; `pin_target() -> Vector2` (`hero_start` before a first pin); `pin_state() -> PinState`; `burst_state() -> BurstState`; `cooldown_left() -> int`; `hero_id() -> StringName`; `burst_id() -> StringName`; counters (below); `state_fields() -> Dictionary` |
+| TowerSim | `gold() -> int`; `slot_count()`; `slot_tower(i) -> StringName` (`&""` empty); `slot_level(i)` (0 empty); `slot_cooldown_left(i)`; `slot_position(i) -> Vector2`; `slows_applied()`; `state_fields()` |
+| HeroSim | `position()`, `pin_target()` (`hero_start` before a first pin) `-> Vector2`; `pin_state() -> PinState`; `burst_state() -> BurstState`; `cooldown_left()`; `hero_id()`, `burst_id() -> StringName`; counters; `state_fields()` |
 | TowerInput | `chip_state() -> TowerInput.ChipState`; `is_chip_open() -> bool`; signals `slot_tapped(slot_index: int)`, `tower_inspected(slot_index: int)` |
 | HeroInput | `aim_state() -> AimState`; `aim_point() -> Vector2`; `cooldown_digit() -> int` |
-| Flow, EnemyWave, Combat | As B5, B7 and B6: `phase()`, `lives()`, `intermission_left`, `result()`, `in_build()`; `wave_index()`, `got_through_by_type()`, `targets()`; `hero_share()`, `dealt_by_kind()`, `dealt_total()` |
 
-Settled items:
+Flow, EnemyWave and Combat reads are B5, B7 and B6 unchanged.
 
-- **`chip_state()` belongs to TowerInput** (Tower Rule 17 is right; B8 and B10 are corrected). The window runs on real time and lives in the wrapper; TowerSim is headless and has no window. `ChipState` is an inner value class (`open: bool`, `slot_index: int` (-1 closed), `elapsed_ms: float`, `level: int`), one instance per TowerInput refreshed on each call; callers read it in the handler or frame and never keep it.
-- **Slot reads are per field** (`slot_tower(i)` and the rest) instead of B8's `slot_state() -> Array` and the GDD's `slot_state(slot_index)`: typed, no allocation per frame. A bad `i` returns the empty value and calls `dev_error` once per read site; never `fatal`.
-- **Counters** (Hero Rule 16, TR-hero-009), all on HeroSim, updated in `pin` and at release only: `repins()`, `bursts_fired()`, `bursts_hit_0()`, `bursts_hit_3()`, `bursts_hit_5()`, `burst_victims()`, `burst_kills()`, `kills_per_burst() -> PackedInt32Array`, `kills_on_hit_3() -> PackedInt32Array`, `best_victims() -> PackedInt32Array`. The array reads return copies (a log or the snapshot reads them once). `best_victims` (the most `targets()` any disc of burst `radius` centred on an enemy holds at release) is computed in every build, because a sim cannot test for a debug build; it costs at most 48 x 48 squared-distance tests once per release. Counters freeze with the battle.
-- **The cooldown total** (B10's "cooldown total"). HudLogic computes it as ADR-0005 Decision 7 already says: `to_ticks(stat_float(burst_ctx, StatKeys.COOLDOWN))`, with its own burst `ReadContext` made in `attach` from `hero_sim.burst_id()`, `to_ticks` from `battle.sim_time`, and `halted()` after the read. ADR-0010 adds `HeroSim.hero_id()` and `burst_id()` (the IDs the Builder already injects, Hero Rule 8), so the wrapper side needs no catalogue lookup. A `HeroSim.cooldown_total()` was rejected (Alternative 4).
-- **`wave_index()` and `got_through_by_type()`** are ratified as ADR-0009 defined them. `got_through_by_type()` returns `Dictionary` (`StringName` def_id to `int`); readers look types up in the Wave records' fixed order and never iterate it.
-- **`state_fields()`** returns every field of the sim as JSON-native values (floats, ints, arrays) for ADR-0007's `digest`, the equivalence test and the run log. It allocates; no gameplay code calls it.
+- **`chip_state()` belongs to TowerInput** (Tower Rule 17 is right; B8 and B10 are corrected): the window is real time and lives in the wrapper. `ChipState` is an inner value class (`open`, `slot_index` (-1 closed), `elapsed_ms`, `level`), one reused instance; callers never keep it.
+- **Slot reads are per field**, replacing B8's `slot_state() -> Array` and the GDD's `slot_state(slot_index)`: typed, no per-frame allocation. A bad `i` returns the empty value and calls `dev_error` once per TowerSim instance (a `_bad_index_reported` latch), never `fatal`. HeroSim has no indexed reads, so no such report.
+- **Counters** (Hero Rule 16), updated only in `pin` and at release: `repins`, `bursts_fired`, `bursts_hit_0`, `bursts_hit_3`, `bursts_hit_5`, `burst_victims`, `burst_kills` (`int`); `kills_per_burst`, `kills_on_hit_3`, `best_victims` (`PackedInt32Array` copies). `best_victims` (most `targets()` a burst-radius disc centred on an enemy holds at release) is computed in every build, since a sim cannot test for debug; at most 48 x 48 tests per release.
+- **Cooldown total**: HudLogic computes `to_ticks(stat_float(burst_ctx, StatKeys.COOLDOWN))` as ADR-0005 Decision 7 says, with a burst context made in `attach` from `hero_sim.burst_id()` and `halted()` after the read. `cooldown_total()` was rejected (Alternative 4).
+- **`wave_index()`, `got_through_by_type()`** ratified as ADR-0009 defined them; readers look types up in Wave-record order and never iterate the `Dictionary`.
+- **`state_fields()`**: every field as JSON-native values for ADR-0007's `digest`, the equivalence test and the run log; allocates; no gameplay code calls it.
 
 ### 8. Input-side bindings
 
 **TowerInput** (Tower Rules 8, 17; Battle HUD Rule 9). `attach(resolver, tower_sim, accessor, halted: Callable, dev_error: Callable)`.
 
-- Registers one TAP disc per slot (priority 200, slot radius per Input GDD). Listens to `tower_sim.tower_built` (P4; consumer added to ADR-0006's table): disables that slot's disc and registers the tower's TAP disc at the same centre.
+- Registers one TAP disc per slot (priority 200, slot radius per Input GDD). Listens to `tower_sim.tower_built` (P4): disables that slot's disc and registers the tower's TAP disc at the same centre. This amends ADR-0006's table: TowerInput joins P1 and P4, and P4's `required_after_attach` becomes yes. Yes is correct because only the wrapper test checks that column, after `attach`, where TowerInput always exists; the headless wiring test is unaffected, since TowerInput is never built headless. RunLog joins P1, P4, P6 and P7 as a development-only consumer that changes no required flag.
+- No position conversion (ADR-0008 open item 3): `upgrade(slot_index)` takes no position, and every hit test is a resolver disc.
 - `_on_tapped(best_tap, p)`: returns at once if `halted.call()` (TR-tower-011; **`halted()` is now injected into TowerInput** by the wrapper, B9 cascade). Empty slot: emits `slot_tapped(slot_index)`. Tower below `accessor.level_count(def_id)`: opens or commits the chip per Rule 8's table. Tower at its last level: emits `tower_inspected(slot_index)`.
 - `ChipWindow`: `open(slot_index)`, `close()`, `advance(ms: float)` (ignores non-finite or negative ms), `is_open()`, `slot()`, `elapsed_ms()`, `can_commit() -> bool` (`200 <= elapsed < 1500`). `MIN_COMMIT_MS := 200.0` and `WINDOW_MS := 1500.0` are `const` presentation constants (Data Rule 1). `TowerInput.advance(ms)` calls it and, on expiry, unregisters the chip disc (registry calls are legal at any time, ADR-0008).
 - `_on_pressed`: applies Rule 8's close rules. `_on_phase_changed`: closes on PAUSED, WON, LOST, FATAL.
@@ -206,44 +223,31 @@ Settled items:
 - `burst_button_centre` is a value, read once by the wrapper from `hud_logic.burst_button_centre()` and passed in; tests pass any point (TR-hero-015). It sets the button and sink disc centres and the cancel ring's 64 and 48.
 - Registers hero (DRAG 200, r 56), button (DRAG 100, r 48), sink (TAP 400, r 48). `update()` (frame step 4) calls `set_centre` for the hero from `position()`, re-clamps the aim and refreshes the digit.
 - Reads Burst `REACH` through its own burst context (made in `attach`) when it clamps an aim, with `halted()` after the read; a halted read ends the aim.
-- Issues `pin` on `drag_ended` of a hero drag, with `PinGeometry.clamp` of the offset finger; issues `burst` on `drag_ended` of a Live aim. `drag_cancelled` and `became_idle` clear state and never issue a command.
+- Issues `pin` on `drag_ended` of a hero drag, with `PinGeometry.clamp_point` of the offset finger; issues `burst` on `drag_ended` of a Live aim. `drag_cancelled` and `became_idle` clear state and never issue a command.
 
 ### 9. Bots and equivalence (TR-hero-012, Input Rule 11)
 
-**One door.** A bot is any object passed to ADR-0007's `battle_runner.run(battle, ticks, between)` as `bot.between`. Its `between(i: int) -> void` may call only the six gameplay commands of Decision 2 (bots never pause) and the reads of Decision 7, plus `PinGeometry` and the accessor's reads. It never writes a field, connects a signal or calls a tick entry. Bots live in `tests/bots/` (exported only by the dev preset that ADR-0004 V5's phone bot-run entry needs; ADR-0007 owns presets).
+**One door.** A bot is an object whose `between(i: int) -> void` is passed to ADR-0007's `battle_runner.run(battle, ticks, between)`. It may call only the six gameplay commands (bots never pause) and Decision 7's reads, plus `PinGeometry` and accessor reads; it never writes a field, connects a signal or calls a tick entry. Bots live in `tests/bots/`, exported only by the dev preset ADR-0004 V5's phone bot-run entry needs (ADR-0007 owns presets).
 
-**Script format.** Steps fire by `battle.ticks_run()`, as ADR-0004 Decision 4 fixed:
+**Script format.** `CommandStep` (`tests/bots/command_step.gd`, values only): `at_tick: int`, `command: StringName` (`&"build"`, `&"upgrade"`, `&"pin"`, `&"burst"`, `&"start_wave"`, `&"call_early"`), `slot_index: int = -1`, `tower_id: StringName = &""`, `x`, `y: float` (pin and burst, passed as `Vector2(x, y)`). `ScriptBot` keeps an `Array[CommandStep]` sorted by `at_tick` and a cursor; each `between` call issues every unfired step with `at_tick <= battle.ticks_run()` (ADR-0004 Decision 4), in array order, and appends the result to `results: PackedInt32Array`. Build-phase steps and `start_wave` all sit at tick 0, since Build runs no ticks. The baseline text form is one JSON object per step. Policy bots (Hero Simulated results) extend the same `Bot` base; their parameters are `const` in the bot file.
 
-```gdscript
-# tests/bots/command_step.gd
-class_name CommandStep extends RefCounted
-var at_tick: int                 # fires when ticks_run() >= at_tick, once, in array order
-var command: StringName          # &"build", &"upgrade", &"pin", &"burst", &"start_wave", &"call_early"
-var slot_index: int = -1
-var tower_id: StringName = &""
-var x: float = 0.0               # pin and burst only; passed as Vector2(x, y)
-var y: float = 0.0
-```
+**Equivalence** (Hero criterion 27). `GestureStep` (`at_tick`, `call`: press, move, release or cancel_pointer, `pointer`, `x`, `y`). Route A: a headless battle, a real HeroInput on `battle.resolver` with a test `burst_button_centre`; per runner step, that tick's gesture calls, then the tick, then `hero_input.update()`. Route B: the same inputs with a `ScriptBot` carrying the positions route A computed (fingers chosen so no clamp moves them). After every tick, `hero_sim.state_fields()`, the counters and a recording log of HeroSim's signals are equal. TowerInput's wiring is proven with a `FakeResolver` (Tower Rule 17).
 
-`ScriptBot` holds an `Array[CommandStep]` sorted by `at_tick` and a cursor; each `between` call issues every unfired step with `at_tick <= ticks_run()` and appends the result code to `results: PackedInt32Array`. In Build, `ticks_run()` stays 0, so a script's build-phase steps and its `start_wave` all sit at tick 0. The text form, for baselines, is one JSON object per step with the same keys. Policy bots (mid-skill, ceiling, pinned once, best single pin; Hero Simulated results) extend the same `Bot` base and decide from reads each call; their parameters are `const` in the bot file, not catalogue values.
-
-**Equivalence test** (Hero criterion 27). A gesture script is an `Array[GestureStep]` (`at_tick`, `call`: press, move, release or cancel_pointer, `pointer`, `x`, `y`). Route A: a headless battle, a real `HeroInput` attached to `battle.resolver` with a test `burst_button_centre`; each runner step calls the resolver for that tick's steps, then ticks, then `hero_input.update()`. Route B: the same battle inputs with a `ScriptBot` whose `pin` and `burst` steps carry the positions route A's HeroInput computed (fingers chosen so no clamp moves them). After every tick, `hero_sim.state_fields()`, the counters and a recording fake's log of HeroSim's signals are equal. TowerInput's wiring is proven separately with a `FakeResolver` (Tower Rule 17).
-
-**Never pinned equals absent** (Hero criterion 28). "Absent" is `InertHeroSim extends HeroSim` (in `tests/helpers/`) whose `tick()` does nothing and returns (typed-return rule); the test swaps `battle.hero_sim` right after `build` (test code may). Production code has no absent branch. Both runs keep per-tick lives, gold, roster, slots, the `deliver` and `attack_fired` logs and the spy accessor's read log equal, and the real HeroSim's `state_fields()` stay at their initial values.
+**Never pinned equals absent** (Hero criterion 28). "Absent" is `InertHeroSim extends HeroSim` (`tests/helpers/`): its `tick() -> void` override does nothing (a `void` override needs no `return`), and its `_init` forwards HeroSim's arguments with `super(...)`. No instance holds a connection: the Builder connects no signal to or from HeroSim (ADR-0006 W1 to W5 skip it) and only injects Callables, and its view signals connect only in `BattleWrapper.attach`, which this test never runs. So `TestBattles.with_inert_hero(...)` builds with `BattleBuilder.build`, constructs `InertHeroSim` from the battle's public members as the Builder builds HeroSim's arguments, and assigns `battle.hero_sim` before the first tick; the real instance is freed. A Builder option that builds InertHeroSim in place was rejected as a production branch for a test; if HeroSim ever gains a Builder connection, the listener-count test shows it and the helper is revisited. Both runs keep per-tick lives, gold, roster, slots, the `deliver` and `attack_fired` logs and the spy read log equal; the real HeroSim's `state_fields()` keep their initial values.
 
 ### 10. Development telemetry: the run log
 
-**Files and sink.** Two files, one sink class: `user://run_log.jsonl` (this ADR) and `user://gesture_log.jsonl` (ADR-0008's `GestureLog`), which settles ADR-0008 choice 7: no merge. The class is `JsonlFileSink` (`src/presentation/dev/jsonl_file_sink.gd`, `RefCounted`), implementing ADR-0008 V8 exactly: `static func open(path: String) -> JsonlFileSink` returns null when `not OS.is_debug_build()` or when the file cannot be opened (`READ_WRITE` if it exists, else `WRITE`; `seek_end()`; one handle); `write_line(text: String) -> bool` stores `text + "\n"`, checks the `store_string` `bool`, then `flush()`; `close()`.
+**Files and sink.** Two files, one sink class: `user://run_log.jsonl` and `user://gesture_log.jsonl` (ADR-0008's `GestureLog`; settles its choice 7: no merge). `JsonlFileSink` (`src/presentation/dev/jsonl_file_sink.gd`, `RefCounted`) applies ADR-0008 V8: `static func open(path: String) -> JsonlFileSink` is null in release or on failure (`READ_WRITE` if the file exists, else `WRITE`; `seek_end()`; one handle); the caller reports a failed open once through `dev_error` with `FileAccess.get_open_error()`. `write_line(text: String) -> bool` stores `text + "\n"`, checks the `bool`, then `flush()`. `close()`.
 
-**Session object.** In debug builds AppRoot creates one `DevLogs` (`src/root/dev_logs.gd`, `RefCounted`) at boot: `launch_id: int` (`int(Time.get_unix_time_from_system() * 1000.0)`, the read ADR-0004 V8 sources), `build_hash: String` (the `const BUILD_HASH` in `src/root/build_info.gd`, `"dev"` in the repo, overwritten by the export script before a debug export; no engine API), `run_sink` and `gesture_sink`. It holds no battle object or Callable, so it may live for the session; release creates none. `BattleWrapper.attach(battle, reduce_motion, dev_logs: DevLogs = null)` gains the optional argument; with null, neither log node is created.
+**Session object.** In debug builds AppRoot makes one `DevLogs` (`src/root/dev_logs.gd`, `RefCounted`) at boot: `launch_id: int` (`int(Time.get_unix_time_from_system() * 1000.0)`, ADR-0004 V8's read), `build_hash: String` (`const BUILD_HASH` in `src/root/build_info.gd`, `"dev"` in the repo, stamped by the export script), `run_sink`, `gesture_sink`, `close()`. AppRoot calls `close()` on `NOTIFICATION_WM_CLOSE_REQUEST` and in its teardown, since a handle closes only when its sink is freed. It holds no battle object or Callable, so it may live for the session. `BattleWrapper.attach(battle, reduce_motion, dev_logs: DevLogs = null)`: with null, no log node is made.
 
-**RunLog** (`src/presentation/dev/run_log.gd`, `extends Node`, created by `attach` only with `dev_logs`). `attach(battle, sink: Callable, launch_id: int, build_hash: String, dev_error: Callable)`; the wrapper passes `dev_logs.run_sink.write_line`, or an invalid `Callable()` if the sink is null. Tests pass a recording fake's method.
+**RunLog** (`src/presentation/dev/run_log.gd`, `extends Node`, made by `attach` only with `dev_logs`): `attach(battle, sink: Callable, launch_id: int, build_hash: String, dev_error: Callable)`, sink `dev_logs.run_sink.write_line` or an invalid `Callable()`; tests pass a recording fake.
 
-- A view listener (ADR-0006 rule 2): it listens to P1 `phase_changed`, P4 `tower_built`, P6 `hero_pinned`, P7 `burst_started` (all allowlisted) and reads queries. It issues no command and writes no sim state. It stamps `Time.get_ticks_msec()` in its handlers for the real seconds to first build, pin and burst since `attach` (Paused time included). `src/presentation/dev/` is outside the `engine_time_in_sim` lint (ADR-0008 cascade).
-- **Attempt record**, one per WON or LOST: HudLogic calls its injected `snapshot_taken: Callable` with the `ResultSnapshot` (Decision 11), wired to `run_log.on_snapshot_taken`; RunLog adds its real-time fields and writes. Screen and log read the same snapshot (Battle HUD Rule 15). A FATAL outcome or a quit writes none (Rule 19 accepts this).
-- **Call record**, one per `CallResult.OK`: HudLogic, the only caller of `call_early` in a human run, reads `flow.intermission_left` and `hero_sim.burst_state()` just before the call and, on `OK`, calls its injected `call_made: Callable` (`run_log.on_call_made(ticks_left: int, burst_state: int)`). RunLog reads `flow.lives()` then and again at the next `phase_changed` to INTERMISSION, WON or LOST, and writes `seconds_left`, `ticks_left`, burst state and lives lost. W5 is not on the view allowlist (Alternative 7).
-- Record fields, all JSON-native, no `Vector2`: `kind` (`"attempt"` or `"call"`), `launch_id`, `build_hash`, `stage_id`, `rng_seed` (ADR-0004: dev builds log the seed), `ticks_run`; then Rule 19's lists. Written with `JSON.stringify(record, "", true, true)` (sorted keys, full precision; ADR-0002's form).
-- **Failure is never fatal.** An invalid sink, or a `write_line` returning `false`, calls `dev_error` once per RunLog with the path and keeps play going; later lines are still attempted. RunLog never calls `fatal`, and nothing it does reaches a sim. HudLogic's two Callables default to `Callable()` and are called only after `is_valid()`, so release HudLogic is unchanged.
+- A view listener (ADR-0006 rule 2) of P1, P4, P6, P7; reads queries; no command, no sim write. It stamps `Time.get_ticks_msec()` for real seconds to first build, pin and burst (Paused included); `src/presentation/dev/` is outside the `engine_time_in_sim` lint (ADR-0008 cascade).
+- **Attempt record**, per WON or LOST: HudLogic's injected `snapshot_taken` Callable passes the `ResultSnapshot` to `run_log.on_snapshot_taken`, so screen and log read one object (Rule 15). FATAL and quits write none (Rule 19).
+- **Call record**, per `CallResult.OK`: HudLogic, the only human caller of `call_early`, reads `intermission_left` and `burst_state()` just before the call and on `OK` calls `call_made` (`run_log.on_call_made(ticks_left: int, burst_state: int)`). RunLog reads `flow.lives()` then and at the next `phase_changed` to INTERMISSION, WON or LOST, and writes `seconds_left`, `ticks_left`, burst state and lives lost.
+- Fields, JSON-native, no `Vector2`: `kind`, `launch_id`, `build_hash`, `stage_id`, `rng_seed` (ADR-0004), `ticks_run`, then Rule 19's lists; `JSON.stringify(record, "", true, true)` (ADR-0002's form).
+- **Never fatal.** An invalid sink or a `false` write calls `dev_error` once per RunLog and play goes on; later lines are still tried. HudLogic calls its two Callables (default `Callable()`) only after `is_valid()`.
 
 ### 11. The HUD result snapshot
 
@@ -251,19 +255,24 @@ var y: float = 0.0
 
 ### 12. Choices made in autonomous mode
 
-Each can be overturned (cascade section d):
+The complete list; each can be overturned (cascade section d):
 
-1. Between-ticks check in every build, `fatal` plus `HALTED`, not a debug-only check (Decision 2).
-2. Explicit enum values (Decision 3); `StartResult` and `CallResult` names and codes (QQ-18).
-3. `chip_state()` on TowerInput (Decision 7); per-field slot reads replace `slot_state` (rename).
-4. Cooldown total stays HUD-computed through the accessor; HeroSim gains `hero_id()` and `burst_id()` instead of `cooldown_total()`.
-5. `best_victims` computed in every build.
-6. `Vector2` command arguments, not `(x, y)` pairs (Decision 5).
-7. Bot steps keyed by `ticks_run()` with a cursor; bots in `tests/bots/`.
-8. "HeroSim absent" modelled by a test-only `InertHeroSim`, no production branch.
-9. Two log files, one sink class; call records fed by HudLogic, not a W5 connection.
-10. TowerInput listens to P4 `tower_built` to swap slot and tower discs.
-11. `launch_id` from the session's unix-millisecond read; `build_hash` from a stamped `const`.
+1. Between-ticks check in every build, `fatal` plus `HALTED` (Decision 2); widens ADR-0004 Decision 5.
+2. Explicit enum values, names by `find_key` (Decision 3); `StartResult` and `CallResult` names and codes (QQ-18).
+3. `chip_state()` on TowerInput, a reused inner `ChipState`; `GestureLog.chip_open` is `tower_input.is_chip_open` (Decisions 7, 8).
+4. Per-field slot reads replace `slot_state` (rename in GDDs and `architecture.md`).
+5. Cooldown total stays HUD-computed through the accessor; HeroSim gains `hero_id()` and `burst_id()` instead of `cooldown_total()`.
+6. `best_victims` computed in every build.
+7. `Vector2` command arguments, not `(x, y)` pairs; HeroInput computes in scalars (Decision 5).
+8. Bot steps keyed by `ticks_run()` with a cursor; bots in `tests/bots/`, exported only by a dev preset.
+9. "HeroSim absent" is a test-only `InertHeroSim` swapped in after build; no production branch.
+10. Two log files, one sink class, held by a session `DevLogs` on AppRoot.
+11. Call records come from HudLogic's injected `call_made` Callable (and the attempt record from `snapshot_taken`), not a W5 connection.
+12. TowerInput listens to P4 `tower_built` to swap slot and tower discs, and P4 becomes required after attach (Decision 8).
+13. `BattleWrapper.attach` gains an optional `dev_logs` argument (amends ADR-0001).
+14. TowerInput and HeroInput are `RefCounted`, not `Node`, so they are testable headless.
+15. `launch_id` from the session's unix-millisecond read; `build_hash` from a stamped `const`.
+16. V2's branch: a `dev_logs` export feature tag if a release export reports a debug build.
 
 ### Architecture Diagram
 
@@ -317,41 +326,15 @@ func state_fields() -> Dictionary
 class_name PinGeometry extends RefCounted
 func _init(stage: StageRecord, left_handed: bool) -> void     # rect and active-hand shapes as floats
 func is_valid(x: float, y: float) -> HeroSim.PinResult        # OK, OUT_OF_BOUNDS or BUTTON_ZONE
-func clamp(fx: float, fy: float, hold_x: float, hold_y: float) -> Vector2   # clamp_pin; Vector2 out
+func clamp_point(fx: float, fy: float, hold_x: float, hold_y: float) -> Vector2   # clamp_pin; not clamp(), which shadows the global
 
-# src/core/flow/flow.gd (adds to B5; enums StartResult, CallResult: Decision 3)
-func start_wave() -> StartResult
-func call_early() -> CallResult
-# Builder also injects between_ticks (battle.between_ticks)
-
-# src/presentation/tower/tower_input.gd
-class_name TowerInput extends RefCounted   # attach/detach args: Decision 8
-class ChipState extends RefCounted:        # open, slot_index, elapsed_ms, level (Decision 7)
-signal slot_tapped(slot_index: int)
-signal tower_inspected(slot_index: int)
-func advance(ms: float) -> void            # frame step 1; feeds ChipWindow
-func chip_state() -> ChipState             # reused instance; never kept
-func is_chip_open() -> bool                # GestureLog's chip_open
-# listeners: _on_pressed, _on_tapped, _on_phase_changed (P1), _on_tower_built (P4)
-
-# src/presentation/tower/chip_window.gd: ChipWindow, const MIN_COMMIT_MS := 200.0, WINDOW_MS := 1500.0 (Decision 8)
-
-# src/presentation/hero/hero_input.gd
-class_name HeroInput extends RefCounted    # attach/detach args: Decision 8
-enum AimState { IDLE, CANCELLING, LIVE }
-func update() -> void                      # frame step 4, first
-# aim_state(), aim_point() -> Vector2, cooldown_digit() -> int
-# listeners: _on_pressed, _on_drag_started, _on_drag_moved, _on_drag_ended, _on_drag_cancelled, _on_became_idle
-
-# src/presentation/dev/: JsonlFileSink, RunLog; src/root/dev_logs.gd: DevLogs (signatures in Decision 10)
-
-# src/root/battle_wrapper.gd (ADR-0001 signature extended)
+# src/root/battle_wrapper.gd (amends ADR-0001)
 func attach(battle: Battle, reduce_motion: bool, dev_logs: DevLogs = null) -> bool
-
-# tests/bots/: Bot (between(i)), ScriptBot, CommandStep, GestureStep; tests/helpers/inert_hero_sim.gd
+# Flow commands and enums: Decision 3. TowerInput, ChipWindow, HeroInput: Decisions 7 and 8.
+# JsonlFileSink, RunLog, DevLogs: Decision 10. Bots: tests/bots/ (Decision 9).
 ```
 
-`RunLog.on_snapshot_taken` and `on_call_made` are called through HudLogic's injected Callables, not signals, so WIRE-8's naming rule does not apply to them. Names are provisional until ADR-0007's NAME lints run (QQ-16); new global names: `ChipWindow`, `PinGeometry`, `JsonlFileSink`, `RunLog`, `DevLogs`, `ResultSnapshot`, `CommandStep`, `GestureStep`, `Bot`, `ScriptBot`, `InertHeroSim`.
+`RunLog.on_snapshot_taken` and `on_call_made` are reached through HudLogic's Callables, not signals, so WIRE-8 does not apply. Names are provisional until ADR-0007's NAME lints run (QQ-16); new global names: `ChipWindow`, `PinGeometry`, `JsonlFileSink`, `RunLog`, `DevLogs`, `ResultSnapshot`, `CommandStep`, `GestureStep`, `Bot`, `ScriptBot`, `InertHeroSim`.
 
 ### Implementation Guidelines
 
@@ -372,67 +355,53 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Alternatives Considered
 
-Estimated effort of every alternative is within a story of the chosen approach, so it is not repeated per entry.
+Effort of each is within a story of the chosen approach.
 
 ### Alternative 1: Input halves as `Node`s with their own `_process`
-- **Description**: TowerInput and HeroInput extend `Node`, run their own `_process` for the chip clock and the hero centre.
-- **Pros**: Familiar Godot shape.
-- **Cons**: Breaks ADR-0004 Decision 5 (one `_process` in the battle subtree; sibling order unsourced); tests need a scene tree.
-- **Rejection Reason**: Contradicts the registry's `engine_time_in_sim` and `frame_order` stances.
+- **Description / Pros / Cons**: familiar Godot shape; but breaks ADR-0004 Decision 5 (one `_process`; sibling order unsourced) and needs a scene tree in tests.
+- **Rejection Reason**: Contradicts `engine_time_in_sim` and `frame_order`.
 
-### Alternative 2: A single `Battle.command(cmd, args) -> int` dispatcher
-- **Description**: One string-keyed entry point for all callers and bots.
-- **Pros**: One place to log and check between ticks.
-- **Cons**: String dispatch is not parser-checked; loses typed enums; a second API to keep in step with the GDDs.
-- **Rejection Reason**: The registry bans string Callables and prefers parse-time names; the injected check gives the same guarantee.
+### Alternative 2: One `Battle.command(cmd, args) -> int` dispatcher
+- **Description / Pros / Cons**: one place to log and check; but string dispatch is not parser-checked and loses typed enums.
+- **Rejection Reason**: The registry prefers parse-time names; the injected check gives the same guarantee.
 
-### Alternative 3: Debug-only between-ticks check
-- **Description**: Check `between_ticks()` only when `OS.is_debug_build()`.
-- **Pros**: Zero release cost.
-- **Cons**: Sim code may not read `OS`; a release defect would desync silently; the cost saved is one call per command.
-- **Rejection Reason**: Architecture Principle 5 (fail loudly in every build) and the sim's no-`OS` rule.
+### Alternative 3a: Debug-only between-ticks check
+- **Description / Pros / Cons**: zero release cost; but sims may not read `OS`, and a release wiring defect would pass unseen.
+- **Rejection Reason**: The no-`OS` rule and Principle 5.
+
+### Alternative 3b: A new refusal code (`IN_TICK`) plus `dev_error`, in every build
+- **Description / Pros / Cons**: no fatal screen, determinism kept; but a code in six enums and the GDD tables, and in release it silently drops a player's tap while hiding the defect.
+- **Rejection Reason**: Principle 5; the only cause is a wiring defect, which should stop the run.
 
 ### Alternative 4: `HeroSim.cooldown_total()`
-- **Description**: HeroSim stores the tick length the current cooldown began with; the HUD divides by it.
-- **Pros**: Exact wedge; no per-frame accessor read in the HUD.
-- **Cons**: Stores a stat-derived value for later display, which the registry's `cached_stat_value` forbids; contradicts ADR-0005 Decision 7, which already names the HUD's per-frame `COOLDOWN` read.
-- **Rejection Reason**: Would supersede an ADR-0005 stance for a cosmetic gain. Revisit if a Vertical Slice modifier makes the wedge jump.
+- **Description / Pros / Cons**: exact wedge, no per-frame HUD read; but stores a stat-derived value (`cached_stat_value`) against ADR-0005 Decision 7.
+- **Rejection Reason**: Supersedes an ADR-0005 stance for a cosmetic gain; revisit if a modifier makes the wedge jump.
 
 ### Alternative 5: Float-pair command arguments `pin(x, y)`
-- **Description**: Commands take two `float`s so bots keep 64-bit positions.
-- **Pros**: No 32-bit rounding on bot positions.
-- **Cons**: HeroInput still converts from `Vector2` payloads; the GDD's `clamp_pin` and criteria are written for `Vector2` in and out; two shapes for one command in tests.
-- **Rejection Reason**: Equivalence compares like with like only if both routes pass the same type; the margins already absorb the rounding.
+- **Description / Pros / Cons**: 64-bit bot positions; but HeroInput still converts, and the GDD's `clamp_pin` and criteria are written for `Vector2`.
+- **Rejection Reason**: Equivalence compares like with like only if both routes pass one type; margins absorb the rounding.
 
 ### Alternative 6: One merged dev log file
-- **Description**: Run and gesture records in `user://dev_log.jsonl` with a `kind` field.
-- **Pros**: One file to send.
-- **Cons**: Gesture records come per press, run records per attempt; the phone-test analysis and the balance analysis read different records; one failure stops both.
-- **Rejection Reason**: Separate files keep each consumer simple; `launch_id` joins them when needed.
+- **Description / Pros / Cons**: one file to send; but different record rates and consumers, and one failure stops both.
+- **Rejection Reason**: Separate files keep each consumer simple; `launch_id` joins them.
 
 ### Alternative 7: RunLog connects to `wave_called_early` (W5)
-- **Description**: The log listens to Flow's W5 directly for call records.
-- **Pros**: The log needs no HUD hook; bot calls would also be logged.
-- **Cons**: W5 is a sim-to-sim wiring signal, not on ADR-0006's view allowlist; adding a wrapper listener changes the listener-count contract.
-- **Rejection Reason**: The HUD is the only human caller and already feeds the log its snapshot.
+- **Description / Pros / Cons**: no HUD hook, bot calls logged too; but W5 is not on ADR-0006's view allowlist, so listening adds a key, while P1, P4, P6 and P7 are already on it.
+- **Rejection Reason**: An allowlist key for a dev log is a contract change; the HUD is the only human caller and already feeds the log.
 
 ## Consequences
 
 ### Positive
-- One door: player, HUD, bots and tests reach the sim through the same eight typed commands, so bot balance gates measure the shipped rules.
-- Refusals are data, not errors: a bot's bad ID gets `BAD_TOWER`, never the fatal screen.
-- The equivalence and absent tests turn Input Rule 11 and Hero Rule 1 into CI checks.
-- Human telemetry exists from the first playable without touching sims.
+- One door: player, HUD, bots and tests use the same eight typed commands, so bot gates measure the shipped rules.
+- Refusals are data: a bot's bad ID gets `BAD_TOWER`, never the fatal screen.
+- Input Rule 11 and Hero Rule 1 become CI checks; human telemetry exists from first playable without touching sims.
 
 ### Negative
-- Eleven new class names to keep collision-free (NAME lints).
-- `slot_state` becomes five reads; GDD and architecture text change (cascade).
-- A fatal on a command inside a tick ends a debug session that might have limped on.
-- HudLogic carries two optional Callables for the log.
+- Eleven new class names (NAME lints); `slot_state` becomes five reads (cascade edits).
+- A mid-tick command ends even a debug session; HudLogic carries two optional log Callables.
 
 ### Neutral
-- TowerInput and HeroInput are testable without the scene tree, so most of their stories are Logic stories with fakes.
-- `best_victims` adds a counter to every build's HeroSim state and digest.
+- Most input-class stories are Logic stories with fakes; `best_victims` joins every build's HeroSim state.
 
 ## Risks
 
@@ -440,26 +409,29 @@ Estimated effort of every alternative is within a story of the chosen approach, 
 - **`user://` unreachable on Android (V3).** Mitigation: desktop MVP first; a share action later.
 - **Enum renumbering by a later edit.** Mitigation: explicit values; baselines store ints, so a renumber fails the baseline compare at once.
 - **`ChipState` kept past the frame by a view.** Mitigation: Implementation Guidelines; review; the instance holds values only, so a kept one is stale, never unsafe.
+- **A lifecycle notification arrives inside `_process` (Decision 2 assumption).** Mitigation: ADR-0003 SP10, SP11 and ADR-0004 V7 record timing, the kit logs `between_ticks()` in the handler; if false, `pause()` defers to the next step 0 by amendment.
 - **Policy bots drift from the Python table.** Mitigation: the Hero GDD names the script as the tie-breaker; bot stories cite it.
 
 ## GDD Requirements Addressed
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
-| tower-system.md | TR-tower-001: TowerSim (builder-made, headless) holds gold, slots, towers and the tick; TowerInput (wrapper-made, absent headless) changes state only through upgrade | Decision 1 (table, door rule), Decision 8 |
-| tower-system.md | TR-tower-002: build and upgrade are the only mutation API, run between ticks and return a typed result enum in fixed check order | Decisions 2, 3, 4 |
-| tower-system.md | TR-tower-008: gold is one non-negative int owned by TowerSim, fed by starting_gold, enemy_killed and wave_called_early; frozen once halted | Decision 6 |
-| tower-system.md | TR-tower-009: early-call bonus is to_ticks(seconds_left) div to_ticks(rate) | Decision 6 |
-| hero-system.md | TR-hero-001: HeroSim (headless) and HeroInput (wrapper-only), which changes state only through pin and burst | Decision 1, Decision 8 |
-| hero-system.md | TR-hero-002: pin and burst run between ticks, ordered enum codes, state before geometry, a refusal mutates nothing | Decisions 2, 3, 4, 5 |
-| hero-system.md | TR-hero-009: read-only queries and per-run counters for HUD, bots, logs and Stage Progression | Decision 7 (reads, counters, `state_fields`) |
-| hero-system.md | TR-hero-012: resolver-driven and direct-command scripts give tick-identical HeroSim state; never-pinned equals HeroSim-absent | Decision 9 |
-| hero-system.md | TR-hero-015: burst_button_centre() owned by the HUD, read once by HeroInput at registration, injectable by tests | Decision 8 (value argument to `attach`) |
-| battle-hud.md | TR-hud-013: debug builds append JSON lines to user://run_log.jsonl through an injectable sink; failure non-fatal; release never writes | Decision 10 |
-| battle-hud.md | B10 reads requested by the HUD (`chip_state`, `wave_index`, `got_through_by_type`) and the cooldown total; Rule 15 snapshot | Decisions 7 and 11 |
-| input-gesture-resolver.md | Rule 11: bots call the commands; one equivalence test keeps the intent | Decision 9 |
-| game-state-stage-flow.md | QQ-18: Start/Call command names and results (Rules 6, 9; edge cases) | Decision 3 |
+| tower-system.md | TR-tower-001: TowerSim headless; TowerInput wrapper-only, changes state only through upgrade | Decisions 1, 8 |
+| tower-system.md | TR-tower-002: build and upgrade are the only mutation API, between ticks, typed result in check order | Decisions 2, 3, 4 |
+| tower-system.md | TR-tower-008: one non-negative int gold on TowerSim, three faucets, frozen once halted | Decision 6 |
+| tower-system.md | TR-tower-009: bonus is to_ticks(seconds_left) div to_ticks(rate) | Decision 6 |
 | tower-system.md | TR-tower-011 (ADR-0008's): TowerInput ignores taps while halted | Decision 8 (`halted` injected) |
+| hero-system.md | TR-hero-001: HeroSim headless; HeroInput wrapper-only, changes state only through pin and burst | Decisions 1, 8 |
+| hero-system.md | TR-hero-002: pin and burst between ticks, ordered codes, state before geometry, refusal mutates nothing | Decisions 2 to 5 |
+| hero-system.md | TR-hero-009: read-only queries and per-run counters | Decision 7 |
+| hero-system.md | TR-hero-012: resolver and direct scripts tick-identical; never-pinned equals absent | Decision 9 |
+| hero-system.md | TR-hero-015: burst_button_centre() HUD-owned, read once, injectable | Decision 8 |
+| battle-hud.md | TR-hud-012: screen and log read one snapshot taken the frame after the outcome | Decisions 10, 11 |
+| battle-hud.md | TR-hud-013: debug-only JSONL run log through an injectable sink, failure non-fatal | Decision 10 |
+| battle-hud.md | Foundational, no TR: B10's HUD-requested reads and the cooldown total | Decision 7 |
+| input-gesture-resolver.md | TR-input-015: debug-only gesture log through an injectable sink | Decisions 8 (`chip_open`), 10 (sink, file) |
+| input-gesture-resolver.md | Rule 11: bots call the commands; one equivalence test | Decision 9 |
+| game-state-stage-flow.md | QQ-18: Start/Call method names and results (Rules 6, 9) | Decision 3 |
 
 ## Performance Implications
 - **CPU**: Commands run a few times per frame at most, each with one to three accessor reads; `best_victims` is at most 2,304 squared-distance tests per burst release (about every 10 s). Negligible.
@@ -475,20 +447,21 @@ No code exists. On acceptance, apply the cascade edits in one change, then write
 
 ## Validation Criteria
 
-1. Per command, a refusal test for each code in check order: whole recording log empty, `state_fields()` unchanged, spy read log exactly the reads before the refusal (Tower criteria, Hero criteria 1 to 24).
-2. A spy that latches `fatal` on the cost read: `build` and `upgrade` return `HALTED`, gold and slots unchanged.
-3. A command called from inside a test listener during `battle.tick`: `fatal` cause names the command, return `HALTED`, nothing mutated.
-4. Gold: `on_enemy_killed(0)` and a 0 bonus emit nothing; a halted battle pays nothing; starter bonus examples 900, 863 and 107 ticks give 8, 7 and 0.
-5. Equivalence (Hero 27) and never-pinned (Hero 28) pass on `CatalogueFactory.minimal()` and the starter stage.
-6. `ScriptBot` runs twice on one `(fixture, stage, rng_seed, script)` give equal digests and result arrays (ADR-0007).
-7. RunLog with a recording sink: one attempt line per WON or LOST, one call line per `CallResult.OK`, none for FATAL; a sink returning `false` gives exactly one `dev_error` and play continues; in a release export no file is created (manual check, V2).
-8. TowerInput with a `FakeResolver`: a tap reaches `slot_tapped`; chip commit window 200 to 1500 ms; taps ignored while halted; `is_chip_open()` matches `chip_state().open`.
-9. Weakref test (ADR-0001) passes with TowerInput, HeroInput and RunLog attached and detached.
+After acceptance, in the Tower, Hero and HUD stories:
 
-Wrong if a bot needs a mutation path the commands lack, or equivalence needs a production test branch.
+1. Each refusal code in check order: empty recording log, `state_fields()` unchanged, spy read log exactly the reads before it.
+2. A spy latching `fatal` on the cost read: `HALTED`, gold and slots unchanged.
+3. A command from a test listener during `battle.tick`: `fatal` names it, `HALTED`, nothing mutated.
+4. Gold: a 0 bounty or bonus emits nothing; halted pays nothing; 900, 863, 107 ticks pay 8, 7, 0.
+5. Equivalence (Hero 27) and never-pinned (Hero 28) pass on the minimal and starter fixtures.
+6. Two `ScriptBot` runs on one input give equal digests and result arrays.
+7. RunLog with a recording sink: one line per WON/LOST attempt and per `CallResult.OK`, none for FATAL; a `false` write gives one `dev_error`; a release export writes no file (V2).
+8. TowerInput with a `FakeResolver`: tap to `slot_tapped`; commit window 200 to 1500 ms; taps ignored while halted.
+9. The ADR-0001 weakref test passes with all input and log classes attached and detached.
 
 ## Related
 
-- Depends on ADR-0004, ADR-0008, ADR-0009; binding ADR-0001, 0002, 0005, 0006, 0007. Enables ADR-0011.
+- Depends on ADR-0004, ADR-0007, ADR-0008, ADR-0009; binding ADR-0001, 0002, 0005, 0006. Enables ADR-0011.
+- Amends (exact edits in the cascade notes): ADR-0006 Decision 5 (P1, P4, P6, P7 consumers; P4 required after attach), ADR-0001 (`attach` gains `dev_logs`), ADR-0004 Decision 5 (between-ticks check in every build), ADR-0008 Decision 8 (`chip_open` and sink slots), `architecture.md` B9 (`between_ticks` row).
 - Settles: ADR-0004 item 15, ADR-0006 Decision 6 (snapshot class), ADR-0008 Decision 9 items 1 to 3 and choice 7, ADR-0009's float-position constraint, `architecture.md` QQ-18 and B10.
 - GDDs: tower-system.md, hero-system.md, battle-hud.md, input-gesture-resolver.md, game-state-stage-flow.md (rules as cited above).
