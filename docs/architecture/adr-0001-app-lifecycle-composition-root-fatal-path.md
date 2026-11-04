@@ -54,7 +54,7 @@ Lifecycle notification names (`NOTIFICATION_APPLICATION_PAUSED`, `..._FOCUS_OUT`
 | **Depends On** | None |
 | **Enables** | ADR-0002 (catalogue load is called by AppRoot), ADR-0003 (adapter lifecycle signal wires through the Builder), ADR-0004 (the clock lives in the wrapper), ADR-0005, ADR-0006 (wiring rule), ADR-0007 (headless harness uses `BattleBuilder`), ADR-0009, ADR-0010 |
 | **Blocks** | Every epic that builds a battle system (Data & Config, Game State & Stage Flow, Input, Combat, Enemy & Wave, Tower, Hero, Battle HUD): none may start until this ADR is Accepted |
-| **Ordering Note** | Write and accept first. ADR-0002 to ADR-0010 cite the injected-callable list (B9 in `architecture.md`), the no-lambda rule and the session-lifetime rule from here. ADR-0005 must define how the accessor receives the per-battle `fatal` (Decision 5, session-lifetime rule). Accepting this ADR closes only the composition-root item of QQ-08 (scene-free builder); its other three items wait on ADR-0004 and ADR-0009. V1 closes QQ-17. |
+| **Ordering Note** | Write and accept first. ADR-0002 to ADR-0010 cite the injected-callable list (B9 in `architecture.md`), the no-lambda rule and the session-lifetime rule from here. ADR-0005 closes how the accessor receives the per-battle `fatal`: the accessor itself is per battle (Decision 5, session-lifetime rule). Accepting this ADR closes only the composition-root item of QQ-08 (scene-free builder); its other three items wait on ADR-0004 and ADR-0009. V1 closes QQ-17. |
 
 ## Context
 
@@ -173,7 +173,7 @@ The parameter is `rng_seed`, not `seed`, because `seed` is a global GDScript fun
 
 Steps, in order (matches Data Flow 4, step 5, in `architecture.md`):
 
-1. Create the battle `FatalLatch` and the `FatalRelay`. Hand the relay's `fatal` to every later step.
+1. Create the battle `FatalLatch` and the `FatalRelay`, then the `StatAccessor(catalogue, relay.fatal)` (ADR-0005). Hand the relay's `fatal` and the accessor to every later step.
 2. Validate stage inputs. Create the `InputResolver` from the Input record's slops (`create` returns null on bad slops: call `fatal`, return null). The resolver reads the slops from the Input record directly, not through the accessor (TR-input-012).
 3. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim.
 4. Make every signal connection and inject every callable in this one function, on statically typed locals, in the form `emitter.signal_name.connect(listener.method)` and `obj.method`. A misspelt signal or method is then a parse error, not a silent no-op. The signal wiring list is in ADR-0006 and Data Flow 3.
@@ -185,7 +185,7 @@ Rules for the Builder and for everything it builds:
 - **`obj.method` only.** Every injected or connected callable is `obj.method` on an object the Builder owns. The string forms `Callable(obj, "method")` and `connect("signal", ...)` are forbidden in `src/`, because the parser cannot check them. ADR-0007's lint rejects them.
 - **No lambdas, no `bind()`.** No lambda and no `bind()` for any injected or connected callable in `src/`, whether or not it captures locals. A lambda may bind `self` implicitly, and a captured `RefCounted` is a strong reference, so either can make a cycle. One flat rule is simpler to follow and to lint. (V1 checks the reference rules.)
 - **No reference fields back to `Battle`.** No sim stores `Battle` in a field. Systems reach each other only through injected callables and signals. Callables that point back at `Battle` (`halted`, `in_build`, `cancel_input`) and the mutual `FatalRelay` and Flow callables are allowed only because method Callables are expected to hold an object ID, not a reference. If V1 shows otherwise, the Rollback plan applies before any sim story starts.
-- **Session lifetime.** An object that lives for the session (`AppRoot`, `Catalogue`, the stat accessor, any record) must never hold a per-battle callable or connect to a per-battle signal. The stat accessor reaches the per-battle `fatal` through a per-battle read context the Builder creates, or per call; ADR-0005 picks which. No sim connects to a catalogue signal. Otherwise a retry either leaks the old battle or sends a later fatal to a dead relay.
+- **Session lifetime.** An object that lives for the session (`AppRoot`, `Catalogue`, any record) must never hold a per-battle callable or connect to a per-battle signal. The stat accessor is per battle (ADR-0005): the Builder creates it with the relay's `fatal`, and it is dropped with the battle. No sim connects to a catalogue signal. Otherwise a retry either leaks the old battle or sends a later fatal to a dead relay.
 - **No mutable `static var`** in any class under `src/`. Static state lives per script, survives a retry and defeats the rebuild.
 - **No deferred connections** on gameplay signals (TR-enemy-004, ADR-0006).
 - **Headless-safe.** The Builder touches no `Node`, `SceneTree` or `DisplayServer`.
@@ -285,7 +285,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Must never use the string forms `Callable(obj, "name")` or `connect("signal", ...)` in `src/`.
 - Must never use a lambda or `bind()` for an injected or connected callable in `src/`.
 - Must never store `Battle` in a field of a sim object. Must never create a `RefCounted` cycle.
-- Must never let a session-lived object (AppRoot, Catalogue, accessor, records) hold a per-battle callable or connect to a per-battle signal; no sim connects to a catalogue signal.
+- Must never let a session-lived object (AppRoot, Catalogue, records) hold a per-battle callable or connect to a per-battle signal; no sim connects to a catalogue signal.
 - Must never declare a mutable `static var` under `src/`.
 - Must call `is_valid()` before calling a held Callable on the fatal path.
 - Must never `preload` a scene in `app_root.gd`; load the fatal and wrapper scenes at run time and null-check.

@@ -95,6 +95,16 @@ state_ownership:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-04
     revised: ""
+  - state: stat_reads
+    status: active
+    owner_system: data-config
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    interface: "Battle.stat_accessor: stat_int(ctx, StatKeys.X) -> int, stat_float(ctx, StatKeys.X) -> float, read at use time; non-fatal is_tower(id), level_count(def_id); bad call calls the battle's fatal and returns 0 or 0.0"
+    write_access: read-only
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -187,6 +197,21 @@ interfaces:
     signal_signature: "ValidationError{code: StringName, source: String, record_id: StringName, field: StringName}; closed code list in ADR-0002 Decision 3"
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-04
+    revised: ""
+  - contract: stat_read_context
+    status: active
+    pattern: direct_call
+    producer: data-config
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - battle-hud
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    signal_signature: "ReadContext{def_id: StringName, level: int = 0, live_entity: Object = null}; one per caller, created with its owner, reused, held by the owning system"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     revised: ""
 
@@ -348,10 +373,34 @@ forbidden_patterns:
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-04
   - pattern: session_object_holds_battle_callable
-    status: active
+    status: "superseded_by: ADR-0005"
     description: "AppRoot, Catalogue, the stat accessor and records never hold a per-battle callable or connect to a per-battle signal; no sim connects to a catalogue signal."
     why: "Either leaks the old battle or sends a later fatal to a dead relay"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-04
+  - pattern: session_object_holds_battle_callable_v2
+    status: active
+    description: "AppRoot, Catalogue and records never hold a per-battle callable, a ReadContext, or connect to a per-battle signal; no sim connects to a catalogue signal. The StatAccessor is per battle and may hold the battle's fatal."
+    why: "Either leaks the old battle or sends a later fatal to a dead relay"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+  - pattern: entity_holds_own_read_context
+    status: active
+    description: "An entity (enemy, tower, hero) never stores its own ReadContext; the owning system holds contexts keyed by spawn_id or slot and drops them with the entity."
+    why: "ReadContext.live_entity points at the entity; both holding each other is a RefCounted cycle that never frees"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+  - pattern: stat_key_literal
+    status: active
+    description: "Stat keys are always StatKeys constants, never string or StringName literals, at stat_int and stat_float call sites."
+    why: "A misspelt constant is a parse error; a misspelt literal is a run-time fatal"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+  - pattern: cached_stat_value
+    status: active
+    description: "No value read from the StatAccessor is stored for later use, except max_hp seeding Health at spawn."
+    why: "Vertical Slice modifiers must take effect with no call-site change (TR-data-008)"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
   - pattern: mutable_static_var
     status: active

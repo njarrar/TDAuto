@@ -272,7 +272,8 @@ Engine starts main scene ──► AppRoot._ready
   3. (VS) Save/Load boot: inject loaded progression into progression systems
   4. AppRoot holds Ready catalogue, picks stage_id and seed. AppRoot state: InStage
   5. Builder.build(catalogue, stage_id, rng_seed, fatal_handler)
-       a. Create the per-battle FatalLatch first, so a fatal during build has somewhere to land
+       a. Create the per-battle FatalLatch first, so a fatal during build has somewhere to land,
+          then the FatalRelay and the per-battle StatAccessor(catalogue, relay.fatal) (ADR-0005)
        b. Validate stage inputs; InputResolver.create(drag_slop, tap_slop) (null on bad slops: fatal)
        c. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim
        d. Make every signal connection; inject halted(), in_build(), targets(), cancel_input(),
@@ -362,10 +363,10 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | Record classes: `TowerRecord`, `EnemyRecord`, `WaveRecord`, `StageRecord`, `HeroRecord`, `BurstRecord`, `InputRecord` | `Resource` or `RefCounted` (format is ADR-0002) | `src/foundation/data/records/` | `id: StringName` plus each GDD's fields. `StageRecord` holds `path_points`, `slot_positions`, `path_width`, `requires_bend`, `early_call_seconds_per_gold`, `hero_start`, `pin_rect`, `pin_exclusion`, `scene_ref`. `InputRecord` holds `drag_slop`, `tap_slop`, `edge_reject_margin`, `left_handed` | ADR-0002 |
 | `ReadContext` | `RefCounted` | `src/foundation/data/read_context.gd` | `def_id: StringName`, `level: int = 0`, `live_entity: Object = null`. **One reused instance per caller** (per enemy, per tower slot, one for the hero), never one per read, so a tick allocates nothing | ADR-0005 |
 | `Targetable` | `RefCounted` | `src/core/combat/targetable.gd` | `spawn_id: int`, `position: Vector2` (cached once per tick), `removed: bool`, `health: Health`, `status: Status` | ADR-0009 |
-| `Enemy` | `Targetable` | `src/feature/enemy_wave/enemy.gd` | Adds `def_id: StringName`, `distance: float`, its `ReadContext` | ADR-0009 |
+| `Enemy` | `Targetable` | `src/feature/enemy_wave/enemy.gd` | Adds `def_id: StringName`, `distance: float`. Its `ReadContext` is held by EnemyWave keyed by `spawn_id`, never by the enemy (ADR-0005, no cycle) | ADR-0009 |
 | `DamageEvent` | `RefCounted` | `src/core/combat/damage_event.gd` | `target: Targetable`, `amount: float`, `source_kind: Combat.SourceKind`, `source_id: StringName` | ADR-0009 |
 | `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, per-source damage copied from Combat | ADR-0006 |
-| `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch` | ADR-0001 |
+| `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005) | ADR-0001 |
 
 IDs are `StringName` throughout as the working default. QQ-04 decides whether that holds for `tower_id` in signals.
 
