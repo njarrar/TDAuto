@@ -1,0 +1,17 @@
+; PROTOTYPE - NOT FOR PRODUCTION. Headless ADR checks (Part 2 group A).
+; Its own project: open it with --path. The repo-root project ignores it
+; through prototypes/.gdignore. No autoloads, no main scene.
+; The two enum warnings are raised to errors (2) so a probe script that
+; triggers them does not load. check_types.gd reads that as "warns" when the
+; same probe with @warning_ignore does load.
+config_version=5
+
+[application]
+
+config/name="adr-checks"
+config/features=PackedStringArray("4.7")
+
+[debug]
+
+gdscript/warnings/int_as_enum_without_cast=2
+gdscript/warnings/int_as_enum_without_match=2
