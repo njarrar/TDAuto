@@ -562,6 +562,39 @@ api_decisions:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0006 Accepted 2026-11-04; binding"
+  - purpose: headless_test_runner
+    status: active
+    api: "tools/ci/run_tests.sh only, in CI and on desktops: --import (one retry on 139), godot-parse-check.gd, tools/ci/lint/lint_main.gd, GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c; exit 0 passes unless No test cases found; 101 and every other code fail; gdUnit4 6.2.0 pinned"
+    not: "gdUnit4-action as the test step; --check-only as a parse check; exit 101 as a pass"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "One pass rule the project owns; an orphan node is a leak the retry design guards against"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+  - purpose: project_lint
+    status: active
+    api: "GDScript SceneTree lint run by Godot headless: token based (comments dropped, strings kept), pure rule functions in tools/ci/lint/rules/, scopes only in tools/ci/lint/scopes.gd, ProjectSettings/ClassDB/global class list reflection; IDs L-LAYER-1 to L-TEST-4; suppression '# lint-allow(ID): reason' except layer, name, autoload, RNG and test rules"
+    not: "Shell or Python regex over source text; gdtoolkit parser"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+  - purpose: test_push_error_reporting
+    status: active
+    api: "gdunit4/report/godot/push_error=true; an expected error is claimed with await assert_error(callable).is_push_error(msg); an unclaimed push_error fails the test; counts across calls use a recording DevErrorSink"
+    not: "Reporting off (is_push_error sees nothing); assert in src/"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "TR-combat-012 needs exactly-one error checks; read from gdUnit4 6.2.0 source, proved by probe H2"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -717,6 +750,27 @@ forbidden_patterns:
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     notes: "ADR-0006 Accepted 2026-11-04; binding"
+  - pattern: signal_assert_or_generated_double_in_tests
+    status: active
+    description: "Tests never use gdUnit4 assert_signal, monitor_signals, mock() or spy(); signals are recorded by hand-written fakes into one EventLog that checks count, typeof() and class per argument (lint L-TEST-1)"
+    why: "assert_signal awaits and is timing-dependent (TR-input-014); generated doubles do not check payload types"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: file_or_scene_in_unit_tests
+    status: active
+    description: "Nothing under tests/unit/ uses FileAccess, DirAccess, load_manifest, a .tscn or .scn path, or get_tree(); catalogues come from code-built fixtures through from_documents or from_texts (lint L-TEST-2)"
+    why: "TR-data-012 and TR-enemy-014: logic tests are fast, isolated and deterministic; real files belong to tests/integration/"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: class_name_in_tests_or_tools
+    status: active
+    description: "No class_name in tests/ or tools/; helpers load by const preload. Every class_name in src/ must not clash with an engine class or another global script class (lints L-NAME-1, L-NAME-2)"
+    why: "Every class_name is global; gdUnit4 already holds names such as Comparator, Fuzzer, LocalTime, ValueProvider"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
