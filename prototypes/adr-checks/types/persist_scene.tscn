@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://types/persist_root.gd" id="1_root"]
+
+[node name="PersistRoot" type="Node"]
+script = ExtResource("1_root")
+
+[node name="Child" type="Node" parent="."]
+
+[connection signal="renamed" from="Child" to="." method="_on_child_renamed"]

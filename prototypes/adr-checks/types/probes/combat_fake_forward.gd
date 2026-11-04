@@ -1,0 +1,6 @@
+# PROTOTYPE - NOT FOR PRODUCTION. ADR checks probe. ADR-0009 V7: Combat fake that forwards its argument.
+extends Combat
+
+
+func _init(p_targets: Callable) -> void:
+	super(p_targets)

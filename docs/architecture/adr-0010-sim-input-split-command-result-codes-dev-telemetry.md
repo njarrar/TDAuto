@@ -52,7 +52,7 @@ Tower and Hero each need a headless sim half (bots, tests) and a wrapper-only in
 
 Owner: godot-specialist writes the scripts; the user runs them on 4.7.2; results go into `current-best-practices.md`. "Expected" is not a source.
 
-**Before acceptance** (standalone scripts under `prototypes/adr-0010-checks/`, none needs a story):
+**Before acceptance** (standalone scripts, none needs a story: V1, V2 and V4 in `prototypes/adr-checks/`; V3 desktop in `prototypes/adr-0010-checks/`):
 
 - **V1. File append (reuses ADR-0008 V8; one headless run closes both).** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_string` returns `bool`; `FileAccess.get_open_error()` after a failed open. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
 - **V2. Debug flag (reuses ADR-0008 V7).** `OS.is_debug_build()` is true in an editor run (headless script). The release half is ADR-0001 V4's spike result, recorded here. Branch, decided now: if a release export reports true, `DevLogs` creation moves behind a custom export feature tag `dev_logs` tested with `OS.has_feature("dev_logs")`, set only in debug presets.

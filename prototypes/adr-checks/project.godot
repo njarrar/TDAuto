@@ -4,12 +4,15 @@
 ; The two enum warnings are raised to errors (2) so a probe script that
 ; triggers them does not load. check_types.gd reads that as "warns" when the
 ; same probe with @warning_ignore does load.
+; flush_stdout_on_print keeps RESULT lines on disk if a check crashes.
+; delta_smoothing is NOT set here: check_numerics.gd reads its default.
 config_version=5
 
 [application]
 
 config/name="adr-checks"
 config/features=PackedStringArray("4.7")
+run/flush_stdout_on_print=true
 
 [debug]
 
