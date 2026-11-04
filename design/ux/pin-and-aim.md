@@ -1,6 +1,6 @@
 # UX Spec: Hero Pin and Burst Aim
 
-> **Status**: In Design (autonomous draft, 2026-11-04; run `/ux-review design/ux/pin-and-aim.md`)
+> **Status**: In Design (autonomous draft, 2026-11-04; revised after the first `/ux-review` the same day)
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04
 > **Journey Phase(s)**: none recorded; `design/player-journey.md` does not exist (PAQ-14). Pin and aim are used in every battle, from the first wave onward
@@ -139,6 +139,8 @@ Burst aim (Ready press on B, dragging up and left toward the packet)
 | (150, 250) | 459 units (306 dp) | 548 units (365 dp) |
 | (270, 174), the top of `pin_rect` | 482 units (321 dp) | 578 units (385 dp) |
 
+Limits of this table: it ignores the clamp to the field (which only matters for a finger above y 100) and any bottom inset (which raises the button and shortens each travel slightly), and the dp figures assume a 360 dp width. The 50-unit fingertip radius used elsewhere is the art bible's "about 100 reference px" across.
+
 The left button gives the same figures for central pins and less for pins on the left. A hero pinned in the top third needs a long thumb drag just to bring the reticle to the thumb. This is the "reticle far from the thumb when clamped" flag, and the table is its measure; the cue and the fallback are in States and Open Questions (PAQ-01, PAQ-03).
 
 ### Component Inventory
@@ -189,7 +191,7 @@ Discovered rather than shown: the damage number, the hero's HP, hit counts. None
 | Button hidden | Won, Lost | Not drawn; nothing can fire |
 | Aim, cancelling | Every aim starts here | Ring at radius 64 around the button; reticle at alpha 0.3, no ticks; preview and kill marks hidden. Releasing cancels |
 | Aim, live | Finger more than 64 from `B` | Reticle full (alpha 0.7) with ticks, solid preview, kill marks. Back within 48 of `B` it returns to cancelling. Releasing fires |
-| Aim, clamped at reach | The reticle's unclamped position is beyond 159.99 from the hero | The reticle stops on the reach limit; the ±20° of reach arc facing the finger turns solid at alpha 0.7. The finger keeps moving without moving the reticle |
+| Aim, clamped at reach | The reticle's unclamped position is beyond 159.99 from the hero | The reticle stays on the reach limit (159.99 from the hero) and slides around it as the finger's direction from the hero changes; only its distance stops growing. The ±20° of reach arc facing the finger turns solid at alpha 0.7 |
 | Kill preview | Live aim only | Each enemy inside the preview with `hp_left` at or below the burst damage (130 in the starter values) has its body knocked out to the field colour, with a steady 2 px white contour; its damaged core is hidden |
 | Release, with kills | Telegraph ends (T + 0.25 s) | Field and hero's 1.3× restore in 120 ms. Spokes (3 px white-gold) from the aim to each kill for 100 ms. Ring 3 px plus 1 per kill, up to 9 px, holds 150 ms. Hero pulses by 1 + 0.04 × kills |
 | Release, no kills | Telegraph ends | Field and hero's 1.3× restore. A 2 px ring fades in over 80 ms; the burst glow is 40%; no spokes, no pulse |
@@ -213,7 +215,7 @@ Mapping interactions for: **touch** (the desktop build's mouse stands in for it)
 | Hero (unpinned) | Press | Press inside the grab disc | Leash on the first frame | `pressed` names the hero |
 | Hero | Drag | `drag_started`, `drag_moved` | Leash and kite follow the clamped pin point | No command yet |
 | Hero | Release | `drag_ended` | Ground ring lands; leash snaps; hero walks (or arrives at once in Build) | `pin(pin_point)` returns `OK`; `hero_pinned` |
-| Hero | Press then release without moving | Tap past `tap_slop` rules | Nothing | A tap there reaches the tap winner, not the hero (Input Rule 3) |
+| Hero | Press released within `tap_slop` of where it began | Tap | Nothing on the hero | It is a tap, so it reaches the tap winner (a tower, slot or nothing), not the hero (Input Rule 3) |
 | Burst button, Ready | Press and drag | `drag_started` | Cancel ring; dim reticle | Aim state: cancelling |
 | Burst button, Ready | Drag past 64 from `B` | `drag_moved` | Reticle full, preview, kill marks | Aim state: live |
 | Burst button, Ready | Drag back to 48 or less | `drag_moved` | Reticle dims; preview and marks hide | Aim state: cancelling |
@@ -315,7 +317,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 | Drag required | Pin and aim both need a drag. There is no tap-based alternative at MVP. This is a recorded limitation (accessibility requirements, Known Intentional Limitations; AQ-07) |
 | Timed input | None. The telegraph (0.25 s) and the cooldown (10 s) are game timing. An aim can be held as long as the player likes, and survives a change of phase |
 | Cancel is forgiving | Cancel is by direction (release within 64 of the button; the boundary is 16 units outside the button's hit disc) and needs no precision. Every aim starts cancelling, so an unintended touch cannot fire |
-| Line contrast on the field | Neutral lines at alpha 0.6 (reach ring) measure 4.98:1 on the field and 4.94:1 on a path assumed to be the field with its value raised 3 points; the leash at alpha 0.5 measures 3.82:1 and 3.80:1; the reticle at alpha 0.7 measures 6.38:1. All pass 3:1 (non-text). The art bible still asks for two tones over the path, which is a safe margin since the path colour is an assumption |
+| Line contrast on the field | (The leash's colour is not set by the art bible; neutral is assumed here, PAQ-17.) Neutral lines at alpha 0.6 (reach ring) measure 4.98:1 on the field and 4.94:1 on a path assumed to be the field with its value raised 3 points; the leash at alpha 0.5 measures 3.82:1 and 3.80:1; the reticle at alpha 0.7 measures 6.38:1. All pass 3:1 (non-text). The art bible still asks for two tones over the path, which is a safe margin since the path colour is an assumption |
 | Deliberately low contrast | The cancelling reticle at alpha 0.3 measures 2.14:1, below 3:1. This is intended: it says "releasing will cancel". The non-colour backup is that the preview and kill marks are hidden (PAQ-08) |
 | Hero and kill marks | Gold (white-gold `#FFE9A8`) is the hero's alone; it measures 15.75:1 on the field. Kill marks are a shape change (body knocked out, white contour), 18.9:1 against the field colour the body is knocked out to, not a colour change |
 | Colour independence | Every state differs by shape, outline or count: dotted vs solid vs filled button; dim vs full reticle with a preview; ticks present vs absent for Ready; fill sweep plus digit for Cooling; spokes counted per kill |
@@ -346,6 +348,9 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 - [ ] **Ready aim, live.** Once the finger is more than 64 from the button's centre, the reticle goes to alpha 0.7 with four ticks, 100 units above the finger, with a solid 2 px preview circle of radius 70. Dragging back to within 48 returns it to cancelling.
 - [ ] **Reach clamp.** When the unclamped reticle would be more than 160 from the hero, the reticle stops at 160 or less from the hero, and the 40 degrees of the reach ring facing the finger turn solid at alpha 0.7. Moving the finger further does not move the reticle further out.
 - [ ] **Fire.** Releasing while live starts a 0.25 s telegraph at the fixed aim point, then every enemy within 70 of it loses 130 HP (or all it has), and the cooldown of 10 s starts at the release. The burst cannot be cancelled after release, and a second aim cannot start until the cooldown ends.
+- [ ] **Aim across a phase change.** An aim held while Intermission becomes Wave stays live and fires on release.
+- [ ] **Walking hero.** During an aim, if the hero is walking, the reach ring moves with it and the reticle re-clamps every frame; releasing never shows a refusal.
+- [ ] **Empty burst.** A burst released with no enemy within 70 of the aim point still starts the 10 s cooldown and draws the no-kill ring.
 - [ ] **Kill preview.** During a live aim, an enemy inside the preview with HP at or below 130 is drawn with its body in the field colour and a steady 2 px white contour; enemies above 130 HP are drawn normally. The marks are hidden while cancelling.
 - [ ] **Release feedback.** A release with kills shows one spoke per kill from the aim point for 100 ms and a ring whose width is 3 px plus 1 px per kill up to 9 px for 150 ms. A release with no kills shows a 2 px ring fading in over 80 ms and no spokes.
 - [ ] **Cooling press.** While Cooling, pressing the button shows the seconds left (digit) above the thumb on a panel with the button bare, starts no aim, and returns the digit to the button on release.
@@ -364,7 +369,7 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 
 | ID | Question | Owner |
 |---|---|---|
-| PAQ-01 | **Reticle far from the thumb (proposal).** The table shows a reticle up to 578 units (385 dp) from the thumb at the start of a drag, and no cue that says where the finger's aim would be. Proposed: while the reticle is clamped, draw a thin dotted tether from the reticle toward the finger's offset position (`F + (0, -100)`), so the clamp reads as a limit, not as a stuck reticle. The GDD's clamp cue (solid reach arc) stays. Test the GDD cue alone first; the tether is the fallback | ux-designer, phone test |
+| PAQ-01 | **Reticle far from the thumb (proposal).** The table shows a reticle up to 578 units (385 dp) from the thumb at the start of a drag, and no cue that says where the finger's aim would be. Proposed: while the reticle is clamped, draw a thin dotted tether from the reticle toward the finger's offset position (`F + (0, -100)`), so the clamp reads as a limit, not as a stuck reticle. The GDD's clamp cue (solid reach arc) stays. Test the GDD cue alone first; the tether is the fallback | Decided 2026-11-04 (recommended setting accepted): ship the GDD's clamp cue alone; the tether stays the fallback if the phone test shows a stuck-looking reticle |
 | PAQ-02 | **Cancel ring is a 14-unit band.** Beyond a fingertip of radius 50, the 64-unit ring shows as 14 units (9.3 dp). Check on a device that it is seen, and that the edge-swipe back gesture cannot start inside it (right edge x 520, 20 units from the field edge). Fallback: draw the ring 3 px, or add a second tick mark | art-director, phone test |
 | PAQ-03 | **Re-grab and aim near the top.** A hero pinned at y 174 sits 116 dp from the top of a 640 dp field; to aim near it the finger must be 100 units lower, still about 183 dp from the top. Assuming the comfortable one-thumb zone is the lower 60% of the screen (an assumption, not sourced in this repo), the top 40% is hard to grab and to aim into. Options in order: (1) test first (the GDD already asks); (2) raise the top of `pin_rect` (a Stage data change; it affects the top lane); (3) enlarge the hero's grab radius above y 300; (4) allow a pin by dragging from a ghost left at the old pin | game-designer, phone test |
 | PAQ-04 | **Pin offset 0 or 100.** The GDD keeps 0 for MVP and tests 100 on the phone. With 0 the ghost is under the thumb and only the leash band (40 units) shows; with 100 a top-half pin needs a lower finger. Record the result of the phone test | game-designer |
@@ -378,3 +383,6 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 | PAQ-12 | **Reach 160: limit or stuck?** The GDD asks whether players feel the reach as a clear limit or as the reticle getting stuck. The clamp cue and PAQ-01 are the mitigation | game-designer, phone test |
 | PAQ-13 | **Drag-free alternative for pin and aim** (AQ-07): not in scope at MVP | game-designer |
 | PAQ-14 | **No player-journey document.** Context on arrival is inferred from the GDDs and prompts | ux-designer |
+| PAQ-15 | **Aim floor (Hero Open Questions).** The reticle is 100 above the finger, so with the finger at the screen's bottom edge (y 960) the reticle is at y 860 and a radius-70 blast reaches y 930; the last 30 units of the path cannot be hit, and a bottom inset `I_bottom` raises both by that much (derived). Does a player feel this as a lost save? | game-designer, phone test |
+| PAQ-16 | **Early thumb on a cooling button (Hero Open Questions).** A press while Cooling is dead today (the digit shows). UX once proposed tracking the press so it becomes an aim the moment the burst is Ready. Keep dead for MVP; test | game-designer, playtest |
+| PAQ-17 | **Leash colour and the "in-zone vs out-of-zone" leash state.** The art bible leaves the leash's colour and alpha unset and lists an in-zone/out-of-zone state shown by dash density that no GDD defines. This spec assumes a neutral leash (its contrast figures rest on that) and has no such state; the pattern library and accessibility requirements no longer claim one. Decide the colour and whether the state exists | art-director |

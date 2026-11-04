@@ -3,7 +3,7 @@
 > **Status**: In Design
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04
-> **Version**: 0.5 (pin and aim spec linked; 0.4 arc and chip proposals added; 0.3 aligned with the Battle HUD GDD approved in PR #7: Paused has no arming, Won omits Got through, burst fill, arming steps)
+> **Version**: 0.6 (arc and chip proposals accepted; pin and aim review fixes; 0.5 pin and aim spec linked; 0.4 arc and chip proposals added; 0.3 aligned with the Battle HUD GDD approved in PR #7: Paused has no arming, Won omits Got through, burst fill, arming steps)
 > **Engine**: Godot 4.7.2
 > **UI Framework**: Two surfaces. Everything that can be tapped or dragged in the field is a registered disc in the Input & Gesture Resolver, drawn by `CanvasItem._draw`. Only the modal screens (Result, Paused, Fatal) and the top information band are Godot `Control` nodes.
 > **Related Documents**:
@@ -253,7 +253,7 @@ accessibility notes match each pattern's accessibility line.
 - Closing: a press outside the discs closes it (backdrop sink); `drag_started` closes it; Paused, an outcome and Fatal close it. A phase change among Build, Wave and Intermission leaves it open. A finger rolling off a disc leaves it open.
 - Start/Call is disabled while an arc is open.
 - Unaffordable discs use P-13.
-- Reduce Motion: the 120 ms collapse becomes a cut, and the build overlay loses its 1.15 to 1 scale and only fades from alpha 0.6 to 0 over 120 ms (proposal, `design/ux/arc-and-chip.md`). The arc itself has no open animation. For its first 200 ms the discs and panels sit at alpha 0.5 and step to full (the guard look, proposal).
+- Reduce Motion: the 120 ms collapse becomes a cut, and the build overlay loses its 1.15 to 1 scale and only fades from alpha 0.6 to 0 over 120 ms (accepted 2026-11-04; `design/ux/arc-and-chip.md`). The arc itself has no open animation. For its first 200 ms the discs and panels sit at alpha 0.5 and step to full (the guard look, accepted 2026-11-04).
 - Accessibility: choice is by shape and word, never colour alone (all three discs are cyan). No timer; the arc stays open until dismissed.
 
 **When to Use**: building on a free slot.
@@ -280,7 +280,7 @@ accessibility notes match each pattern's accessibility line.
 - Below the affordable cost it uses P-13.
 - The chip-then-tap step is the mis-spend safeguard: there is no selling.
 - Window length runs on real time (the sim clock is stopped in Build). It must be adjustable (see accessibility requirements, input timing).
-- Proposed in `design/ux/arc-and-chip.md`: the chip sits at alpha 0.5 for the first 200 ms and steps to full (the guard look); it closes with a 120 ms fade on expiry or dismiss and cuts on a commit; a level-2 tower shows its range ring for 1.5 s and a "Max" label. A chip cannot leave the field or reach the band under layout rule L1 (its top is never above y 206).
+- Accepted 2026-11-04 (from `design/ux/arc-and-chip.md`, now in the Battle HUD GDD): the chip sits at alpha 0.5 for the first 200 ms and steps to full (the guard look); it closes with a 120 ms fade on expiry or dismiss and cuts on a commit; a level-2 tower shows its range ring for 1.5 s and a "Max" label. A chip cannot leave the field or reach the band under layout rule L1 (its top is never above y 206).
 - Open: whether the draining bar (3 units) reads under a thumb (fallback 6 units); the window multiplier at Alpha.
 - Accessibility: the 1.5 s window is a timed input. See Accessibility Requirements, Motor, "Input timing adjustments".
 
@@ -331,7 +331,7 @@ accessibility notes match each pattern's accessibility line.
 - Before a first pin, a one-line prompt "Drag the hero" (P-17).
 - The pin ghost is a 2 px unfilled kite. The ground ring is 2 px solid at radius 30.
 - Open: re-grabbing a hero pinned high on the screen with one thumb. Measured in `design/ux/pin-and-aim.md` (PAQ-03): a hero at y 174 needs a thumb about 183 dp from the top of the screen even to aim near it.
-- Accessibility: one finger, one drag, no hold. The leash's in-zone and out-of-zone states differ by dash density, not tint.
+- Accessibility: one finger, one drag, no hold. (The art bible's leash "in-zone vs out-of-zone" state is not defined by any GDD and is left out until it is; PAQ-17 in `design/ux/pin-and-aim.md`.)
 
 **When to Use**: Moving the hero.
 **When NOT to Use**: Any other object; only the hero is dragged to a place.
@@ -358,6 +358,8 @@ accessibility notes match each pattern's accessibility line.
 - Releasing in the cancel zone cancels. Pause cancels an aim in progress.
 - Cooling press: the digit shows above the thumb on a panel, the button is bare, and the press does nothing (P-15). On release the digit returns to the button.
 - Accessibility: aim is a held drag (no timing). Cancel is by direction (release near the button) and needs no precision. A drag-free alternative is not in scope at MVP (Known Intentional Limitations).
+
+- Also drawn (from the Hero GDD; details in `design/ux/pin-and-aim.md`): the kill preview (an enemy that would die has its body knocked out with a 2 px white contour, live aim only); the clamped-at-reach cue (the ±20° of the reach ring facing the finger turns solid at alpha 0.7); and, as a fallback proposal only, a dotted tether from a clamped reticle toward the finger (PAQ-01).
 
 **When to Use**: The burst.
 **When NOT to Use**: Any tap action; the burst is drag-only by design.
@@ -395,7 +397,7 @@ accessibility notes match each pattern's accessibility line.
 **Specification**:
 - A refused tap nudges the element 2 px once for 120 ms. No magenta (magenta is danger only).
 - Skipped under Reduce Motion, which leaves a refused tap with only the standing dim (P-13).
-- **Refusal cue (proposal, `design/ux/arc-and-chip.md`)**: the Tower GDD requires a cue that does not rely on motion. The refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms per disc or chip (under 3 flashes per second). It is a brightness step, not motion, so it stays under Reduce Motion. Not yet accepted (UQ-01).
+- **Refusal cue (accepted 2026-11-04; in the Battle HUD GDD)**: the Tower GDD requires a cue that does not rely on motion. The refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms per disc or chip (under 3 flashes per second). It is a brightness step, not motion, so it stays under Reduce Motion. Accepted 2026-11-04.
 - Accessibility: a cue must exist that is not motion alone.
 
 **When to Use**: A tap that was understood but could not be carried out.
@@ -550,8 +552,8 @@ accessibility notes match each pattern's accessibility line.
 
 | Gap | Needed by | Note |
 |---|---|---|
-| Refusal cue that survives Reduce Motion | P-12 | Proposed in the arc and chip spec (UQ-01); awaiting acceptance |
-| Static fallbacks for the build overlay and arc collapse under Reduce Motion | P-06 | Proposed in the arc and chip spec; awaiting acceptance |
+| Refusal cue that survives Reduce Motion | P-12 | Closed 2026-11-04: accepted; in the Battle HUD GDD |
+| Static fallbacks for the build overlay and arc collapse under Reduce Motion | P-06 | Closed 2026-11-04: accepted; in the Tower and Battle HUD GDDs |
 | Expired or closed chip, armed look after the 200 ms guard, maximum-level cue, chip leaving the field | P-07 | Proposed in the arc and chip spec (the field flag cannot occur under L1); the "Max" label is a new string for the Tower and HUD GDDs (UQ-03) |
 | Unit-to-dp scale behind the 44 pt / 48 dp targets | P-01 | Settled in the arc and chip spec: dp per unit = device width in dp / 540, so 48 dp at 360 dp wide and larger on wider phones. The unmeasured part is real device widths |
 | Menu and list navigation, toggle, slider, tab | Menu & Screen Flow (Vertical Slice), Settings (Alpha) | Standard controls: not needed at MVP. Define with the first menu spec. Keyboard and gamepad focus is out of scope (touch only; technical preferences) |

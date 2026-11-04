@@ -345,12 +345,15 @@ Primitives only, and nothing has been rendered. Text sits on panel. Tower and He
 | Next-wave line | Neutral glyphs at true size, 16, 22 and 30, with the fast's notch, because at a smaller size normal and heavy merge. Counts 14 dp |
 | Start/Call | Panel rect, 2 px neutral outline, two 14 dp lines. Arming: alpha 0.5, stepping to full at Armed, since art bible §7 never animates panel opacity (user decision, 2026-11-04). Burst glyph 16 px neutral |
 | Arc | The disc is a hit area only and is not drawn. A tower-size polygon with panel fill and a 3 px cyan contour. Panel above, 80 × 56, with the word and cost on two 14 dp lines. Provisional: `/ux-design` settles panels, targets and contrast |
-| Chip | 76 × 44 panel, 16 dp cost, 20 px cyan level-2 polygon, neutral bar |
+| Chip | 84 × 44 panel (user decision, 2026-11-04, accepting the UX specs' recommendations: 76 fitted only 2 digits beside the glyph, and a level-1 cost can reach 3; `design/ux/arc-and-chip.md` Text Fit), 16 dp cost, 20 px cyan level-2 polygon, neutral bar. Alpha 0.5 for its first 200 ms, stepping to full (the guard look). Closes with a 120 ms fade on expiry or dismiss, and with a cut on a commit |
 | Unaffordable | Cost text at alpha 0.6, never multiplied by another dim (4.80:1 on panel; 0.55 gave 4.25:1, under the 4.5:1 minimum), cost struck through |
 | Prompt | 14 dp, one line, on panel |
 | Result | All 16 dp, left-aligned, no headline size. Lost glyphs outlined. Retry neutral fill. Retry and Play again sit at alpha 0.5 until Armed, stepping to full, and lighten while a counting press is held, so a slide-off shows. Won's panel is compact and two-column, with the board visible above it |
 | Paused | Static 40% scrim, 300 × 64 panel |
-| Ground ring | 2 px neutral, radius 16, alpha 0.35, 150 ms in, unlike the pin's 30 |
+| Ground ring | 2 px neutral, radius 16, alpha 0.35, 150 ms in, unlike the pin's 30; holds 600 ms, then fades out over 200 ms (user decision, 2026-11-04, accepting the UX specs' recommendations) |
+| Refusal cue | On `NO_GOLD` from a disc or the chip, the refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms per disc or chip. It is not motion, so it stays under Reduce Motion, beside the nudge that does not (user decision, 2026-11-04, accepting the UX specs' recommendations) |
+| Arc guard and close | Discs and panels at alpha 0.5 for the first 200 ms after opening, stepping to full (the guard look). A dismiss closes with a cut; under Reduce Motion the 120 ms collapse after a build is a cut too (user decision, 2026-11-04, accepting the UX specs' recommendations) |
+| Max label | On `tower_inspected`, a 14 dp "Max" on panel at the tower's (x, y − 76) for the same 1.5 s as the range ring, so the player sees why no chip opens (user decision, 2026-11-04, accepting the UX specs' recommendations) |
 
 **Colour.** Field-anchored polygons, in the arc and chip, stay cyan: that tower, there. Screen space stays neutral, including enemy and burst glyphs. Backups for colour: strike, alpha, and fill, outline or dots.
 
