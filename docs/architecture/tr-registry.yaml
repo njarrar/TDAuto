@@ -310,9 +310,9 @@ requirements:
 - id: TR-state-008
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow listens to synchronous wave_cleared, waves_complete and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
+  requirement: "Flow listens to synchronous wave_cleared, waves_completed and enemy_leaked (leak before complete) and emits lives_changed, phase_changed and wave_called_early"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-009
   system: state
@@ -590,9 +590,9 @@ requirements:
 - id: TR-tower-001
   system: tower
   gdd: design/gdd/tower-system.md
-  requirement: "TowerSim (builder-made, headless) holds gold, slots, towers and the tick; TowerInput (wrapper-made, absent headless) changes state only through upgrade"
+  requirement: "TowerSim (builder-made, headless) holds gold, slots, towers and the tick; input objects (TowerInput and the HUD arc, wrapper-made, absent headless) change state only through TowerSim commands (upgrade, build)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-tower-002
   system: tower
@@ -716,7 +716,7 @@ requirements:
 - id: TR-hero-004
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim, HeroInput and the HUD, and the Burst ID into the HUD for the cooldown wedge"
+  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim; the wrapper, not the builder, injects them into HeroInput and the HUD, and the Burst ID into the HUD for the cooldown wedge"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
@@ -807,7 +807,7 @@ requirements:
 - id: TR-hud-002
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Result and Paused screens are full-screen modal Controls, built once and toggled visible, that consume every event before the Input adapter sees it; a modal is only hidden inside its own handler, never freed"
+  requirement: "Result and Paused screens are full-screen modal Controls, built once and toggled visible, that consume presses (not moves or releases) before the Input adapter sees them; a modal is only hidden inside its own handler, never freed"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
@@ -835,9 +835,9 @@ requirements:
 - id: TR-hud-006
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Retry sets an idempotent latch on the app root and never frees its caller; the root's next frame checks Fatal, stops, cancels, frees and rebuilds"
+  requirement: "Retry sets an idempotent latch on the app root and never frees its caller; the root's next frame checks Fatal, stops the Clock, cancels input through Battle.cancel_input(), frees and rebuilds"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-007
   system: hud
@@ -863,7 +863,7 @@ requirements:
 - id: TR-hud-010
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase and lives_changed join the view allowlist"
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase_changed and lives_changed join the view allowlist, which means they may have zero view connections in a headless build"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
@@ -913,6 +913,13 @@ requirements:
   system: hud
   gdd: design/gdd/battle-hud.md
   requirement: "HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set), not every frame"
+  created: 2026-11-04
+  revised: ""
+  status: active
+- id: TR-hud-018
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "Each debug run-log record holds a launch ID, made once at boot, and the game build hash; the wrapper injects both into HudLogic and the logs (split from TR-hud-006)"
   created: 2026-11-04
   revised: ""
   status: active
