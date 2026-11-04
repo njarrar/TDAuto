@@ -44,7 +44,7 @@ This supplements (not replaces) the agent's built-in knowledge.
 ## GDScript (4.7)
 
 - **An override of a typed method inherits its return type**, so it needs an
-  explicit `return` statement; the migration guide's fix is `return null`
+  explicit `return` statement; the migration guide's fix is `return null`, which only fits Object and Variant returns; for `int`, `float` or `bool` return a real value of that type (verified 4.7.2 headless, probe-results.md ADR-0007-H4)
 - **Writing one element of a packed array no longer calls the property's
   setter.** A setter on a `PackedInt32Array` (etc.) property no longer runs on
   `arr[i] = v`; assign the whole array where the setter has to run

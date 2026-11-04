@@ -14,7 +14,7 @@ change behaviour or defaults. The guide lists no deprecations.
 
 | Subsystem | Change | Details |
 |-----------|--------|---------|
-| GDScript | Overrides inherit a typed return | An override of a method with a typed return now inherits that type, so it needs an explicit `return` (add `return null` to fix the error). **GDScript breaks** |
+| GDScript | Overrides inherit a typed return | An override of a method with a typed return now inherits that type, so it needs an explicit `return` (the migration guide suggests `return null`, which only fits Object and Variant returns; an `-> int`, `-> float` or `-> bool` override must return a real value of that type, verified 4.7.2 headless, probe-results.md ADR-0007-H4). **GDScript breaks** |
 | GDScript | Packed array element writes | Setting one element of a packed array no longer calls the setter of the whole packed-array property |
 | GUI | `RichTextLabel.ImageUpdateMask.UPDATE_WIDTH_IN_PERCENT` renamed | Now `UPDATE_WIDTH_UNIT`. **GDScript breaks** |
 | GUI | `RichTextLabel.add_image()` / `update_image()` | `width` / `height` are `float` (were `int`); `width_in_percent` / `height_in_percent` renamed `width_unit` / `height_unit`, typed `RichTextLabel.ImageUnit` (were `bool`, default `false` → `0`). C# source breaks |
