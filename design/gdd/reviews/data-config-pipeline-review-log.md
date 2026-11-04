@@ -117,3 +117,48 @@ Reviewed-Content-Hash: design/art/art-bible.md f27f37cc8274e7edee283103be2c318dc
 
 ## Revision — 2026-11-03 — cross-GDD warning pass
 From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `requires_bend` in Rule 10, HUD rows, Input record note, cross-references, QQ-20 in Open Questions.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: M
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 5 | Recommended: 12
+Summary: The architecture held and no settled decision was reopened. Five text contradictions remained: AC3's Input fixture gave two errors while claiming one, Rule 7's empty-list ban clashed with empty enemy tags, the one-tick floor of 1/60 was below one tick at the 30 Hz Flow now allows, the Input record's "false by default" bools contradicted Rules 7 and 8, and AC2's "exactly one error" had no stated precedence. The creative director rejected the drift, float-precision and storage-format blockers as already handled or mistaken.
+Prior verdict resolved: Yes (the fourth review's 4 blocking items)
+Findings:
+- [BLOCKING] Acceptance Criteria AC3: drag_slop 15 / tap_slop 15 fails tap_slop's floor too, so two errors; use 20 / 20.
+- [BLOCKING] Rule 7, MVP tags: "empty lists" vs enemy tags that may be empty; name the lists that must be non-empty.
+- [BLOCKING] Field domains: interval floor of one tick (1/60) is below one tick at 30 Hz (Flow Tuning Knobs); user decision, recommended fixed 1/30 s.
+- [BLOCKING] Record table, Input row: bools "false by default" contradict Rules 7 and 8; authored explicitly, false at MVP.
+- [BLOCKING] Rule 7, AC2: no precedence for "exactly one error" (unknown tag vs role-tag count, missing field vs domain).
+- [RECOMMENDED] Rules 9, 13: a local content-test command; typos are the content test's.
+- [RECOMMENDED] Rule 3: scene_ref is an asset reference, not a record reference.
+- [RECOMMENDED] Field domains: "world units" to "field units" (flagged four times).
+- [RECOMMENDED] Field domains: positive minimums for "above 0" floors; a move_speed ceiling.
+- [RECOMMENDED] Rule 9: name Battle HUD's one-digit bonus cap.
+- [RECOMMENDED] Rule 7: more boot-fatal cross-field checks (hero_start in pin_rect, duplicate slots, typed enemy_id and wave_ids).
+- [RECOMMENDED] Rule 1: list exempt constants.
+- [RECOMMENDED] Acceptance Criteria: AC1 duplicate count, AC4 named errors, AC5 per-fault table, AC6 key list, AC8 mutation isolation, AC9 fixture path, AC3 codes and NaN, level_count/is_tower on an unknown ID.
+- [RECOMMENDED] Intent notes for lives_cost 0, cost 0, damage 0.
+- [RECOMMENDED] Routed to ADR-0002: ResourceLoader under export remapping, JSON include filters, duplicate_deep and a recursive compare, JSON numbers as float, NaN reachability, --import before headless CI, null-return error codes, untrusted .tres scripts, synchronous load, no assert on the handler path.
+- [RECOMMENDED] Routed to content tests and owning GDDs: load and can_instantiate() in AC10, visual_key check, last-wave intermission, count x interval, lives_cost vs starting_lives, cost vs starting_gold; Input GDD's record line to list the bools.
+- [RECOMMENDED] Rejected as blocking: scene and data drift (the Stage record holds the layout), slow_strength float precision (GDScript float is 64-bit), storage-format detection and assert stripping (already deferred to the ADR).
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 5e5df4a50191c71f81644957fb43ef96b38ab6d5
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/systems-index.md 46346acf72e112720034dfd4bcd5b35b83b5f552
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+Reviewed-Content-Hash: design/gdd/tower-system.md 83803cb361c7fe6971b87874234be4f565d8651c
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d79fe3bf982a1d15a806cc0725421521a6a735d5
+Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d14444df535b375764cb42
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied in autonomous mode: all 5 blocking items (AC3 fixture at 20 / 20 with 21 passing; named non-empty lists with tags exempt; interval floor 1/30 s citing Flow's Tuning Knobs, decision taken on the creative director's recommendation, since every starter interval is at least 0.125 s; Input bools authored explicitly; Rule 7 precedence and AC2 fixtures) and recommended: field units throughout, Rule 3 scene_ref note, Rule 9 HUD cap and local content-test command, Rule 1 exempt constants, AC1 duplicate count, AC3 NaN exactly one error, level_count and is_tower on an unknown ID.
+Not done: positive minimums, extra cross-field checks, AC4/AC5/AC6/AC8/AC9 rewrites, intent notes, and every routed item.
+Re-review pending: the GDD hash above is of the reviewed text, not this revision.
