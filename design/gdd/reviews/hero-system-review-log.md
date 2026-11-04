@@ -158,36 +158,216 @@ The script re-ran in both hands: every bot result is unchanged, and clamp_pin ma
 ## Revision — 2026-11-02 — Tower review's changes applied, re-review still pending
 Single's level 2 damage is now 21 (Tower System, user decision), so the bot table and results are refreshed and two gates are added, upgrade order and placement. `report_attack` names the call behind `attack_fired`, closing the logged gap. Every gate passes, with the share median at 25.1%, the band's floor.
 
+## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
+A `heavy` now costs 3 lives (Enemy & Wave, user decision), so the bot table, best pins and skill sweep are refreshed. Every gate passes, with the share median at 25.1%.
+
 ## Review — 2026-11-03 — Verdict: NEEDS REVISION
 Review mode: full · Workflow: standard
 Scope signal: L
 Specialists: game-designer, systems-designer, qa-lead, ux-designer, gameplay-programmer, creative-director
-Blocking items: 4 | Recommended: 8
-Summary: No pillar problems and the arithmetic holds; the script reproduces every table row (median share 25.2%, so the earlier 25.1% note was stale). But the share gate measured restraint: a bot that fires whenever Ready keeps one more life and reaches a median of 29.8%, and with exact aim 34% to 41%. The other blockers were the kill preview's timing basis, the cancel ring's radius and stale figures.
-Prior verdict resolved: Yes; all eight review-4 blockers fixed
+Blocking items: 5 | Recommended: 16
+Summary: No pillar concerns and the design has converged: five contract fixes, down from eight, one of them needing a script re-run. The bot table and the mechanics hold; what is missing is where the hand and the IDs come from, the button's centre, two counter definitions, and one current set of re-pin figures. The creative director proposes a focused check of the five edits over a sixth full review.
+Prior verdict resolved: Yes (the fourth review's eight blockers are applied)
 Findings:
-- [BLOCKING] Simulated results and Share gate: the gate measures the mid-skill trigger, not the cooldown; firing on Ready is better play and lifts share to 28% to 38% (41% with exact aim); rounding and inclusivity unstated.
-- [BLOCKING] Visual/Audio, kill preview: positions at lift or at landing unstated; a fast enemy moves 27.5 in the telegraph.
-- [BLOCKING] UI Requirements and Rule 13: the ring at 64 is called the cancel boundary, but a Live aim cancels at 48, so a lift at 55 fires.
-- [BLOCKING] Open Questions line 446 and the revision note: 35% and 44% and 25.1% are stale (32%, 40%, 25.2%).
-- [RECOMMENDED] Left-hand Start/Call is 7.2 units (4.8 dp) from the mirrored button (Battle HUD).
-- [RECOMMENDED] A thumb cannot aim below y 860, hiding the leak-save near the exit.
-- [RECOMMENDED] Wording: "the pin decides which stretch" while re-pinning is free; "release" meant lift and landing.
-- [RECOMMENDED] Acceptance Criteria: tick numbering unstated; criteria 16, 19, 21, 24, 26, 27 need numeric THENs; one array name per burst-outcome gate; real bots not tied to the script; human rows lack sample sizes; Manual list misses rows and sign-off.
-- [RECOMMENDED] Prompts retire on a first burst that hits nobody.
-- [RECOMMENDED] Engine: retry teardown (gameplay-programmer rated blocking; held as for Tower); handlers-issue-no-commands unenforced; update() contract; button "centre" point; Vector2 precision unverified.
-- [RECOMMENDED] Reduce Motion leaves a dead press silent; reach ring contrast unspecified; one input path for the burst.
-- [RECOMMENDED] Formulas: burst_safe_distance assumes the slow outlasts the telegraph; hero_start valid for both hands; clamp's 0.03 bound only for starter shapes; cooldown_left floor is Data's one tick (gameplay-programmer rated blocking; fixture only).
-Disagreements: gameplay-programmer's two blockers (stuck Cooling, retry teardown) held at recommended, since Data floors the cooldown and Tower's teardown item was held today; qa-lead's real-bot, counter-value and array-name blockers held at story level as in review 4, while the share tolerance stayed blocking because the greedy median sits at 30%.
-Fixed in the same session, with three user decisions (2026-11-03): the share gate runs on a greedy bot (fires when Ready at any victim, mid-skill aim and re-pin), median 25% to 30% inclusive and unrounded, none above 40%, today 29.81% and 37.7%; the greedy ceiling above 40% is accepted as skill; `hero_bots.py --greedy` reproduces and asserts it. The kill preview projects positions to landing, with criterion 32. The ring is at 64 while Cancelling and 48 while Live, read through `aim_ring_radius()`, in criterion 13. Stale figures replaced; tick numbering stated; "release" means the landing. Tower's line 120 now cites the greedy gate.
-Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
+- [BLOCKING] Rule 2: the left-hand flag has no home in Data; `reduce_motion` has the same gap.
+- [BLOCKING] Rule 8, Tick: the Hero's `def_id` and the Burst's ID are never sourced.
+- [BLOCKING] Rules 13, 15: the burst button's centre is device-dependent through `burst_y`, and nothing carries it to HeroInput.
+- [BLOCKING] Rule 16: `repins` and `kills_on_hit_3` membership are undefined, and deferred gates depend on them.
+- [BLOCKING] Rule 7, Simulated results, Deferred: two sets of best-pin figures on a user-accepted trade-off.
+- [RECOMMENDED] Rule 4, Handed to owning GDDs, header: stale text.
+- [RECOMMENDED] Tick steps 4, 7: state the burst's `report_attack` impact and radius.
+- [RECOMMENDED] Rules 2, 6, 14: one filter site and a type for the return codes.
+- [RECOMMENDED] Rule 14: `pin_target()` before a first pin.
+- [RECOMMENDED] Simulated results: real bots follow the rules in intermission, so results may shift.
+- [RECOMMENDED] Rules 2, 6: the return value of a failed read inside a command.
+- [RECOMMENDED] Simulated results: state the share band's tolerance; report median kills over all bursts; add a casual bot.
+- [RECOMMENDED] Formulas: walk_ticks' "free moves" wording; `dt` in two variable tables.
+- [RECOMMENDED] UI Requirements: a non-motion cue for a dead press under Reduce Motion.
+- [RECOMMENDED] UI Requirements, Input: ring on press, reticle timing; Input's row disagrees.
+- [RECOMMENDED] Visual Requirements: complete the Reduce Motion row.
+- [RECOMMENDED] UI Requirements: non-kill victims and a zero-victim aim have no mark (`/ux-design`).
+- [RECOMMENDED] Visual Requirements: say the preview shows current positions, up to 27.5 units from where a fast enemy lands.
+- [RECOMMENDED] Open Questions: a burst does 17% to a heavy; record the risk for Enemy & Wave.
+- [RECOMMENDED] Battle HUD log: mis-grabs, cancels per aim, presses captured by the hero.
+- [RECOMMENDED] Player Fantasy, Tuning Knobs: absent (advisory at standard).
+Refuted by checking sources: a stuck cooldown at 0 ticks (Data floors both at one tick, at the real `dt`); an unstated arrival-tick attack (criterion 18); a wrong aim-offset sign passing (criterion 28); an unreaped corpse among victims (Combat's helpers skip the dead); the aim dead zone as a defect (the hard hole is radius 48, no starter path enters it, and radius 70 covers it).
+Reviewed-Content-Hash: design/gdd/hero-system.md c07e192cca761638aa22df0fa1f69848a07a956e
 Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
 Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
-Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
-Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
-Reviewed-Content-Hash: design/gdd/enemy-wave.md 2890a42203fd47a724a105634efd2349ba0b18bf
+Reviewed-Content-Hash: design/gdd/game-concept.md 74aec3a9e2b7094565a249d773621ecaee83c7c7
+Reviewed-Content-Hash: design/gdd/combat-damage.md 40ae59c616520d9cd4b3a5eea61c1ec824b8c0d8
+Reviewed-Content-Hash: design/gdd/enemy-wave.md cfc80084d4b46610e6de31ab9abcffe6910a899d
 Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
-Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 72c80e73e19aaff142fbf3c22477bdecfd092e99
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
-Reviewed-Content-Hash: design/gdd/tower-system.md 2b6f6a42bcfb5c3598682e28cc32b16c150eef2d
-Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 06b90a96f9ffef54b0f7ea5de79ddb809bdba094
+
+## Revision — 2026-11-03 — Five blockers and the stale text applied, re-review pending
+Applied in `design/gdd/hero-system.md`: `left_handed` and `reduce_motion` on Data's Input record, read by the builder; the Hero's ID and `burst_id` passed at build, with a content rule of exactly one Hero record; `burst_button_centre()` as the one button centre; `repins`, `kills_per_burst` and `kills_on_hit_3` defined, with cases added to criterion 16; Rule 7's figures replaced from a fresh run. `design/gdd/data-config-pipeline.md`, `design/gdd/battle-hud.md` and `design/gdd/game-concept.md` carry the matching changes. Rule 4's amend note and the done Combat bullet are removed.
+The script re-ran on the starter stage, default, `--sweeps` and `--left`. The bot table, share median of 25.1% and sweep results match the GDD; only Rule 7's figures were stale, at 3, 2, 5 and 1 against 1, 1, 2 and 4 today. The change is a correction of text, not balance, and the gates are unchanged.
+Awaits the user: they accepted about 3 lives at reach 160 on an earlier run, and today it is about 2 (a mean of 2 on the best pin), with no limit at 1, 0, 1 and 4, so reach adds little. Reach stays 160 until they rule.
+Decided without asking, in autonomous mode: revising now; a pin at the hero's own position does not count as a re-pin (creative director, against qa-lead's reading); the flags' home on the Input record, read directly. The recommended items above stay open.
+
+## Review — 2026-11-03 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, godot-specialist, creative-director
+Blocking items: 6 | Recommended: 15 grouped lines
+Summary: The mechanics, numbers and pillars hold, and no specialist's design objection survived checking. What remained was a builder contract missing from Flow, a test convention that fails correct code, and contradictory or untestable text. The creative director asks that most of the 40-plus findings be treated as precision, not fuel for another round.
+Prior verdict resolved: Yes
+Findings:
+- [BLOCKING] Handed to owning GDDs, Flow: `in_build()`, the hand and the Hero's and Burst's IDs are absent from the builder's owner, which says only "Builds and ticks it".
+- [BLOCKING] Acceptance Criteria preamble, 4, 5, 8: "the entire log" omits the `attack_fired` that Tick steps 4 and 7 emit, so a strict test fails correct code.
+- [BLOCKING] Open Questions, row 1: "4 to 5 lives" contradicts the table (5, 3, 2, 5) and Rule 7 (8, 8, 7, 5).
+- [BLOCKING] Formulas clamp_pin, criterion 14: "64-bit floats" against `Vector2` interfaces is unstated, and the "tie" at (186, 800) is the circle-centre rule, so the tie-break was untested.
+- [BLOCKING] Criterion 27: it cannot fail, since the fixture has only `in_build()`.
+- [BLOCKING] Criterion 16: "set the counters" has no values.
+- [RECOMMENDED] Rule 1, Input Rule 11, Handed to owning GDDs: stale amend text and Input bullet.
+- [RECOMMENDED] Open Questions: the 17% burst against a heavy, raised twice now.
+- [RECOMMENDED] Rule 3: a guard behind "signal handlers never issue commands", for the ADR.
+- [RECOMMENDED] Criteria 4, 7, 15, 18 to 21, 23, 31 and compound criteria 2, 11, 13: exact values and splits; 12, 25, 28, 29, 30 tightened.
+- [RECOMMENDED] Acceptance Criteria coverage: builder injection, `hero_pinned` order, first pin at own position, inclusive radius, non-fatal leak in a telegraph, tower kill emptying the radius, press while Telegraphing, left-hand runs.
+- [RECOMMENDED] Deferred criteria: unmeasurable rows (Hero alone, Best moment, First run, Always-call humans, Radius 70, Pins near a button, Burst between ticks), and "Hero stories" as an owner.
+- [RECOMMENDED] Manual list: no pass descriptions or lead sign-off.
+- [RECOMMENDED] Simulated results: share gate margin of 0.1; `hero_share_bound` has no cadence cap; `damage_per_second` ignores tick rounding.
+- [RECOMMENDED] Formulas: `speed_factor` range, walk_ticks tolerance units, a NaN finger's path to `hold`, leash against `path_width` units.
+- [RECOMMENDED] Rules 7, 9, 3: the reach ring understates landing reach by up to 60; the cooldown is not the pacing lever (about 2 bursts a wave); a `repins` per wave trigger.
+- [RECOMMENDED] Rule 14, UI: a pin has no cancel; cooling digit offset unspecified; finger-to-reticle tether; re-grab at high pins; hero over the button; prompt 700 units from the hero; left-hand unmirrored list and no way to test it (`/ux-design`).
+- [RECOMMENDED] Rule 13: lift-off drift cancels at 65 to 70, no non-visual cue, log `release_state`.
+- [RECOMMENDED] Visual Requirements: Reduce Motion row still incomplete; 2 px and alpha 0.6 primitives; kill-mark flicker hold.
+- [RECOMMENDED] Engine, for the ADR: `update()` after physics ticks; desktop mouse emulation; Callable cycles need a teardown; an enum for return codes; criterion 28's exact-integer scripts.
+- [RECOMMENDED] Player Fantasy, Tuning Knobs: absent (advisory at standard).
+Disagreements, for the user: ux-designer wants exclusion 104 or zone ownership now, against Rule 15's user decision of 60 until the phone test; game-designer wants reach re-simulated or dropped, against keeping 160.
+Refuted by checking sources: a stuck cooldown at 0 ticks (Data floors it, again); `halted()` must include Paused (Flow 15, 17 cancel input and hold a finger dead); Start/Call as a `Button` (HUD draws an Input disc); criterion 29's read log (`burst_id` is not an accessor read); HUD and Hero disagree on the digit (HUD Rule 12 gives press responses to Hero); the hero owning half the button (36% at exclusion 60); FMA across platforms (no GDD promises cross-platform identity); radius 70 unguarded (a user-set pass mark and fallback exist); Pillar 2 requiring a heavy answer at MVP (its clause starts at Vertical Slice).
+Reviewed-Content-Hash: design/gdd/hero-system.md def3c97f988a2d766746461c1534444080e7cb73
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 69276bc59133ed1fc4125a561b829e3bd7eb4156
+Reviewed-Content-Hash: design/gdd/combat-damage.md 40ae59c616520d9cd4b3a5eea61c1ec824b8c0d8
+Reviewed-Content-Hash: design/gdd/enemy-wave.md cfc80084d4b46610e6de31ab9abcffe6910a899d
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9eced0c9ccd235555840
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-03 — Six blockers applied, re-review pending
+Applied in `design/gdd/hero-system.md`: the log convention stated once in the Acceptance Criteria preamble, with criteria 5 and 8 corrected; criterion 14 given real ties, in y on the starter shape and in x on an injected one, both run against the script's `clamp_pin`; PinGeometry's scalar floats and the 32-bit margin stated, with the technical director to confirm; criterion 16 given values; criterion 19 made able to fail; criterion 27 moved to integration as 31, with 28 to 31 renumbered 27 to 30; the stale Open Question, amend text and Input bullet corrected; the heavy risk added to Open Questions; the share margin noted on its gate. `design/gdd/game-state-stage-flow.md` carries the builder's injections.
+Not changed: balance, Rule 15, reach. No script re-run, since no value moved.
+Awaits the user: whether about 2 lives (1, 1, 2, 4) satisfies the concept's "clearly lose" at reach 160. Creative director recommends accepting for MVP. The recommended items above stay open.
+Decided without asking, in autonomous mode: revising now; scalar floats as the representation, pending the technical director.
+
+## User ruling — 2026-11-03
+Accepted about 2 lives (1, 1, 2, 4) as satisfying the concept's "clearly lose" for MVP, with reach staying at 160 (creative director's recommendation). The Pinned once gate and the lanes fallback are unchanged. Updated Rule 7, the Pinned once row, the Open Question and the header.
+
+## Review — 2026-11-03 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, qa-lead, ux-designer, godot-specialist, creative-director
+Blocking items: 2 | Recommended: 9
+Summary: Every stated example recomputes, sibling values agree and the sixth review's blockers are fixed. Two test gaps remain: criterion 15 lets a fake resolver decide the user's "hero wins overlap" ruling, and a pin-only script passes criterion 27, the only proof that bot numbers apply to HeroInput. The creative director finds no design, balance or simulation change is needed, and that the main open risk, thumb aim, needs a phone rather than another review.
+Prior verdict resolved: Yes
+Findings:
+- [BLOCKING] Acceptance Criteria, criterion 15: drag-wins is tested through a fake resolver, with no coordinates.
+- [BLOCKING] Acceptance Criteria, criterion 27: the gesture script has no required content, and the thumb roll is joined to the equivalence test.
+- [RECOMMENDED] Rule 13, Radius 70 row: log `release_state` before the first phone build, since the pass mark counts only fired bursts and a silently cancelling thumb can pass it. Raised twice now.
+- [RECOMMENDED] Rule 10, Share row: run radii 68 and 72 and several variations; 65, 70 and 75 give 24%, 25.1% and 32%, and 25.1% sits on the floor.
+- [RECOMMENDED] Deferred criteria: "Hero stories" is not an owner; human rows lack sample sizes; Best moment cannot fail; "within 40" should exclude fingers within 20 of a button centre.
+- [RECOMMENDED] Open Questions: re-pin (`repins`) and reach have no numeric trigger for their fallbacks.
+- [RECOMMENDED] Criteria 2, 6, 7, 8, 11, 13, 14, 16, 18, 21, 24, 29, 30: missing edges, a Telegraphing press, a loose oracle, compound asserts.
+- [RECOMMENDED] Coverage: Intermission restoring the cooldown, tower kill emptying the radius, enemy exit and off-field in a telegraph, HERO source ID, Paused during an aim.
+- [RECOMMENDED] Simulated results: the real bots must rule out 4-unit hops, which attack at full walking speed; intermission rule in ticks; `hero_share_bound` denominator against Combat's `dealt_total`; `burst_safe_distance` unbounded below; a NaN finger in `clamp`.
+- [RECOMMENDED] For `/ux-design` and the phone test: cancelling shape cue, committed cue, clamp cue, Reduce Motion and photosensitivity, reach dot size, cooling digit under the thumb, left-hand aim row, mis-call row.
+- [RECOMMENDED] For the Input ADR, verified on 4.7: float tolerance in tests and float32-exact boundary values, PinGeometry's single conversion seam, position from start, `_ticking` guard, Callable teardown, `update()` timing, touch emulation and index, typed return enums, gdUnit4 on 4.7.2. Player Fantasy and Tuning Knobs stay absent (advisory at standard).
+Disagreements, for the user: game-designer wants a human-error bot gate or the aim magnet now, against the user-set phone gate and fallback; ux-designer wants cancel feedback and logging blocking, against a desktop MVP; qa-lead listed six blockers, of which the creative director keeps two.
+Refuted by checking sources: no first-pin teaching (the prompt, the nudge and HUD Rule 13 exist); burst never taught (HUD prompt 3 reads "Drag from the big button"); a realistic human cannot win (the 3 s, 50-off bot keeps 6 to 9 lives); cancelling is alpha only (ticks, preview and kill marks also go); arrival-tick attack unsettled (criteria 18 and 19 settle it).
+Reviewed-Content-Hash: design/gdd/hero-system.md e53f138d7dcb82f81ec97959546593402872937d
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 69276bc59133ed1fc4125a561b829e3bd7eb4156
+Reviewed-Content-Hash: design/gdd/combat-damage.md 40ae59c616520d9cd4b3a5eea61c1ec824b8c0d8
+Reviewed-Content-Hash: design/gdd/enemy-wave.md cfc80084d4b46610e6de31ab9abcffe6910a899d
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md bf732dff9591608ebee0b1d8d7127d51c3c9cd2b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9eced0c9ccd235555840
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-03 — Two blockers applied, re-review pending
+Applied in `design/gdd/hero-system.md`: criterion 15 now covers only registration and the centre update; drag-wins moved to new integration criterion 32, with coordinates and the real resolver; criterion 27 given the required content of its script; the thumb roll moved to new criterion 33. Existing criteria keep their numbers.
+Not changed: rules, balance, formulas, simulation. No script re-run, since no value moved. The recommended items above stay open.
+Decided without asking, in autonomous mode: revising now. Left for the user: an eighth full review or the creative director's lighter exit.
+
+## User ruling — 2026-11-03 — APPROVED on a lighter exit
+The user chose the creative director's lighter exit over an eighth full review. One reader (qa-lead) checked criteria 15, 27, 32 and 33 only. 15, 32 and 33 passed. 27 failed on three points: presses released in place never reach `drag_ended`, a wrongly issued `burst` is refused and so invisible to a field comparison, and an aim between `reach − 0.01` and `reach` gets clamped. Its replacement wording was applied and checked against Rules 11 to 13 by the main session, not by a second reader.
+This was not a full review, so this entry has no Review mode line and does not cover a later `/design-review`. The recommended items in the seventh review stay open; `release_state` logging should land before the first phone build.
+Reviewed-Content-Hash: design/gdd/hero-system.md 6c42e0f35c803d364a8156eb02ebd5a781b47949
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 69276bc59133ed1fc4125a561b829e3bd7eb4156
+Reviewed-Content-Hash: design/gdd/combat-damage.md 40ae59c616520d9cd4b3a5eea61c1ec824b8c0d8
+Reviewed-Content-Hash: design/gdd/enemy-wave.md cfc80084d4b46610e6de31ab9abcffe6910a899d
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md bf732dff9591608ebee0b1d8d7127d51c3c9cd2b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9eced0c9ccd235555840
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
+Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Hero view named as drawer of field-anchored visuals (C4, new wording), `visual_key`, L11 condition, L14 row, always-call clause, 100 offset. No rule value changed; Approved stands, pending the user's view.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader)
+Blocking items: 1 | Recommended: 6
+Summary: Lean re-check after the 2026-11-04 Rule 2 amendment. The instant pin leaves the hero's grab disc behind: Rule 15, criterion 15 and Input's Interactions row update the centre only while walking. The other readers of `in_build()` hold. The reader had no shell, so the sim, diffs and scripts were not run by it.
+Prior verdict resolved: See summary
+Findings:
+- [BLOCKING] Rule 15, criterion 15; Input Interactions: update the hero's centre on every position change, and test a press after a Build pin.
+- [RECOMMENDED] Rule 11, Ready ticks row: name `in_build()`, not phases, and state HeroInput's injection.
+- [RECOMMENDED] Simulated results, Open Questions: still name overlapping waves as the fallback, against Flow.
+- [RECOMMENDED] Always-call, humans: "lose much more" has no threshold.
+- [RECOMMENDED] Visual table, Game Feel: no row covers a Build pin; a Build re-pin has no Arrival transition.
+- [RECOMMENDED] Criterion 30: Build re-pin, Build pin at own position, and the fixture's `in_build()` default.
+- [RECOMMENDED] States table: Unpinned row omits the own-position pin.
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User accepted every recommendation ("Implement all recomended"). Applied: the blocker (the registered centre follows every position change, tested after a Build pin) and recommended items, including removing overlapping waves as the fallback, a threshold for humans, and the mono-role gate while calling with a zero-bonus table from `hero_bots.py --calls`. Not done: Rule 11's Ready ticks wording.
+Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader with a shell)
+Blocking items: 0 | Recommended: 4
+Summary: The prior blocker is fixed, and `--calls` matches the table. A sweep from 0.3 to 8 s per gold shows the rate cannot pass the new mono-role gate, which may need a design change. Battle HUD's review adds a blocker on Rule 16's reads, tracked in its log.
+Prior verdict resolved: Yes
+Findings:
+- [RECOMMENDED] Mono-role while calling: "a rate change is the first lever" is false; single only stays at 9 calling when Ready at every rate.
+- [RECOMMENDED] Same row: state it is reported only until first playable, where it blocks, so CI does not go red.
+- [RECOMMENDED] Rule 16: name the source of a held press (see Battle HUD's `button_press()`).
+- [RECOMMENDED] Always-call row says "below"; the mono row is above.
+Reviewed-Content-Hash: design/gdd/hero-system.md d075d8207bffb1b7f4a23a2f0467da21c2509528
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 05e3e8f4ca5b1c2a34b39d2ebc9215b0d5342861
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 0804873149506940e730239e7998a943f8bcc5cd
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c67e5441a28be83b92efa4b903b15c4e76918a6b
+Reviewed-Content-Hash: design/gdd/tower-system.md 86f753dacdcc4d904575ab5d6bdfffb8fd4f6415
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md b869a7ca338cf3100f72219f98e64207b252dec6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 044488039c9a221f998173317300db5f3cd7ab5b
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User chose to keep the mono-role gate while calling, reported only until first playable. Applied: `button_press()`, the digit decision, the corrected rate claim and stage-length wording. Status stands; the hashes above no longer match.
+
+## Revision — 2026-11-04 — after a lean read (not a new verdict)
+One adversarial reader checked the day's added rules (S1, S2, the four cross-review decisions) and returned NEEDS REVISION with 18 findings. All five rated BLOCKING were fixed (Flow Rule 9, Thumb cost pass condition, redraw key, criterion 6, HUD 0.55 evidence). Recommended items 3, 7, 9 to 14, 16 to 18 and part of 8 were fixed. Not done: concept `towers-only` unit at Vertical Slice (15). The fix pass was not re-read, per the one-review, one-fix cap the producer recommended. No hash stamped, because this text has no review verdict.

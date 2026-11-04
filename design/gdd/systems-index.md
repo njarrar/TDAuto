@@ -1,9 +1,9 @@
 # Systems Index: TowerRiot
 
-> **Status**: Draft
+> **Status**: MVP tier approved; Vertical Slice and later systems not yet designed
 > **Created**: 2026-11-01
-> **Last Updated**: 2026-11-02
-> **Source Concept**: design/gdd/game-concept.md (design-review 2026-11-01: NEEDS REVISION — this index follows the *confirmed* hero model from `prototypes/hero-pin-concept/REPORT.md`, not the concept's stale tap-to-move text)
+> **Last Updated**: 2026-11-04
+> **Source Concept**: design/gdd/game-concept.md (Approved 2026-11-01, revised for the *confirmed* hero model from `prototypes/hero-pin-concept/REPORT.md`)
 > **TD-SYSTEM-BOUNDARY**: CONCERNS 2026-11-01 — applied inline (see Dependency Map notes)
 > **CD-SYSTEMS**: CONCERNS (accepted) 2026-11-01 — recorded beneath Priority Tiers
 > **PR-SCOPE**: OPTIMISTIC 2026-11-01 — user chose "Defer, merge, standard": 8 MVP GDDs at `workflow: standard` (`project.yaml` → `workflow_overrides.system_overrides`), `full` from Vertical Slice
@@ -24,14 +24,14 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
-| 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | In Review | design/gdd/game-state-stage-flow.md | Data & Config |
-| 4 | Combat & Damage (inferred) | Gameplay | MVP | In Review | design/gdd/combat-damage.md | — |
-| 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | In Review | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
-| 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | In Review | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input |
+| 1 | Data & Config Pipeline (inferred) | Core | MVP | Approved | design/gdd/data-config-pipeline.md | — |
+| 2 | Input & Gesture Resolver | Core | MVP | Approved | design/gdd/input-gesture-resolver.md | Data & Config |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | Approved | design/gdd/game-state-stage-flow.md | Data & Config, Input, Combat |
+| 4 | Combat & Damage (inferred) | Gameplay | MVP | Approved | design/gdd/combat-damage.md | — (`to_ticks` only) |
+| 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Approved | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
+| 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Approved | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Approved | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State; Battle HUD for HeroInput only |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Approved | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Enemy & Wave, Combat |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
@@ -91,15 +91,15 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Core Layer
 
-1. Game State & Stage Flow — depends on: Data. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
-2. Combat & Damage — no dependencies: callers read values and pass them in. **TD note:** God-object risk; the GDD defines three pieces: DamageEvent (dealer kind and id from day one), Health, Status (slow). ProjectileSpawner cut because hits are instant, pending technical-director confirmation. Hit flashes live here (PR-SCOPE).
+1. Game State & Stage Flow — depends on: Data, Input, Combat. **TD note:** owns the app root (catalogue, fatal screen) and the one battle builder, a plain function called by the scene and by bots (amended by the Game State GDD, since a scene-owned root cannot run headless; technical-director to confirm), that connects `enemy_killed(bounty)`, `enemy_leaked`, `waves_complete` and friends. No system reaches into another; this is how injection-over-singletons is met.
+2. Combat & Damage — no dependencies but `to_ticks`: callers read values and pass them in. **TD note:** God-object risk; the GDD defines three pieces: DamageEvent (dealer kind and id from day one), Health, Status (slow). ProjectileSpawner cut because hits are instant, pending technical-director confirmation. Hit flashes live here (PR-SCOPE).
 3. Stat & Modifier Resolution — depends on: Data. **TD/PR note:** VS tier, but every MVP stat read goes through one accessor so the resolver drops in behind it. Pure function base → flat adds → % multipliers (additive within the bucket). No overrides until something needs them. Stat-source tags reserved now for synergies.
 
 ### Feature Layer
 
 1. Enemy & Wave — depends on: Data, Combat, Game State. Each emitter declares its own signals (Data owns none, per the Data & Config GDD); the composition root wires them. Path and slots moved from the stage scene to the Stage record, technical-director to confirm.
 2. Tower System — depends on: Enemy & Wave, Combat, Input, Data, Game State. Gold income from `enemy_killed(bounty)`. **Split:** TowerSim in the builder and TowerInput in the wrapper, since the chip needs real time while the clock is stopped; technical director to confirm.
-3. Hero System — depends on: Input, Combat, Enemy & Wave, Data. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
+3. Hero System — depends on: Input, Combat, Enemy & Wave, Data, Game State; HeroInput alone also reads Battle HUD's `burst_button_centre()`. **TD note:** Burst depends on Hero inside the GDD; Hero never references Burst; the cooldown display reads from Burst.
 4. Stage Progression & Stars — depends on: Game State, Enemy & Wave, Combat (per-source counters for the report), Data. **TD note:** stars are lives-based, not damage-based.
 5. Skill Point Economy — depends on: Stage Progression, Game State. One-time first-clear grant (design-review ruling pending in the concept revision).
 6. Skill Tree System — depends on: Skill Point Economy, Stat & Modifier, Data.
@@ -108,7 +108,7 @@ Merged by PR-SCOPE: Burst Skill and Pin & Aim Feedback → Hero; Stage & Path �
 
 ### Presentation Layer
 
-1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input.
+1. Battle HUD & Build UI — depends on: Game State, Tower, Hero, Input, Data, Enemy & Wave, Combat.
 2. Visual Feedback & VFX — depends on: Combat, Hero, Tower.
 3. Menu & Screen Flow — depends on: Stage Progression, Skill Tree, Save/Load.
 4. Onboarding Prompts — depends on: Game State, Battle HUD.
@@ -165,8 +165,8 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | System | Risk Type | Risk Description | Mitigation |
 |--------|-----------|-----------------|------------|
 | Input & Gesture Resolver | Design | Pin drag vs slot tap vs burst drag at fingertip size; untested on a phone (CD-PLAYTEST) | Hit-target registry; drag slop ~10–12 dp; phone test with a non-developer tester before Pillar 4 is claimed |
-| Combat & Damage | Technical | God object; attribution depends on `source` being on every DamageEvent | Four-piece decomposition in the GDD; one unit test per piece |
-| Hero System | Design | Hero share 39% (bot) vs 25–30% target; towers-only can win once upgrades exist | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
+| Combat & Damage | Technical | God object; attribution depends on `source` being on every DamageEvent | Three-piece decomposition in the GDD; one unit test per piece |
+| Hero System | Design | Hero share 39% (bot) vs 25–30% expected; towers-only can win once upgrades exist | Waves tuned assuming the hero; human share logged from the first build; "pinned once" bot mode as an acceptance criterion |
 | Stat & Modifier Resolution | Technical | Deferred to VS; retrofit cost if MVP code reads stats directly | Single stat accessor enforced from MVP day 1 |
 | Skill Tree / Synergies | Design | Scarcity rule (~60%) undefined per tier; dominant-build risk | Scarcity restated per tier in the concept revision; one cheap cross-buff at VS tests the hook early |
 
@@ -178,8 +178,8 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 |--------|-------|
 | Total systems identified | 22 |
 | Design docs started | 8 |
-| Design docs reviewed | 1 |
-| Design docs approved | 0 |
+| Design docs reviewed | 8 |
+| Design docs approved | 8 |
 | MVP systems designed | 8/8 |
 | Vertical Slice systems designed | 0/11 |
 
@@ -187,7 +187,6 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 
 ## Next Steps
 
-- [ ] Revise `design/gdd/game-concept.md` per its design review (pin + aim model, Pillar 2 and 4 tests, scarcity, point source)
-- [ ] `/design-system data-config-pipeline` — first in design order
-- [ ] `/design-review` each GDD; `/consistency-check` after the third
-- [ ] `/gate-check technical-setup` when the 8 MVP GDDs are approved
+- [x] `/ux-design` for the arc panels and chip (`design/ux/arc-and-chip.md`); Start/Call and result are in `design/ux/hud.md`
+- [ ] `/architecture-decision` ADR-0001
+- [x] Full `/review-all-gdds` (2026-11-04), then `/gate-check technical-setup` (`production/gate-checks/`)

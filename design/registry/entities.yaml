@@ -54,488 +54,132 @@
 #   in any other shape is reported as unsupported layout, with its number.
 
 version: 1
-last_updated: "2026-11-03"
+last_updated: ""
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
-# Named game-world objects: enemies, towers, the hero, the burst and the stage.
-# Level-keyed attributes are lists in level order: [level 1, level 2].
+# Named game-world objects: enemies, NPCs, characters, factions, bosses.
+# Register an entity here when it appears in more than one GDD — e.g., an
+# enemy defined in combat.md that also drops items listed in inventory.md.
+#
+# Required fields: name, status, source, referenced_by, added
+# Attribute fields: any key stats that could appear in another GDD
+#   (health, damage, drops, faction, etc.)
 
-entities:
-  - name: normal
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-      - design/gdd/battle-hud.md
-    max_hp: 125
-    move_speed: 60
-    bounty: 4
-    lives_cost: 1
-    visual_key: enemy_normal
-    added: 2026-11-03
-    revised: ""
-  - name: fast
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-      - design/gdd/battle-hud.md
-    max_hp: 60
-    move_speed: 110
-    bounty: 3
-    lives_cost: 1
-    visual_key: enemy_fast
-    added: 2026-11-03
-    revised: ""
-  - name: heavy
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-      - design/gdd/battle-hud.md
-    max_hp: 750
-    move_speed: 38
-    bounty: 16
-    lives_cost: 2
-    visual_key: enemy_heavy
-    added: 2026-11-03
-    revised: ""
-  - name: tower_single
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-    role: single_target
-    cost: [50, 60]
-    damage: [12, 21]
-    range: [150, 165]
-    attack_interval: [0.6, 0.6]
-    added: 2026-11-03
-    revised: ""
-  - name: tower_splash
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-    role: splash
-    cost: [70, 80]
-    damage: [20, 30]
-    range: [150, 165]
-    attack_interval: [1.0, 1.0]
-    splash_radius: [55, 75]
-    added: 2026-11-03
-    revised: ""
-  - name: tower_slow
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/combat-damage.md
-    role: slow
-    cost: [60, 70]
-    damage: [0, 0]
-    range: [150, 165]
-    attack_interval: [0.6, 0.6]
-    slow_strength: [0.4, 0.5]
-    slow_duration: [2.0, 2.5]
-    added: 2026-11-03
-    revised: ""
-  - name: hero
-    status: active
-    source: design/gdd/hero-system.md
-    referenced_by:
-      - design/gdd/hero-system.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/data-config-pipeline.md
-    damage: 4
-    attack_interval: 1.0
-    leash_radius: 90
-    walk_speed: 240
-    grab_radius: 56
-    added: 2026-11-03
-    revised: ""
-  - name: burst
-    status: active
-    source: design/gdd/hero-system.md
-    referenced_by:
-      - design/gdd/hero-system.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/tower-system.md
-      - design/gdd/combat-damage.md
-      - design/gdd/battle-hud.md
-    damage: 130
-    radius: 70
-    cooldown: 10
-    telegraph_duration: 0.25
-    reach: 160
-    added: 2026-11-03
-    revised: ""
-  - name: starter_stage
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/tower-system.md
-      - design/gdd/hero-system.md
-      - design/gdd/battle-hud.md
-      - design/gdd/data-config-pipeline.md
-    path_width: 72
-    path_length: 1704
-    path_length_in_field: 1644
-    slot_count: 5
-    starting_lives: 10
-    starting_gold: 120
-    wave_count: 6
-    total_hp: 16790
-    added: 2026-11-03
-    revised: ""
+entities: []
+
+# Example (remove when first real entry is added):
+#
+# entities:
+#   - name: goblin
+#     status: active              # active | deprecated
+#     source: design/gdd/combat.md
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/inventory.md
+#     health: 40
+#     damage: 8
+#     drops:
+#       - item: goblin_arm        # must match an entry in items section
+#         qty: 1
+#         drop_rate: 0.8          # 0.0–1.0
+#     added: 2026-03-26
+#     revised: ""
+
 
 # ─── ITEMS ───────────────────────────────────────────────────────────────────
-# Named collectables, equipment, consumables, currency. None at MVP: gold is a
-# single integer owned by Tower System, with no item records.
+# Named collectables, equipment, consumables, crafting materials, currency.
+# Register an item when its name or value appears in more than one GDD.
+#
+# Required fields: name, status, source, referenced_by, added
+# Attribute fields: value_gold, weight, stackable, category, and any stat
+#   modifiers that another system (e.g., economy, crafting) might reference.
 
 items: []
 
-# ─── FORMULAS ────────────────────────────────────────────────────────────────
+# Example:
+#
+# items:
+#   - name: goblin_arm
+#     status: active
+#     source: design/gdd/combat.md   # drop defined in combat GDD
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/inventory.md    # inventory GDD lists its weight/stack rules
+#       - design/gdd/economy.md      # economy GDD references its sell price
+#     value_gold: 5
+#     weight: 1
+#     stackable: true
+#     category: crafting_material
+#     added: 2026-03-26
+#     revised: ""
 
-formulas:
-  - name: to_ticks
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/game-state-stage-flow.md
-      - design/gdd/combat-damage.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-    variables:
-      - seconds
-      - dt
-    output_range: [0, 36000000]
-    expression: "round(seconds / dt), halves away from zero"
-    notes: "The one conversion for authored time (Flow Rule 4). 1.8 s gives 108 ticks and 0.6 s gives 36 at dt 1/60."
-    added: 2026-11-03
-    revised: ""
-  - name: gold_upper_bound
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/tower-system.md
-    variables:
-      - starting_gold
-      - bounty
-      - count
-    output_range: [120, 630]
-    expression: "starting_gold + sum(bounty * count) over waves 1 to w"
-    notes: "Starter values: 456 through wave 5, 630 through wave 6. Tower builds gold_before_wave on it."
-    added: 2026-11-03
-    revised: ""
-  - name: gold_before_wave
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/enemy-wave.md
-    variables:
-      - gold_upper_bound
-      - early_call_bonus
-      - intermission_duration
-    output_range: [120, 496]
-    expression: "gold_upper_bound(w - 1) + sum(early_call_bonus(intermission_duration(i))) over waves before w"
-    notes: "Starter: 160, 216, 296, 368, 496 before waves 2 to 6; max_final_gold 670. Must stay below the cheapest full board, 550."
-    added: 2026-11-03
-    revised: ""
-  - name: early_call_bonus
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/game-state-stage-flow.md
-      - design/gdd/battle-hud.md
-      - design/gdd/hero-system.md
-    variables:
-      - seconds_left
-      - early_call_seconds_per_gold
-    output_range: [0, 8]
-    expression: "to_ticks(seconds_left) div to_ticks(early_call_seconds_per_gold)"
-    notes: "0 to 8 per call and 40 per stage at starter values. Battle HUD shows it on Call."
-    added: 2026-11-03
-    revised: ""
-  - name: burst_spike
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/hero-system.md
-      - design/gdd/combat-damage.md
-    variables:
-      - D_b
-      - R
-      - d
-      - r
-      - n
-      - s
-    output_range: [2, 1000000]
-    expression: "(D_b * V_b) / (d * V_s)"
-    notes: "Gate: at least 2 for every splash level on every group of 5 or more. Starter lowest 5.78."
-    added: 2026-11-03
-    revised: ""
-  - name: display_seconds
-    status: active
-    source: design/gdd/battle-hud.md
-    referenced_by:
-      - design/gdd/battle-hud.md
-      - design/gdd/hero-system.md
-    variables:
-      - cooldown_left
-      - dt
-    output_range: [0, 600]
-    expression: "see Battle HUD Formulas"
-    notes: "Hero cooldown_digit() shows display_seconds of cooldown_left."
-    added: 2026-11-03
-    revised: ""
-  - name: hero_share
-    status: active
-    source: design/gdd/combat-damage.md
-    referenced_by:
-      - design/gdd/combat-damage.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-    variables:
-      - dealt_hero
-      - dealt_burst
-      - dealt_total
-    output_range: [0, 1]
-    expression: "(dealt_hero + dealt_burst) / dealt_total, and 0 when dealt_total is 0"
-    notes: "Real damage only, so overkill cannot inflate it. Hero gates its median at the greedy bot (hero_share_band)."
-    added: 2026-11-03
-    revised: ""
+
+# ─── FORMULAS ────────────────────────────────────────────────────────────────
+# Named calculations with defined variables and output ranges.
+# Register a formula when its output feeds into another system's input,
+# or when another GDD references it by name.
+#
+# Required fields: name, status, source, referenced_by, variables[],
+#   output_range[min, max], added
+# Optional: expression (the actual formula), notes
+
+formulas: []
+
+# Example:
+#
+# formulas:
+#   - name: damage_formula
+#     status: active
+#     source: design/gdd/combat.md
+#     referenced_by:
+#       - design/gdd/combat.md
+#       - design/gdd/progression.md   # progression GDD scales attack variable
+#     variables:
+#       - attack
+#       - defense
+#       - crit_chance
+#       - crit_multiplier
+#     output_range: [0, 999]
+#     expression: "max(0, attack - defense) * (1 + crit_chance * crit_multiplier)"
+#     notes: "Output feeds into health-system damage intake. Min is 0 (armour
+#       can absorb all damage). Max is uncapped in formula but tuning knob
+#       damage_cap in combat.md clamps at 999."
+#     added: 2026-03-26
+#     revised: ""
+
 
 # ─── CONSTANTS ───────────────────────────────────────────────────────────────
+# Named numerical values referenced across multiple systems.
+# Register a constant when it is defined in one GDD but another GDD must
+# agree with it (e.g., gold carry limit defined in economy but checked in
+# inventory, or base inventory slots defined in inventory but displayed in HUD).
+#
+# Required fields: name, status, source, referenced_by, value, unit, added
 
-constants:
-  - name: dt
-    status: active
-    source: design/gdd/game-state-stage-flow.md
-    referenced_by:
-      - design/gdd/game-state-stage-flow.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/combat-damage.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-      - design/gdd/data-config-pipeline.md
-    value: 0.0166667
-    unit: seconds
-    notes: "1/60, the fixed tick; an engine constant, not a catalogue value"
-    added: 2026-11-03
-    revised: ""
-  - name: field_size
-    status: active
-    source: design/gdd/battle-hud.md
-    referenced_by:
-      - design/gdd/battle-hud.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/input-gesture-resolver.md
-    value: [540, 960]
-    unit: field units
-    added: 2026-11-03
-    revised: ""
-  - name: top_band_bottom
-    status: active
-    source: design/gdd/battle-hud.md
-    referenced_by:
-      - design/gdd/battle-hud.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-    value: 174
-    unit: field units (y)
-    notes: "Lowest edge of the top band at the largest inset; L6 and pin_rect hold to it"
-    added: 2026-11-03
-    revised: ""
-  - name: burst_button_line
-    status: active
-    source: design/gdd/battle-hud.md
-    referenced_by:
-      - design/gdd/battle-hud.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-    value: [456, 816, 888]
-    unit: field units (x, y_min, y_max)
-    notes: "Right hand; left hand x is 84. L3, L7 and pin_exclusion test this line"
-    added: 2026-11-03
-    revised: ""
-  - name: start_call_centre
-    status: active
-    source: design/gdd/battle-hud.md
-    referenced_by:
-      - design/gdd/battle-hud.md
-      - design/gdd/hero-system.md
-    value: [186, 800]
-    unit: field units
-    notes: "Hit radius 48, both hands"
-    added: 2026-11-03
-    revised: ""
-  - name: hit_radius_slot_tower
-    status: active
-    source: design/gdd/input-gesture-resolver.md
-    referenced_by:
-      - design/gdd/input-gesture-resolver.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/tower-system.md
-      - design/gdd/battle-hud.md
-    value: 36
-    unit: field units
-    added: 2026-11-03
-    revised: ""
-  - name: hit_radius_burst_button
-    status: active
-    source: design/gdd/input-gesture-resolver.md
-    referenced_by:
-      - design/gdd/input-gesture-resolver.md
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/battle-hud.md
-    value: 48
-    unit: field units
-    added: 2026-11-03
-    revised: ""
-  - name: hit_radius_hero
-    status: active
-    source: design/gdd/input-gesture-resolver.md
-    referenced_by:
-      - design/gdd/input-gesture-resolver.md
-      - design/gdd/hero-system.md
-      - design/gdd/battle-hud.md
-    value: 56
-    unit: field units
-    added: 2026-11-03
-    revised: ""
-  - name: drag_priority_hero
-    status: active
-    source: design/gdd/input-gesture-resolver.md
-    referenced_by:
-      - design/gdd/input-gesture-resolver.md
-      - design/gdd/hero-system.md
-    value: 200
-    unit: priority
-    notes: "Burst button DRAG priority is 100, so a press inside both drags the hero"
-    added: 2026-11-03
-    revised: ""
-  - name: chip_window
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/input-gesture-resolver.md
-      - design/gdd/battle-hud.md
-    value: [200, 1500]
-    unit: ms
-    notes: "Commit when 200 <= elapsed < 1500 at release"
-    added: 2026-11-03
-    revised: ""
-  - name: chip_disc
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/battle-hud.md
-      - design/gdd/input-gesture-resolver.md
-    value: [300, 40, 76]
-    unit: (TAP priority, radius, offset above tower in field units)
-    added: 2026-11-03
-    revised: ""
-  - name: intermission_duration
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/hero-system.md
-      - design/gdd/tower-system.md
-      - design/gdd/game-state-stage-flow.md
-    value: 15
-    unit: seconds
-    notes: "Every starter position; at least cooldown + telegraph (615 ticks) and at most 30 s"
-    added: 2026-11-03
-    revised: ""
-  - name: early_call_seconds_per_gold
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/hero-system.md
-      - design/gdd/data-config-pipeline.md
-    value: 1.8
-    unit: seconds per gold
-    added: 2026-11-03
-    revised: ""
-  - name: hero_start
-    status: active
-    source: design/gdd/hero-system.md
-    referenced_by:
-      - design/gdd/hero-system.md
-      - design/gdd/battle-hud.md
-      - design/gdd/data-config-pipeline.md
-    value: [350, 800]
-    unit: field units
-    notes: "102 from the nearest slot, 80 from the path"
-    added: 2026-11-03
-    revised: ""
-  - name: pin_exclusion_radius
-    status: active
-    source: design/gdd/hero-system.md
-    referenced_by:
-      - design/gdd/hero-system.md
-      - design/gdd/battle-hud.md
-      - design/gdd/data-config-pipeline.md
-    value: 60
-    unit: field units
-    notes: "Hero grab 56 plus 4"
-    added: 2026-11-03
-    revised: ""
-  - name: cheapest_full_board
-    status: active
-    source: design/gdd/tower-system.md
-    referenced_by:
-      - design/gdd/tower-system.md
-      - design/gdd/enemy-wave.md
-    value: 550
-    unit: gold
-    notes: "Five single towers at level 2; gold_before_last_wave must stay below it"
-    added: 2026-11-03
-    revised: ""
-  - name: hero_share_band
-    status: active
-    source: design/gdd/hero-system.md
-    referenced_by:
-      - design/gdd/hero-system.md
-      - design/gdd/game-concept.md
-    value: [0.25, 0.30, 0.40]
-    unit: share (median min, median max, any build max)
-    notes: "Median of mixed builds at the greedy bot, inclusive, unrounded (user, 2026-11-03)"
-    added: 2026-11-03
-    revised: ""
-  - name: enemy_pool
-    status: active
-    source: design/gdd/enemy-wave.md
-    referenced_by:
-      - design/gdd/enemy-wave.md
-      - design/gdd/tower-system.md
-    value: 48
-    unit: enemies
-    notes: "peak_alive_ub cap, art bible section 8"
-    added: 2026-11-03
-    revised: ""
+constants: []
+
+# Example:
+#
+# constants:
+#   - name: gold_carry_limit
+#     status: active
+#     source: design/gdd/economy.md
+#     referenced_by:
+#       - design/gdd/economy.md
+#       - design/gdd/inventory.md   # inventory enforces the carry limit
+#       - design/gdd/ui.md          # HUD displays current gold vs limit
+#     value: 9999
+#     unit: gold
+#     added: 2026-03-26
+#     revised: ""
+#
+#   - name: base_inventory_slots
+#     status: active
+#     source: design/gdd/inventory.md
+#     referenced_by:
+#       - design/gdd/inventory.md
+#       - design/gdd/progression.md  # progression unlocks additional slots
+#     value: 20
+#     unit: slots
+#     added: 2026-03-26
+#     revised: ""

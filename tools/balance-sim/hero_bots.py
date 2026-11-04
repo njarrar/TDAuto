@@ -5,14 +5,14 @@ Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check
      python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
      python3 tools/balance-sim/hero_bots.py --orders (fill first against upgrading in pairs, every placement)
-     python3 tools/balance-sim/hero_bots.py --greedy (the share gate's bot: fires whenever Ready with any enemy in the disc)
+     python3 tools/balance-sim/hero_bots.py --calls  (mid-skill: never calling, calling when the burst is Ready, always calling, each with and without the bonus)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
 import itertools
 import math,sys
 DT=1/60; BR=70; BLOG=[]; THUMB=None; START=(350.0,800.0)
-PATH=[(-40,226),(430,226),(430,400),(110,400),(110,570),(270,570),(270,980)]
-SLOTS=[(270,320),(190,485),(350,485),(170,700),(370,700)]
+PATH=[(-40,210),(430,210),(430,400),(110,400),(110,570),(270,570),(270,980)]
+SLOTS=[(270,305),(190,485),(350,485),(170,700),(370,700)]
 cum=[0]
 for a,b in zip(PATH,PATH[1:]): cum.append(cum[-1]+math.dist(a,b))
 LEN=cum[-1]
@@ -22,7 +22,7 @@ def pos(d):
         if d<cum[k+1]:
             t=(d-cum[k])/(cum[k+1]-cum[k]); a,b=PATH[k],PATH[k+1]
             return (a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1]))
-EN={'n':(125,60,4,1),'f':(60,110,3,1),'h':(750,38,16,2)}
+EN={'n':(125,60,4,1),'f':(60,110,3,1),'h':(750,38,16,3)}
 WAVES=[([('n',8,1.5,0)],15),([('n',6,.6,0),('n',6,.6,12)],15),([('n',12,.7,0),('f',8,.5,0)],15),
 ([('h',2,3,0),('n',8,.6,8)],15),([('f',8,.4,0),('h',2,4,0),('n',10,.5,4),('f',8,.4,16)],15),
 ([('h',4,3,0),('n',12,.5,10),('f',10,.4,20),('n',8,.5,24)],15)]
@@ -116,6 +116,7 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
     if hero:
         hx=list(START); pin=hero.get('pin',START)
         pinned=hero['mode']=='once' or (hero['mode']=='driven' and not hero.get('repin',True))
+        if pinned: hx=list(pin)  # Hero Rule 2: a pin in Build places the hero at once
     hcd=0; bcd=0; bwait=0; bq=None; tick=0; wt=[]
     goldhist=[]
     for wi,(groups,inter) in enumerate(WAVES):
@@ -208,8 +209,9 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
         if wi<len(WAVES)-1:
             # intermission
             n=tk(inter)
-            wait=0 if early else n
-            if early: gold+=int(n//tk(bonus))
+            # early: True calls at once; 'ready' calls the moment the burst is Ready (Flow Rule 9's gate)
+            wait=(min(bcd,n) if early=='ready' else 0) if early else n
+            if early: gold+=int((n-wait)//tk(bonus))
             tick+=wait
             for _ in range(wait):
                 for t in towers.values():
@@ -308,19 +310,6 @@ def orders():
         fl=[_lives(fill(p,ORD)) for p in ps]; pr=[_lives(pairs(p,ORD)) for p in ps]
         print(f"{lab:27} placements {len(ps)} | fill first median {median(fl)} range {min(fl)}-{max(fl)} | upgrade in pairs median {median(pr)} range {min(pr)}-{max(pr)}")
         assert median(pr)>=median(fl) and max(fl)-min(fl)>=3
-GREEDY=dict(MID,need=1)
-def greedy():
-    # Hero GDD share gate: mid-skill re-pin and aim, but fires whenever Ready with any enemy in the disc
-    sh=[]
-    for lab,hb in (('greedy',GREEDY),('greedy ceiling',dict(CEIL,need=1))):
-        rs=[]
-        for b,o in MIXED.items():
-            BLOG.clear();r=run(F,o,hero=dict(hb,reach=160.0));k3=[k for hh,k in BLOG if hh>=3]
-            rs.append(r['hs'])
-            print(f"{lab:18} {b:27} {fm(r)} share {r['hs']*100:.1f} burst {r['bs']*100:.1f} bursts {len(BLOG)} kills3+ {median(k3) if k3 else 0} {r['mins']:.1f}m")
-        print(f"{lab}: median share {median(rs)*100:.2f}, max {max(rs)*100:.1f}")
-        if hb is GREEDY: sh=rs
-    assert .25<=median(sh)<=.30 and max(sh)<=.40
 if __name__=='__main__':
     assert valid_pin(START) and valid_pin((270,480))
     check_clamp()
@@ -333,8 +322,9 @@ if __name__=='__main__':
             print(lab,[(b,fm(r:=run(F,o,hero=dict(MID,reach=160.0,**mm))),round(r['hs']*100)) for b,o in MIXED.items()])
     elif '--orders' in sys.argv:
         orders()
-    elif '--greedy' in sys.argv:
-        greedy()
+    elif '--calls' in sys.argv:
+        for b,o in BUILDS.items():
+            print(f"{b:27}",' | '.join(f"{lab} {fm(r:=run(F,o,early=e,bonus=bn,hero=dict(MID,reach=160.0)))} {r['mins']:.1f}m gold {r['gold']}" for lab,e,bn in (('never',False,1.8),('ready','ready',1.8),('ready no bonus','ready',1e9),('always',True,1.8),('always no bonus',True,1e9))))
     elif '--left' in sys.argv:
         HAND='left'; table()
     else:

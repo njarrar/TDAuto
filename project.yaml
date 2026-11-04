@@ -8,7 +8,7 @@ framework:
   last_upgraded: 2026-10-19
 
 project:
-  stage: Systems Design
+  stage: Technical Setup
 
 # NOTE: this template ships with no `modes:` block, and the six knobs below must
 # never be added to one.
@@ -32,7 +32,6 @@ project:
 modes:
   rigor: full
   automation: autonomous
-  workflow: standard
 
 engine:
   name: "Godot"

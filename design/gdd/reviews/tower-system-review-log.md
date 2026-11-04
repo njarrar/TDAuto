@@ -47,39 +47,65 @@ User decision: filling every slot before upgrading must not be the answer. Singl
 Blockers: the splash figure now reads 0.57 on two victims and 0.86 on three; Battle HUD and Hero are listed as existing downstream GDDs; Rule 8 cites the chip's draining bar, and the question is closed; the 0-bounty edge case says no content row catches it; Combat Rule 12 names `report_attack`, used by Tower and Hero; Data Rule 10 names `level_count(def_id)`, and `is_tower` is no longer called new; criteria 21 and 5 are rewritten.
 The bots re-ran in both hands. Every gate passes, but the share median is now 25.1%, at the band's floor. Recommended items from the review stay open.
 
-## Review — 2026-11-03 — Verdict: NEEDS REVISION
-Review mode: full · Workflow: standard
-Scope signal: L
-Specialists: game-designer, systems-designer, economy-designer, qa-lead, ux-designer, godot-specialist, creative-director
-Blocking items: 4 | Recommended: 11
-Summary: The core loop, gold arithmetic and review 1 fixes hold; every revision item is factual or testability. The prose claimed more than the data: "9 lives on all four" is one placement, and a paired run shows upgrading in pairs better on 22 of 90 placements, equal on 51 and worse on 17, with a positive mean on every mix. creative-director put the user decision back as a confirmation: accept "weakly better, placement matters more" or demand a clear lead through another retune.
-Prior verdict resolved: Yes; all eight review-1 blockers fixed
+## Revision — 2026-11-02 — All recommended items applied, re-review pending
+User asked for all 14. Fill then upgrade was settled in the last revision. Rule 4 has the mis-fire fallback order; Rule 12 no longer claims no lost progress; the Summary separates gold from commitment; the opening dead zone is accepted in writing; `wave_income` adds a floor and a ceiling per wave, and the floor now catches a 0-bounty stage; Rule 16 records the free 4.75 s; `burst_spike` is called a heuristic; quantisation and the wasted weak slow are recorded.
+New: `slows_applied()` on Tower and Slowed N on the result, in Battle HUD Rules 15 and 19, so slow shows its value. The concept notes that towers-only now loses. The UX flag lists what `/ux-design` must specify; the ADR note lists what must be settled before TowerInput stories; the chip's disc-only commit is an Open Question.
+Acceptance Criteria are rewritten: 28 become 67, bundles split, missing rules covered, Integration moved, fixtures fixed, Manual made measurable.
+Decided without asking, in autonomous mode: the income bounds (cheapest cost, twice the dearest), accepting the dead zone, and the Slowed line. None changes a balance number, so the bots were not re-run. Whether Slowed fits Won's panel is unverified.
+
+## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
+A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are refreshed; single alone now wins with 6 lives. `burst_spike` no longer cites a gate of 5 hits, since Enemy & Wave's gates use 4.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `early_call_bonus(seconds_left)` added to Rule 17's reads (N3), `visual_key` names, `to_ticks` dependency.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader)
+Blocking items: 1 | Recommended: 8
+Summary: Lean re-review. All eight blockers from 2026-11-02 are resolved. New: with calling now a safe skip, its bonus lifts single-only to tie the mixes, an outcome used to reject other values, and the mono-role gate measures only uncalled play. User decision on the bonus. The reader had no shell, so the sim, diffs and scripts were not run by it.
+Prior verdict resolved: Yes
 Findings:
-- [BLOCKING] Starter values, line 118: "wins with 9 lives on all four mixed builds" is one fixed placement; medians are 5 to 9 and lows reach 0.
-- [BLOCKING] Starter values, line 120: "filling first never comes out ahead" holds for medians only; fill first wins 17 of 90 placements.
-- [BLOCKING] Starter values and log: share median 25.2% (Hero) against 25.1% (revision log); the gate sits at its 25% floor.
-- [BLOCKING] Acceptance Criteria, 5: the upgrade fixture cannot hold NO_TOWER and MAX_LEVEL at once; spy scope over is_tower and level_count unclear.
-- [RECOMMENDED] Formulas: cite the project's to_ticks (systems-designer and godot-specialist rated "undefined" blocking; false, it is defined in Enemy & Wave).
-- [RECOMMENDED] Rule 12: "no lost progress" still false (open since review 1).
-- [RECOMMENDED] Rule 5: HALTED against NO_GOLD precedence after the cost read.
-- [RECOMMENDED] Manual: no chip or arc screenshot with sign-off (qa-lead rated blocking; the UI gate binds at story close).
-- [RECOMMENDED] Rule 8: a reflexive double tap at 200 to 300 ms can commit; phone test has no sample size (ux-designer rated blocking).
-- [RECOMMENDED] ADR line: re-entrancy and the ChipWindow clock and order (godot-specialist rated blocking; review 1 deferred them to the Input ADR).
-- [RECOMMENDED] Content rules: no per-wave scarcity check; 750 > 670 tests gold too late to spend; about one decision per wave.
-- [RECOMMENDED] Economy and roles: slow can be a trap (second slow redundant, weakest upgrade); wrong builds unrecoverable; early-call bonus barely a decision.
-- [RECOMMENDED] UX: Reduce Motion refusal gives no cue (ux-designer rated blocking; stays a /ux-design must); nothing teaches the second tap; 1.5 s not adjustable; slot 0 chip reach; arc panel text fit.
-- [RECOMMENDED] Acceptance Criteria: tighten 10, 14, 21, 22, 26, 27; assert the upgrade success log; cover Rules 7, 8, 10, 17 and edge cases; define fixtures B and C; thresholds for deferred and manual rows.
-- [RECOMMENDED] Engine: every chip close path unregisters its disc; retry teardown of registrations; chip routing in a pure class; event-driven redraw.
-Disagreements: to_ticks "undefined" (systems-designer, godot-specialist) against the main review, which found it defined; "670 does not follow" (systems-designer) false, line 216 defines it; share gate on seed variance (game-designer) moot, the bots are not random; ADR-deferred items, the double-tap guard, Reduce Motion feedback and the chip screenshot held at recommended by creative-director against their specialists' blocking ratings.
-Fixed in the same session: all four blockers (line 118 now separates the fixed placement from the medians; line 120 gives the paired result and the share at its floor; criterion 5 is a sequence with spy scope stated), plus the to_ticks citation, Rule 12's wording, HALTED before NO_GOLD, chip and arc screenshots in Manual, the phone test's sample size and 300 ms fallback, and re-entrancy on the ADR line. User decision taken in autonomous mode, logged, open to the user: accept as delivered (upgrading weakly better, placement matters more) rather than retune.
-Reviewed-Content-Hash: design/gdd/tower-system.md 73aeab735d3511e2c67be2fca7deea1d3cdd5f2e
+- [BLOCKING] Rule 16, Starter values: decide the bonus. Cut it, or keep it and gate mono-role while calling. Fix Rule 14 and Open Questions row 1 to match.
+- [RECOMMENDED] Rule 16: the one-tick sentence should say the wave commits at once and members spawn next tick; "costs burst recovery" omits re-pin and build time.
+- [RECOMMENDED] Formulas: "two with every call" holds only buying cheapest first.
+- [RECOMMENDED] Hero's "from the gold": `--calls` cannot separate gold from time; add a zero-bonus comparison.
+- [RECOMMENDED] Starter values: "every build loses without the hero" was tested on one placement per mix.
+- [RECOMMENDED] Cross-References: no Hero or Battle HUD rows.
+- [RECOMMENDED] 40 gold moves a purchase a wave earlier on some mixes; hand arithmetic, not run.
+Reviewed-Content-Hash: design/gdd/tower-system.md 83803cb361c7fe6971b87874234be4f565d8651c
 Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
 Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
-Reviewed-Content-Hash: design/gdd/game-concept.md ed25cb702da175ffd4e9fbebb4a42b147cbffa0d
-Reviewed-Content-Hash: design/gdd/combat-damage.md 9fe61dab43d04486b54833702d9215b1c72762b5
-Reviewed-Content-Hash: design/gdd/enemy-wave.md 2890a42203fd47a724a105634efd2349ba0b18bf
-Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d30777d982233c4efe7199017dec3a529ef504fc
-Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b81528a4102d977ed04d869e0f4ecc9a1b117559
-Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
-Reviewed-Content-Hash: design/gdd/hero-system.md 6318793eec275f8d1f5e0bd0b3c3f7a2a7d5aa5f
-Reviewed-Content-Hash: design/gdd/battle-hud.md a8f14586cae3c5c253117dbf2e0960855d3ec009
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User accepted every recommendation ("Implement all recomended"). Decision: keep the bonus and gate mono-role while calling, on new evidence (cutting it does not end the tie and fails the 2-lives gate on one mix). Applied: Rules 14 and 16, Open Questions row 1, and recommended items including Hero and Battle HUD cross-references. The new gate fails today by design, and tuning at first playable must pass it.
+Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader with a shell)
+Blocking items: 0 | Recommended: 3
+Summary: The prior blocker is resolved: the bonus stays and mono-role is gated while calling. `--calls` and the hand arithmetic match. The gate has no known passing tuning.
+Prior verdict resolved: Yes
+Findings:
+- [RECOMMENDED] Open Questions row 1, Hero's row: answer "is the rate the lever?" with no.
+- [RECOMMENDED] "Where to build": "every gate passes" holds only uncalled.
+- [RECOMMENDED] "This run changed the enemies": qualify "win with only 6 lives" as uncalled.
+Reviewed-Content-Hash: design/gdd/tower-system.md 86f753dacdcc4d904575ab5d6bdfffb8fd4f6415
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 05e3e8f4ca5b1c2a34b39d2ebc9215b0d5342861
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 0804873149506940e730239e7998a943f8bcc5cd
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c67e5441a28be83b92efa4b903b15c4e76918a6b
+Reviewed-Content-Hash: design/gdd/hero-system.md d075d8207bffb1b7f4a23a2f0467da21c2509528
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md b869a7ca338cf3100f72219f98e64207b252dec6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 044488039c9a221f998173317300db5f3cd7ab5b
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Recommended text applied after the Approved verdict: the rate claim, uncalled qualifiers and `chip_state()`'s window. Status stands; the hashes above no longer match.
