@@ -158,6 +158,7 @@ state_ownership:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - state: sim_time
@@ -199,6 +200,28 @@ state_ownership:
     write_access: flow-only
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - state: hit_target_registry
+    status: active
+    owner_system: input-resolver
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    interface: "InputResolver.register(centre, radius, accepts, priority, sink) -> int id (NONE on invalid), unregister(id), set_centre(id, centre), set_enabled(id, enabled); legal in any state and inside handlers; effective at the next press; rows hold values only, owners hold int ids"
+    write_access: owners-through-registry-calls
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - state: battle_resolver
+    status: active
+    owner_system: battle-builder
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    interface: "Battle.resolver: InputResolver, read-only by contract, created in Builder step 2 by InputResolver.create(drag_slop, tap_slop, dev_error); the wrapper hands it to InputAdapter, HeroInput, TowerInput, HudLogic and GestureLog, each of which drops it in detach()"
+    write_access: battle-builder-only
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-04
     revised: ""
 
@@ -376,6 +399,7 @@ interfaces:
     signal_signature: "press/move/release(pointer: int, pos: Vector2 field units), cancel_pointer(pointer), cancel(); queued by InputAdapter and delivered in InputAdapter.flush(), which the wrapper calls at frame step 0; cancel_all() empties the queue; every forwarded press ends exactly once"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - contract: battle_tick
@@ -465,6 +489,7 @@ interfaces:
     signal_signature: "pressed(best_tap: int, best_drag: int, p: Vector2), tapped(best_tap: int, p: Vector2), ground_tapped(p: Vector2), drag_started(best_drag: int, press_pos: Vector2, p: Vector2), drag_moved(best_drag: int, press_pos: Vector2, p: Vector2), drag_ended(best_drag: int, press_pos: Vector2, release_pos: Vector2), drag_cancelled(best_drag: int), became_idle(); drag_cancelled and became_idle listeners never issue commands; internals ADR-0008"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - contract: battle_emitter_enumeration
@@ -477,6 +502,34 @@ interfaces:
     signal_signature: "Battle.EMITTER_KEYS and Battle.emitters() -> Array[Object] (flow, combat, enemy_wave, tower_sim, hero_sim, resolver); contract data in tests/integration/battle_wiring/battle_signal_contract.gd (WIRING, VIEW_ALLOWLIST)"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - contract: resolver_reentrancy
+    status: active
+    pattern: direct_call
+    producer: input-resolver
+    consumers:
+      - input-adapter
+      - hero-input
+      - tower-input
+      - battle-hud
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    signal_signature: "Gesture calls go through one FIFO queue drained by the outermost call; each call commits then emits its whole batch, became_idle last; a call made inside a handler runs after the current batch; registry calls are immediate; cancel-then-press is two steps; 64-call cap whose abort discards new calls; InputAdapter.flush() calls recover_if_stuck() first"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - contract: gesture_record
+    status: active
+    pattern: direct_call
+    producer: input-resolver
+    consumers:
+      - gesture-log
+      - test-harness
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    signal_signature: "InputResolver.last_gesture() -> GestureRecord: null before the first gesture, else a new copy (serial, pointer, press_pos, end_pos, moves, max_travel, winners, sink flag, frozen centres, candidates and WinRule per class, slop, Outcome); finalised before became_idle"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
 
@@ -602,6 +655,7 @@ api_decisions:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - purpose: release_relevant_checks
@@ -663,6 +717,7 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - purpose: sim_position_representation
@@ -675,6 +730,7 @@ api_decisions:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
   - purpose: display_stretch
@@ -796,6 +852,36 @@ api_decisions:
     reason: "Names exactly the missing, extra or flagged connection; shapes pending ADR-0006 V2 and V3"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: resolver_position_maths
+    status: active
+    api: "Vector2 at the resolver API and in payloads, passed through unchanged; inside, .x and .y read into float and squared distances compared in float; geometry stored as float pairs"
+    not: "Vector2 methods or operators in resolver decisions; payload positions built from arithmetic"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    reason: "Vector2 is expected 32-bit (QQ-05, ADR-0009 V1); the resolver chooses which command runs, and the equivalence test compares bit for bit"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: resolver_error_reporting
+    status: active
+    api: "InputResolver reports bad registrations and non-finite input through the dev_error Callable passed to create(), falling back to push_error when it is not valid"
+    not: "assert, print, a silent drop"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    reason: "Survives release builds (ADR-0001 Decision 4) and lets tests assert the report without engine-error capture"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: dev_log_file_append
+    status: active
+    api: "FileAccess READ_WRITE when the file exists, else WRITE; seek_end(); one handle; flush() after each line; check the bool every store_* returns"
+    not: "FileAccess WRITE on an existing log (truncates), one open per line"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    reason: "FileAccess has no append mode (engine check, V8 NEEDS VERIFICATION); Android can kill the app between lines"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
 
@@ -1003,6 +1089,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
   - pattern: engine_time_in_sim
+    # Note (ADR-0008): the development-only GestureLog under src/presentation/dev/ stamps Time.get_ticks_msec(); it is neither sim code nor a real-time model, and the lint must not flag that folder.
     status: active
     description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* in sim code or in real-time models; _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
     why: "Sim time must enter only through Battle.tick, and the frame order must be one function"
@@ -1037,6 +1124,8 @@ forbidden_patterns:
     description: "HeroInput.update() never runs before the frame's ticks; it runs first in frame step 4, so the hit-disc centre and aim_point() match the drawn frame."
     why: "Before the ticks, a press on a walking hero is tested against where it was a frame earlier (TD-ADR T2)"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
   - pattern: unordered_iteration_in_sim
     status: active
@@ -1094,6 +1183,30 @@ forbidden_patterns:
     description: "Listeners of attack_fired and damage_applied never call the StatAccessor."
     why: "Combat injects no halted(); its listeners must not be able to reach fatal (ADR-0009 Decision 4)"
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: registry_holds_owner
+    status: active
+    description: "No InputResolver target row stores an owner, node, Callable or any object; owners hold int ids and drop them, and the resolver, in detach()."
+    why: "A reference from the resolver to wrapper nodes is a cycle or a teardown leak (ADR-0001)"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+  - pattern: gesture_call_outside_adapter
+    status: active
+    description: "No production code except InputAdapter.flush() calls InputResolver.press, move, release, cancel_pointer or recover_if_stuck; cancel() only from cancel_all() and the wrapper's detach(); no drag_cancelled or became_idle listener makes a gesture call or issues a command."
+    why: "G1 to G6 listeners may issue commands only because those signals fire inside flush() at frame step 0 (ADR-0006 rule 3)"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+  - pattern: resolver_new_outside_create
+    status: active
+    description: "InputResolver.new( appears only in input_resolver.gd and under tests/; production code uses InputResolver.create and checks for null; fakes use FakeResolver.new, never create."
+    why: "A constructor cannot refuse bad slops (Input Rule 9); static create is not virtual"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+  - pattern: vector2_in_dev_log_record
+    status: active
+    description: "GestureLog and run-log records hold no Vector2; positions are separate x and y fields, serialised with JSON.stringify(data, \"\", true, true)."
+    why: "JSON.stringify writes a Vector2 as the string \"(x, y)\" (engine check)"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
 
 # Example:

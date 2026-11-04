@@ -182,7 +182,7 @@ The parameter is `rng_seed`, not `seed`, because `seed` is a global GDScript fun
 Steps, in order (matches Data Flow 4, step 5, in `architecture.md`):
 
 1. Create the battle `FatalLatch` and the `FatalRelay`, then the `StatAccessor(catalogue, relay.fatal)` (ADR-0005). Hand the relay's `fatal` and the accessor to every later step.
-2. Validate stage inputs. Create the `InputResolver` from the Input record's slops (`create` returns null on bad slops: call `fatal`, return null). The resolver reads the slops from the Input record directly, not through the accessor (TR-input-012).
+2. Validate stage inputs. Create the `InputResolver` with `InputResolver.create(drag_slop, tap_slop, dev_error)` from the Input record's slops and the battle's `dev_error` (`create` returns null on bad slops: call `fatal`, return null), and store it as the read-only `Battle.resolver` (ADR-0008 Decision 2). The resolver reads the slops from the Input record directly, not through the accessor (TR-input-012).
 3. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim.
 4. Make every signal connection and inject every callable in this one function, on statically typed locals, in the form `emitter.signal_name.connect(listener.method)` and `obj.method`. A misspelt signal or method is then a parse error, not a silent no-op. The signal wiring list is in ADR-0006 and Data Flow 3.
 5. Return the `Battle`. If the battle latch is set at any point, return null and let the caller discard everything. `Battle` holds strong references to every sim object, the resolver and the relay. Nothing else holds the sims.
