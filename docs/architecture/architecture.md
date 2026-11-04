@@ -105,7 +105,7 @@ The systems index lists Combat under the Gameplay category. The architecture put
 |---|---|---|---|---|
 | AppRoot (main scene) | The Ready catalogue, the retry latch, the Fatal latch, the fatal screen, the presentation session flags (`pinned_once`, `built_once`, `won_once`), the Retry-to-Start timer. **The single receiver of lifecycle notifications**: on focus loss it calls `adapter.cancel()` and `battle.pause()` | Starts the load, builds and frees battles | Catalogue, BattleBuilder, ShellBuilder | `Node`, scene tree notifications and free timing (NOT SOURCEABLE) |
 | BattleBuilder | Wiring of one battle | `build(catalogue, stage_id, seed, fatal_handler) -> Battle` | Catalogue and every sim module | none: plain `RefCounted` |
-| ShellBuilder | Wiring of the shell around one battle: InputResolver, InputAdapter attach, TowerInput, HeroInput, HudLogic, HUD nodes, views | `build(battle, catalogue, session_flags) -> Shell`, `free()` | Battle, Catalogue | `Node` creation and freeing |
+| ShellBuilder | Wiring of the shell around one battle: InputResolver, InputAdapter attach, TowerInput, HeroInput, AimModel, HudLogic, HUD nodes, views, BattleWrapper | `build(battle, catalogue, session_flags: SessionFlags, parent: Node) -> Shell`; `Shell.dispose()` (not `free()`, which would override `Object.free`) | Battle, Catalogue | `Node` creation and freeing |
 
 ### Foundation
 
@@ -122,7 +122,7 @@ The systems index lists Combat under the Gameplay category. The architecture put
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| FlowSim | Phase (`enum Phase`: BUILD, WAVE, INTERMISSION, PAUSED, WON, LOST, FATAL), lives, `intermission_left`, the outcome latch; writes `HaltState` | `tick()`, `start_wave()`, `call_early()`, `pause()`, `resume()`, `on_enemy_leaked`, `on_wave_cleared`, `on_waves_complete`; signals `phase`, `lives_changed`, `wave_called_early` | Stage record; EnemyWave signals connected by the builder; `EnemyWave.start_next_wave` as an injected Callable | none |
+| FlowSim | Phase (`enum Phase`: BUILD, WAVE, INTERMISSION, PAUSED, WON, LOST, FATAL), lives, `intermission_left`, the outcome latch; writes `HaltState` | `tick()`, `start_wave()`, `call_early()`, `pause()`, `resume()`, `on_enemy_leaked`, `on_wave_cleared`, `on_waves_complete`; signals `phase_changed`, `lives_changed`, `wave_called_early` | Stage record; EnemyWave signals connected by the builder; `EnemyWave.start_next_wave` as an injected Callable | none |
 | Combat | Health and Status per enemy, the damage counters, the targeting helpers | `deliver`, `apply_slow`, `report_attack`, `first_in`, `nearest_in`, `all_in_radius`, `hp_left`, `is_dead`, `speed_factor`, `tick_status`, `dealt_by_id`, `dealt_by_kind`; signals `attack_fired`, `damage_applied` | `HaltState` (for `in_tick()`); callers pass every value in | none |
 | InputResolver | The target registry, the single active pointer, the two frozen winners | `press`, `move`, `release`, `cancel`, `cancel_pointer`, `register`, `unregister`; signals `pressed`, `tap`, `ground_tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `idle` | Input record (two slops, injected) | none: plain object |
 | FixedStepClock | The real-time accumulator and its clamp, as a plain class | `advance(real_seconds) -> int` (ticks owed), `reset()` | `SimTime.DT` | none: tested headless |
@@ -203,7 +203,7 @@ Single thread. Nothing in the sim crosses a thread boundary. The one question is
         e. TowerSim             (starting_gold, Combat, EnemyWave.targets as Callable, HaltState)
         f. HeroSim              (hero, burst, Combat, EnemyWave.targets as Callable, HaltState)
         g. connect signals      (one function, explicit Callables); inject start_next_wave into FlowSim
-   3. ShellBuilder.build(battle, catalogue, session_flags)
+   3. ShellBuilder.build(battle, catalogue, session_flags, parent)
         InputResolver, InputAdapter.attach, TowerInput, HeroInput, AimModel, HudLogic, HUD nodes,
         views, BattleWrapper with a fresh FixedStepClock
    4. first frame
@@ -233,8 +233,8 @@ Data names: input events (producer engine, consumer adapter, synchronous call); 
 | `enemy_leaked(lives_cost)` | EnemyWave (advance) | FlowSim | signal, synchronous | Fires before `waves_complete`; a fatal leak stops the loop |
 | `wave_cleared(seconds)` | EnemyWave (reap) | FlowSim | signal | Payload is the intermission in seconds |
 | `waves_complete()` | EnemyWave (reap) | FlowSim | signal | Ignored after a Lost |
-| `wave_called_early(seconds_left)` | FlowSim | TowerSim | signal | Bonus paid before the next spawn and before `phase(WAVE)` |
-| `phase(p)`, `lives_changed(n)` | FlowSim | HudLogic, TowerInput, views | signal, view allowlist | Emitted after state is committed; `p` is an `int` holding a `FlowSim.Phase` |
+| `wave_called_early(seconds_left)` | FlowSim | TowerSim | signal | Bonus paid before the next spawn and before `phase_changed(WAVE)` |
+| `phase_changed(p)`, `lives_changed(n)` | FlowSim | HudLogic, TowerInput, views | signal, view allowlist | Emitted after state is committed; `p` is an `int` holding a `FlowSim.Phase` |
 | `gold_changed`, `tower_built`, `tower_upgraded` | TowerSim | HudLogic, views | signal, view allowlist | Nothing in gameplay depends on them |
 | `hero_pinned`, `burst_started` | HeroSim | HudLogic, views | signal, view allowlist | Handlers never issue commands |
 | `attack_fired`, `damage_applied` | Combat | CombatView | signal, view allowlist | Copied positions |
@@ -246,13 +246,13 @@ Wiring is tested, not trusted: one test fails if any battle signal has no listen
 
 ### 4. Gameplay scenarios
 
-**Kill to next wave.** `Combat.deliver` brings HP to 0, then the corpse waits for the reap slot. EnemyWave reaps in ascending `spawn_id`, reads `bounty` through the accessor, removes the corpse, emits `enemy_killed` (TowerSim adds gold, emits `gold_changed`), then runs the clear check. A wave that is clear emits `wave_cleared(15.0)` (or `waves_complete` on the last), FlowSim enters Intermission with `intermission_left = SimTime.to_ticks(15.0)` and emits `phase(INTERMISSION)`, and the HUD arms Start/Call over 300 ms.
+**Kill to next wave.** `Combat.deliver` brings HP to 0, then the corpse waits for the reap slot. EnemyWave reaps in ascending `spawn_id`, reads `bounty` through the accessor, removes the corpse, emits `enemy_killed` (TowerSim adds gold, emits `gold_changed`), then runs the clear check. A wave that is clear emits `wave_cleared(15.0)` (or `waves_complete` on the last), FlowSim enters Intermission with `intermission_left = SimTime.to_ticks(15.0)` and emits `phase_changed(INTERMISSION)`, and the HUD arms Start/Call over 300 ms.
 
-**Leak to Lost.** In EnemyWave's advance slot an enemy reaches the path end, reads `lives_cost`, leaves the roster, emits `enemy_leaked`. FlowSim applies `lives_after = max(0, lives_before - lives_cost)`, emits `lives_changed`, and on 0 commits Lost, sets `HaltState`, emits `phase(LOST)`. `halted()` is now true, so EnemyWave, TowerSim and HeroSim return at once and nothing pays a bounty. The HUD snapshots results on the next frame and shows the screen after 400 ms.
+**Leak to Lost.** In EnemyWave's advance slot an enemy reaches the path end, reads `lives_cost`, leaves the roster, emits `enemy_leaked`. FlowSim applies `lives_after = max(0, lives_before - lives_cost)`, emits `lives_changed`, and on 0 commits Lost, sets `HaltState`, emits `phase_changed(LOST)`. `halted()` is now true, so EnemyWave, TowerSim and HeroSim return at once and nothing pays a bounty. The HUD snapshots results on the next frame and shows the screen after 400 ms.
 
-**Early call.** The HUD calls `Battle.call_early()`. FlowSim emits `wave_called_early(seconds_left)`; TowerSim pays `to_ticks(seconds_left) div to_ticks(rate)`; FlowSim then calls the injected `start_next_wave` and emits `phase(WAVE)`. The first spawn is on the next tick.
+**Early call.** The HUD calls `Battle.call_early()`. FlowSim emits `wave_called_early(seconds_left)`; TowerSim pays `to_ticks(seconds_left) div to_ticks(rate)`; FlowSim then calls the injected `start_next_wave` and emits `phase_changed(WAVE)`. The first spawn is on the next tick.
 
-**Retry.** The Retry tap sets a latch on AppRoot. AppRoot's frame checks Fatal first, then frees the shell (which stops the clock and cancels input), frees the old battle, builds a new one with the same stage and seed, and builds a new shell. The catalogue and the session flags survive; nothing else does.
+**Retry.** The Retry tap sets a latch on AppRoot. AppRoot's frame checks Fatal first, then disposes the shell (which stops the clock and cancels input), frees the old battle, builds a new one with the same stage and seed, and builds a new shell. The catalogue and the session flags survive; nothing else does.
 
 **Focus loss.** AppRoot alone receives the lifecycle notification. It calls `adapter.cancel()` and `battle.pause()`; FlowSim enters Paused and the shell resets its `FixedStepClock`. A tap on the Paused screen calls `battle.resume()` and reaches nothing beneath. Which notification triggers this is NOT SOURCEABLE until ADR-0002.
 
@@ -330,6 +330,11 @@ func in_tick() -> bool
 @abstract func slot(i: int) -> SlotState
 @abstract func roster() -> Array[EnemyState]
 # hero position, pin and burst state, cooldown, wave index, intermission_left ...
+
+class_name SessionFlags extends RefCounted     # owned by AppRoot; survives retry, not app restart
+var pinned_once: bool
+var built_once: bool
+var won_once: bool
 ```
 
 Each `class_name` lives in its own file. Packed arrays on `StageRecord` are read-only after load, so the 4.7 change to packed-array element setters does not reach them.
@@ -378,9 +383,12 @@ func build(slot_index: int, tower_id: StringName) -> TowerSim.Result
 func upgrade(slot_index: int) -> TowerSim.Result
 func pin(position: Vector2) -> HeroSim.PinResult
 func burst(aim_point: Vector2) -> HeroSim.BurstResult
+# test seams (ADR-0001, ADR-0002): used by tests and bots, never by the shell
+func systems() -> Array[RefCounted]                  # every system the builder made, in tick order
+func snapshot() -> Dictionary                         # plain copy of sim state for equality checks
 ```
 
-Bots and the shell hold only `Battle`. Signals stay on their owning modules (`battle.flow.phase`, `battle.towers.gold_changed`); `Battle` does not re-emit them. `Battle` implements `BattleReadModel`, so the HUD and views read the same interface a test fake provides.
+Bots and the shell hold only `Battle`. Signals stay on their owning modules (`battle.flow.phase_changed`, `battle.towers.gold_changed`); `Battle` does not re-emit them. `Battle` implements `BattleReadModel`, so the HUD and views read the same interface a test fake provides.
 
 ### FlowSim
 
