@@ -1,6 +1,6 @@
 # Accessibility Requirements
 
-> **Status**: Committed (tier chosen in autonomous mode on 2026-11-04; the user may revise it, see AQ-01)
+> **Status**: Committed (tier confirmed by the user on 2026-11-04, AQ-01)
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04 (result timing corrected after `/ux-review`)
 > **Accessibility Tier Target**: Standard, phased (MVP ships the Basic subset the design already meets; the Standard items arrive with Settings & Accessibility at Alpha)
@@ -250,7 +250,7 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | ID | Question | Owner | Deadline | Resolution |
 |----|----------|-------|----------|-----------|
-| AQ-01 | Confirm or change the Standard (phased) tier. It was chosen in autonomous mode. | user | Before `/gate-check pre-production` | Open |
+| AQ-01 | Confirm or change the Standard (phased) tier. It was chosen in autonomous mode. | user | Before `/gate-check pre-production` | Closed 2026-11-04: user confirmed Standard (phased) |
 | AQ-02 | Game State Rule 17 has no pause button, but the Basic tier requires "pause anywhere". Add a user pause control (for example at Alpha with Settings), or record a formal exception with the producer. | game-designer, producer | Before the Game State GDD is Approved | Open, **High** |
 | AQ-03 | Standard requires adjustable text size, but the HUD is built to three text sizes, a 48 dp band and at most 3 text draws. Decide how the HUD scales, or limit the option to the Control screens. | ux-designer, art-director | HUD UX spec | Open |
 | AQ-04 | Is a colourblind palette needed, given colour independence by design? Run Coblis on the first battle screenshots before building it. | ux-designer | Vertical Slice | Open |
