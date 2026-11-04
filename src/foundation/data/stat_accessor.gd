@@ -137,3 +137,13 @@ func _tower_float(level: TowerLevel, key: StringName) -> float:
 	if key == StatKeys.SLOW_DURATION:
 		return level.slow_duration
 	return 0.0
+
+
+## Non-fatal: true if the tower `def_id` carries the role tag (`&"splash"`,
+## `&"slow"`, `&"single_target"`). False for an unknown or non-tower ID. Never
+## calls fatal. TowerSim uses it to pick the targeting and the role reads.
+func has_tag(def_id: StringName, tag: StringName) -> bool:
+	var record: TowerRecord = _catalogue.tower(def_id)
+	if record == null:
+		return false
+	return record.has_tag(tag)
