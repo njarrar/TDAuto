@@ -130,3 +130,6 @@ The `/review-all-gdds consistency` re-check (design/gdd/gdd-cross-review-2026-11
 
 ## Revision — 2026-11-04 — ADR sync
 Wording and tables only, no balance value or status change. Interactions and Dependencies rows for the HUD and Flow now name the `wave_index()` and `got_through_by_type()` reads (cross-GDD re-check N4). The Open Questions row on where Reduce Motion lives is answered: a field on the Input record (ADR-0002), passed to views through `PresentationSettings` (ADR-0001).
+
+## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
+No balance value changed; Status unchanged. The signal `waves_complete` is now `waves_completed` in every code form, test logs included (ADR-0006 Decision 5). The Open Question on the tick order is answered: accepted 2026-11-04 (ADR-0004 Decision 5); the path and slots move stays open.

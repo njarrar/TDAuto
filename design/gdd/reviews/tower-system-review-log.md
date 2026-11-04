@@ -58,3 +58,6 @@ A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are r
 
 ## Revision — 2026-11-04 — ADR sync
 Tables only; no balance value changed. Interactions and the downstream Dependencies table gain a row for Input's Rule 13 gesture log, which hears `tower_upgraded` and reads `chip_state()` in development builds. The log belongs to the test harness story, not the resolver. This makes the link two-way, as cross-review N3 asked (gdd-cross-review-2026-11-03.md, Consistency Re-check), alongside the ADR-0001 to ADR-0003 sync of the other GDDs.
+
+## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
+No balance value changed; Status unchanged. Signal renames: `tap` to `tapped`, `phase` to `phase_changed`, `waves_complete` to `waves_completed` (ADR-0006 Decision 5). Rule 17 and both gesture-log rows name `GestureLog` and its `set_prompt` (ADR-0008 Decision 8), and Rule 17 says the HUD reads costs when drawing, never in a sim signal handler (ADR-0005 Decision 5). The ADR note records that the wrapper feeds `ChipWindow.advance(ms)` in frame step 1 (ADR-0004 Decision 4). Not applied: ADR-0008 makes `chip_state()` TowerSim's read, but this GDD gives it and the chip window to TowerInput; left for the user to settle.

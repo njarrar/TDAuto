@@ -121,3 +121,6 @@ Wording and tables only; no domain bound or balance value changed.
 - Rule 9: the content test also fails an unlisted data file, a manifest path whose case differs from the file, and a key repeated in one JSON object (ADR-0002 Decision 7).
 - The "Becomes an ADR" note and the format and snapshot Open Questions rows point to ADR-0002 and read JSON; only the Android export proof stays open. The unknown-property edge case matches Rule 7.
 - Interactions and Dependencies rows for the HUD add Burst `cooldown` through the accessor for the wedge (cross-review N2).
+
+## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
+No balance value changed; Status unchanged. The one-tick floor reads `TickMath.TICK_SECONDS` (ADR-0004 Decision 2). Rule 10, Edge Cases and AC 7 list the six bad-call causes in order (null context, unresolved `def_id`, unknown key, inapplicable key, type mismatch, bad level) and say the returned `0` or `0.0` is unusable (ADR-0005 Decisions 1 and 2). The signal `waves_complete` is now `waves_completed` (ADR-0006 Decision 5).

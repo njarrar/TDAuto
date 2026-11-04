@@ -316,3 +316,6 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8
 
 ## Revision — 2026-11-04 — ADR sync
 Wording only; no bound or balance value changed. The "Hero records, exactly one" row leaves the content-rule table and becomes a boot check: zero or two Hero records fail the load with `record_count` (ADR-0002 Decision 5, Tier 0b; Data Rule 7).
+
+## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
+No balance value changed; Status unchanged. `idle` is now `became_idle` (ADR-0006 Decision 5). Rule 13 says HeroInput issues no command from `drag_cancelled` or `became_idle`, the cleanup edges `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6). Rule 16 names the payload `hero_pinned(pin_position)` (ADR-0006 Decision 4). The walk position is written per axis, with no `Vector2` operators in sim code (ADR-0004 Decision 9).

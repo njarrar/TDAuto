@@ -157,3 +157,6 @@ Applied in `design/gdd/combat-damage.md`: the ADR stated as a prerequisite for t
 Decided without asking: the 8 of 10 threshold and every safe range are proposed values with no test behind them; qa-lead and the first phone build can change them. No rule, formula or balance number changed, so the bots were not re-run.
 Checked: gdUnit4 6.2.0's source confirms `assert_error`, `is_push_error` and `is_success`, the setting's default of off, and that a leftover logged error fails the test. A runtime probe was denied at the permission prompt and not run, so the first test story keeps a negative test.
 No edit for the Vertical Slice item: Visual Feedback & VFX and Stage Progression & Stars have no GDD to change yet, and Dependencies already requires them to list this one when authored.
+
+## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
+No balance value changed; Status unchanged. `damage_applied` names its position `hit_position`, and Rule 12 tells views to use it (ADR-0006 Decision 4). The Open Question on the tick order is answered: accepted 2026-11-04 (ADR-0004 Decision 5); the ProjectileSpawner cut stays open.
