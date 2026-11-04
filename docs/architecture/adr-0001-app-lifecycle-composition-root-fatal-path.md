@@ -278,7 +278,7 @@ func on_fatal(cause: String) -> void          # the fatal_handler; sets the app 
 
 # src/root/battle_wrapper.gd
 class_name BattleWrapper extends Node
-func attach(battle: Battle, reduce_motion: bool) -> bool
+func attach(battle: Battle, reduce_motion: bool, dev_logs: DevLogs = null) -> bool   # dev_logs: ADR-0010 Decision 10
 func detach() -> void
 ```
 

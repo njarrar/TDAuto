@@ -100,7 +100,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_count()`, and per slot `slot_tower(slot_index)` (`&""` when empty), `slot_level(slot_index)` and `slot_cooldown_left(slot_index)` (ADR-0010). The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -403,7 +403,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 9. (Rule 5) **GIVEN** a spy doubling cost between two builds, **THEN** the second build falls by the new cost.
 10. (Rule 9) **GIVEN** a spy doubling damage between two shots, **THEN** the second `deliver` carries the new damage.
 11. (Rule 5) **GIVEN** a latch in the cost read, **WHEN** `build`, **THEN** `HALTED`, gold and slots unchanged, an empty log.
-12. (Rule 5) **GIVEN** a `gold_changed` listener, **WHEN** `build` is `OK`, **THEN** the listener already reads the tower through `slot_state`.
+12. (Rule 5) **GIVEN** a `gold_changed` listener, **WHEN** `build` is `OK`, **THEN** the listener already reads the tower through `slot_tower` and `slot_level`.
 13. (Rule 8) Tap at 199: no `upgrade`, expiry unmoved.
 14. (Rule 8) Closed, last level: a tap opens no chip and emits `tower_inspected(slot_index)`.
 15. (Chip commit) Tap at 200: one `upgrade`.
@@ -444,7 +444,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 50. (Rule 14) Gold passes 100,000 uncapped.
 51. (Rule 15) **GIVEN** gold 26, a cost of 30, and a tower about to kill an enemy worth 4, **WHEN** `build`, **THEN** `NO_GOLD`. **WHEN** T, then `build`, **THEN** `OK`.
 52. (Rule 15) **GIVEN** two kills in one tick, worth 4 and 3, **WHEN** T, **THEN** `gold_changed` twice, in ascending `spawn_id`.
-53. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; `slot_state` is empty, then `A`, 1, 0.
+53. (Rule 17) **GIVEN** one script, with and without listeners, **THEN** identical state; the slot reads give `&""`, then `A`, level 1, `cooldown_left` 0.
 54. (Rule 17) **GIVEN** `C` and a target, **WHEN** T, **THEN** `slows_applied()` is 1. `A` leaves it at 0.
 55. (early_call_bonus) `dt` 0.25, rate 1.0: 3.0, 2.75, 0.75 pay 3, 2, 0.
 56. (early_call_bonus) `dt` 1/60, rate 1.8: `to_ticks` gives 108, and 900, 863, 108, 107 ticks pay 8, 7, 1, 0.

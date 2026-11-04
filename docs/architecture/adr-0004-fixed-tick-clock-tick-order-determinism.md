@@ -199,7 +199,7 @@ BattleWrapper._process(delta):
 (engine) render
 ```
 
-- **Commands only between ticks.** Gesture commands run in step 0; `Flow.pause()` and `Flow.resume()` from engine callbacks outside `_process`; nothing in step 3. `Battle.between_ticks()` lets ADR-0010 check this in development builds.
+- **Commands only between ticks.** Gesture commands run in step 0; `Flow.pause()` and `Flow.resume()` from engine callbacks outside `_process`; nothing in step 3. `Battle.between_ticks()` lets ADR-0010 check this; ADR-0010 Decision 2 checks it in every build, with `fatal` on failure.
 - **HeroInput syncs after the ticks (TR-hero-011; the Hero GDD's open question).** `hero_input.update()` runs first in step 4: it sets the hit-disc centre, re-clamps `aim_point()` and updates `cooldown_digit()` from post-tick state, which is what step 4 draws. Next frame's `flush()` tests a press against the hero the player saw. In step 1 the centre would lag the drawn hero by a frame. TR-hud-005's "real-time models before ticks" covers HudLogic and ChipWindow; `update()` is a view-side sync of sim state, so it goes with the views.
 - **Displayed equals paid (TR-hud-005).** Step 4 of frame F draws the bonus from post-tick `intermission_left`; the tap reaches the HUD in F+1's step 0, before F+1's ticks, so `call_early` pays the most recently rendered value. A late event (SP1) is handled a frame later, still against the most recently rendered value. Relies on `flush()` in step 0 and render after `_process`.
 - **Other per-frame nodes.** `AppRoot._process` (ADR-0001) acts on the retry and fatal latches: before the wrapper it tears down at once, after it one frame later, and ticks after a fatal or outcome are gated either way. The adapter's size poll calls `cancel_all()`: before `flush()` it empties this frame's queue, after it the next frame's; either is a cancelled gesture, never a wrong one. So no `process_priority` is set.
@@ -285,7 +285,7 @@ Autonomous mode; each is the recommended option, and the user confirms or overtu
 12. Float policy bans (Decision 9).
 13. Raw frame ms to real-time models; HudLogic clamps itself; ChipWindow has no clamp.
 14. No interpolation or fps cap at MVP (V3 decides); delta smoothing off (V9).
-15. `Battle.between_ticks()` exposed; ADR-0010 decides enforcement.
+15. `Battle.between_ticks()` exposed; enforced by ADR-0010 Decision 2 (every build, `fatal`).
 16. `BattleClock` instead of "Clock" (QQ-16).
 17. HeroInput `update()` after the ticks, in step 4.
 

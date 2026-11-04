@@ -197,13 +197,13 @@ Leaks precede the clear because W1 fires in tick step 2 and W3/W4 in step 6 (TR-
 
 | ID | Signal | Listeners (MVP) | Emitted | Required after attach |
 |---|---|---|---|---|
-| P1 | `Flow.phase_changed(value: Phase)` | `BattleWrapper._on_phase_changed` (ADR-0004), HudLogic, TowerInput (chip) | each phase change; outcomes and PAUSED after Flow Rule 15's commit order (state, gate, `cancel_input()`, emit); FATAL from `Flow.enter_fatal` on the fatal path | yes |
+| P1 | `Flow.phase_changed(value: Phase)` | `BattleWrapper._on_phase_changed` (ADR-0004), HudLogic, TowerInput (chip), RunLog (development builds, ADR-0010) | each phase change; outcomes and PAUSED after Flow Rule 15's commit order (state, gate, `cancel_input()`, emit); FATAL from `Flow.enter_fatal` on the fatal path | yes |
 | P2 | `Flow.lives_changed(current: int)` | HudLogic | inside W1's handler, only on a change, before any `phase_changed(LOST)` | yes |
 | P3 | `TowerSim.gold_changed(current: int)` | HudLogic | after `build`/`upgrade` commit and before P4/P5; inside W2 and W5 handlers; only on a change | yes |
-| P4 | `TowerSim.tower_built(slot_index: int, tower_id: StringName)` | field view (may poll instead) | after P3 in `build` | no |
+| P4 | `TowerSim.tower_built(slot_index: int, tower_id: StringName)` | TowerInput (slot to tower disc, ADR-0010), field view (may poll instead), RunLog (development builds) | after P3 in `build` | yes |
 | P5 | `TowerSim.tower_upgraded(slot_index: int, level: int)` | gesture log (development builds) | after P3 in `upgrade` | no |
-| P6 | `HeroSim.hero_pinned(position: Vector2)` | hero view (may poll instead) | inside `pin()` after state set | no |
-| P7 | `HeroSim.burst_started(aim_point: Vector2, telegraph_ticks: int)` | Combat view (clearance window) | inside `burst()` after state set | yes |
+| P6 | `HeroSim.hero_pinned(position: Vector2)` | hero view (may poll instead), RunLog (development builds, ADR-0010) | inside `pin()` after state set | no |
+| P7 | `HeroSim.burst_started(aim_point: Vector2, telegraph_ticks: int)` | Combat view (clearance window), RunLog (development builds, ADR-0010) | inside `burst()` after state set | yes |
 | P8 | `Combat.attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` | Combat view | inside `report_attack`, before the attacker's `deliver` calls | yes |
 | P9 | `Combat.damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int)` | Combat view | inside `deliver`, after HP, dead state and counters; never when `applied` is 0 | yes |
 | G1 | `InputResolver.pressed(best_tap: int, best_drag: int, p: Vector2)` | HeroInput, TowerInput, HudLogic | frame step 0 (`flush()`) | yes |

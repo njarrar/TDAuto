@@ -139,8 +139,8 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | **EnemyWave** | Roster (sole owner of enemies), per-enemy `ReadContext`s keyed by `spawn_id`, wave state machine (`WaveState`), `PathTrack` (cached cumulative lengths), `spawn_id` counter | `roster()`, `targets()` (both in `spawn_id` order, internal buffers, read-only, valid for the slot only); `advance()`, `reap()`, `start_next_wave()`, `add_enemy(def_id, start_distance)` (EnemyWave and tests only); signals `enemy_leaked(lives_cost)`, `enemy_killed(bounty)`, `wave_cleared(intermission_duration)`, `waves_completed` | Stage and Wave records (direct), stats via accessor, `Combat.attach`, `dt`, `FieldBounds` size, injected `halted()`, `fatal`, error sink and `to_ticks` | None in the sim. Views use `CanvasItem._draw` (see Presentation) |
-| **TowerSim** | Gold (non-negative int), slots, towers, per-tower `cooldown_left` (ticks) | `build(slot_index, tower_id) -> BuildResult`, `upgrade(slot_index) -> UpgradeResult`, `tick()`, `slot_state()`, `chip_state()`, `gold()`; signals `gold_changed`, `tower_built`, `tower_upgraded` | `slot_positions` from the Stage record; accessor; `enemy_killed` straight from EnemyWave and `wave_called_early` from Flow (both wired by the Builder); injected `targets()` and `halted()`; Combat helpers | None |
-| **HeroSim** | Hero position, pin target, pin state, burst state, cooldown, telegraph, run counters | `pin(pos) -> PinResult`, `burst(pos) -> BurstResult`, `tick()`, read-only queries (`position`, `pin_target`, `pin_state`, `burst_state`, `cooldown_left`), counters; signals `hero_pinned`, `burst_started` | Stage record (`hero_start`, `pin_rect`, `pin_exclusion`), accessor, Combat, injected `targets()`, `halted()`, `in_build()` and `left_handed` | None |
+| **TowerSim** | Gold (non-negative int), slots, towers, per-tower `cooldown_left` (ticks), `slows_applied` | `build(slot_index, tower_id) -> BuildResult`, `upgrade(slot_index) -> UpgradeResult`, `tick()`, `gold()`, `slot_count()`, `slot_tower(i)`, `slot_level(i)`, `slot_cooldown_left(i)`, `slot_position(i)`, `slows_applied()`, `state_fields()`; signals `gold_changed`, `tower_built`, `tower_upgraded` (ADR-0010) | `slot_positions`, `starting_gold`, `early_call_seconds_per_gold` from the Stage record; accessor; `enemy_killed` straight from EnemyWave and `wave_called_early` from Flow (both wired by the Builder); injected `targets()`, `halted()`, `between_ticks()`; Combat helpers | None |
+| **HeroSim** | Hero position, pin target, pin state, burst state, cooldown, telegraph, run counters | `pin(pos) -> PinResult`, `burst(aim_point) -> BurstResult`, `tick()`, read-only queries (`position`, `pin_target`, `pin_state`, `burst_state`, `cooldown_left`, `hero_id`, `burst_id`, `state_fields`), counters (ADR-0010 Decision 7); signals `hero_pinned`, `burst_started` | Stage record (`hero_start`, `pin_rect`, `pin_exclusion`), accessor, Combat, injected `targets()`, `halted()`, `between_ticks()`, `in_build()` and `left_handed` | None |
 | **PinGeometry** | Pure clamp and validity maths in float scalars | `is_valid(pos) -> PinResult` (`OUT_OF_BOUNDS`, `BUTTON_ZONE` or `OK`, per Hero Rule 14), `clamp(pos)` | Pin rect and exclusion segments | None (avoids `Vector2` methods on purpose, see QQ-05) |
 | *Stage Progression, Skill Points, Skill Tree, Hero Weapons, Synergies (VS/Alpha)* | Reserved | | | |
 
@@ -152,11 +152,11 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | **HudTopBand** | Display-only `Control`s that ignore input | None | HudLogic | `Control`, `mouse_filter` (HIGH, 4.6 dual focus) |
 | **HudField** | One `_draw` for field art; hit targets are resolver discs | None | HudLogic, resolver registry | `CanvasItem._draw` (MEDIUM, 4.7 line feather) |
 | **ResultScreen, PausedScreen** | Full-screen modal `Control`s | Retry, Resume requests | Result snapshot | `Control` input consumption before the adapter (**HIGH, NEEDS VERIFICATION**) |
-| **HeroInput** | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `cooldown_digit()` | Resolver signals, HeroSim queries, `burst_button_centre()` from the HUD | None |
-| **TowerInput** | Slot and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected` | Resolver, TowerSim, Flow `phase_changed` | None |
-| **ChipWindow** | Real-time upgrade-chip timing | `advance(ms)` | Fed by the wrapper each frame | None |
-| **Field views** (enemy, tower, combat, path) | Pools, draw order, flash markers (16 max), enemy view pool (at least 48) | None | `roster()`, `slot_state()`, Combat view signals | `CanvasItem._draw`, `draw_polyline` or a baked polygon (MEDIUM, **NEEDS VERIFICATION** for 90 degree corners at width 72) |
-| **RunLog / GestureLog** (dev only) | JSONL records, gesture records | Injectable sink | Signals only | `FileAccess` append (MEDIUM; check the `bool` return). Decided in ADR-0010 and ADR-0008 |
+| **HeroInput** (`RefCounted`, built in `attach`) | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `aim_state()`, `aim_point()`, `cooldown_digit()` | Resolver signals, HeroSim queries, accessor (`REACH`), injected `halted()` and `in_build()`, `burst_button_centre` value from the HUD | None |
+| **TowerInput** (`RefCounted`, built in `attach`) | Slot, tower and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected`, `chip_state()`, `is_chip_open()`, `advance(ms)` | Resolver, TowerSim reads and `tower_built`, accessor (`level_count`), Flow `phase_changed`, injected `halted()` | None |
+| **ChipWindow** | Real-time upgrade-chip timing (200 and 1500 ms consts) | `advance(ms)`, `can_commit()` | Fed by TowerInput each frame | None |
+| **Field views** (enemy, tower, combat, path) | Pools, draw order, flash markers (16 max), enemy view pool (at least 48) | None | `roster()`, TowerSim per-slot reads (ADR-0010), Combat view signals | `CanvasItem._draw`, `draw_polyline` or a baked polygon (MEDIUM, **NEEDS VERIFICATION** for 90 degree corners at width 72) |
+| **RunLog / GestureLog** (dev only) | JSONL records in `user://run_log.jsonl` and `user://gesture_log.jsonl` | Injectable sink (`JsonlFileSink.write_line`); `DevLogs` session object on AppRoot | View signals P1, P4, P6, P7; HudLogic's `snapshot_taken` and `call_made` Callables | `FileAccess` append (MEDIUM; check the `bool` return). Decided in ADR-0010 and ADR-0008 |
 
 ### Composition Root
 
@@ -217,7 +217,7 @@ BattleWrapper._process(delta):
        and halted() is false. The gate lives in the sim, so it holds headless too.
   4. HeroInput.update() (hit-disc centre, aim point and digit from post-tick state, so they match
      the drawn frame; ADR-0004 Decision 5), then refresh views from read-only queries
-     (roster, slot_state, hero queries, HUD view-models)
+     (roster, TowerSim slot reads, hero queries, HUD view-models)
 ```
 
 | Data | Producer | Consumer | Kind |
@@ -336,7 +336,7 @@ Not built at MVP. The contract MVP code must respect: progression systems own th
 
 ### 9. Dev telemetry path
 
-Development builds only. A gesture-log harness (`GestureLog`, created by the wrapper only when `OS.is_debug_build()`, ADR-0008 Decision 8) listens to `pressed`, `became_idle` and `tower_upgraded` and reads the resolver's `last_gesture()` copy; a run log appends JSON lines to `user://run_log.jsonl` through an injectable sink. A write failure is non-fatal and release builds never write (TR-hud-013, TR-input-015). Both listen only; neither can change a result.
+Development builds only. `GestureLog` (created by the wrapper only when `OS.is_debug_build()`, ADR-0008 Decision 8) listens to `pressed`, `became_idle` and `tower_upgraded`, reads the resolver's `last_gesture()` copy and writes `user://gesture_log.jsonl`; `RunLog` listens to view signals P1, P4, P6, P7, receives HudLogic's snapshot and call records, and appends to `user://run_log.jsonl`. Both write through `JsonlFileSink` instances held by AppRoot's `DevLogs`, created only when `OS.is_debug_build()`. A write failure is one `dev_error`, never fatal, and release builds never write (TR-hud-013, TR-input-015; ADR-0010 Decision 10). Both listen only; neither can change a result.
 
 ### 10. Frame budget (proposal, unmeasured)
 
@@ -494,9 +494,11 @@ func result() -> StageResult         # null before the outcome; built once at th
 func in_build() -> bool
 func tick() -> void
 var intermission_left: int           # integer ticks, never float subtraction
-# Commands (between ticks). The GDD names the actions, not the methods; names are proposed (QQ-18).
-func start_wave() -> StartResult     # Start Wave in BUILD; a second tap finds no BUILD and is ignored
-func call_early() -> CallResult      # Call during INTERMISSION; a call at 0 is ignored with no signal
+# Commands (between ticks; ADR-0010 Decisions 2 and 3, QQ-18 closed).
+enum StartResult { OK = 0, HALTED = 1, NOT_BUILD = 2 }
+enum CallResult  { OK = 0, HALTED = 1, NOT_INTERMISSION = 2, NOTHING_LEFT = 3 }
+func start_wave() -> StartResult     # Start Wave in BUILD; a second tap finds no BUILD: NOT_BUILD
+func call_early() -> CallResult      # Call during INTERMISSION; a call at 0 is NOTHING_LEFT, no signal
 func pause() -> void
 func resume() -> void
 signal phase_changed(value: Phase)   # renamed from the GDDs' phase (TD-ARCHITECTURE B1, ADR-0006)
@@ -543,8 +545,8 @@ func start_next_wave() -> void              # parameterless; commits at wave_tic
 func add_enemy(def_id: StringName, start_distance: float) -> bool   # EnemyWave and tests only
 func roster() -> Array[Targetable]          # spawn_id order; caller must not hold it past its slot
 func targets() -> Array[Targetable]         # targetable only: centre inside the 540x960 field
-func wave_index() -> int                    # view-only read requested by the HUD
-func got_through_by_type() -> Dictionary    # view-only read requested by the HUD
+func wave_index() -> int                    # view-only read (ADR-0009, ratified ADR-0010)
+func got_through_by_type() -> Dictionary    # view-only read (ADR-0009, ratified ADR-0010)
 enum WaveState { WAITING, ACTIVE, FINISHED }
 func wave_state() -> WaveState
 func wave_tick() -> int
@@ -559,32 +561,39 @@ The enemy stays a valid reference after removal (`removed` is set, the object is
 
 ```gdscript
 class_name TowerSim extends RefCounted
-enum BuildResult { OK, HALTED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD }
-enum UpgradeResult { OK, HALTED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD }
+enum BuildResult   { OK = 0, HALTED = 1, BAD_SLOT = 2, BAD_TOWER = 3, SLOT_OCCUPIED = 4, NO_GOLD = 5 }
+enum UpgradeResult { OK = 0, HALTED = 1, BAD_SLOT = 2, NO_TOWER = 3, MAX_LEVEL = 4, NO_GOLD = 5 }
 func build(slot_index: int, tower_id: StringName) -> BuildResult
 func upgrade(slot_index: int) -> UpgradeResult
 func gold() -> int
-func slot_state() -> Array                  # per slot: tower_id, level, cooldown_left
-func chip_state() -> Dictionary             # view-only read requested by the HUD
+func slot_count() -> int
+func slot_tower(slot_index: int) -> StringName     # &"" when empty
+func slot_level(slot_index: int) -> int            # 0 when empty
+func slot_cooldown_left(slot_index: int) -> int
+func slot_position(slot_index: int) -> Vector2     # view and bot read
+func slows_applied() -> int
 signal gold_changed(current: int)
 signal tower_built(slot_index: int, tower_id: StringName)   # StringName: ADR-0006 (QQ-04)
 signal tower_upgraded(slot_index: int, level: int)
 
 class_name HeroSim extends RefCounted
-enum PinResult { OK, HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE }
-enum BurstResult { OK, HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH }
+enum PinResult   { OK = 0, HALTED = 1, BAD_POSITION = 2, OUT_OF_BOUNDS = 3, BUTTON_ZONE = 4 }
+enum BurstResult { OK = 0, HALTED = 1, BUILD_PHASE = 2, NOT_PINNED = 3, NOT_READY = 4,
+                   BAD_POSITION = 5, OFF_FIELD = 6, OUT_OF_REACH = 7 }
 func pin(pos: Vector2) -> PinResult
-func burst(pos: Vector2) -> BurstResult
+func burst(aim_point: Vector2) -> BurstResult
+# queries and counters: ADR-0010 Decision 7
 signal hero_pinned(position: Vector2)
 signal burst_started(aim_point: Vector2, telegraph_ticks: int)
 ```
-Invariants: commands run only between ticks. State is checked before geometry. A refusal mutates and emits nothing. All stats a command needs are read before any mutation, so a bad read halts with nothing half done. After `OK`, the enum lists checks in the GDD's order. TowerInput's `slot_tapped` and `tower_inspected` are signals from TowerInput, not reads. ADR-0009 binds HeroSim and TowerSim to float scalar sim positions: `pin(pos)` and `burst(pos)` take `Vector2` from HeroInput and convert on entry; stored hero position, pin target and aim point are float pairs; `hero_pinned` and `burst_started` stay `Vector2` as view signals.
+Invariants: every command first checks the injected `between_ticks()` (`fatal`, then `HALTED`), then `halted()`. State is checked before geometry. A refusal mutates and emits nothing. All stats a command needs are read before any mutation. Enum values are explicit and never renumbered; names come from `find_key`. `chip_state()` is TowerInput's, not TowerSim's (Tower Rule 17). `Vector2` arguments are converted to float scalars on entry; stored positions are float pairs; position queries and the two view signals build `Vector2` on return (ADR-0009, ADR-0010 Decision 5).
 
 ### B9. Injected values and callables (ADR-0001)
 
 | Name | Injected into | Meaning |
 |---|---|---|
-| `halted() -> bool` | EnemyWave, TowerSim, HeroSim, HudLogic | `Battle.halted()`. Checked after every accessor read and every signal. |
+| `halted() -> bool` | EnemyWave, TowerSim, HeroSim, HudLogic; TowerInput, HeroInput (by the wrapper, ADR-0010) | `Battle.halted()`. Checked after every accessor read and every signal. |
+| `between_ticks() -> bool` | TowerSim, HeroSim, Flow | `Battle.between_ticks()`. Checked first in every command, in every build; false calls `fatal` (ADR-0010 Decision 2). |
 | `in_build() -> bool` | HeroSim, HeroInput, HudLogic | True while Flow is in BUILD. |
 | `targets() -> Array[Targetable]` | TowerSim, HeroSim | EnemyWave's `targets()`, so Tower and Hero never reference EnemyWave (Tower Rules 9, 13; Hero Rule 4). |
 | `cancel_input() -> void` | Flow | `Battle.cancel_input`, which calls the canceller the wrapper sets to `InputAdapter.cancel_all` (empties the adapter queue, then the resolver's `cancel()`; ADR-0001 Decision 5, ADR-0003 Decision 9), so Flow never references the adapter or the resolver (TR-state-007). Headless, a no-op. |
@@ -600,7 +609,7 @@ All are method Callables on objects the Builder owns (B4 rule).
 
 ### B10. HUD read surface (ADR-0006, ADR-0010)
 
-The HUD reads, never writes: `Flow.phase()`, `lives()`, `intermission_left`, `result()`; `TowerSim.gold()`, `slot_state()`, `chip_state()`; `HeroSim` queries and `cooldown_left`; `EnemyWave.wave_index()`, `got_through_by_type()`; `Combat.hero_share()` for the end-of-stage log. It also listens to TowerInput's `tower_inspected` signal. The cooldown total and the three reads above marked "requested by the HUD" do not exist in their owners' GDDs as written yet; ADR-0010 adds them. `burst_button_centre()` is owned by the HUD and read once by HeroInput at registration.
+The HUD reads, never writes: `Flow.phase()`, `lives()`, `intermission_left`, `result()`, `in_build()`; `TowerSim.gold()`, the per-slot reads, `slows_applied()`; `TowerInput.chip_state()`; `HeroSim` queries, counters, `cooldown_left()` and `burst_id()`; `EnemyWave.wave_index()`, `got_through_by_type()`; `Combat.hero_share()`. It listens to TowerInput's `slot_tapped` and `tower_inspected`. The cooldown total is `to_ticks(stat_float(burst_ctx, StatKeys.COOLDOWN))`, read by the HUD through its own burst context (ADR-0005 Decision 7). The result screen and run log read one `ResultSnapshot` (ADR-0010 Decision 11). `burst_button_centre()` is owned by the HUD and read once by the wrapper, which passes it to `HeroInput.attach` as a value.
 
 ### What cannot be tested headless
 
@@ -722,4 +731,4 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-15 | GDScript 4.7 pitfalls have no rule yet: a typed-method override needs an explicit `return`; packed-array element writes skip setters; lambdas capture locals by value; signal parameter types are not checked at `emit()`. Turn them into Required and Forbidden rules. | Medium | ADR-0007 Decision 11 (Proposed); `/create-control-manifest` extracts them |
 | QQ-16 | Every `class_name` is global. Short names (`Flow`, `Combat`, `Battle`, `Catalogue`, `Clock`, now `BattleClock`) risk collisions with engine or addon classes. Prefix them or lint for collisions. | Low | ADR-0007 Decision 10 (Proposed): no prefix; NAME-1 to NAME-4 on every run; V6 checks every ADR `class_name` (derived scan) against `ClassDB` |
 | QQ-17 | Does a method `Callable` hold a strong reference to its object on 4.7? The retry weakref test depends on the answer. | Medium | ADR-0001 |
-| QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 |
+| QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 (Proposed): names kept; `StartResult { OK, HALTED, NOT_BUILD }`, `CallResult { OK, HALTED, NOT_INTERMISSION, NOTHING_LEFT }` |

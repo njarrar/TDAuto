@@ -56,7 +56,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Burst button.**
 
-12. **Look only.** HudField draws the button at the active hand's shape in Stage's `pin_exclusion`, in every phase. HeroInput registers it and decides what a press means. Locked (dotted) comes from `in_build()` and `pin_state()`; otherwise `burst_state()` gives Ready, or Cooling with its wedge and digit, and Telegraphing draws as an empty wedge. The wedge is `cooldown_left() / to_ticks(cooldown)`, clamped to 1, reading Burst `cooldown` through the accessor at use time with the ID the builder injects, so Hero needs no extra read. The press responses are the Hero GDD's.
+12. **Look only.** HudField draws the button at the active hand's shape in Stage's `pin_exclusion`, in every phase. HeroInput registers it and decides what a press means. Locked (dotted) comes from `in_build()` and `pin_state()`; otherwise `burst_state()` gives Ready, or Cooling with its wedge and digit, and Telegraphing draws as an empty wedge. The wedge is `cooldown_left() / to_ticks(cooldown)`, clamped to 1, reading Burst `cooldown` through the accessor at use time with the ID from `HeroSim.burst_id()` (ADR-0010), so Hero needs no extra read. The press responses are the Hero GDD's.
 
 **Prompts.**
 
@@ -175,12 +175,12 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Arc and chip costs, range rings | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
 | Next-wave line | Wave records directly | On phase change | Enemy & Wave |
 | Result | Flow result, Combat counters, `got_through_by_type()`, `slows_applied()` | Once at the outcome | Flow, Combat, Enemy & Wave, Tower |
-| Prompts | `pin_state()`, `slot_state()`, `targets()`, burst counters | Frame | Hero, Tower, Enemy & Wave |
+| Prompts | `pin_state()`, TowerSim slot reads, `targets()`, burst counters | Frame | Hero, Tower, Enemy & Wave |
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` | Input (API); HUD (meaning) |
-| Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
+| Tower System | calls, listens | `build`; TowerInput's `slot_tapped`, `chip_state()` and `tower_inspected` | Tower |
 | Hero System | reads, serves | State and timers; HeroInput reads `burst_button_centre()` and registers the button | Hero |
 | Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase_changed` | Flow |
 
@@ -236,7 +236,7 @@ The **chip_bar** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `elapsed` | float, ms | 0 and up | calculated (Tower's `chip_state()`) | Real time since the chip opened |
+| `elapsed` | float, ms | 0 and up | calculated (TowerInput's `chip_state()`) | Real time since the chip opened |
 
 **Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value.
 **Example:** 750 ms: 0.5.
@@ -274,7 +274,7 @@ The **chip_bar** formula is defined as:
 | System | Interface |
 |---|---|
 | Game State & Stage Flow | `phase_changed`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
-| Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected`, `slows_applied()` |
+| Tower System | `gold()`, `gold_changed`, the per-slot reads, `slot_tapped`, `build`, TowerInput's `chip_state()`, `tower_inspected`, `slows_applied()` |
 | Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
 | Input & Gesture Resolver | Registry, `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` |
 | Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly |
