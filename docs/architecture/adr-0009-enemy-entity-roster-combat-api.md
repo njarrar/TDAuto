@@ -187,11 +187,11 @@ class_name DamageEvent extends RefCounted
 var target: Targetable
 var amount: float
 var source_kind: Combat.SourceKind
-var source_id: StringName           # dealer's definition ID; type is ADR-0006's (QQ-04)
+var source_id: StringName           # dealer's definition ID; StringName per ADR-0006 (QQ-04)
 static func make(target: Targetable, amount: float, source_kind: Combat.SourceKind, source_id: StringName) -> DamageEvent
 ```
 
-Callers make one event per victim. Combat never stores an event. A listener of `damage_applied` must never store the event or read `event.target` (Combat Rule 12). The signal keeps the GDD's payload, which passes the whole event and so exposes `event.target` to listeners; replacing `event` with `source_kind` and `source_id` would close that by construction. Payloads are ADR-0006's (QQ-04), so this ADR keeps the GDD signature as the working default and hands the replacement to ADR-0006 as a recommendation (cascade notes).
+Callers make one event per victim. Combat never stores an event. `damage_applied` does not carry the event: ADR-0006 Decision 4 replaced the GDD's `event` parameter with `source_kind` and `source_id`, so no listener can reach `event.target` (Combat Rule 12), by construction.
 
 **Scoped exception to ADR-0001 Decision 4.** Combat calls `push_error` directly for its guard codes, with the fixed message constants `ERR_REMOVED`, `ERR_BAD_AMOUNT`, `ERR_BAD_SLOW`, `ERR_BAD_MAX_HP` and `ERR_ALREADY_ATTACHED`, instead of the injected `dev_error` sink. ADR-0001 Decision 4 and the registry's `release_relevant_checks` say a release-relevant failure goes through `fatal` or `dev_error`; this exception covers only these five codes in `src/core/combat/`. Reasons: the guards catch caller bugs that are unreachable at MVP (attackers hold no target across ticks, and callers pass catalogue-validated values); each guarded call changes nothing, so state stays correct whether or not the message is seen; it keeps `to_ticks` Combat's only dependency (TR-combat-007); and it matches the GDD's test method (`assert_error(...).is_push_error(constant)`). Accepted costs: these messages are not recorded in `DevErrorSink`'s in-memory list, and they may be silent in a release export if ADR-0001 V4 shows `push_error` does not log there. The one guard whose failure must not pass silently, a bad `max_hp`, is escalated by EnemyWave to `fatal` (Decision 7), so it does not rely on `push_error`. Combat injects no `halted()` and no `fatal`: it never reads a stat, and its two signals are view-only and cannot end a battle, so ADR-0001's "check after every signal that can end the battle" does not apply to them. Its callers check `halted()` after their own reads.
 
@@ -204,7 +204,7 @@ Callers make one event per victim. Combat never stores an event. A listener of `
 3. Dead (`health.hp <= 0.0`): return 0.0, silent.
 4. `applied = minf(amount, hp)` (typed; `min()` returns `Variant`). If `applied` is 0.0, return 0.0 with no counter change and no signal.
 5. Commit: `hp -= applied`; `dealt[source_id] = dealt.get(source_id, 0.0) + applied` (a `+=` on a missing key is a run-time error); the kind sum for `source_kind` `+= applied` (a `PackedFloat64Array` of three, indexed by the enum).
-6. Emit `damage_applied(event, applied, target.view_position(), hp <= 0.0, target.spawn_id)`.
+6. Emit `damage_applied(event.source_kind, event.source_id, applied, target.view_position(), hp <= 0.0, target.spawn_id)`.
 7. Return `applied`.
 
 Only the first failing guard reports. `deliver` runs only inside a tick; that is caller discipline (Combat Rule 2), checked by the Enemy & Wave and Hero deferred criteria, not by a flag in Combat.
@@ -267,7 +267,7 @@ Children appended this way join the roster before the reap's clear check, so the
 **Advance and reap.** The order of the tick's steps is ADR-0004's; inside its own two entries EnemyWave does:
 
 - `advance() -> void`: ownership check (below); spawn (schedule members due at `wave_tick`, groups in authored order, members ascending, each through `add_enemy`; **if `add_enemy` returns false, `advance` returns at once**, so no later member spawns and nothing moves, Rule 13 and Acceptance 19); move (for each enemy in `spawn_id` order not dead: read `MOVE_SPEED` through its context, check `halted()`, `distance = minf(distance + speed * combat.speed_factor(e) * dt, path_length)`, `_path.place(e)`); rebuild `_targets`; leak loop; then `wave_tick` rises.
-- `reap() -> void`: ownership check; reap loop; then the clear check every tick while the wave is Active (Enemy & Wave Rule 11), state committed before `wave_cleared` or `waves_complete`, then `halted()`.
+- `reap() -> void`: ownership check; reap loop; then the clear check every tick while the wave is Active (Enemy & Wave Rule 11), state committed before `wave_cleared` or `waves_completed`, then `halted()`.
 
 **Loop rules (leak and reap).** Both loops must be written as `var i := 0` / `while i < _roster.size():`, reading the size on every pass; must never use `for e in _roster` while removing. For a match (leak: `distance >= path_length`; reap: `combat.is_dead(e)`): read the stat (`LIVES_COST` or `BOUNTY`) through the context, check `halted()`, then commit `removed = true`, `_roster.remove_at(i)`, `_targets.erase(e)`, `_contexts.erase(e.spawn_id)`, the counts and (leak only) the per-type leak count; then emit (`enemy_leaked(lives_cost)` or `enemy_killed(bounty)`) and check `halted()`. After a removal, `i` is not advanced, since the next enemy now sits at `i`; otherwise `i += 1`. A listener may append to the roster during the emit (a kill listener calling `add_enemy`, Acceptance 28): the child lands at the end, so the size read on the next pass picks it up, and an alive child is skipped by the reap and keeps the wave from clearing.
 
@@ -365,7 +365,7 @@ func dealt_by_kind(kind: SourceKind) -> float
 func dealt_total() -> float                        # sum of the three kind sums
 func hero_share() -> float                         # (HERO + BURST) / total; 0.0 when total is 0
 signal attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)
-signal damage_applied(event: DamageEvent, applied: float, position: Vector2, killed: bool, spawn_id: int)
+signal damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int)   # ADR-0006
 
 # src/feature/enemy_wave/enemy.gd
 class_name Enemy extends Targetable
@@ -403,7 +403,7 @@ func wave_tick() -> int
 signal enemy_leaked(lives_cost: int)
 signal enemy_killed(bounty: int)
 signal wave_cleared(intermission_duration: float)
-signal waves_complete()                # name: QQ-07, ADR-0006
+signal waves_completed()               # renamed from waves_complete (ADR-0006)
 ```
 
 Names and signatures are the contract; private fields may change. `advance()` takes no argument: EnemyWave owns `wave_tick`, and a passed battle tick would be a second clock that could disagree.
@@ -432,7 +432,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Only Combat may write `health`, `status`, `hp`, `max_hp`, `strength` or `ticks_left`. Only EnemyWave may write `distance`, `pos_x`, `pos_y` or `removed`.
 - Must call `combat.attach` and get true before adding an enemy to the roster; must route every spawn, now and for splitters later, through `add_enemy`.
 - Every HP change must go through `deliver`; `deliver` must run only inside a tick.
-- Must create one `DamageEvent` per victim; Combat and listeners must never store an event; listeners must never read `event.target` and must never call `deliver`.
+- Must create one `DamageEvent` per victim; Combat must never store an event; `damage_applied` carries `source_kind` and `source_id`, never the event (ADR-0006); listeners must never call `deliver` or the `StatAccessor`.
 - Callers must call `report_attack` before the attack's `deliver` calls, and deliver before `apply_slow`.
 - Combat must never read the catalogue or the stat accessor and must never hold a Targetable or a list.
 - Helpers must never mutate, sort or keep their input list; tie-breaks must compare `spawn_id` explicitly.
@@ -590,6 +590,7 @@ No code exists, so nothing migrates. The documentation edits are listed in the c
 
 - Depends on: ADR-0001 (App Lifecycle, Composition Root and Fatal Path), ADR-0005 (Stat Accessor and Read-Context Contract). Uses ADR-0002's record classes and geometry encoding.
 - Defers to: ADR-0004 (tick order, float policy, `MAX_TICKS_PER_FRAME`), ADR-0006 (signal payload ID types, QQ-04; signal names, QQ-07), ADR-0007 (lint rules, class-name collisions).
+- Amended by: ADR-0006 Decision 4 (`damage_applied` carries `source_kind` and `source_id` instead of the `DamageEvent`; registry `listener_stores_damage_event` superseded by `sim_object_in_signal_payload`) and Decision 3 (`waves_complete` renamed `waves_completed`).
 - Enables: ADR-0010, ADR-0011.
 - Amends: `architecture.md` B0, B6, B7, Module Ownership; ADR-0001 Decision 4 (scoped exception for Combat's guard codes) and the registry's `release_relevant_checks`; closes QQ-08's ProjectileSpawner and stage-record items on acceptance; answers QQ-05 for sim positions.
 - Design: `design/gdd/combat-damage.md` (Core Rules, Formulas, Acceptance Criteria), `design/gdd/enemy-wave.md` (Rules 2, 4, 8 to 15, Formulas), `design/gdd/tower-system.md` (Rules 9, 13), `design/gdd/hero-system.md` (Rule 8, attack steps).

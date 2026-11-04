@@ -35,7 +35,7 @@ does, so each needs its own yes or no.
 | # | Choice | What it changes | If the user says no |
 |---|---|---|---|
 | C1 | The Android back button or gesture pauses the game and never quits it (`quit_on_go_back = false`) | Input GDD Rule 7 gains the back request as a pause trigger; the player leaves with the home gesture | Keep the engine default (back quits); drop the fourth trigger in Decision 6 |
-| C2 | A press outside the 540x960 field, letterbox bars included, is rejected | An Input GDD Edge Case changes: a disc straddling an edge is hit only from its on-field part (no MVP disc straddles one) | Forward off-field presses unmodified; the HUD ignores the off-screen `ground_tap` |
+| C2 | A press outside the 540x960 field, letterbox bars included, is rejected | An Input GDD Edge Case changes: a disc straddling an edge is hit only from its on-field part (no MVP disc straddles one) | Forward off-field presses unmodified; the HUD ignores the off-screen `ground_tapped` |
 | C3 | Taller phones letterbox (bars above and below); the off-field enemy entry is not revealed | About 20% of a 9:20 screen is bars | Alternative 5 (`keep_width` with a field offset), which reopens TR-input-016 and the HUD layout |
 | C4 | The game is locked to portrait | Rotating the phone does nothing | Supersede Decision 4; landscape needs a new layout |
 

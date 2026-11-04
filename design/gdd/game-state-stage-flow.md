@@ -35,7 +35,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 **Stage phases.**
 
 6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here.
-7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_complete` instead, so Flow needs no wave count.
+7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_completed` instead, so Flow needs no wave count.
 8. **Intermission.** After every wave but the last, a countdown runs. Enemy & Wave owns its duration and sends it as the payload of `wave_cleared`. The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
 9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback if the always-call bot below shows dominance. Bots do not call early unless a mode says so, and a **towers-only, always-call** mode joins the Pillar 2 bot gates.
 10. **Actions are never phase-locked.** Building, upgrading and re-pinning stay live in Build, Wave and Intermission, and a change of phase never cancels a gesture. In Build, towers and pins apply at once, while movement and timers begin on the first tick. The burst is the exception: Hero refuses it in Build, since a stopped clock would never let it recover.
@@ -44,10 +44,10 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 11. **Lives.** Flow owns lives, starting at the stage's `starting_lives`. On `enemy_leaked(lives_cost)` it applies the lives formula and, if lives changed, emits `lives_changed(current)`.
 12. **Lost.** The first leak that takes lives to 0 ends the stage on that tick, as Lost.
-13. **Won.** Enemy & Wave's `waves_complete` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_complete`.
-14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_complete` still arrives after that, the stage stays Lost and the event is ignored.
-15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit (`phase` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for); the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The battle exposes `in_build()`, which Hero uses to refuse the burst, and one `halted()`, true on Won, Lost and Fatal, for systems whose own loops must stop. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started (Enemy & Wave's `wave_index()`, injected by the builder, so Flow still keeps no wave count), lives left and Combat's damage by source, shown as plain text at MVP.
-15a. **Events out of phase.** A `wave_cleared` or `waves_complete` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: development builds log an error and the event is ignored. An `enemy_leaked` in Intermission also logs an error but still applies, because losing a life must never be silently dropped.
+13. **Won.** Enemy & Wave's `waves_completed` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_completed`.
+14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_completed` still arrives after that, the stage stays Lost and the event is ignored.
+15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit (`phase_changed` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for); the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The battle exposes `in_build()`, which Hero uses to refuse the burst, and one `halted()`, true on Won, Lost and Fatal, for systems whose own loops must stop. Won and Lost are terminal and later ticks do nothing. The result stays readable after the outcome: outcome, last wave started (Enemy & Wave's `wave_index()`, injected by the builder, so Flow still keeps no wave count), lives left and Combat's damage by source, shown as plain text at MVP.
+15a. **Events out of phase.** A `wave_cleared` or `waves_completed` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: development builds log an error and the event is ignored. An `enemy_leaked` in Intermission also logs an error but still applies, because losing a life must never be silently dropped.
 
 **Retry.**
 
@@ -64,7 +64,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 **Wiring is tested, not trusted.** An unconnected signal is a silent bug, so one test fails if any signal of any battle system has no listener, unless it is on a named allowlist for views, and a scripted micro-battle proves the targets are right: a kill raises gold by the bounty, a leak drops lives, and clearing all waves wins.
 
 **Handed to owning GDDs.**
-- **Enemy & Wave:** `wave_cleared`, `waves_complete`, `enemy_leaked(lives_cost)`, the leak-before-complete order, keeping spawned children on the roster atomically so a wave cannot clear early, the `intermission_duration` field on the Wave record, a cap on `start_delay` (a wave cannot be called early, so a long one is an empty field), and its place in the tick order. Leaks per lane are cut until a map has more than one lane.
+- **Enemy & Wave:** `wave_cleared`, `waves_completed`, `enemy_leaked(lives_cost)`, the leak-before-complete order, keeping spawned children on the roster atomically so a wave cannot clear early, the `intermission_duration` field on the Wave record, a cap on `start_delay` (a wave cannot be called early, so a long one is an empty field), and its place in the tick order. Leaks per lane are cut until a map has more than one lane.
 - **Hero:** refuses the burst in Build, and balances burst cooldown against `intermission_duration` with Enemy & Wave.
 - **Tower:** the early-call bonus value, priced knowing that a ready burst makes calling nearly free, and never dependent on burst state, and one direct build command shared by the arc and the bots, since the arc lives in the HUD and is absent headless. Input's Rule 11 has bots call Hero's and Tower's commands directly.
 - **Combat:** per-source damage counters readable after the outcome.
@@ -89,7 +89,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | State | Clock | Transitions |
 |---|---|---|
 | Build | Stopped | Start Wave → Wave 1. Focus loss → Paused. Failure handler → halted, from any state |
-| Wave | Running | `wave_cleared` → Intermission. `waves_complete` → Won. Lives 0 → Lost. Focus loss → Paused |
+| Wave | Running | `wave_cleared` → Intermission. `waves_completed` → Won. Lives 0 → Lost. Focus loss → Paused |
 | Intermission | Running | Countdown 0 or call early → next Wave. Lives 0 → Lost (a contract breach, Rule 15a). Focus loss → Paused |
 | Paused | Stopped | Resume tap → the phase it left |
 | Won | Stopped, latched | Retry → new battle |
@@ -101,11 +101,11 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 |---|---|---|---|
 | Data & Config Pipeline | reads | App root triggers load and holds the catalogue; reads the Stage record; receives the failure handler's calls | Data (load, lookup); this system (root, screen) |
 | Input & Gesture Resolver | builds | Wrapper builds resolver and adapter per battle; Won, Lost, Paused, Fatal and retry call `cancel()`; adapter forwards a lifecycle signal | Input (API); this system (composition) |
-| Enemy & Wave | wires, commands | Listens to `wave_cleared`, `waves_complete`, `enemy_leaked`; calls start next wave; reads `wave_index()` for the result | Enemy & Wave (signals) |
+| Enemy & Wave | wires, commands | Listens to `wave_cleared`, `waves_completed`, `enemy_leaked`; calls start next wave; reads `wave_index()` for the result | Enemy & Wave (signals) |
 | Tower System | wires | Forwards `wave_called_early(seconds_left)`; connects kills to gold | Tower (bonus value) |
 | Hero System | wires | Builds and ticks it; injects `halted()` and `in_build()`; reads `left_handed` from Data's Input record and the one Hero record's ID and `burst_id`, passing the IDs and the hand to HeroSim, the hand to the wrapper's HeroInput and HUD, and the Burst's ID to the HUD for the wedge (Hero Rules 2, 8; Battle HUD Rule 12) | Hero |
 | Combat & Damage | wires, reads | Reads per-source counters for the result | Combat |
-| Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
+| Battle HUD | listens | `lives_changed`, `phase_changed`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
 | Bots and tests | call | `build`, `tick`, commands, read result; timeouts belong to the harness | Harness |
 
 ## Formulas
@@ -151,7 +151,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If the result is read after a loss**: "wave reached" is the last wave started, which is `wave_index()`.
 - **If a call-early command and the countdown's expiry fall together**: commands apply between ticks, so whichever comes first starts the wave, and the other finds no Intermission and is ignored. `wave_called_early` fires only for a real call.
 - **If Start Wave is tapped twice**: the second tap finds no Build and is ignored.
-- **If the last wave clears**: `waves_complete` applies; there is no Intermission and the button is gone.
+- **If the last wave clears**: `waves_completed` applies; there is no Intermission and the button is gone.
 - **If focus is lost in Won, Lost or Fatal**: no state change.
 - **If focus is lost and the OS kills the app**: the stage is lost and the next launch boots cold.
 - **If a finger is held across a retry**: the new adapter never saw its press, so its moves are dropped and it must lift first.
@@ -231,13 +231,13 @@ The Start/Call button is irreversible, so it must stay clear of the burst corner
 A recording fake logs every Flow signal, and each THEN is the entire log; anything unlisted fails. A factory builds `stage()`: 3 lives, 3 waves, intermission 1.0 s, `dt` 0.25 (binary-exact). A fake Enemy & Wave `E` counts wave starts and emits on command. No scene, no random seeds, no time assertions.
 
 **CI: Logic**
-1. (Rule 6) **GIVEN** a new flow, **WHEN** 100 ticks, **THEN** an empty log and 0 starts; **WHEN** Start twice, **THEN** `phase(Wave)` and 1 start.
-2. (Rules 7, 8) **GIVEN** wave 1, **WHEN** `wave_cleared` and 3 ticks, **THEN** `phase(Intermission)` and 1 start; a 4th tick appends `phase(Wave)`, and 2 starts.
-3. (Rule 9) **GIVEN** Intermission after 2 ticks, **WHEN** call twice, **THEN** `wave_called_early(0.5), phase(Wave)`, and 2 starts.
+1. (Rule 6) **GIVEN** a new flow, **WHEN** 100 ticks, **THEN** an empty log and 0 starts; **WHEN** Start twice, **THEN** `phase_changed(WAVE)` and 1 start.
+2. (Rules 7, 8) **GIVEN** wave 1, **WHEN** `wave_cleared` and 3 ticks, **THEN** `phase_changed(INTERMISSION)` and 1 start; a 4th tick appends `phase_changed(WAVE)`, and 2 starts.
+3. (Rule 9) **GIVEN** Intermission after 2 ticks, **WHEN** call twice, **THEN** `wave_called_early(0.5), phase_changed(WAVE)`, and 2 starts.
 4. (Rule 9) **GIVEN** Build, any Wave, or just after expiry, **WHEN** call, **THEN** nothing appended and starts unchanged.
-5. (Rule 13) **GIVEN** the last wave, **WHEN** `waves_complete`, **THEN** `phase(Won)`.
-6. (Rules 11, 12) **GIVEN** 3 lives, **WHEN** cost 2, **THEN** `lives_changed(1)`; a following cost 3 or 5 gives `lives_changed(0), phase(Lost)`; cost 0 gives an empty log. A further same-tick leak appends nothing.
-7. (Rule 14) **GIVEN** 1 life, **WHEN** a leak then `waves_complete` on one tick, **THEN** `lives_changed(0), phase(Lost)`.
+5. (Rule 13) **GIVEN** the last wave, **WHEN** `waves_completed`, **THEN** `phase_changed(WON)`.
+6. (Rules 11, 12) **GIVEN** 3 lives, **WHEN** cost 2, **THEN** `lives_changed(1)`; a following cost 3 or 5 gives `lives_changed(0), phase_changed(LOST)`; cost 0 gives an empty log. A further same-tick leak appends nothing.
+7. (Rule 14) **GIVEN** 1 life, **WHEN** a leak then `waves_completed` on one tick, **THEN** `lives_changed(0), phase_changed(LOST)`.
 8. (Rule 15) **GIVEN** Won or Lost, **WHEN** ticks, every event, every command and focus loss, **THEN** nothing appended and the result unchanged. Listeners see the state committed, the clock stopped and `cancel()` already called.
 9. (Rule 15) **GIVEN** recording systems A, B, C, **WHEN** B's tick triggers Lost, **THEN** C does not tick that tick.
 10. (Rules 7, 10, 15) **GIVEN** each change among Build, Wave and Intermission, **THEN** `cancel()` is not called.

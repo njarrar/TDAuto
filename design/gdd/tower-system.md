@@ -75,7 +75,7 @@ IDs and levels are checked before any accessor read, through Data's non-fatal `i
 | `pressed` naming another tap target, or none | Closes. If it names another tower, that tap opens that tower's own chip |
 | `pressed` over the same tower with the hero beneath | Stays open (Input edge case) |
 | Phase changes among Build, Wave and Intermission | Stays open (Flow Rule 10) |
-| Paused, Won, Lost, Fatal | Closes on Flow's `phase` signal, which now names Paused and Fatal too, since `cancel()` emits nothing when input is idle. While `halted()` is true, TowerInput ignores every tap, so no chip or arc reopens |
+| Paused, Won, Lost, Fatal | Closes on Flow's `phase_changed` signal, which now names Paused and Fatal too, since `cancel()` emits nothing when input is idle. While `halted()` is true, TowerInput ignores every tap, so no chip or arc reopens |
 | Retry | Destroyed with the battle |
 
 A tower at its last level opens no chip, and emits `tower_inspected(slot_index)` for the range ring. Only one chip is open at a time.
@@ -187,7 +187,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack` | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; forwards `wave_called_early(seconds_left)` | Flow (order); this system (bonus) |
-| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
+| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tapped`, `pressed` | Input (API); TowerInput (meaning, chip) |
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
@@ -298,7 +298,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 - **If a splash tower's target is the only one in range but others stand beyond range inside the radius**: they are hit. Range picks the aim; the radius picks the victims.
 - **If a splash's impact lies near the field's edge**: only enemies in `targets()` can be hit.
 - **If the last target dies to an earlier tower this tick**: the later tower finds no target, holds at 0 and fires on the next tick with one.
-- **If Won is reached**: `waves_complete` makes Flow latch in the reap slot, and gold keeps whatever the reap paid first. Leftover gold is worth nothing at MVP.
+- **If Won is reached**: `waves_completed` makes Flow latch in the reap slot, and gold keeps whatever the reap paid first. Leftover gold is worth nothing at MVP.
 - **If a fatal leak ends the stage with a tower about to fire**: the tick is skipped (Flow Rule 15) and nothing fires.
 - **If the player calls with less than one rate's worth left**: the bonus is 0, no `gold_changed` fires, and the wave starts.
 - **If a stage has 0 bounty on every enemy**: only starting gold and the bonus exist. The `wave_income` floor fails it, since 8 is below the cheapest level-1 `cost`. A code-built fixture simply earns nothing.
@@ -317,8 +317,8 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `level_count(def_id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack`, tick slot |
-| Input & Gesture Resolver | Target registry, `tap`, `pressed` (TowerInput only) |
-| Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
+| Input & Gesture Resolver | Target registry, `tapped`, `pressed` (TowerInput only) |
+| Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase_changed` for the chip |
 
 **Downstream, with their own GDDs:**
 
@@ -382,14 +382,14 @@ Battle HUD draws these; this system supplies the data.
 | Tower fields, stat keys, never cache, level and cost meaning, sell and level questions | `design/gdd/data-config-pipeline.md` | Field domains; Tower levels and cost; Rule 10 | Value dependency; amended |
 | `deliver`, `apply_slow`, helpers, tick order, splash gate | `design/gdd/combat-damage.md` | Rules 2, 6, 7, 10, 11 | Rule dependency; Rule 6 amended |
 | Slots, `targets()`, `enemy_killed`, `to_ticks`, `gold_upper_bound`, L10, starter HP, bot gates | `design/gdd/enemy-wave.md` | Rules 3, 11, 14; Formulas; Starter values | Value dependency; amended |
-| Early call, live actions, `halted()`, `phase`, wiring test | `design/gdd/game-state-stage-flow.md` | Rules 2, 3, 9, 10, 15 | Rule dependency |
+| Early call, live actions, `halted()`, `phase_changed`, wiring test | `design/gdd/game-state-stage-flow.md` | Rules 2, 3, 9, 10, 15 | Rule dependency |
 | Tap, `pressed`, target registry, bounce guard, chip window | `design/gdd/input-gesture-resolver.md` | Rule 8; Dependencies | Rule dependency; amended |
 | Polygons, accretion, states, affordance, budgets | `design/art/art-bible.md` | §2, §3, §4, §7, §8 | Value dependency; amended |
 | Prior prices and range, "too basic" finding | `prototypes/hero-pin-concept/REPORT.md` | Report | Evidence |
 
 ## Acceptance Criteria
 
-A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow`, and each THEN is the entire log. A spy accessor logs reads, changes values or latches `halted()`. Factories build `sim()`: `dt` 0.25, gold 100; `A` single, cost 30/40, damage 10/15, range 100/120, interval 0.5/0.25; `B` as `A`, splash, radius 50; `C` as `A`, slow, damage 0, strength 0.5, 1.0 s. `T` is one tick. `ChipWindow` uses `advance(ms)`, a fake `upgrade` and a fake `phase`, and chip criteria start open at 0. No scene, catalogue files or time assertions, except where a criterion names real records.
+A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow`, and each THEN is the entire log. A spy accessor logs reads, changes values or latches `halted()`. Factories build `sim()`: `dt` 0.25, gold 100; `A` single, cost 30/40, damage 10/15, range 100/120, interval 0.5/0.25; `B` as `A`, splash, radius 50; `C` as `A`, slow, damage 0, strength 0.5, 1.0 s. `T` is one tick. `ChipWindow` uses `advance(ms)`, a fake `upgrade` and a fake `phase_changed`, and chip criteria start open at 0. No scene, catalogue files or time assertions, except where a criterion names real records.
 
 **CI: Logic**
 1. (Rule 1) **GIVEN** `sim()`, **WHEN** `build` `A`, `B`, `C` on slots 0, 1, 2, **THEN** each is `OK`, gold is 10, the log is `gold_changed(70), tower_built(0, A), gold_changed(40), tower_built(1, B), gold_changed(10), tower_built(2, C)`, and no unlock is read.
@@ -469,7 +469,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Bot gates | Hero stories | The Hero GDD's deferred table owns towers-only, hero-only, mono-role, dominant build, upgrade order, placement, share, burst outcome, always-call and `dealt_burst`, each with its threshold |
 | `burst_spike`, L11, intermission, Combat's bypass row | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
 | Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
-| TowerInput wiring | Tower UI story | With a fake resolver, the chip's disc is TAP 300, radius 40, at (x, y − 76) while open and unregistered on close; taps reach `ChipWindow`; a built slot is disabled; `slot_tapped` fires; `phase` closes the chip |
+| TowerInput wiring | Tower UI story | With a fake resolver, the chip's disc is TAP 300, radius 40, at (x, y − 76) while open and unregistered on close; taps reach `ChipWindow`; a built slot is disabled; `slot_tapped` fires; `phase_changed` closes the chip |
 | Arc, result | Battle HUD stories | A disc builds once; an unaffordable one does nothing; a double tap on a slot dismisses; damage by source and Slowed are shown; screenshots retained |
 | Phone test (Input P1) | Producer | Under the Pillar 4 protocol, no accidental upgrades or wrong discs on the first phone build |
 

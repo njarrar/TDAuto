@@ -43,11 +43,11 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 6. **Tap a slot, get three discs.** `slot_tapped` from TowerInput registers one backdrop (TAP 250, a sink covering the field) and three discs (TAP 300), which compete from the next press. Order is always triangle, hexagon, square, left to right, on every slot and both hands, for motor memory. A panel above each disc holds its word and cost on two lines: Single, Splash, Slow. The new tower firing at once demonstrates the role. A disc press within 200 ms of opening is ignored, since a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy a tower that cannot be sold. Start/Call is registered but disabled while an arc is open, because at priority 350 it would otherwise beat the backdrop; an arc open across a phase change keeps it so.
 7. **Tap a disc: `build`.** The disc always calls `build`, and the result decides: `OK` closes the arc and unregisters it at once, with a 120 ms collapse as art only. `NO_GOLD` leaves it open with a nudge. `HALTED` closes it. Anything else closes it and logs a development error. Costs are read through the accessor on opening and on `gold_changed` while open, at level 1 only, so nothing can ask past a level count. An unaffordable disc is dimmed and struck through, updated live.
-8. **Closing.** `pressed` with a best tap that is not one of the discs closes the arc and unregisters it, and the later `tap(backdrop)` is ignored. `drag_started` closes it. A finger rolling off a disc leaves it open. A phase change among Build, Wave and Intermission leaves it open. Paused, an outcome and Fatal close it.
+8. **Closing.** `pressed` with a best tap that is not one of the discs closes the arc and unregisters it, and the later `tapped(backdrop)` is ignored. `drag_started` closes it. A finger rolling off a disc leaves it open. A phase change among Build, Wave and Intermission leaves it open. Paused, an outcome and Fatal close it.
 
 **Upgrade chip.**
 
-9. **The chip is its own target, owned by TowerInput.** It must sit above the thumb to be seen, so a tap on what the player sees must work. TowerInput registers a TAP disc at priority 300, radius 40, at (x, y − 76) of the tower while the window is open, and treats `tap(chip)` as a second `tap(tower)` (Tower Rule 8). The HUD draws from `chip_state()`, which gives the slot, the elapsed time and the level: the cost, the level-2 glyph, and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock. Below the affordable cost it is dimmed and struck through. A tap on a level-2 tower gives `tower_inspected(slot_index)`, which shows its range ring for 1.5 s and opens no chip.
+9. **The chip is its own target, owned by TowerInput.** It must sit above the thumb to be seen, so a tap on what the player sees must work. TowerInput registers a TAP disc at priority 300, radius 40, at (x, y − 76) of the tower while the window is open, and treats `tapped(chip)` as a second `tapped(tower)` (Tower Rule 8). The HUD draws from `chip_state()`, which gives the slot, the elapsed time and the level: the cost, the level-2 glyph, and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock. Below the affordable cost it is dimmed and struck through. A tap on a level-2 tower gives `tower_inspected(slot_index)`, which shows its range ring for 1.5 s and opens no chip.
 
 **Start/Call.**
 
@@ -69,7 +69,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Ground ring.**
 
-14. **Three per battle.** `ground_tap` draws a dim ring for the first three in a battle, and none after. It resets on retry, since nothing else survives one. A dismissal is `tap(backdrop)`, so it draws none.
+14. **Three per battle.** `ground_tapped` draws a dim ring for the first three in a battle, and none after. It resets on retry, since nothing else survives one. A dismissal is `tapped(backdrop)`, so it draws none.
 
 **Result.**
 
@@ -169,7 +169,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 |---|---|---|---|
 | Gold | `gold()`, `gold_changed` | Signal | Tower |
 | Lives | Flow read, `lives_changed` | Signal | Flow |
-| Pips, Start/Call, overlays | Flow reads, `phase`, `wave_index()`, `wave_ids` size | Signal | Flow, Enemy & Wave |
+| Pips, Start/Call, overlays | Flow reads, `phase_changed`, `wave_index()`, `wave_ids` size | Signal | Flow, Enemy & Wave |
 | Countdown, bonus | `intermission_left` through Tower's formula | Frame, comparing whole ticks | Flow, Tower |
 | Digit, wedge, ticks | `cooldown_left()`, `burst_state()`; Burst `cooldown` through the accessor for the wedge | Frame, comparing whole ticks | Hero, Data |
 | Arc and chip costs, range rings | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
@@ -179,12 +179,12 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` | Input (API); HUD (meaning) |
+| Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` | Input (API); HUD (meaning) |
 | Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
 | Hero System | reads, serves | State and timers; HeroInput reads `burst_button_centre()` and registers the button | Hero |
-| Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase` | Flow |
+| Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase_changed` | Flow |
 
-Headless wiring tests are unaffected, since the HUD is absent, and `phase` and `lives_changed` join Flow's view allowlist.
+Headless wiring tests are unaffected, since the HUD is absent, and `phase_changed` and `lives_changed` join Flow's view allowlist.
 
 ## Formulas
 
@@ -273,10 +273,10 @@ The **chip_bar** formula is defined as:
 
 | System | Interface |
 |---|---|
-| Game State & Stage Flow | `phase`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
+| Game State & Stage Flow | `phase_changed`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
 | Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected`, `slows_applied()` |
 | Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
-| Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
+| Input & Gesture Resolver | Registry, `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` |
 | Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly |
 
 **Soft:** Combat (counters for the result), Enemy & Wave (`wave_index()`, `got_through_by_type()`, `targets()`).
@@ -357,7 +357,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled. A disc press at 199 ms is ignored, and at 200 ms it counts.
 5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges; `HALTED` closes; others close and log an error. One tap, one `build`.
 6. (Rule 7) Level 1 read on opening and `gold_changed`; dimming flips both ways; a newly affordable disc builds.
-7. (Rule 8; Input row) A press outside closes and unregisters; a later `tap(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
+7. (Rule 8; Input row) A press outside closes and unregisters; a later `tapped(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
 8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.
 9. (Rule 10) "Start"; "Call +7"; bonus 0 "Call"; hidden in Wave; glyph matches burst state. With the hero 60 from its centre, a press inside both discs released in place calls nothing, and moved past `tap_slop` re-pins; a press at the centre calls. With the hero walking across, a press outside the hero's disc calls. In Build at `hero_start`: calls.
 10. (Rule 11; Flow row) A press during Arming, released once Armed, does nothing; the next press commands once.

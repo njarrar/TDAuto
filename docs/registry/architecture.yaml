@@ -94,6 +94,7 @@ state_ownership:
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
   - state: stat_reads
@@ -188,6 +189,16 @@ state_ownership:
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - state: stage_result
+    status: active
+    owner_system: flow
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    interface: "Flow.result() -> StageResult, null before the outcome; built once at the WON, LOST or FATAL commit, before phase_changed; value fields only (outcome, last_wave_started, lives_left, dealt_tower, dealt_hero, dealt_burst, dealt_total)"
+    write_access: flow-only
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
 
@@ -351,6 +362,7 @@ interfaces:
     signal_signature: "InputAdapter.lifecycle_paused() -> wrapper connects to Flow.pause() and the HUD press clear; emitted after cancel_all(), possibly several times per loss; every listener idempotent"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
   - contract: resolver_drive
@@ -410,6 +422,61 @@ interfaces:
     signal_signature: "advance(ms: float) -> void with raw frame ms (0.0 on a bad delta) in frame step 1; each model applies its own GDD clamp and Paused freeze; HeroInput.update() -> void in frame step 4, after the ticks; none issues a command"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_wiring_signals
+    status: active
+    pattern: signal
+    producer: enemy-wave
+    consumers:
+      - flow
+      - tower-sim
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "W1 enemy_leaked(lives_cost: int) -> Flow.on_enemy_leaked; W2 enemy_killed(bounty: int) -> TowerSim.on_enemy_killed; W3 wave_cleared(intermission_duration: float) -> Flow.on_wave_cleared; W4 waves_completed() -> Flow.on_waves_completed; W5 Flow.wave_called_early(seconds_left: float) -> TowerSim.on_wave_called_early; connected only in BattleBuilder.build, flags 0, synchronous, commit then emit, halted() after"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_view_signals
+    status: active
+    pattern: signal
+    producer: all-battle-systems
+    consumers:
+      - battle-hud
+      - battle-wrapper
+      - tower-input
+      - views
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "Flow.phase_changed(value: Phase), lives_changed(current: int); TowerSim.gold_changed(current: int), tower_built(slot_index: int, tower_id: StringName), tower_upgraded(slot_index: int, level: int); HeroSim.hero_pinned(position: Vector2), burst_started(aim_point: Vector2, telegraph_ticks: int); Combat.attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float), damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int); on the view allowlist; connected only in BattleWrapper.attach, undone in detach, flags 0; no sim listens"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - contract: resolver_gesture_signals
+    status: active
+    pattern: signal
+    producer: input-resolver
+    consumers:
+      - hero-input
+      - tower-input
+      - battle-hud
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "pressed(best_tap: int, best_drag: int, p: Vector2), tapped(best_tap: int, p: Vector2), ground_tapped(p: Vector2), drag_started(best_drag: int, press_pos: Vector2, p: Vector2), drag_moved(best_drag: int, press_pos: Vector2, p: Vector2), drag_ended(best_drag: int, press_pos: Vector2, release_pos: Vector2), drag_cancelled(best_drag: int), became_idle(); drag_cancelled and became_idle listeners never issue commands; internals ADR-0008"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_emitter_enumeration
+    status: active
+    pattern: direct_call
+    producer: battle-builder
+    consumers:
+      - test-harness
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "Battle.EMITTER_KEYS and Battle.emitters() -> Array[Object] (flow, combat, enemy_wave, tower_sim, hero_sim, resolver); contract data in tests/integration/battle_wiring/battle_signal_contract.gd (WIRING, VIEW_ALLOWLIST)"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
 
@@ -534,6 +601,7 @@ api_decisions:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
   - purpose: release_relevant_checks
@@ -606,6 +674,7 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
   - purpose: display_stretch
@@ -696,6 +765,37 @@ api_decisions:
     reason: "round()'s half rule is unsourced; repeated float subtraction drifts (5.0 s took 301 ticks)"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: signal_emit_and_connect
+    status: active
+    api: "signal_name.emit(args); emitter.signal_name.connect(listener.method) with no flags"
+    not: "emit_signal(\"name\", ...), CONNECT_DEFERRED, CONNECT_ONE_SHOT, CONNECT_REFERENCE_COUNTED on a battle signal"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "Parser-checked names; synchronous delivery keeps commit-then-emit and halt-mid-tick; flags hide a connection's lifetime from the listener-count test"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: id_types
+    status: active
+    api: "StringName for every catalogue ID (tower_id, def_id, source_id, stage_id) in signals, commands and fields; int for slot_index, spawn_id, resolver ids and level"
+    not: "String for any ID; int tower IDs"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "One type end to end with ADR-0002's records; emit() may not check types (ADR-0006 V1)"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: listener_count_introspection
+    status: active
+    api: "get_script().get_script_signal_list() for declared signals; get_signal_connection_list(name) with callable.get_object(), callable.get_method() and flags"
+    not: "unfiltered get_signal_list() (includes Object's own signals), call-count-only fakes"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "Names exactly the missing, extra or flagged connection; shapes pending ADR-0006 V2 and V3"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
 
@@ -849,7 +949,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
   - pattern: listener_stores_damage_event
-    status: active
+    status: "superseded_by: ADR-0006"   # was: active; replaced by sim_object_in_signal_payload
     description: "No damage_applied listener stores the DamageEvent or reads event.target; views use the copied position and spawn_id."
     why: "Keeps reaped enemies alive and makes views depend on sim objects"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
@@ -943,6 +1043,57 @@ forbidden_patterns:
     description: "No sim result or payload depends on Dictionary iteration order, instance IDs or object hashes; iterate arrays in spawn_id or slot order."
     why: "Determinism per architecture (TR-combat-014); Dictionary order is unsourced"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-04
+  - pattern: sim_object_in_signal_payload
+    status: active
+    description: "No signal payload carries a sim object (Targetable, Enemy, DamageEvent, Health, Status, ReadContext, a record, a system, Battle); payloads are int, float, bool, StringName, Vector2 or an enum."
+    why: "A view holding a payload object keeps reaped enemies or the old battle alive and can reach sim state"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: emit_before_commit
+    status: active
+    description: "No battle signal is emitted before every state change and counter it describes is committed; an emitter checks halted() after every emit."
+    why: "Listeners read queries in the handler; a listener can end the battle"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: connection_outside_builder_or_attach
+    status: active
+    description: "Battle signals are connected only in BattleBuilder.build (sim to sim) or BattleWrapper.attach (to wrapper nodes, undone in detach); never elsewhere and never inside a handler."
+    why: "The listener-count test and the retry teardown rely on two known connection sites"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: sim_listens_to_view_signal
+    status: active
+    description: "No sim object connects to a view signal (phase_changed, lives_changed, gold_changed, tower_built, tower_upgraded, hero_pinned, burst_started, attack_fired, damage_applied) or a resolver gesture signal."
+    why: "Gameplay must be identical with or without views (TR-tower-012, TR-hud-004)"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: command_from_sim_or_cancel_listener
+    status: active
+    description: "Listeners of Flow, EnemyWave, TowerSim, HeroSim and Combat signals, and of drag_cancelled and became_idle, never issue a command, call a tick entry or deliver; only gesture listeners of pressed, tapped, ground_tapped and drag_started/moved/ended issue commands."
+    why: "Those signals can fire inside a tick; commands run only between ticks (ADR-0004)"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: listener_order_dependence
+    status: active
+    description: "No outcome depends on which of two listeners of one signal runs first; a view needing new state listens to the owner's own signal."
+    why: "Call order is unverified on 4.7 (ADR-0006 V4)"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: data_store_signal
+    status: active
+    description: "Catalogue, record classes, StatAccessor, ReadContext, entity and value classes, FatalLatch, FatalRelay and Battle declare no signal."
+    why: "Each emitter declares its own signals and the composition root wires them (TR-data-014)"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+  - pattern: combat_signal_listener_reads_accessor
+    status: active
+    description: "Listeners of attack_fired and damage_applied never call the StatAccessor."
+    why: "Combat injects no halted(); its listeners must not be able to reach fatal (ADR-0009 Decision 4)"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
 
 # Example:

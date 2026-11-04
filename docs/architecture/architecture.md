@@ -109,7 +109,7 @@ Note on requirement tags: the `Layer` column in `requirements-traceability.md` t
 
 ## Module Ownership
 
-Naming follows `project.yaml`: classes PascalCase, files snake_case, signals past tense. Signal names that break the past-tense rule are listed in QQ-07.
+Naming follows `project.yaml`: classes PascalCase, files snake_case, signals past tense. No signal is an exception; ADR-0006 renamed the five that broke the rule (QQ-07).
 
 Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`, `src/core/`, `src/feature/`, `src/presentation/`, `src/root/`. Tests mirror them under `tests/unit/` and `tests/integration/`.
 
@@ -120,7 +120,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | **Catalogue** (Data & Config) | The Ready catalogue: typed read-only records (Tower, Enemy, Wave, Stage, Hero, Burst, Input). The manifest. Load state (Unloaded, Loading, Ready, Failed). | `load(manifest) -> LoadResult`; typed record lookup by ID; `is_tower(id)`, `level_count(def_id)` (non-fatal) | Data files via manifest | `Resource` or JSON, `ResourceLoader` / `FileAccess` (MEDIUM; format is ADR-0002). `duplicate_deep()` for snapshot tests (4.5, MEDIUM) |
 | **Validator** (inside Data & Config) | Error list `{code, source, record_id, field}`. Tiered checks. | `validate(records) -> Array[ValidationError]` | Catalogue records | None (plain GDScript) |
 | **StatAccessor** (Data & Config) | Stat-key vocabulary and int/float type per key. Nothing else; no stored values. | `stat_int(ctx, key) -> int`, `stat_float(ctx, key) -> float`; a type mismatch or bad call goes to the injected failure handler | Catalogue; later Stat & Modifier | None |
-| **InputResolver** | Hit-target registry, the four-state machine, the FIFO re-entrancy queue, the frozen winners of the current press. No clock, no scene. | `press`, `move`, `release`, `cancel_pointer`, `cancel`; `register`, `unregister`, `set_centre`, `set_enabled`; signals `pressed`, `tap`, `ground_tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `idle` (payloads in B2) | `drag_slop`, `tap_slop` from the Input record, passed to `create()` by the Builder | None |
+| **InputResolver** | Hit-target registry, the four-state machine, the FIFO re-entrancy queue, the frozen winners of the current press. No clock, no scene. | `press`, `move`, `release`, `cancel_pointer`, `cancel`; `register`, `unregister`, `set_centre`, `set_enabled`; signals `pressed`, `tapped`, `ground_tapped`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `became_idle` (payloads in B2, names ADR-0006) | `drag_slop`, `tap_slop` from the Input record, passed to `create()` by the Builder | None |
 | **InputAdapter** (the only engine-facing input code) | Translation of engine events to the five resolver calls; edge and safe-area rejection; touch/mouse de-duplication; lifecycle `cancel()` calls | `lifecycle_paused` (pause) for Flow and the HUD; `display_changed` and `field_insets()` for the HUD; `flush()` for the wrapper's frame step 0; `cancel_all()` as the Battle input canceller (ADR-0003) | Godot input events, `DisplayServer`, viewport | `InputEventScreenTouch`, `InputEventScreenDrag` and the `canceled` flag (**HIGH, NEEDS VERIFICATION**); `_unhandled_input` vs `Control` ordering (**HIGH**); `Node.PROCESS_MODE_ALWAYS` (LOW); `DisplayServer.get_display_safe_area()` (**HIGH**); `Viewport.size_changed` (LOW); app lifecycle notifications (**HIGH**); mouse device ID change (4.7, **HIGH**) |
 | **FatalLatch** | One per battle plus one on AppRoot. Pure: keeps the first cause, idempotent, `is_fatal()`. No screen, no scene, no catalogue. | `fatal(cause)` (injected as a `Callable`), `is_fatal()` | Nothing | `push_error` (LOW). `assert` is never used for release-relevant checks (stripped in exports) |
 | *Mobile Platform (VS)* | Safe-area mapping, export presets, effect pooling, particle caps | Reserved | | `DisplayServer` (HIGH) |
@@ -130,7 +130,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| **Flow** (Game State, pure object) | Stage state machine (Build, Wave, Intermission, Paused, Won, Lost, Fatal). Lives. `intermission_left` as integer ticks. The stage result. The remembered phase while Paused. | `phase()`, `lives()`, `result()`, `in_build()`, `intermission_left`; commands `start_wave()`, `call_early()`, `pause()`, `resume()` (names proposed, QQ-18); signals `phase_changed`, `lives_changed`, `wave_called_early` | Enemy & Wave signals (`wave_cleared`, `waves_complete`, `enemy_leaked`); injected `cancel_input()` and the battle FatalLatch; the adapter's lifecycle signal (wired by the Builder's wrapper step) | None |
+| **Flow** (Game State, pure object) | Stage state machine (Build, Wave, Intermission, Paused, Won, Lost, Fatal). Lives. `intermission_left` as integer ticks. The stage result. The remembered phase while Paused. | `phase()`, `lives()`, `result()`, `in_build()`, `intermission_left`; commands `start_wave()`, `call_early()`, `pause()`, `resume()` (names proposed, QQ-18); signals `phase_changed`, `lives_changed`, `wave_called_early` | Enemy & Wave signals (`wave_cleared`, `waves_completed`, `enemy_leaked`); injected `cancel_input()`, `wave_index`, `dealt_by_kind`, `dealt_total` and the battle FatalLatch; the adapter's lifecycle signal (wired by the Builder's wrapper step) | None |
 | **Combat** | `Targetable` base class, `DamageEvent` value, `Health` and `Status` classes (one each per target, held one way by the Targetable, created by `attach`), per-source damage counters. | `attach(t, max_hp) -> bool`; `deliver(event) -> float`; `apply_slow`; `speed_factor`; `tick_status(roster)`; `first_in`, `nearest_in`, `all_in_radius` (float scalar origins); `dealt_by_id`, `dealt_by_kind`, `dealt_total`, `hero_share`; `is_dead`, `hp_left`; `report_attack`; signals `attack_fired`, `damage_applied` | Values passed in by callers; `to_ticks` injected at build (it carries the fixed `dt`; Combat takes no separate `dt`, ADR-0009) | None (pure) |
 | *Stat & Modifier (VS)* | Modifier stack, fixed evaluation order | Behind `StatAccessor` | Catalogue, tree nodes | None |
 
@@ -138,7 +138,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| **EnemyWave** | Roster (sole owner of enemies), per-enemy `ReadContext`s keyed by `spawn_id`, wave state machine (`WaveState`), `PathTrack` (cached cumulative lengths), `spawn_id` counter | `roster()`, `targets()` (both in `spawn_id` order, internal buffers, read-only, valid for the slot only); `advance()`, `reap()`, `start_next_wave()`, `add_enemy(def_id, start_distance)` (EnemyWave and tests only); signals `enemy_leaked(lives_cost)`, `enemy_killed(bounty)`, `wave_cleared(intermission_duration)`, `waves_complete` | Stage and Wave records (direct), stats via accessor, `Combat.attach`, `dt`, `FieldBounds` size, injected `halted()`, `fatal`, error sink and `to_ticks` | None in the sim. Views use `CanvasItem._draw` (see Presentation) |
+| **EnemyWave** | Roster (sole owner of enemies), per-enemy `ReadContext`s keyed by `spawn_id`, wave state machine (`WaveState`), `PathTrack` (cached cumulative lengths), `spawn_id` counter | `roster()`, `targets()` (both in `spawn_id` order, internal buffers, read-only, valid for the slot only); `advance()`, `reap()`, `start_next_wave()`, `add_enemy(def_id, start_distance)` (EnemyWave and tests only); signals `enemy_leaked(lives_cost)`, `enemy_killed(bounty)`, `wave_cleared(intermission_duration)`, `waves_completed` | Stage and Wave records (direct), stats via accessor, `Combat.attach`, `dt`, `FieldBounds` size, injected `halted()`, `fatal`, error sink and `to_ticks` | None in the sim. Views use `CanvasItem._draw` (see Presentation) |
 | **TowerSim** | Gold (non-negative int), slots, towers, per-tower `cooldown_left` (ticks) | `build(slot_index, tower_id) -> BuildResult`, `upgrade(slot_index) -> UpgradeResult`, `tick()`, `slot_state()`, `chip_state()`, `gold()`; signals `gold_changed`, `tower_built`, `tower_upgraded` | `slot_positions` from the Stage record; accessor; `enemy_killed` straight from EnemyWave and `wave_called_early` from Flow (both wired by the Builder); injected `targets()` and `halted()`; Combat helpers | None |
 | **HeroSim** | Hero position, pin target, pin state, burst state, cooldown, telegraph, run counters | `pin(pos) -> PinResult`, `burst(pos) -> BurstResult`, `tick()`, read-only queries (`position`, `pin_target`, `pin_state`, `burst_state`, `cooldown_left`), counters; signals `hero_pinned`, `burst_started` | Stage record (`hero_start`, `pin_rect`, `pin_exclusion`), accessor, Combat, injected `targets()`, `halted()`, `in_build()` and `left_handed` | None |
 | **PinGeometry** | Pure clamp and validity maths in float scalars | `is_valid(pos) -> PinResult` (`OUT_OF_BOUNDS`, `BUTTON_ZONE` or `OK`, per Hero Rule 14), `clamp(pos)` | Pin rect and exclusion segments | None (avoids `Vector2` methods on purpose, see QQ-05) |
@@ -153,7 +153,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | **HudField** | One `_draw` for field art; hit targets are resolver discs | None | HudLogic, resolver registry | `CanvasItem._draw` (MEDIUM, 4.7 line feather) |
 | **ResultScreen, PausedScreen** | Full-screen modal `Control`s | Retry, Resume requests | Result snapshot | `Control` input consumption before the adapter (**HIGH, NEEDS VERIFICATION**) |
 | **HeroInput** | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `cooldown_digit()` | Resolver signals, HeroSim queries, `burst_button_centre()` from the HUD | None |
-| **TowerInput** | Slot and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected` | Resolver, TowerSim, Flow `phase` | None |
+| **TowerInput** | Slot and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected` | Resolver, TowerSim, Flow `phase_changed` | None |
 | **ChipWindow** | Real-time upgrade-chip timing | `advance(ms)` | Fed by the wrapper each frame | None |
 | **Field views** (enemy, tower, combat, path) | Pools, draw order, flash markers (16 max), enemy view pool (at least 48) | None | `roster()`, `slot_state()`, Combat view signals | `CanvasItem._draw`, `draw_polyline` or a baked polygon (MEDIUM, **NEEDS VERIFICATION** for 90 degree corners at width 72) |
 | **RunLog / GestureLog** (dev only) | JSONL records, gesture records | Injectable sink | Signals only | `FileAccess` append (MEDIUM; check the `bool` return). Decided in ADR-0010 and ADR-0008 |
@@ -253,19 +253,19 @@ After any step that can commit an outcome (leak, kill, fatal), later steps check
 | `enemy_leaked(lives_cost)` | EnemyWave | Flow | Synchronous, state committed before emit, spawn_id order |
 | `enemy_killed(bounty)` | EnemyWave | TowerSim (gold) | Same |
 | `wave_cleared(intermission_duration)` | EnemyWave | Flow | Same; leaks come before the clear |
-| `waves_complete` | EnemyWave | Flow | Same |
-| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, TowerSim (`wave_called_early`, and `phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | The GDD names the signal `phase`; renamed here because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1) |
+| `waves_completed` | EnemyWave | Flow | Same |
+| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, TowerSim (`wave_called_early`), TowerInput (`phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | `phase_changed`, not `phase`, because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1; GDDs renamed by ADR-0006) |
 | `gold_changed`, `tower_built`, `tower_upgraded` | TowerSim | HUD, views | Commit first, `gold_changed` then the tower signal; a refusal emits nothing |
 | `hero_pinned`, `burst_started` | HeroSim | Views, HUD | After state set; handlers never issue commands |
-| `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` |
-| Gesture signals | InputResolver | HeroInput, TowerInput, HudLogic | Re-entrant calls queue FIFO and drain in the outermost call |
+| `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` or the accessor; `damage_applied` carries `source_kind` and `source_id`, never the `DamageEvent` (ADR-0006) |
+| Gesture signals (`pressed`, `tapped`, `ground_tapped`, `drag_*`, `became_idle`) | InputResolver | HeroInput, TowerInput, HudLogic | Re-entrant calls queue FIFO and drain in the outermost call; `drag_cancelled` and `became_idle` can fire inside a tick, so their listeners never issue commands |
 
 Rules for all of them (ADR-0006):
 1. **Commit, then emit.** State is final before the first listener runs.
 2. **Gameplay does not depend on listeners.** A battle with every view listener removed produces identical state (TR-tower-012, TR-hud-004).
-3. **Wiring signals** (the ones in the first six rows that the sim itself consumes) are connected only in the Builder, never deferred.
+3. **Wiring signals** (`enemy_leaked`, `enemy_killed`, `wave_cleared`, `waves_completed`, `wave_called_early`: the ones the sim itself consumes) are connected only in the Builder; every other battle signal is connected only in `BattleWrapper.attach` and disconnected in `detach`. No connection is deferred or takes any flag (ADR-0006 Decision 2).
 4. **View allowlist.** A test fails if any battle signal has no listener, except signals on a named allowlist (TR-state-013).
-5. Signals declare typed parameters, but GDScript does not check them at `emit()`, and a `connect` with a mismatched Callable fails only at runtime. The real guard is the listener-count test plus recording fakes that assert payloads, not only call counts (ADR-0007). The type of `tower_id` is undecided (QQ-04).
+5. Signals declare typed parameters, but GDScript does not check them at `emit()`, and a `connect` with a mismatched Callable fails only at runtime. The real guard is the listener-count test plus recording fakes that assert payloads and their types, not only call counts (ADR-0007). Catalogue IDs in payloads are `StringName`; slot, spawn and resolver ids are `int`; no payload carries a sim object (ADR-0006 Decision 4, QQ-04). Whether `emit()` checks types is ADR-0006 V1.
 
 ### 4. Initialisation order
 
@@ -374,13 +374,13 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | `PathTrack` | `RefCounted` | `src/feature/enemy_wave/path_track.gd` | `static make(path_points) -> PathTrack` (null on unusable points); cumulative lengths; `place(e: Enemy)` | ADR-0009 |
 | `FieldBounds` | `RefCounted` (constants only) | `src/foundation/field_bounds.gd` | `WIDTH := 540.0`, `HEIGHT := 960.0`; injected into EnemyWave by the Builder | ADR-0009 (ADR-0003 uses it for the field size and does not take ownership) |
 | `DamageEvent` | `RefCounted` | `src/core/combat/damage_event.gd` | `target: Targetable`, `amount: float`, `source_kind: Combat.SourceKind`, `source_id: StringName` | ADR-0009 |
-| `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, per-source damage copied from Combat | ADR-0006 |
+| `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, `dealt_tower`, `dealt_hero`, `dealt_burst`, `dealt_total: float` copied from Combat. Built once by Flow at the outcome commit, before `phase_changed`; holds no reference | ADR-0006 |
 | `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005), `input_record: InputRecord` (ADR-0003), `sim_time: SimTime`, `sim_rng: SimRng` (ADR-0004) | ADR-0001, ADR-0004 |
 | `SimTime` | `RefCounted` | `src/foundation/sim_time.gd` | `const TICKS_PER_SECOND := 60`; `ticks_per_second: int`, `dt: float` (read-only); `to_ticks(seconds) -> int` = sign(x) * floor(abs(x) + 0.5), x = seconds * ticks_per_second | ADR-0004 |
 | `SimRng` | `RefCounted` | `src/foundation/sim_rng.gd` | xorshift32 from `rng_seed & 0xFFFFFFFF`; `next_u32()`, `next_below(n)`, `draw_count()`; no MVP consumer | ADR-0004 |
 | `BattleClock` | `RefCounted` | `src/root/battle_clock.gd` | `MAX_TICKS_PER_FRAME := 3`, `STALL_SECONDS := 0.5`; `advance(delta) -> int`, `drop_backlog()`; owned by BattleWrapper, absent headless | ADR-0004 |
 
-IDs are `StringName` throughout as the working default. QQ-04 decides whether that holds for `tower_id` in signals.
+Catalogue IDs are `StringName` everywhere, signals included (`tower_id`, `def_id`, `source_id`); `slot_index`, `spawn_id`, resolver ids and `level` are `int` (ADR-0006, QQ-04 closed).
 
 ### B1. Stat accessor (ADR-0005)
 
@@ -425,15 +425,15 @@ func set_centre(id: int, centre: Vector2) -> void
 func set_enabled(id: int, enabled: bool) -> void
 
 signal pressed(best_tap: int, best_drag: int, p: Vector2)
-signal tap(best_tap: int, p: Vector2)
-signal ground_tap(p: Vector2)
+signal tapped(best_tap: int, p: Vector2)
+signal ground_tapped(p: Vector2)
 signal drag_started(best_drag: int, press_pos: Vector2, p: Vector2)
 signal drag_moved(best_drag: int, press_pos: Vector2, p: Vector2)      # one per input call, never per frame
 signal drag_ended(best_drag: int, press_pos: Vector2, release_pos: Vector2)
 signal drag_cancelled(best_drag: int)
-signal idle()                                                          # last signal of every exit to Idle
+signal became_idle()                                                   # last signal of every exit to Idle
 ```
-Invariants: ids start at 1 and are never reused; `NONE` marks an absent winner. `sink` is TAP-only: the target absorbs taps its owner ignores, without raising the press's slop. One active pointer. Winners and their discs are frozen at press (tie-break: priority, then squared distance, then id). Gesture calls made inside a handler queue FIFO and drain synchronously in the outermost call. No clock, no scene tree, no engine events. Non-finite positions and radii are dropped with `push_error`. Names that break the past-tense rule (`tap`, `ground_tap`, `pressed`, `idle`) are QQ-07, to be settled before ADR-0008 is written, because the GDD's tests already use them.
+Invariants: ids start at 1 and are never reused; `NONE` marks an absent winner. `sink` is TAP-only: the target absorbs taps its owner ignores, without raising the press's slop. One active pointer. Winners and their discs are frozen at press (tie-break: priority, then squared distance, then id). Gesture calls made inside a handler queue FIFO and drain synchronously in the outermost call. No clock, no scene tree, no engine events. Non-finite positions and radii are dropped with `push_error`. ADR-0006 fixed the names (`tap`, `ground_tap` and `idle` became `tapped`, `ground_tapped` and `became_idle`; `pressed` is kept) and the payload types; ADR-0008 owns the internals.
 
 ### B3. Input adapter (ADR-0003)
 
@@ -482,7 +482,7 @@ class_name Flow extends RefCounted
 enum Phase { BUILD, WAVE, INTERMISSION, PAUSED, WON, LOST, FATAL }
 func phase() -> Phase
 func lives() -> int
-func result() -> StageResult         # readable after the outcome until the battle is dropped
+func result() -> StageResult         # null before the outcome; built once at the outcome commit (ADR-0006 Decision 6)
 func in_build() -> bool
 func tick() -> void
 var intermission_left: int           # integer ticks, never float subtraction
@@ -491,11 +491,11 @@ func start_wave() -> StartResult     # Start Wave in BUILD; a second tap finds n
 func call_early() -> CallResult      # Call during INTERMISSION; a call at 0 is ignored with no signal
 func pause() -> void
 func resume() -> void
-signal phase_changed(value: Phase)   # GDD name: phase. Renamed (TD-ARCHITECTURE B1)
+signal phase_changed(value: Phase)   # renamed from the GDDs' phase (TD-ARCHITECTURE B1, ADR-0006)
 signal lives_changed(current: int)
 signal wave_called_early(seconds_left: float)
 ```
-Outcome commit order (Rule 15): set state, then the tick gate stops time, then `cancel_input()`, then emit `phase_changed`. FATAL is a `Phase` value because Rule 15 has `phase` name Won, Lost, Paused and Fatal, and Tower's chip listens for Fatal. AppRoot's own states (Boot, InStage, Fatal) are separate and live on AppRoot. Retry is an AppRoot latch, not a Flow command.
+Outcome commit order (Rule 15): set state and build the `StageResult`, then the tick gate stops time, then `cancel_input()`, then emit `phase_changed`. FATAL is a `Phase` value because Rule 15 has `phase_changed` name Won, Lost, Paused and Fatal, and Tower's chip listens for Fatal. AppRoot's own states (Boot, InStage, Fatal) are separate and live on AppRoot. Retry is an AppRoot latch, not a Flow command.
 
 ### B6. Combat (ADR-0009)
 
@@ -521,7 +521,7 @@ func dealt_by_kind(kind: SourceKind) -> float
 func dealt_total() -> float
 func hero_share() -> float
 signal attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)
-signal damage_applied(event: DamageEvent, applied: float, position: Vector2, killed: bool, spawn_id: int)
+signal damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int)
 ```
 Invariants: every HP change goes through `deliver`. Guards run in a fixed order (removed, amount, dead) and report named `push_error` codes. The parameter is `max_range` because `range` is a GDScript global. Combat reads no catalogue data. Helpers never mutate the list and skip the dead. View signals carry copied positions, and listeners never call `deliver`. ADR-0009 fixes the list type as `Array[Targetable]`, sim positions as float scalars (`Vector2` only in `report_attack` and the view signals), `attach` as the registration call, and `push_error` direct for Combat's guard codes (a scoped exception to ADR-0001 Decision 4).
 
@@ -543,7 +543,7 @@ func wave_tick() -> int
 signal enemy_leaked(lives_cost: int)
 signal enemy_killed(bounty: int)
 signal wave_cleared(intermission_duration: float)
-signal waves_complete()                     # breaks the past-tense rule: QQ-07
+signal waves_completed()                    # renamed from waves_complete (ADR-0006, QQ-07)
 ```
 The enemy stays a valid reference after removal (`removed` is set, the object is not freed). Lists are built as `Array[Targetable]` from the start, since typed arrays are invariant (ADR-0009 V2). `roster()` and `targets()` return EnemyWave's internal buffers, read-only by contract and size-checked at each `advance()` and `reap()`; a removed enemy leaves both before its signal fires. Constructor, loops and `add_enemy`: ADR-0009 Decision 7.
 
@@ -559,7 +559,7 @@ func gold() -> int
 func slot_state() -> Array                  # per slot: tower_id, level, cooldown_left
 func chip_state() -> Dictionary             # view-only read requested by the HUD
 signal gold_changed(current: int)
-signal tower_built(slot_index: int, tower_id: StringName)   # tower_id type: QQ-04
+signal tower_built(slot_index: int, tower_id: StringName)   # StringName: ADR-0006 (QQ-04)
 signal tower_upgraded(slot_index: int, level: int)
 
 class_name HeroSim extends RefCounted
@@ -584,6 +584,8 @@ Invariants: commands run only between ticks. State is checked before geometry. A
 | `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
 | `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
 | `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow | `battle.sim_time.to_ticks`: sign(x) * floor(abs(x) + 0.5) with x = seconds * 60; non-finite gives 0; `dt` = 1/60 fixed at build (ADR-0004 Decision 6). |
+| `wave_index() -> int` | Flow | `enemy_wave.wave_index`, read once to build the `StageResult` (Game State Rule 15; ADR-0006 Decision 6). |
+| `dealt_by_kind(kind: Combat.SourceKind) -> float`, `dealt_total() -> float` | Flow | `combat.dealt_by_kind` and `combat.dealt_total`, read once to build the `StageResult` (ADR-0006 Decision 6). |
 | `dt: float` | Flow, EnemyWave, HeroSim (and Combat through `to_ticks` only) | `battle.sim_time.dt`, the value 1/60 (ADR-0004). |
 
 All are method Callables on objects the Builder owns (B4 rule).
@@ -698,10 +700,10 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 (Proposed): `_process` accumulator, 60 Hz, clamp 3 (V6 sets 2 to 4), stall over 0.5 s runs no ticks |
 | QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. Proposed in ADR-0003: `canvas_items`, `keep`, portrait, fullscreen on phones, 360 dp guard (log only), taller phones letterbox (off-field entry not revealed at MVP; pending user confirmation C3, C4). | High | ADR-0003 (Proposed) |
 | QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
-| QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
+| QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. Proposed in ADR-0006: `StringName` for every catalogue ID, `int` for slot, spawn and resolver ids; no payload carries a sim object. | Medium | ADR-0006 (Proposed) |
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 (float policy); ADR-0009 makes every sim position a float scalar pair and verifies `Vector2` precision (V1); float policy and `tests/baselines/<arch>/` in ADR-0004 Decision 9 (Proposed) |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return; a release synthesised before a focus loss. Spike items SP1, SP2, SP3, SP10, SP11; kit in `prototypes/adr-0003-device-spike/`. | High | ADR-0003 (spike) |
-| QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
+| QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. Proposed in ADR-0006: those four renames, `pressed` kept, no exception; GDDs updated in the same change. | Medium | ADR-0006 (Proposed) |
 | QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009; ADR-0004 Decision 4 states the one tick order (Proposed) |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
