@@ -121,7 +121,7 @@ state_ownership:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -262,7 +262,7 @@ interfaces:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - contract: tick_constant
     status: active
     pattern: shared_resource
@@ -282,7 +282,7 @@ interfaces:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - contract: in_tick_guard
     status: active
     pattern: direct_call
@@ -298,7 +298,7 @@ interfaces:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -334,7 +334,7 @@ performance_budgets:
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - system: simulation
     status: active
     budget_ms: 4.0
@@ -451,7 +451,7 @@ api_decisions:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - purpose: sim_randomness
     status: active
     api: "No sim RNG at MVP; later, one RandomNumberGenerator per consumer, made by the Builder and seeded splitmix64(rng_seed * 1_000_003 + SALT); cosmetic RandomNumberGenerator owned by the wrapper only"
@@ -462,7 +462,7 @@ api_decisions:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -558,7 +558,7 @@ forbidden_patterns:
     why: "Sim time enters only through Battle.tick, so a battle is a function of its inputs"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - pattern: global_random_in_sim
     status: active
     # was: scoped to src/foundation, src/core, src/feature only (TD-ADR finding 2)
@@ -566,21 +566,21 @@ forbidden_patterns:
     why: "Global draws are not tied to rng_seed and break replay"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - pattern: vector_methods_in_sim
     status: active
     description: "In src/foundation, src/core and src/feature, sim maths uses float and int scalars with + - * / sqrt min max abs floor ceil round floori roundi int() clampf clampi is_finite is_nan only; Vector2 is storage (constructor, .x, .y); no Vector2 operators or methods, Rect2 methods, PackedVector2Array maths, Curve2D or Path2D sampling, or transcendentals"
     why: "Engine C++ methods and libm may differ by CPU; determinism is promised per architecture only"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
   - pattern: float_countdown
     status: active
     description: "No code subtracts dt from a float countdown; every countdown is an int of ticks and every authored duration passes through TickMath.to_ticks"
     why: "Repeated float subtraction drifts (5.0 s took 301 ticks)"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0004 Accepted 2026-11-04; binding"
 
 # Example:
 #

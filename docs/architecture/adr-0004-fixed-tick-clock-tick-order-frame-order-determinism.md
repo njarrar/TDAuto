@@ -1,7 +1,7 @@
 # ADR-0004: Fixed-Tick Clock, Tick Order, Frame Order and Determinism
 
 ## Status
-Proposed
+Accepted
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation.
 
@@ -12,6 +12,7 @@ Proposed
 2026-11-04 (against `docs/engine-reference/godot/` for Godot 4.7.2, `architecture.md` v4, ADR-0001 to ADR-0003 as Accepted, and `docs/registry/architecture.yaml`; revised after godot-specialist and TD-ADR reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar); also records the user's sign-off on QQ-08's tick-order part (one tick order, Combat Rule 11), accepting that towers act before the hero
 - Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`)
 - godot-specialist: CONCERNS; TD-ADR: CONCERNS. Findings resolved under Reviews.
 - Acceptance: the user. QQ-08's tick-order part is accepted only with this ADR.
@@ -285,7 +286,7 @@ Names are proposed; QQ-16 may add a prefix (ADR-0007).
 
 ## Migration Plan
 No code exists. Sync items, not edited here:
-1. `architecture.md`: Composition Root BattleWrapper row (the clock polls `clock_running()`, not `phase_changed(PAUSED)`; the wrapper owns a `DevErrorSink`); Data Flow 1 (driver, `step`, S1 off the critical path); Data Flow 3 row for `phase_changed` (drop the wrapper); Data Flow 6 step 4 (ADR-0003 2.5's zeroing now happens on the next frame's poll); Data Flow 10 (Decision 7); B0 (`TickMath`, `TickGuard`, `TickClock`); B4 and B9 additions; Required ADRs (ADR-0004 written; TR-state-006 joins ADR-0006's Covers as shared, for result contents and phase signals); QQ-01 resolved; QQ-05 resolved pending V11a; QQ-08 tick-order part pending acceptance; QQ-11 frame part.
+1. `architecture.md`: Composition Root BattleWrapper row (the clock polls `clock_running()`, not `phase_changed(PAUSED)`; the wrapper owns a `DevErrorSink`); Data Flow 1 (driver, `step`, S1 off the critical path); Data Flow 3 row for `phase_changed` (drop the wrapper); Data Flow 6 step 4 (ADR-0003 2.5's zeroing now happens on the next frame's poll); Data Flow 10 (Decision 7); B0 (`TickMath`, `TickGuard`, `TickClock`); B4 and B9 additions; Required ADRs (ADR-0004 written; TR-state-006 joins ADR-0006's Covers as shared, for result contents and phase signals); QQ-01 resolved; QQ-05 resolved pending V11a; QQ-08 tick-order part accepted by the user 2026-11-04; QQ-11 frame part.
 2. GDDs: Game State's ADR line after Rule 18 and "long frame" edge case; Combat and Enemy & Wave tick-order open questions; HUD `ticks_per_second` and Rules 10, 18; Tower's `ChipWindow` feed note (the wrapper); Data & Config floor text; Hero's walk position formula `from + (pin - from) * ratio` written per component (Decision 9).
 3. ADR-0002 (next revision): `to_ticks` uses `roundi`; optionally its validator warns when `seconds / dt` lies within 1e-9 of `k + 0.5`.
 4. ADR-0003 (next revision): Risks "S1 fails" notes the queue is not adopted.
