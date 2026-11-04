@@ -1,9 +1,9 @@
 # Tower System (incl. Gold Economy)
 
-> **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers, one user decision and all recommended items applied, re-review pending)
+> **Status**: Approved (lean design re-review 2026-11-04; 3 recommended items in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
@@ -75,7 +75,7 @@ IDs and levels are checked before any accessor read, through Data's non-fatal `i
 | `pressed` naming another tap target, or none | Closes. If it names another tower, that tap opens that tower's own chip |
 | `pressed` over the same tower with the hero beneath | Stays open (Input edge case) |
 | Phase changes among Build, Wave and Intermission | Stays open (Flow Rule 10) |
-| Paused, Won, Lost, Fatal | Closes on Flow's `phase` signal, which now names Paused and Fatal too, since `cancel()` emits nothing when input is idle. While `halted()` is true, TowerInput ignores every tap, so no chip or arc reopens |
+| Paused, Won, Lost, Fatal | Closes on Flow's `phase_changed` signal, which now names Paused and Fatal too, since `cancel()` emits nothing when input is idle. While `halted()` is true, TowerInput ignores every tap, so no chip or arc reopens |
 | Retry | Destroyed with the battle |
 
 A tower at its last level opens no chip, and emits `tower_inspected(slot_index)` for the range ring. Only one chip is open at a time.
@@ -94,13 +94,13 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Gold.**
 
-14. **Gold is one integer, never negative, with no cap, and `gold_changed` fires only when it changes.** Faucets: `starting_gold` when the battle is built (read directly from Stage); `enemy_killed(bounty)`, whoever dealt the kill; and the early-call bonus. Sinks: the two commands. Leaks pay nothing. There is no interest or stipend, which would add hoarding and blur what calling early costs. Gold freezes once `halted()` is true: a fatal leak skips the reap, so nothing is paid (Combat Rule 11).
+14. **Gold is one integer, never negative, with no cap, and `gold_changed` fires only when it changes.** Faucets: `starting_gold` when the battle is built (read directly from Stage); `enemy_killed(bounty)`, whoever dealt the kill; and the early-call bonus. Sinks: the two commands. Leaks pay nothing. There is no interest or stipend, which would add hoarding and blur what calling early pays. Gold freezes once `halted()` is true: a fatal leak skips the reap, so nothing is paid (Combat Rule 11).
 15. **A bounty is spendable from the next command.** Kills pay in the reap slot in ascending `spawn_id`, and commands run between ticks, so they cannot interleave.
-16. **The early-call bonus scales with time given up.** `wave_called_early(seconds_left)` pays the bonus at once, before the next wave's first spawn (Formulas). A flat bonus would make calling on the last tick free money. It reads no burst state (Flow Rule 9), and Start Wave in Build pays nothing. Calling costs burst recovery only while the burst could still be cooling: at starter values it needs 10.25 s of the 15 s, so a call with 4.75 s or less left costs no recovery and pays at most 2 gold. That is accepted. `seconds_left` includes the tick the next wave starts on, so a call pays for one tick more than it saves, which can move a payout by 1 gold exactly at a rate boundary; that is accepted too. The rate is a new Stage field, `early_call_seconds_per_gold`, which keeps gold values on the records that spend or earn them.
+16. **The early-call bonus scales with time given up.** `wave_called_early(seconds_left)` pays the bonus at once, before the next wave's first spawn (Formulas). A flat bonus would make calling on the last tick free money. It reads no burst state (Flow Rule 9), and Start Wave in Build pays nothing. Calling costs the time to re-pin and build, and burst recovery only while the burst could still be cooling: at starter values it needs 10.25 s of the 15 s, so a call with 4.75 s or less left costs no recovery and pays at most 2 gold. That is accepted. The wave commits at once and its members spawn on the next tick, while `seconds_left` counts every tick left, so a call pays for one tick more than it saves, which can move a payout by 1 gold exactly at a rate boundary; that is accepted too. **The bonus stays (user decision, 2026-11-04).** It lifts single only to tie the mixes at 9, but cutting it would not end the tie and would fail Flow's 2-lives gate on one mix (Hero, Simulated results). So a mono-role gate now covers calling too (Hero's deferred table), which fails today, is reported only until first playable, and then blocks. The rate cannot pass it (Hero, Deferred criteria). The rate is a new Stage field, `early_call_seconds_per_gold`, which keeps gold values on the records that spend or earn them.
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`), and `early_call_bonus(seconds_left)`, the pure formula below, so the HUD shows exactly what a call pays. The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10).
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`, giving the slot, elapsed time, window length and level. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`), and `early_call_bonus(seconds_left)`, the pure formula below, so the HUD shows exactly what a call pays. The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10).
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -115,11 +115,11 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 Each level's `visual_key` follows art bible §8's naming: `tower_tri_l1` and `_l2`, `tower_hex_l1` and `_l2`, `tower_sq_l1` and `_l2`. Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold at level 1: 0.57 on the two victims its radius reaches at 36 spacing, and 0.86 on three, against single's 0.40. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
 
-**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
+**This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build, on the one placement tested per mix, loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and, uncalled, single or splash alone win with only 6 lives, so mixes earn their slots (calling lifts single to 9; Hero's mono-role gate while calling). Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
 **Spending the whole opening has a price.** Single and splash, or slow and slow, leave 0 gold and at most 40 after wave 1, below the cheapest purchase of 50, so nothing new arrives until wave 2 pays. Single and single can reach 60, and single and slow 50. This is accepted, since it is what makes the first buy a real choice, and first playable will show whether it feels like a trap.
 
-**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early leads on all four mixes, single alone stays behind and every gate passes. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
+**Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early leads on all four mixes, single alone stays behind uncalled, and every gate passes except mono-role while calling. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
 
 | Mix | Placements | Fill first: median, range | Upgrade in pairs: median, range |
 |---|---|---|---|
@@ -244,7 +244,7 @@ The **wave_income** formula is defined as:
 **Output Range:** 0 and up. `gold_before_wave` only rises, so the last-wave rows bound the total, and this bounds each step.
 **Example:** 40, 56, 80, 72 and 128 at starter values. The first wave's 40 is below the cheapest purchase, which is why the content row starts at the second wave.
 
-That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call. A surviving player can leak at most 9 lives, worth 48 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold, and instant retry is its answer until a playtest says otherwise.
+That supports one or two decisions per wave. Filled first, the 2, 2 and 1 board has 2 towers at the start and 5 by wave 5, and goes into wave 6 three upgrades short with no calls, two with every call, buying cheapest first. By hand arithmetic, not run, 40 gold also moves a purchase a wave earlier on some mixes. A surviving player can leak at most 9 lives, worth 48 gold, and the bonus adds up to 40 more, so winners end within about two decisions of each other. The death spiral is about timing, not total gold, and instant retry is its answer until a playtest says otherwise.
 
 The **tower_dps** formula is defined as:
 
@@ -318,7 +318,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound`, `to_ticks` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack`, tick slot |
 | Input & Gesture Resolver | Target registry, `tap`, `pressed` (TowerInput only) |
-| Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase` for the chip |
+| Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase_changed` for the chip |
 
 **Downstream, with their own GDDs:**
 
@@ -382,14 +382,16 @@ Battle HUD draws these; this system supplies the data.
 | Tower fields, stat keys, never cache, level and cost meaning, sell and level questions | `design/gdd/data-config-pipeline.md` | Field domains; Tower levels and cost; Rule 10 | Value dependency; amended |
 | `deliver`, `apply_slow`, helpers, tick order, splash gate | `design/gdd/combat-damage.md` | Rules 2, 6, 7, 10, 11 | Rule dependency; Rule 6 amended |
 | Slots, `targets()`, `enemy_killed`, `to_ticks`, `gold_upper_bound`, L10, starter HP, bot gates | `design/gdd/enemy-wave.md` | Rules 3, 11, 14; Formulas; Starter values | Value dependency; amended |
-| Early call, live actions, `halted()`, `phase`, wiring test | `design/gdd/game-state-stage-flow.md` | Rules 2, 3, 9, 10, 15 | Rule dependency |
+| Early call, live actions, `halted()`, `phase_changed`, wiring test | `design/gdd/game-state-stage-flow.md` | Rules 2, 3, 9, 10, 15 | Rule dependency |
+| Bot gates, `burst_spike`, mono-role while calling, simulated table | `design/gdd/hero-system.md` | Simulated results; Deferred criteria | Rule dependency |
+| Arc, chip's drawing, Start/Call's bonus read, `slows_applied()` on the result | `design/gdd/battle-hud.md` | Rules 6 to 10, 15 | Ownership handoff |
 | Tap, `pressed`, target registry, bounce guard, chip window | `design/gdd/input-gesture-resolver.md` | Rule 8; Dependencies | Rule dependency; amended |
 | Polygons, accretion, states, affordance, budgets | `design/art/art-bible.md` | §2, §3, §4, §7, §8 | Value dependency; amended |
 | Prior prices and range, "too basic" finding | `prototypes/hero-pin-concept/REPORT.md` | Report | Evidence |
 
 ## Acceptance Criteria
 
-A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow`, and each THEN is the entire log. A spy accessor logs reads, changes values or latches `halted()`. Factories build `sim()`: `dt` 0.25, gold 100; `A` single, cost 30/40, damage 10/15, range 100/120, interval 0.5/0.25; `B` as `A`, splash, radius 50; `C` as `A`, slow, damage 0, strength 0.5, 1.0 s. `T` is one tick. `ChipWindow` uses `advance(ms)`, a fake `upgrade` and a fake `phase`, and chip criteria start open at 0. No scene, catalogue files or time assertions, except where a criterion names real records.
+A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow`, and each THEN is the entire log. A spy accessor logs reads, changes values or latches `halted()`. Factories build `sim()`: `dt` 0.25, gold 100; `A` single, cost 30/40, damage 10/15, range 100/120, interval 0.5/0.25; `B` as `A`, splash, radius 50; `C` as `A`, slow, damage 0, strength 0.5, 1.0 s. `T` is one tick. `ChipWindow` uses `advance(ms)`, a fake `upgrade` and a fake `phase_changed`, and chip criteria start open at 0. No scene, catalogue files or time assertions, except where a criterion names real records.
 
 **CI: Logic**
 1. (Rule 1) **GIVEN** `sim()`, **WHEN** `build` `A`, `B`, `C` on slots 0, 1, 2, **THEN** each is `OK`, gold is 10, the log is `gold_changed(70), tower_built(0, A), gold_changed(40), tower_built(1, B), gold_changed(10), tower_built(2, C)`, and no unlock is read.
@@ -466,10 +468,10 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Bot gates | Hero stories | The Hero GDD's deferred table owns towers-only, hero-only, mono-role, dominant build, upgrade order, placement, share, burst outcome, always-call, call-when-Ready and `dealt_burst`, each with its threshold |
+| Bot gates | Hero stories | The Hero GDD's deferred table owns towers-only, hero-only, mono-role, mono-role while calling, dominant build, upgrade order, placement, share, burst outcome, always-call, call-when-Ready and `dealt_burst`, each with its threshold |
 | `burst_spike`, L11, intermission, Combat's bypass row | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
 | Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
-| TowerInput wiring | Tower UI story | With a fake resolver, the chip's disc is TAP 300, radius 40, at (x, y − 76) while open and unregistered on close; taps reach `ChipWindow`; a built slot is disabled; `slot_tapped` fires; `phase` closes the chip |
+| TowerInput wiring | Tower UI story | With a fake resolver, the chip's disc is TAP 300, radius 40, at (x, y − 76) while open and unregistered on close; taps reach `ChipWindow`; a built slot is disabled; `slot_tapped` fires; `phase_changed` closes the chip |
 | Arc, result | Battle HUD stories | A disc builds once; an unaffordable one does nothing; a double tap on a slot dismisses; damage by source and Slowed are shown; screenshots retained |
 | Phone test (Input P1) | Producer | Under the Pillar 4 protocol, no accidental upgrades or wrong discs on the first phone build |
 
@@ -485,7 +487,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Calling early is nearly free for a hero bot, though the concept promises a cost (Hero GDD, Open Questions) | qa-lead + Hero GDD | First playable |
+| Calling early is nearly free for a hero bot, as Flow Rule 9 intends. Can tuning hold single only below the mixes while calling? The rate cannot; heavy HP and single's stats are untried (Hero's mono-role gate, failing today) | qa-lead + Hero GDD | First playable |
 | Do human results land between pinned once and driven? All numbers here are one scripted simulation, not game code, with slot order fixed by hand | qa-lead | First playable |
 | Is one mix the solved build? All four tested mixes tie on the mid-skill bot, and no fixed bot can tell | Bots + playtest | First playable |
 | Is the early-call bonus noticed at 1.8 s per gold? It pays 40 gold at most, below any tower's price on its own | Playtest | First playable |

@@ -163,7 +163,7 @@ requirements:
 - id: TR-input-003
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Every forwarded press is followed by exactly one release or cancel for that index, even under a mouse_filter STOP Control; the canceled flag is honoured"
+  requirement: "Every forwarded press is followed by a release or cancel for that index, and the first closes it, even under a mouse_filter STOP Control; the canceled flag is honoured"
   created: 2026-11-03
   revised: ""
   status: active

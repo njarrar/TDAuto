@@ -24,8 +24,7 @@ production/qa/
 
 ## Installing GdUnit4
 
-GdUnit4 is **not installed yet** (`addons/gdUnit4/` does not exist), so
-`commands.test` cannot run until it is.
+GdUnit4 6.2.0 is installed in `addons/gdUnit4/`. To reinstall it:
 
 1. Open Godot → Asset Store (AssetLib before Godot 4.7) → search "GdUnit4" → install it
 2. Enable the plugin: Project → Project Settings → Plugins → GdUnit4 ✓

@@ -121,7 +121,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | **Validator** (inside Data & Config) | Error list `{code, source, record_id, field}`. Tiered checks. | `validate(records) -> Array[ValidationError]` | Catalogue records | None (plain GDScript) |
 | **StatAccessor** (Data & Config) | Stat-key vocabulary and int/float type per key. Nothing else; no stored values. | `stat_int(ctx, key) -> int`, `stat_float(ctx, key) -> float`; a type mismatch or bad call goes to the injected failure handler | Catalogue; later Stat & Modifier | None |
 | **InputResolver** | Hit-target registry, the four-state machine, the FIFO re-entrancy queue, the frozen winners of the current press. No clock, no scene. | `press`, `move`, `release`, `cancel_pointer`, `cancel`; `register`, `unregister`, `set_centre`, `set_enabled`; signals `pressed`, `tap`, `ground_tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `idle` (payloads in B2) | `drag_slop`, `tap_slop` from the Input record, passed to `create()` by the wrapper | None |
-| **InputAdapter** (the only engine-facing input code) | Translation of engine events to the five resolver calls; edge and safe-area rejection; touch/mouse de-duplication; lifecycle `cancel()` calls | Forwards one lifecycle signal (pause) for Flow | Godot input events, `DisplayServer`, viewport | `InputEventScreenTouch`, `InputEventScreenDrag` and the `canceled` flag (**HIGH, NEEDS VERIFICATION**); `_unhandled_input` vs `Control` ordering (**HIGH**); `Node.PROCESS_MODE_ALWAYS` (LOW); `DisplayServer.get_display_safe_area()` (**HIGH**); `Viewport.size_changed` (LOW); app lifecycle notifications (**HIGH**); mouse device ID change (4.7, **HIGH**) |
+| **InputAdapter** (the only engine-facing input code) | Translation of engine events to the five resolver calls; edge and safe-area rejection; touch/mouse de-duplication; lifecycle `cancel()` calls | Emits `lifecycle_paused` (pause, focus loss) for Flow and HudLogic, `viewport_resized` for HudLogic | Godot input events, `DisplayServer`, viewport | `InputEventScreenTouch`, `InputEventScreenDrag` and the `canceled` flag (**HIGH, NEEDS VERIFICATION**); `_unhandled_input` vs `Control` ordering (**HIGH**); `Node.PROCESS_MODE_ALWAYS` (LOW); `DisplayServer.get_display_safe_area()` (**HIGH**); `Viewport.size_changed` (LOW); app lifecycle notifications (**HIGH**); mouse device ID change (4.7, **HIGH**) |
 | **FatalLatch** | One per battle plus one on AppRoot. Pure: keeps the first cause, idempotent, `is_fatal()`. No screen, no scene, no catalogue. | `fatal(cause)` (injected as a `Callable`), `is_fatal()` | Nothing | `push_error` (LOW). `assert` is never used for release-relevant checks (stripped in exports) |
 | *Mobile Platform (VS)* | Safe-area mapping, export presets, effect pooling, particle caps | Reserved | | `DisplayServer` (HIGH) |
 | *Save/Load (VS)* | Save file, version field, migration | Reserved | | `FileAccess` (MEDIUM) |
@@ -148,13 +148,12 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| **HudLogic** | HUD presentation state (button arm model, modal press model, arc state, range rings, snapshot). Registers every HUD disc, listens to gestures and issues commands. No gameplay state. | `advance(ms)`, `modal_press`, `modal_release`, `modal_clear`, `burst_button_centre()`, view-model reads | Resolver, TowerInput signals, Flow, TowerSim, HeroSim, EnemyWave, Combat (read-only), accessor for costs and Burst `cooldown`, injected `dt` and `to_ticks` | None |
+| **HudLogic** | HUD presentation state (button arm model, modal press model, arc state, range rings, snapshot). Registers every HUD disc, listens to gestures and issues commands. No gameplay state. | `advance(ms)`, `modal_press`, `modal_move`, `modal_release`, `modal_cancel_pointer`, `modal_cancel`, `modal_changed`, `burst_button_centre()`, view-model reads | Resolver, TowerInput signals, Flow, TowerSim, HeroSim, EnemyWave, Combat (read-only), accessor for costs and Burst `cooldown`, injected `dt` and `to_ticks` | None |
 | **HudTopBand** | Display-only `Control`s for gold, lives, pips and the next-wave line, which ignore input | None | HudLogic | `Control`, `mouse_filter` (HIGH, 4.6 dual focus) |
-| **HudField** | A `Node2D` that only draws, with one `_draw` for arc, chip, Start/Call, burst button art and digit, all rings and the prompt, redrawn on a quantised key | None | HudLogic | `CanvasItem._draw` (MEDIUM, 4.7 line feather) |
-| **HudModals** | Result and Paused `Control`s, built once and toggled visible, forwarding presses to HudLogic | None | HudLogic, adapter lifecycle signal | `Control` input (HIGH, ADR-0003) |
-| **ResultScreen, PausedScreen** | Full-screen modal `Control`s | Retry, Resume requests | Result snapshot | `Control` input consumption before the adapter (**HIGH, NEEDS VERIFICATION**) |
-| **HeroInput** | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `cooldown_digit()` | Resolver signals, HeroSim queries, `burst_button_centre()` from the HUD | None |
-| **TowerInput** | Slot and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected`, `chip_state()` | Resolver, TowerSim, Flow `phase` | None |
+| **HudField** | A `Node2D` that only draws, with one `_draw` for arc, chip, Start/Call, burst button art and digit, all rings and the prompt, redrawn on a quantised key and while a timed visual runs | None | HudLogic, HeroInput (`aim_state()`, `button_press()`, `cooldown_digit()`) | `CanvasItem._draw` (MEDIUM, 4.7 line feather) |
+| **HudModals** | Result and Paused `Control`s, built once and toggled visible, forwarding presses, moves and releases to HudLogic; toggled on `modal_changed` | None | HudLogic | `Control` input (HIGH, ADR-0003) |
+| **HeroInput** | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `aim_state()`, `aim_point()`, `button_press()`, `cooldown_digit()` | Resolver signals, HeroSim queries, `burst_button_centre()` from the HUD | None |
+| **TowerInput** | Slot and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected`, `chip_state()` | Resolver, TowerSim, Flow `phase_changed` | None |
 | **ChipWindow** | Real-time upgrade-chip timing | `advance(ms)` | Fed by the wrapper each frame | None |
 | **Field views** (enemy, tower, combat, path, hero) | Pools, draw order, flash markers (16 max), enemy view pool (at least 48). The hero view draws the reticle, reach ring, kill preview and Ready ticks | None | `roster()`, `slot_state()`, Combat view signals, HeroInput and HeroSim reads | `CanvasItem._draw`, `draw_polyline` or a baked polygon (MEDIUM, **NEEDS VERIFICATION** for 90 degree corners at width 72) |
 | **RunLog / GestureLog** (dev only) | JSONL records, gesture records | Injectable sink | Signals only | `FileAccess` append (MEDIUM; check the `bool` return). Decided in ADR-0010 and ADR-0008 |
@@ -250,7 +249,7 @@ After any step that can commit an outcome (leak, kill, fatal), later steps check
 | `enemy_killed(bounty)` | EnemyWave | TowerSim (gold) | Same |
 | `wave_cleared(intermission_duration)` | EnemyWave | Flow | Same; leaks come before the clear |
 | `waves_complete` | EnemyWave | Flow | Same |
-| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, TowerSim (`wave_called_early`, and `phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | The GDD names the signal `phase`; renamed here because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1) |
+| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, TowerSim (`wave_called_early`, and `phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | The GDD names the signal `phase_changed`; renamed here because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1) |
 | `gold_changed`, `tower_built`, `tower_upgraded` | TowerSim | HUD, views | Commit first, `gold_changed` then the tower signal; a refusal emits nothing |
 | `hero_pinned`, `burst_started` | HeroSim | Views, HUD | After state set; handlers never issue commands |
 | `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` |
@@ -280,8 +279,8 @@ Engine starts main scene ──► AppRoot._ready
           left_handed, to_ticks, wave_index(), the Hero and Burst IDs and the error sink (method Callables only, no capturing lambdas)
        e. Return Battle (headless-safe: no node touched)
   6. BattleWrapper builds InputResolver.create(drag_slop, tap_slop) (null: fatal), sets battle.set_input_cancel(resolver.cancel),
-     and adds InputAdapter, Clock, HUD and field views around the Battle
-  7. Flow enters Build
+     and adds, in order, InputAdapter, Clock, TowerInput, HudLogic, HeroInput (reads burst_button_centre()), then HudTopBand, HudField, HudModals and the field views, around the Battle
+  Flow opens in Build, emitting nothing, so HudLogic and TowerInput read phase() when built in step 6.
 ```
 
 Dependency note: the stat accessor cannot be used before step 2 finishes. The resolver reads its slops directly from the Input record, not through the accessor (TR-input-012).
@@ -428,9 +427,10 @@ Invariants: ids start at 1 and are never reused; `NONE` marks an absent winner. 
 
 ```gdscript
 class_name InputAdapter extends Node        # process_mode = PROCESS_MODE_ALWAYS
-signal lifecycle_paused()                   # one signal; the wrapper connects it to Flow.pause()
-# Contract: every forwarded press is followed by exactly one release, cancel_pointer or cancel()
-# for that index, even when a Control with mouse_filter = STOP lies under the drag.
+signal lifecycle_paused()                   # pause and focus loss only; the wrapper connects it to Flow.pause() and HudLogic.modal_cancel()
+signal viewport_resized()                   # a resize cancels input without pausing; connected to HudLogic.modal_cancel()
+# Contract: every forwarded press is followed by a release, cancel_pointer or cancel() for that
+# index, and the first closes it, even when a Control with mouse_filter = STOP lies under the drag.
 # Calls resolver.cancel() on pause, focus loss and viewport resize.
 ```
 Everything in this block is **NEEDS VERIFICATION** against live 4.7 docs: event path (`_unhandled_input` vs `_input`), `InputEventScreenTouch.canceled`, emulation settings, pointer-index collision, the 4.7 mouse device ID, `get_display_safe_area()` units. ADR-0003 decides stretch mode, aspect, minimum width and tall-phone behaviour itself; the Mobile Platform GDD (Vertical Slice) inherits the decision rather than blocking it (TD-ARCHITECTURE A3).
@@ -445,6 +445,8 @@ func tick(dt: float) -> void      # the ONLY way simulation time advances.
 func halted() -> bool             # flow outcome WON, LOST or FATAL, or fatal_latch set
 func set_input_cancel(cancel: Callable) -> void   # wrapper only; never set headless
 func cancel_input() -> void       # public, guarded with is_valid(); Flow and AppRoot both call it
+# Reads for the wrapper, which injects them into HeroInput and HudLogic (the builder never sees those):
+# left_handed, hero_id, burst_id, dt, to_ticks, in_build
 # Strong typed fields: every sim, the FatalLatch and the one per-battle StatAccessor (Flow Rule 2a)
 
 class_name BattleBuilder extends RefCounted
@@ -468,11 +470,11 @@ func start_wave() -> StartResult     # Start Wave in BUILD; a second tap finds n
 func call_early() -> CallResult      # Call during INTERMISSION; a call at 0 is ignored with no signal
 func pause() -> void
 func resume() -> void
-signal phase_changed(value: Phase)   # GDD name: phase. Renamed (TD-ARCHITECTURE B1)
+signal phase_changed(value: Phase)   # Renamed from phase in the GDDs too (2026-11-04): signal phase plus func phase() fails to parse on 4.7.2
 signal lives_changed(current: int)
 signal wave_called_early(seconds_left: float)
 ```
-Commit order (Rule 15): set state, then act (`start_next_wave()`, or the tick gate stops time and `cancel_input()`), then emit in order, stopping if Fatal latched during an emit. `phase_changed` fires on every state change. FATAL can replace WON, LOST and PAUSED. FATAL is a `Phase` value because Rule 15 has `phase` name Won, Lost, Paused and Fatal, and Tower's chip listens for Fatal. AppRoot's own states (Boot, InStage, Fatal) are separate and live on AppRoot. Retry is an AppRoot latch, not a Flow command.
+Commit order (Rule 15): set state, then act (`start_next_wave()`, or the tick gate stops time and `cancel_input()`), then emit in order, stopping if Fatal latched during an emit. `phase_changed` fires on every state change. FATAL can replace WON, LOST and PAUSED. FATAL is a `Phase` value because Rule 15 has `phase_changed` name Won, Lost, Paused and Fatal, and Tower's chip listens for Fatal. AppRoot's own states (Boot, InStage, Fatal) are separate and live on AppRoot. Retry is an AppRoot latch, not a Flow command.
 
 ### B6. Combat (ADR-0009)
 
@@ -560,13 +562,14 @@ Invariants: commands run only between ticks. State is checked before geometry. A
 | `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
 | `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
 | `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow, HudLogic | Rounds half away from zero; `dt` fixed at build. |
+| `tap_slop`, `edge_reject_margin`, `reduce_motion`, field width, safe-area insets; Combat's counters, tower IDs and role tags, launch ID, build hash, AppRoot's retry latch | HudLogic | Injected by the wrapper (Battle HUD Rule 1). |
 | `dt: float` | HudLogic | The fixed tick, for `intermission_left × dt` on Tower's bonus read. |
 
 All are method Callables on objects `Battle` holds in typed fields, since the Builder holds nothing and a Callable does not keep its target alive (B4 rule, QQ-17). There is one StatAccessor per battle.
 
 ### B10. HUD read surface (ADR-0006, ADR-0010)
 
-The HUD reads, never writes: `Flow.phase()`, `lives()`, `intermission_left`, `result()`; `TowerSim.gold()`, `early_call_bonus()`, `slows_applied()`, the `tower_built` signal; `TowerInput.chip_state()`; `HeroSim` queries and `cooldown_left`; `EnemyWave.wave_index()`, `got_through_by_type()`; `Combat.hero_share()` for the end-of-stage log. It also listens to TowerInput's `tower_inspected` signal. The cooldown total is Burst `cooldown`, read through the accessor with the injected `burst_id`; Hero exposes no total. All these reads now exist in their owners' GDDs. `burst_button_centre()` is owned by the HUD and read once by HeroInput at registration.
+The HUD reads, never writes: HeroInput's `aim_state()`, `button_press()` and `cooldown_digit()`, read by HudField; `Flow.phase()`, `lives()`, `intermission_left`, `result()`; `TowerSim.gold()`, `early_call_bonus()`, `slows_applied()`, the `tower_built` signal; `TowerInput.chip_state()`; `HeroSim` queries and `cooldown_left`; `EnemyWave.wave_index()`, `got_through_by_type()`; `Combat.hero_share()` for the end-of-stage log. It also listens to TowerInput's `tower_inspected` signal. The cooldown total is Burst `cooldown`, read through the accessor with the injected `burst_id`; Hero exposes no total. All these reads now exist in their owners' GDDs. `burst_button_centre()` is owned by the HUD and read once by HeroInput at registration.
 
 ### What cannot be tested headless
 
@@ -677,7 +680,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |
-| QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
+| QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed`, in the GDDs too. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
 | QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. | High | ADR-0001, ADR-0004, ADR-0009 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
 | QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004, ADR-0011, performance-analyst |

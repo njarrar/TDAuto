@@ -5,7 +5,7 @@ Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check
      python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
      python3 tools/balance-sim/hero_bots.py --orders (fill first against upgrading in pairs, every placement)
-     python3 tools/balance-sim/hero_bots.py --calls  (mid-skill: never calling, calling when the burst is Ready, always calling)
+     python3 tools/balance-sim/hero_bots.py --calls  (mid-skill: never calling, calling when the burst is Ready, always calling, each with and without the bonus)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
 import itertools
@@ -324,7 +324,7 @@ if __name__=='__main__':
         orders()
     elif '--calls' in sys.argv:
         for b,o in BUILDS.items():
-            print(f"{b:27}",' | '.join(f"{lab} {fm(r:=run(F,o,early=e,hero=dict(MID,reach=160.0)))} {r['mins']:.1f}m gold {r['gold']}" for lab,e in (('never',False),('ready','ready'),('always',True))))
+            print(f"{b:27}",' | '.join(f"{lab} {fm(r:=run(F,o,early=e,bonus=bn,hero=dict(MID,reach=160.0)))} {r['mins']:.1f}m gold {r['gold']}" for lab,e,bn in (('never',False,1.8),('ready','ready',1.8),('ready no bonus','ready',1e9),('always',True,1.8),('always no bonus',True,1e9))))
     elif '--left' in sys.argv:
         HAND='left'; table()
     else:

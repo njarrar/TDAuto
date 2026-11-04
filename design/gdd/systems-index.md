@@ -24,14 +24,14 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Data & Config Pipeline (inferred) | Core | MVP | In Review | design/gdd/data-config-pipeline.md | — |
-| 2 | Input & Gesture Resolver | Core | MVP | In Review | design/gdd/input-gesture-resolver.md | Data & Config |
-| 3 | Game State & Stage Flow (inferred) | Core | MVP | In Review | design/gdd/game-state-stage-flow.md | Data & Config, Input, Combat |
+| 1 | Data & Config Pipeline (inferred) | Core | MVP | Approved | design/gdd/data-config-pipeline.md | — |
+| 2 | Input & Gesture Resolver | Core | MVP | Approved | design/gdd/input-gesture-resolver.md | Data & Config |
+| 3 | Game State & Stage Flow (inferred) | Core | MVP | Approved | design/gdd/game-state-stage-flow.md | Data & Config, Input, Combat |
 | 4 | Combat & Damage (inferred) | Gameplay | MVP | Approved | design/gdd/combat-damage.md | — (`to_ticks` only) |
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Approved | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
-| 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | In Review | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
-| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | In Review | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Enemy & Wave, Combat |
+| 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | Approved | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
+| 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Approved | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config, Game State |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Approved | design/gdd/battle-hud.md | Game State, Tower, Hero, Input, Data & Config, Enemy & Wave, Combat |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
@@ -179,7 +179,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 | Total systems identified | 22 |
 | Design docs started | 8 |
 | Design docs reviewed | 8 |
-| Design docs approved | 2 |
+| Design docs approved | 8 |
 | MVP systems designed | 8/8 |
 | Vertical Slice systems designed | 0/11 |
 
@@ -187,7 +187,6 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 
 ## Next Steps
 
-- [ ] Re-review Battle HUD and Game State & Stage Flow (revised 2026-11-04); re-check Hero's Rule 2 amendment; re-review Data & Config, Input and Tower
 - [ ] `/ux-design` for the arc panels, chip, Start/Call and result before epics
 - [ ] `/architecture-decision` ADR-0001
 - [ ] Full `/review-all-gdds`, then `/gate-check technical-setup` when the 8 MVP GDDs are approved
