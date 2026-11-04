@@ -58,3 +58,45 @@ A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are r
 
 ## Revision — 2026-11-03 — cross-GDD warning pass
 From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `early_call_bonus(seconds_left)` added to Rule 17's reads (N3), `visual_key` names, `to_ticks` dependency.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, economy-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 6 | Recommended: 14
+Summary: The prior eight blockers held and every recomputed table checked. Six items remained: "one tick" floors that, after Data's change to 1/30 s, let the bonus divide by zero at a coarse test dt; an unstated clock and clamp for the chip window; a wave_income floor checked on an optimistic bound (wave 2's bounties alone pay 48 against a cheapest buy of 50); a "9 lives on all four builds" line that reads as contradicting the placement table; an impossible AC6; and Rule 16 still framing the bonus as a trade-off after the user made calling a fast-forward.
+Prior verdict resolved: Yes (all 8 prior blocking items)
+Findings:
+- [BLOCKING] Formulas, content rows, Rule 9: "one tick" floors; early_call_bonus and the cooldown divide or reload at 0 ticks under a coarse dt.
+- [BLOCKING] Rule 8 and chip criteria: ChipWindow's clock and clamp unstated, so 199/200/1499/1500 are ambiguous.
+- [BLOCKING] Content rules, wave_income: floor checked on an optimistic bound; user decision (creative director recommends raising wave 2's bounties so bounties alone pay 50).
+- [BLOCKING] Starter values, Open Questions: fixed-placement "9 lives on all four" vs the placement table's medians.
+- [BLOCKING] Acceptance Criteria AC6: "every fault at once" impossible for upgrade; HALTED vs NO_GOLD precedence; is_tower and level_count vs "no accessor read".
+- [BLOCKING] Rule 16, Open Questions: bonus framed as a cost after the user's fast-forward decision.
+- [RECOMMENDED] Formulas: the death spiral is placement as well as timing; "9 lives worth 48 gold" means three heavies.
+- [RECOMMENDED] Starter values: the slow and slow opening is a trap; "real choice" overclaims.
+- [RECOMMENDED] Content rules: bounds for splash_radius and slow_duration; burst_spike range and epsilon; seconds_left with a 0 duration; a ceiling on last-wave bounty share; gold_before_last_wave for tutorial stages.
+- [RECOMMENDED] Rule 8 table: `phase` vs `phase_changed` (ADR-0006, QQ-07).
+- [RECOMMENDED] Acceptance Criteria: AC18 wording; AC14 to Integration; AC52's reap dependency; target HP and whether T includes the reap in AC31, 38, 39, 40, 51; AC58 cutoff; missing criteria (Paused, opening tap, chip_state draining, Won gold, HUD preview past the last level); upgrade versions of AC7 to AC12; AC22 and AC42 splits; level-2 role values; two slows of different levels; AC59 per part; Manual pass conditions.
+- [RECOMMENDED] Routed to ADRs and architecture: slot_state arity vs B8, input vs ChipWindow feed order, an emitting guard, TowerInput's typed fields, tower_id as StringName, TowerInput signals in B8, targets() cached per tick, _draw batching.
+- [RECOMMENDED] Routed to Battle HUD: +N and a first-time hint on calling, ring layer order, 4.7 line feather with a device screenshot, chip disc near the top edge, a bonus-cap row.
+- [RECOMMENDED] Routed to playtest: per-tower result line, the chip's mid-wave cost and disc-only commit, a readable level-2 slow, wave 1 leak sensitivity, the 8-gold bonus, back-loaded wave 6 bounties and stranded gold.
+- [RECOMMENDED] Disagreements: game-designer's coverage-cue blocker mostly answered by Battle HUD Rule 9's arc range rings; qa-lead's AC65 point mistaken (it uses a starter-shaped factory). The creative director's fix for the chip clock (ticks) was not applied: the sim clock is stopped in Build, so the chip keeps real time with HUD Rule 11's 100 ms clamp.
+Reviewed-Content-Hash: design/gdd/tower-system.md 83803cb361c7fe6971b87874234be4f565d8651c
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d79fe3bf982a1d15a806cc0725421521a6a735d5
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d14444df535b375764cb42
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied in autonomous mode: blockers 1, 2, 4, 5 and 6 (max(1, to_ticks(...)) on the bonus divisor and the reload, 1/30 s floors citing Data; ChipWindow on real time with a 100 ms clamp per advance, frozen while Paused, and chip criteria in advance totals; the fixed-placement runs named as one placement per mix; AC6 rewritten per fault with HALTED ahead of NO_GOLD; Rule 16 and Open Question 1 recast for the fast-forward). Blocker 3 applied as the interim option: the wave_income row and Formulas prose now say the bound is optimistic and that a player who never calls is 2 gold short after wave 2. Raising wave 2's bounties is left to the user, since it changes Enemy & Wave's data and needs the bots re-run.
+Also applied: the death spiral line, three heavies, AC58's cutoff.
+Not done: the remaining recommended items and every routed item.
+Re-review pending: the GDD hash above is of the reviewed text, not this revision.
