@@ -122,6 +122,17 @@ state_ownership:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0004 Accepted 2026-11-04; binding"
+  - state: stat_key_vocabulary
+    status: active
+    owner_system: data-config
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    interface: "StatKeys (src/foundation/data/stat_keys.gd): StringName const per key, enum Kind INT/FLOAT, const ROWS per record type (tower, enemy, hero, burst), const ROLE_TAG; ROWS matches schema.gd numeric fields both ways (V4); reserved grant_kind values GRANT_SKILL_TREE, GRANT_HERO_WEAPON, GRANT_SYNERGY"
+    write_access: data-config-only
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -299,6 +310,22 @@ interfaces:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0004 Accepted 2026-11-04; binding"
+  - contract: stat_read
+    status: active
+    pattern: direct_call
+    producer: stat-accessor
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - hud-logic
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int, stat_float(ctx, key) -> float; bad call (null context, unresolved def, unknown key, inapplicable key, type mismatch, bad level, in that order) calls fatal once with cause code and returns 0 or 0.0; is_tower(id), level_count(def_id) never call fatal; object injected by the Builder; HudLogic gets it via Battle.stat_accessor(); caller checks halted() after every read; ReadContext made once per owner, live entity held by WeakRef"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -463,6 +490,17 @@ api_decisions:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0004 Accepted 2026-11-04; binding"
+  - purpose: stat_key_format
+    status: active
+    api: "StringName constants in StatKeys, named after schema fields; untyped const Dictionary tables; value fetched with Object.get(key) on the record or TowerLevel"
+    not: "String literal or &-literal keys at call sites, int enum keys, Variant stat() read, typed Dictionary const (4.4+, unverified offline)"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    reason: "One key list checked against schema.gd; pointer compare; matches future modifier data with no map; match-per-key is the fallback if perf check P1 fails"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -581,6 +619,27 @@ forbidden_patterns:
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     notes: "ADR-0004 Accepted 2026-11-04; binding"
+  - pattern: stat_value_cache
+    status: active
+    description: "No caller stores a stat read past the action that read it; the only exception is max_hp read once at spawn to seed Health"
+    why: "A Vertical Slice modifier must reach live entities with no call-site change (TR-data-008)"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: stat_key_literal
+    status: active
+    description: "No String or &-literal key argument to stat_int or stat_float; keys come only from StatKeys constants (lint L-STAT-1)"
+    why: "A literal skips the vocabulary and a String converts to StringName on every call"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: read_context_per_read
+    status: active
+    description: "No read path calls ReadContext.new(); each owner makes its contexts once and reuses them; a context holds its live entity only by WeakRef and never a Node"
+    why: "Per-read contexts allocate in the hot path; a strong live entity forms a RefCounted cycle with the Enemy that owns the context"
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-04
+    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
