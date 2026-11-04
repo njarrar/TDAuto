@@ -1,6 +1,6 @@
 # Tower System (incl. Gold Economy)
 
-> **Status**: In Review (second design review 2026-11-04, full, NEEDS REVISION; 6 blocking items applied, one awaiting a user decision on wave 2's bounties; re-review pending; see the review log)
+> **Status**: In Review (second design review 2026-11-04, full, NEEDS REVISION; 6 blocking items applied, one wave 2's bounties kept by user decision; re-review pending; see the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-04
@@ -142,7 +142,7 @@ Upgrading in pairs means build two, upgrade both, and repeat. A new single still
 | `gold_before_last_wave` | Below the cheapest full board, which is slot count × the cheapest tower's total level costs | 496 < 550 |
 | Dearest full board, likewise | Above `max_final_gold` | 750 > 670 |
 | Bonus share | At most 10% of `max_final_gold` | 6.0% |
-| `wave_income`, every wave from the second | At least the cheapest level-1 `cost`, so no later wave funds nothing. This is an optimistic bound (every kill, every call made at once): bounties alone after wave 2 pay 48, so a player who never calls is 2 gold short of the cheapest buy there. Accepted pending the user's choice on raising wave 2's bounties (review 2026-11-04) | 56 ≥ 50 |
+| `wave_income`, every wave from the second | At least the cheapest level-1 `cost`, so no later wave funds nothing. This is an optimistic bound (every kill, every call made at once): bounties alone after wave 2 pay 48, so a player who never calls is 2 gold short of the cheapest buy there. Kept by user decision (2026-11-04) until the bots are re-baselined on the fixed tick: an extra normal or fast in wave 2, or a cheaper single, each broke a Pillar 2 gate on the throwaway bots (review log) | 56 ≥ 50 |
 | `wave_income`, every wave | At most twice the dearest `cost`, so a wave funds one or two decisions | 128 ≤ 160 |
 | `damage` | Exactly 0 on `slow`, above 0 otherwise | Pass |
 | `range` | At most 260 | 165 |

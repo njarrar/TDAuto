@@ -100,3 +100,10 @@ Applied in autonomous mode: blockers 1, 2, 4, 5 and 6 (max(1, to_ticks(...)) on 
 Also applied: the death spiral line, three heavies, AC58's cutoff.
 Not done: the remaining recommended items and every routed item.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Decision — 2026-11-04 — wave 2 bounties (blocker 3)
+The user first chose raising wave 2's bounties, then kept the labelled optimistic bound after the throwaway bots (`tools/balance-sim/hero_bots.py`, default, --orders and --calls; the unmodified script reproduced the documented table) showed every variant breaks a Pillar 2 gate:
+- One more normal in wave 2 (bounties 52): hero share median 24.8%, below the 25% floor; 3 single, 1 splash, 1 slow wins without the burst; upgrading in pairs only ties filling first on 3 single, 2 splash.
+- One extra fast (51): upgrading in pairs trails filling first on 3 single, 1 splash, 1 slow (6.5 against 7), failing the script's order assert.
+- Single level-1 cost 48: single only reaches 10 lives against the best mixed build's 9, failing the mono-role gate.
+Revisit when the bots are re-baselined on the fixed tick, when every gate can be retuned together. No data changed.
