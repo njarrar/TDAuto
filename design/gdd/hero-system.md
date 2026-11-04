@@ -1,6 +1,6 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
-> **Status**: In Review (Rule 2 amended 2026-11-04 by user decision: a pin in Build places the hero at once; bot table unchanged; needs a re-check). Before that: Approved 2026-11-03 by the user, on a lighter exit after the seventh design review (NEEDS REVISION; two blockers applied, the revised criteria confirmed by one reader, no eighth full review) Cross-GDD text reconciliation later the same day changed no balance value and kept this status: it names the hero view as drawer of field-anchored visuals, adds content row L14, and corrects the UX offset prose to 100. See the review log.
+> **Status**: In Review (eighth design review 2026-11-04, full, NEEDS REVISION on the Rule 2 amendment's tests and a tick floor; its 3 blocking items applied the same day, re-review pending; the amendment itself held). Before that: Approved 2026-11-03 by the user on a lighter exit after the seventh review. See the review log.
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, first about 3 lives and then about 2 (Rule 7), and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-04
@@ -33,7 +33,7 @@ HeroInput changes the battle only through the two commands. Bots call the two co
 **The pin.**
 
 1. **Nothing happens until the first pin.** The hero starts unpinned at the stage's `hero_start`. It fights nothing, and the burst is refused until it is pinned, so the button stays locked. It shows its grab ring, not its leash: `hero_start` is 80 from the path, so a leash of 90 would show enemies walking through a hero that does nothing. A never-pinned run is therefore identical to towers-only by rule (Combat's deferred gate), which is the prototype's pet test, and the first thing a player learns is the pin.
-2. **`pin(position)` sets the destination.** It runs between ticks, and returns `HALTED` (`halted()` is true), `BAD_POSITION` (not finite), `OUT_OF_BOUNDS` (outside `pin_rect`), `BUTTON_ZONE` (inside an active shape in Stage's `pin_exclusion`), or `OK`, checked in that order. A refusal changes nothing. `pin_exclusion` is a list of segments, each with a radius and a hand (right, left or both), a disc being a segment of no length: each hand's burst line, and Start/Call's centre for both hands, each at radius 60. Only shapes for both hands and the active hand count, so a right-handed player keeps the bottom-left corner (user decision, 2026-11-02). The hand comes from `left_handed` on Data's Input record, which the builder reads and injects into HeroSim and the wrapper's HeroInput and HUD, and it is fixed for the battle. The radius is the hero's grab radius 56 plus 4: no button's centre ever lies inside the hero's grab disc, and the hero's centre never lies inside a button's 48, so each can always be pressed at its centre. Where the discs overlap, the hero wins (Rule 15). Every distance test compares squared distances, inclusive, so exactly 60 is `OK`. In Build a pin places the hero at once: its position becomes the pin, it is Pinned with no walk, and `hero_pinned` fires, so the first drag visibly works while the clock is stopped (user decision, 2026-11-04; Flow Rule 10). Timers begin on the first tick.
+2. **`pin(position)` sets the destination.** It runs between ticks, and returns `HALTED` (`halted()` is true), `BAD_POSITION` (not finite), `OUT_OF_BOUNDS` (outside `pin_rect`), `BUTTON_ZONE` (inside an active shape in Stage's `pin_exclusion`), or `OK`, checked in that order. A refusal changes nothing. `pin_exclusion` is a list of segments, each with a radius and a hand (right, left or both), a disc being a segment of no length: each hand's burst line, and Start/Call's centre for both hands, each at radius 60. Only shapes for both hands and the active hand count, so a right-handed player keeps the bottom-left corner (user decision, 2026-11-02). The hand comes from `left_handed` on Data's Input record, which the builder reads and injects into HeroSim and the wrapper's HeroInput and HUD, and it is fixed for the battle. The radius is the hero's grab radius 56 plus 4: no button's centre ever lies inside the hero's grab disc, and the hero's centre never lies inside a button's 48, so each can always be pressed at its centre. Where the discs overlap, the hero wins (Rule 15). Every distance test compares squared distances, inclusive, so exactly 60 is `OK`. In Build a pin places the hero at once: its position becomes the pin, `walk_left` is 0, it is Pinned with no walk, `attack_left` is untouched (0 before any attack), and `hero_pinned` fires, so the first drag visibly works while the clock is stopped (user decision, 2026-11-04; Flow Rule 10). Timers begin on the first tick.
 3. **The hero walks in a straight line.** At `walk_speed`, 240 units per second, with no path-following, so "no pathfinding" stands. It does not attack while walking, and a new pin restarts from where it is. `hero_pinned` fires from the command, after the state is set. Signal handlers never issue commands. There is no re-pin cooldown. Crossing the starter hairpin takes about 2 s, so two fronts cost something, but it is not a chore.
 4. **The leash is the hero's whole reach.** The hero stands at its pin and attacks the nearest enemy from `targets()` inside `leash_radius`. There is no separate range and no chasing inside the leash, so the leash means what the hero itself can hit, which is how the prototype's players read it. The burst's reach is a separate ring, shown only while aiming.
 5. **Auto-attack is deliberately small.** It exists to make the pin feel inhabited, at 4 damage per second against a level-1 single tower's 20. About 5% of a stage's damage comes from it, and 8% at the very most.
@@ -63,10 +63,10 @@ HeroInput changes the battle only through the two commands. Bots call the two co
    1. Walking: subtract 1 from `walk_left`, and set the position along the line. At 0: exactly at the pin, Pinned.
    2. If `attack_left` is above 0, subtract 1. If still above 0, or not Pinned, go to 5.
    3. Read `leash_radius`, then `nearest_in(targets(), position, leash)`. None: hold at 0 and go to 5.
-   4. Read `damage` and `attack_interval`. Set `attack_left = to_ticks(attack_interval)`, call Combat's `report_attack`, which emits `attack_fired`, then `deliver`.
+   4. Read `damage` and `attack_interval`. Set `attack_left = max(1, to_ticks(attack_interval))`, call Combat's `report_attack`, which emits `attack_fired`, then `deliver`.
    5. If Cooling: subtract 1 from `cooldown_left`; at 0, Ready. Nothing else touches the burst here, since `cooldown_left` is also 0 while Ready and Telegraphing.
    6. Telegraphing: subtract 1 from `telegraph_left`. If still above 0, end.
-   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius`, `report_attack` with source kind BURST, the Burst's ID and the hero's position as origin, one `deliver` per victim, then the counters.
+   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = max(1, to_ticks(cooldown))`, so a cooldown that rounds to 0 ticks at a coarse test `dt` still Readies on the next tick rather than counting past 0. Then `all_in_radius`, `report_attack` with source kind BURST, the Burst's ID and the hero's position as origin, one `deliver` per victim, then the counters.
 
 **Starter values.** These are fixtures, not balance.
 
@@ -77,7 +77,7 @@ HeroInput changes the battle only through the two commands. Bots call the two co
 | | `visual_key` | `char_hero` |
 | Burst | `damage`, `radius` | 130, 70 |
 | | `cooldown`, `telegraph_duration`, `reach` | 10, 0.25, 160 |
-| Stage | `hero_start` | (350, 800): 102 from the nearest slot, 80 from the path, 107 from the right-hand button |
+| Stage | `hero_start` | (350, 800): 102 from the nearest slot, 80 from the path, 107 from the right-hand burst line (107.2 to 137.8 from the button's centre, by bottom inset) |
 | | `pin_rect` | x 48 to 492, y 174 to 888: a fixed worst case, so the sim needs no insets and every device agrees |
 | | `pin_exclusion` | Right hand: segment (456, 816) to (456, 888). Left hand: segment (84, 816) to (84, 888). These are the lines L3 and L7 test. Both hands: the point (186, 800). Each at radius 60. The HUD conforms to them |
 
@@ -123,7 +123,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 
 | Check | Bound | Starter |
 |---|---|---|
-| `leash_radius` | At least `path_width` | 72 ≤ 90 |
+| `leash_radius` | At least `path_width` | `path_width` 72 ≤ leash 90 |
 | Fastest enemy's `move_speed` × `max(1, to_ticks(telegraph_duration))` × `dt` | At most half the `radius` | 27.5 ≤ 35 |
 | `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration` (Enemy & Wave) | 15 ≥ 10.25 |
 | `burst_spike` (Tower) | At least 2 | 5.78 |
@@ -151,7 +151,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 
 | Hero | Meaning | `pin` `OK` | On tick |
 |---|---|---|---|
-| Unpinned | At `hero_start`; fights nothing | → Walking, or Pinned at once in Build | No reads, no attack |
+| Unpinned | At `hero_start`; fights nothing | → Walking, or Pinned at once in Build or when the pin is `hero_start` itself | No reads, no attack |
 | Walking | Moving to the pin; no attacks; its attack timer still counts | Restart from the current position, or Pinned at once if the pin is its own position | At the pin → Pinned |
 | Pinned | At the pin; attacks inside the leash | → Walking; stays Pinned if the pin is its own position, or in Build, where it moves at once | Attacks |
 
@@ -161,7 +161,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 | Telegraphing | Aim fixed; no cancel | `NOT_READY` | Reaches 0 → release → Cooling |
 | Cooling | Timer running | `NOT_READY` | Reaches 0 → Ready |
 
-Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rules 11 and 13. The battle does not know a thumb is aiming.
+Walking never occurs in Build: Build only opens the stage, and every pin there places the hero at once. Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rules 11 and 13. The battle does not know a thumb is aiming.
 
 ### Interactions with Other Systems
 
@@ -216,7 +216,7 @@ The **walk_ticks** formula is defined as:
 | `distance` | float, units | 0 up to the `pin_rect` diagonal | calculated | Current position to the pin |
 | `walk_speed` | float, units/s | above 0 to 2,000 | data file via the accessor | Hero |
 
-**Output Range:** 1 up to 211 ticks across the rect's diagonal of 841, so even the smallest hop takes a tick and a bot cannot chain free moves.
+**Output Range:** 1 up to 211 ticks across the rect's diagonal of 841 at the starter `walk_speed` of 240, so even the smallest hop takes a tick and a bot cannot chain free moves.
 **Example:** 240 units: 60 ticks. The position along the line is `from + (pin − from) × (1 − float(walk_left) / float(walk_ticks))`, with the ratio in floats, and at `walk_left` 0 the position is assigned the pin directly.
 
 The **clamp_pin** rule is defined as:
@@ -407,10 +407,19 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 27. (Equivalence) A tick-indexed gesture script, unclamped, with finger = aim + (0, 100), through the real resolver and HeroInput, and the same script through direct commands: after every tick, HeroSim's fields, counters and logs are equal. The script holds at least, in this order: a press on the button in Build, a first pin, Start, a pin that walks, a re-pin mid-walk, an aim released Live, a press on the button in Cooling, and an aim released while cancelling. A released Live aim has its finger over 64 from the button's centre and its aim within `reach − 0.01`. Each of the two presses drags its finger over 64 from the button's centre and releases there. The cancelled aim drags to 55 from it, never passing 64, and releases there. These three issue no command, so the direct script has no entry for them. A spy on HeroSim's `pin` and `burst` records identical calls in both runs.
 28. (Never pinned) A fixed script on the starter stage to Won or Lost, with HeroSim never pinned and with HeroSim absent: per-tick lives, gold, enemies, towers, the `deliver` and `attack_fired` logs and the accessor read log are equal, and HeroSim's fields keep their initial values.
 29. (Content) Real records pass; each rule fails on its own broken fixture, watched failing once.
-30. (Flow, Combat) Build runs no T; a fatal leak lands nothing; Paused resumes exactly. In Build, a pin 50 away gives `position()` at the pin, Pinned and one `hero_pinned`, with no T; the same pin with `in_build()` false starts a walk.
+30. (Flow, Combat) Build runs no T; a fatal leak lands nothing; Paused resumes exactly. The Build pin is criteria 34 to 39.
 31. (Phase) With the real Flow and resolver, an aim armed in Intermission stays Live across the change to Wave, and its release gives `burst_started`.
 32. (Rule 15, drag wins) The real resolver, `hero()` values, `drag_slop` 15, the button's centre (456, 852), an injected stage with no `pin_exclusion`, burst Ready, in Wave. **GIVEN** the hero pinned at (456, 722), **WHEN** a press lands on (456, 852), **THEN** `aim_state()` is Cancelling. **GIVEN** a new press after that one is released, and a pin to (456, 872) with 4 T, so the hero is at (456, 822), **WHEN** `update()`, a press on (456, 837), 15 from each centre, and a move to (456, 822), **THEN** `drag_started` names the hero, `aim_state()` stays Idle and no `burst` is issued.
-33. (Rule 15, thumb roll) The real resolver, `hero()` values, `tap_slop` 28, one TAP slot of radius 36 at (270, 480), and the hero pinned at (270, 572), 92 from it. **WHEN** a press on (270, 516), inside both discs, is released in place, **THEN** the slot gets its tap and `repins` is unchanged. **WHEN** a press there moves to (270, 543), 27 away, **THEN** no drag. **WHEN** it moves to (270, 544), 28 away, and releases, **THEN** the slot gets no tap, `repins` rises by 1 and `pin_target()` is (270, 544).
+33. (Rule 15, thumb roll) The real resolver, `hero()` values, `tap_slop` 28, one TAP slot of radius 36 at (270, 480), and the hero pinned at (270, 572), 92 from it. The slot is a real tap winner, so `tap_slop` governs the press and `drag_slop` does not apply (Input Rule 3). **WHEN** a press on (270, 516), inside both discs, is released in place, **THEN** the slot gets its tap and `repins` is unchanged. **WHEN** a press there moves to (270, 543), 27 away and outside the slot's disc, and releases there, **THEN** no `drag_started`, the slot gets its tap, since a release anywhere under slop taps (Input Rule 3), and `repins` is unchanged. **WHEN** it moves to (270, 544), 28 away, and releases, **THEN** the slot gets no tap, `repins` rises by 1 and `pin_target()` is (270, 544).
+
+**CI: Logic, the Build pin (Rule 2)**
+34. **GIVEN** `in_build()` true and the hero Unpinned at `hero_start`, **WHEN** a pin 50 away, **THEN** `position()` and `pin_target()` are the pin, Pinned, one `hero_pinned`, no T and `repins` 0; a `hero_pinned` listener reads `position()` at the pin. **GIVEN** `in_build()` false instead, **THEN** the same pin starts a walk.
+35. **GIVEN** pinned in Build, **WHEN** a second pin 80 away, **THEN** Pinned at once there, one more `hero_pinned`, and `repins` 1.
+36. **GIVEN** pinned in Build at p, **WHEN** a pin inside `pin_exclusion`, and separately one outside `pin_rect`, **THEN** `BUTTON_ZONE` and `OUT_OF_BOUNDS`, `position()` still p, and no signal.
+37. **GIVEN** pinned in Build at p, **WHEN** `pin(p)`, **THEN** `OK`, Pinned, one `hero_pinned`, and `repins` unchanged.
+38. **GIVEN** pinned in Build at p with a target inside the leash, **WHEN** `in_build()` turns false and one T runs, **THEN** the hero hits from p on that tick and does not walk.
+39. **GIVEN** `in_build()` true because Paused from Build, **WHEN** a bot calls `pin` 50 away, **THEN** it places the hero at once, as in Build. A person cannot reach this, since the Paused modal takes every event (Battle HUD Rule 2), and bots are never paused (Flow Rule 10).
+40. (Tick steps 4 and 7) **GIVEN** `dt` 0.25, `cooldown` 0.1 and `attack_interval` 0.1, both 0 ticks by `to_ticks`, **THEN** the burst is Ready one tick after release, and the hero hits once every tick while a target is in the leash.
 
 **Deferred criteria.** Bots per Simulated results. Done for this system means every criterion runnable today passes and each of these has its owner.
 

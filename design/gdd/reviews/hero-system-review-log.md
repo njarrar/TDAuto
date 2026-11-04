@@ -316,3 +316,47 @@ Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8
 
 ## Revision — 2026-11-03 — cross-GDD warning pass
 From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Hero view named as drawer of field-anchored visuals (C4, new wording), `visual_key`, L11 condition, L14 row, always-call clause, 100 offset. No rule value changed; Approved stands, pending the user's view.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, ux-designer, creative-director
+Blocking items: 3 | Recommended: 12
+Summary: The re-check of the 2026-11-04 amendment (a pin in Build places the hero at once) found the amendment sound: the throwaway simulator models it (line 119) and, unmodified, reproduces the documented table and the 25.1% median, and Build occurs once per stage. What blocked was its test coverage, a thumb-roll criterion overtaken by Input's changed Rule 3, and the tick-floor hole Tower had: Tick steps 4 and 7 set timers from to_ticks with no minimum, so a 0-tick cooldown at a coarse test dt never Readies.
+Prior verdict resolved: Yes (the seventh review's two blockers; the lighter-exit approval)
+Findings:
+- [BLOCKING] Tick steps 4 and 7: attack_left and cooldown_left need max(1, to_ticks(...)); a 0-tick cooldown counts past 0 and locks the burst.
+- [BLOCKING] Acceptance Criteria AC30: compound, and the Build pin had one case; split into re-pin, refusal, own position, Build then Start, Paused from Build, and a listener reading the new position.
+- [BLOCKING] Acceptance Criteria AC33: under Input Rule 3 a release 27 away now taps the slot; assert it and state that tap_slop governs.
+- [RECOMMENDED] Rule 2: state walk_left, position and attack_left after a Build pin.
+- [RECOMMENDED] States table: Walking never occurs in Build; Unpinned row covers a pin at hero_start.
+- [RECOMMENDED] Visual/Audio: a Build-pin line, the same release ring with the hero already on it, and an arrival cue.
+- [RECOMMENDED] Wording: 107 from the burst line, 107.2 to 137.8 from the centre; walk_ticks 211 at speed 240; burst_safe_distance can go negative; leash row order.
+- [RECOMMENDED] Acceptance Criteria edges in AC2, 4, 6, 8, 11, 13, 25; HERO source_id; N for human rows; owner IDs for Deferred rows; concrete values in AC21, AC24, AC29.
+- [RECOMMENDED] Report share at 25 and 50 units of aim error, not as a gate.
+- [RECOMMENDED] Player Fantasy lines; shorter status line.
+- [RECOMMENDED] User call: Build pins count in repins and inflate the re-pin value measure; recommended a separate build_pins counter.
+- [RECOMMENDED] Routed to ADRs: scalar rule for every inclusive comparison, compare == OK, pointer by index not device 0, Callable lifetime and HeroInput held strongly, Reduce Motion injected, the unsourced 32-bit Vector2 claim.
+- [RECOMMENDED] Routed to Battle HUD: button centre stale after a layout change, centre update during a drag, redraw layers, left-hand Start/Call vs the cancel ring.
+- [RECOMMENDED] Routed to art and VFX: 4.7 line feather on 2 px lines, dotted ring seam, faint reach dots and cancelling state, contrast, a photosensitivity cap.
+- [RECOMMENDED] Routed to the phone test: thumb limit 860 vs about 820, hysteresis crossing cue, ghost under the thumb, a preview before a release fires, heavies, Build-then-walk read as lag, top re-grab as a fail criterion, the AQ-07 trigger; the producer: a left-handed and Reduce Motion debug toggle for the phone build.
+- [RECOMMENDED] Disagreements: game-designer's "first pin only instant" narrows the user's decision without new evidence and would strand a second Build drag; "Build between waves" is mistaken; godot's stale-aim blocker is answered by Rule 12's re-clamp on release. The creative director's "pin while Paused from Build returns HALTED" was not applied: halted() is false while Paused and bots are never paused, so criterion 39 states that the pin places at once and a person cannot reach it.
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d79fe3bf982a1d15a806cc0725421521a6a735d5
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: design/accessibility-requirements.md e525e1253b9112f6a74c671bb6d0e1f02f96bb0f
+Reviewed-Content-Hash: tools/balance-sim/hero_bots.py bc1cc2b938adb3c90b5ed02c6d569f4ad30f6fd3
+Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d14444df535b375764cb42
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied in autonomous mode: all 3 blocking items (max(1, to_ticks(...)) in Tick steps 4 and 7 with new criterion 40; AC30 split, with the Build pin as new criteria 34 to 39; AC33 asserts the slot tap at 27 away and names tap_slop) and recommended: Rule 2's state after a Build pin, the States table sentence and Unpinned row, the burst-line distance, walk_ticks at speed 240, the leash row.
+Not done: the remaining recommended items, the repins user call, and every routed item.
+Re-review pending: the GDD hash above is of the reviewed text, not this revision.
