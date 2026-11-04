@@ -7,8 +7,8 @@ Requirement source: `docs/architecture/tr-registry.yaml` v4, 126 entries, all ac
 ## Coverage Summary
 - Total requirements: 126
 - Covered by an Accepted ADR: 0 (0%)
-- Covered by a Proposed ADR: 124 (98.4%), of which 4 are implicit (the ADR decides it in its Decision text but leaves it out of its GDD Requirements Addressed table)
-- Partial: 2
+- Covered by a Proposed ADR: 126 (100%), all listed in the covering ADR's GDD Requirements Addressed table (updated after review 04c)
+- Partial: 0
 - Gaps: 0
 
 No requirement is covered by an Accepted ADR. All 11 ADRs are Proposed, and each lists engine runs (desktop, export or phone) that block its acceptance. Coverage resting on Proposed ADRs is not a pass state: stories that cite these ADRs stay blocked until `/architecture-decision accept ADR-NNNN`.
@@ -19,7 +19,7 @@ No requirement is covered by an Accepted ADR. All 11 ADRs are Proposed, and each
 | input-gesture-resolver.md | 16 | 16 | 0 | 0 |
 | game-state-stage-flow.md | 16 | 16 | 0 | 0 |
 | combat-damage.md | 14 | 14 | 0 | 0 |
-| enemy-wave.md | 17 | 15 | 2 | 0 |
+| enemy-wave.md | 17 | 17 | 0 | 0 |
 | tower-system.md | 15 | 15 | 0 | 0 |
 | hero-system.md | 15 | 15 | 0 | 0 |
 | battle-hud.md | 18 | 18 | 0 | 0 |
@@ -111,8 +111,8 @@ No requirement is covered by an Accepted ADR. All 11 ADRs are Proposed, and each
 | TR-enemy-013 | enemy-wave.md | Core | One add-enemy step handles schedule spawns and future splitter children, joining atomically before the clear check | ADR-0009 | Covered (Proposed) |
 | TR-enemy-014 | enemy-wave.md | Core | A headless content test checks layout rules L1-L14 and wave rules on in-memory records; unit tests use fakes and no scene or files | ADR-0007 | Covered (Proposed) |
 | TR-enemy-015 | enemy-wave.md | Core | Views read roster() and the path each frame; fixed three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured | ADR-0011 | Covered (Proposed) |
-| TR-enemy-016 | enemy-wave.md | Core | wave_index() is the 1-based position in wave_ids of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text | ADR-0001 names `wave_index()` as injected only; architecture.md assigns ADR-0009, which never names it | Partial |
-| TR-enemy-017 | enemy-wave.md | Core | got_through_by_type() counts a leak before enemy_leaked fires, so a fatal leak is in the result | ADR-0010 names `got_through_by_type` as a log field only; architecture.md assigns ADR-0009, which never names it | Partial |
+| TR-enemy-016 | enemy-wave.md | Core | wave_index() is the 1-based position in wave_ids of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text | ADR-0009 Decision 7, "Wave index" rule (Proposed) | Covered |
+| TR-enemy-017 | enemy-wave.md | Core | got_through_by_type() counts a leak before enemy_leaked fires, so a fatal leak is in the result | ADR-0009 Decision 7, "Leak" rule (Proposed) | Covered |
 | TR-tower-001 | tower-system.md | Feature | TowerSim (builder-made, headless) holds gold, slots, towers and the tick; input objects (TowerInput and the HUD arc, wrapper-made, absent headless) change state only through TowerSim commands (upgrade, build) | ADR-0010 | Covered (Proposed) |
 | TR-tower-002 | tower-system.md | Feature | build(slot_index, tower_id) and upgrade(slot_index) are the only mutation API, run between ticks and return a typed result enum in fixed check order | ADR-0010 | Covered (Proposed) |
 | TR-tower-003 | tower-system.md | Feature | Tower IDs and levels are validated with is_tower and level_count before any accessor read; cost and stats are read at use time | ADR-0005 | Covered (Proposed) |
@@ -164,23 +164,11 @@ No requirement is covered by an Accepted ADR. All 11 ADRs are Proposed, and each
 
 ## Known Gaps
 
-No requirement is without an ADR. Two are partial:
-
-- **TR-enemy-016** (enemy-wave.md, Core): `wave_index()` is 1-based, 0 before any start and never reset. ADR-0001 lists it among the injected callables, but no ADR fixes its meaning. `architecture.md` v4 assigns it to ADR-0009, whose text never names it. Fix: add it to ADR-0009's Decision and table (or to ADR-0006), or change the assignment in `architecture.md`.
-- **TR-enemy-017** (enemy-wave.md, Core): `got_through_by_type()` counts a leak before `enemy_leaked` fires. ADR-0010 lists the field in the run log only; no ADR fixes the count-before-emit order. `architecture.md` v4 assigns it to ADR-0009, whose text never names it. Fix: add the rule to ADR-0009 (add-enemy and leak step) or to ADR-0006 emit rules.
-
-Four more are covered only in Decision text, missing from the covering ADR's GDD Requirements Addressed table: TR-state-015 and TR-state-016 (ADR-0001), TR-hud-017 (ADR-0011), TR-hud-018 (ADR-0010). Add the rows when each ADR is next revised.
-
-## Superseded Requirements
-
-No registry entry is superseded or deprecated. Three registry texts use names an ADR has since changed. The GDDs still use the old names too, so the registry follows its GDD until the GDD sync lands; then revise the text with a `revised` date (same IDs):
-
-- TR-input-009: `tap`, `ground_tap`, `idle` became `tapped`, `ground_tapped`, `became_idle` (ADR-0008).
-- TR-enemy-004: `waves_complete` became `waves_completed` (ADR-0006).
-- TR-tower-012: "tower_id type undecided"; ADR-0006 decided `StringName`.
+No requirement is without an ADR, and none is partial. Review 04c found two partial (TR-enemy-016, TR-enemy-017) and four rows missing from ADR tables (TR-state-015, TR-state-016, TR-hud-017, TR-hud-018). All six were fixed in the ADRs on 2026-11-04, after the review.
 
 ## History
 
 | Date | Total | Accepted | Proposed | Partial | Gap | Notes |
 |------|-------|----------|----------|---------|-----|-------|
 | 2026-11-04 | 126 | 0 | 124 | 2 | 0 | First matrix against the 11 written ADRs; adds TR-hud-018; replaces the 125-row index |
+| 2026-11-04 | 126 | 0 | 126 | 0 | 0 | After the 04c fixes: ADR-0009 covers TR-enemy-016 and 017; four table rows added |
