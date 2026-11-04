@@ -1,0 +1,142 @@
+extends GdUnitTestSuite
+## TowerInput and ChipWindow wiring on a headless battle's resolver (Tower Rules 8 and 17,
+## ADR-0010 Validation for the input halves).
+
+const TestBattles := preload("res://tests/helpers/test_battles.gd")
+const Fakes := preload("res://tests/helpers/fakes.gd")
+const SLOT0: Vector2 = Vector2(270.0, 305.0)
+const CHIP0: Vector2 = Vector2(270.0, 229.0)
+
+class Rec extends RefCounted:
+	var taps: Array[int] = []
+	var inspected: Array[int] = []
+
+	func on_slot(i: int) -> void:
+		taps.append(i)
+
+	func on_inspect(i: int) -> void:
+		inspected.append(i)
+
+var _battle: Battle
+var _ti: TowerInput
+var _rec: Rec
+var _halt: Fakes.Halted
+var _errs: Fakes.DevErrors
+
+
+func before_test() -> void:
+	_battle = TestBattles.build()
+	_halt = Fakes.Halted.new()
+	_errs = Fakes.DevErrors.new()
+	_rec = Rec.new()
+	_ti = TowerInput.new()
+	assert_bool(_ti.attach(_battle.resolver, _battle.tower_sim, _battle.accessor, _halt.halted, _errs.report)).is_true()
+	_battle.resolver.pressed.connect(_ti._on_pressed)
+	_battle.resolver.tapped.connect(_ti._on_tapped)
+	_battle.tower_sim.tower_built.connect(_ti._on_tower_built)
+	_battle.flow.phase_changed.connect(_ti._on_phase_changed)
+	_ti.slot_tapped.connect(_rec.on_slot)
+	_ti.tower_inspected.connect(_rec.on_inspect)
+
+
+func after_test() -> void:
+	_ti.detach()
+
+
+func _tap(p: Vector2) -> void:
+	_battle.resolver.press(0, p)
+	_battle.resolver.release(0, p)
+
+
+func test_empty_slot_tap_emits_slot_tapped() -> void:
+	_tap(SLOT0)
+	assert_array(_rec.taps).is_equal([0])
+	assert_bool(_ti.is_chip_open()).is_false()
+
+
+func test_built_slot_disc_swaps_and_tap_opens_chip_at_offset() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_tap(SLOT0)
+	assert_array(_rec.taps).is_empty()
+	assert_bool(_ti.is_chip_open()).is_true()
+	var cs: TowerInput.ChipState = _ti.chip_state()
+	assert_int(cs.slot_index).is_equal(0)
+	assert_int(cs.level).is_equal(1)
+	assert_bool(_battle.resolver.centre_of(_ti.chip_disc_id()) == CHIP0).is_true()
+
+
+func test_tap_before_200ms_is_ignored_then_commits() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	var gold: int = _battle.tower_sim.gold()
+	_tap(SLOT0)
+	_ti.advance(100.0)
+	_tap(SLOT0)
+	assert_int(_battle.tower_sim.gold()).is_equal(gold)
+	assert_bool(_ti.is_chip_open()).is_true()
+	_ti.advance(150.0)
+	_tap(SLOT0)
+	assert_int(_battle.tower_sim.slot_level(0)).is_equal(2)
+	assert_bool(_ti.is_chip_open()).is_false()
+
+
+func test_tap_on_chip_disc_commits() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_tap(SLOT0)
+	_ti.advance(500.0)
+	_tap(CHIP0)
+	assert_int(_battle.tower_sim.slot_level(0)).is_equal(2)
+
+
+func test_expiry_closes_and_next_tap_opens_new_chip_without_upgrade() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_tap(SLOT0)
+	_ti.advance(1500.0)
+	assert_bool(_ti.is_chip_open()).is_false()
+	assert_int(_ti.chip_disc_id()).is_equal(InputResolver.NONE)
+	_tap(SLOT0)
+	assert_bool(_ti.is_chip_open()).is_true()
+	assert_int(_battle.tower_sim.slot_level(0)).is_equal(1)
+
+
+func test_no_gold_keeps_chip_open() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_battle.tower_sim.build(1, &"tower_splash")
+	assert_int(_battle.tower_sim.gold()).is_less(60)
+	_tap(SLOT0)
+	_ti.advance(300.0)
+	_tap(SLOT0)
+	assert_bool(_ti.is_chip_open()).is_true()
+	assert_int(_battle.tower_sim.slot_level(0)).is_equal(1)
+	assert_float(_ti.chip_state().elapsed_ms).is_equal(300.0)
+
+
+func test_last_level_tap_inspects() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_battle.tower_sim.upgrade(0)
+	_tap(SLOT0)
+	assert_array(_rec.inspected).is_equal([0])
+	assert_bool(_ti.is_chip_open()).is_false()
+
+
+func test_pressed_elsewhere_closes_chip() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_tap(SLOT0)
+	_battle.resolver.press(0, Vector2(50.0, 700.0))
+	assert_bool(_ti.is_chip_open()).is_false()
+
+
+func test_phase_closes_chip_and_halted_ignores_taps() -> void:
+	_battle.tower_sim.build(0, &"tower_single")
+	_tap(SLOT0)
+	_ti._on_phase_changed(Flow.Phase.PAUSED)
+	assert_bool(_ti.is_chip_open()).is_false()
+	_halt.value = true
+	_tap(SLOT0)
+	assert_bool(_ti.is_chip_open()).is_false()
+
+
+func test_detach_unregisters_discs() -> void:
+	var slot_disc_centre: Vector2 = _battle.resolver.centre_of(1)
+	assert_bool(is_nan(slot_disc_centre.x)).is_false()
+	_ti.detach()
+	assert_bool(is_nan(_battle.resolver.centre_of(1).x)).is_true()
