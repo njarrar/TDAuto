@@ -6,7 +6,7 @@ Proposed
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. No other agent and no skill may do it alone. Stories that cite this ADR stay blocked while it is `Proposed`.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, APPROVE; fixes applied.
 
 Engine validation (godot-specialist): written by the Godot specialist against the 4.7.2 class reference and `docs/engine-reference/godot/`; no separate validation pass.
 
@@ -53,7 +53,7 @@ Each item is settled by the **first phone build run** on the low-end target phon
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0009 Enemy Entity, Roster and Combat API (`roster()`, `Enemy.def_id`, `position`, `distance`, Combat view signals); ADR-0010 Sim/Input Split, Command Result Codes and Dev Telemetry (`slot_state()`, HeroInput and HeroSim reads). Text also relies on: ADR-0001 (BattleWrapper builds views, absent headless, rebuilt on retry), ADR-0003 (stretch mode, field units, safe area, `reduce_motion` read), ADR-0004 (frame order and frame budget split), ADR-0006 (view allowlist, signal payloads), ADR-0008 (hit-target discs) |
+| **Depends On** | ADR-0009 Enemy Entity, Roster and Combat API (`roster()`, `Enemy.def_id`, `position`, `Targetable.distance`, Combat view signals); ADR-0010 Sim/Input Split, Command Result Codes and Dev Telemetry (`slot_state()`, HeroInput and HeroSim reads). Text also relies on: ADR-0001 (BattleWrapper builds views, absent headless, rebuilt on retry), ADR-0003 (stretch mode, field units, safe area, `reduce_motion` read), ADR-0004 (frame order and frame budget split), ADR-0006 (view allowlist, signal payloads), ADR-0008 (hit-target discs) |
 | **Enables** | Visual Feedback & VFX (Vertical Slice) takes over the Combat view under these budgets |
 | **Blocks** | Battle HUD stories; path, tower, enemy, hero and combat view stories |
 | **Ordering Note** | Can be deferred to the first phone build, when draw calls are first measured (architecture.md, Priority). View stories may start on desktop under the rules here; Acceptance waits on V-1 to V-6 |

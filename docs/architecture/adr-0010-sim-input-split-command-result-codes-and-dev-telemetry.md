@@ -4,7 +4,7 @@
 
 Proposed
 
-> TD-ADR: not run per ADR; batch review after all ADRs are written.
+> TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
 > Engine specialist validation: not run (no agents spawned for this batch).
 
 ## Date
@@ -29,7 +29,7 @@ Tower and Hero each mix state that must run headless with input handling that ne
 |-------|-------|
 | **Engine** | Godot 4.7.2 |
 | **Domain** | Core (game logic and file I/O in development builds) |
-| **Layer** | Core |
+| **Layer** | Feature and Presentation (sims in Feature, input objects in Presentation) |
 | **Knowledge Risk** | LOW for the split and result codes (plain GDScript). MEDIUM for the log writer: 4.4 changed `FileAccess.store_*` to return `bool`. HIGH for the version overall (`VERSION.md`). |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/engine-reference/godot/breaking-changes.md` (typed-return override); `docs/architecture/architecture.md` (B8, B9, B10, Data Flow 9, Module Ownership); the 4.7.2-stable class reference for `FileAccess`, `OS`, `JSON`, `Time`, `Engine`, `@GlobalScope`. The 4.4 `store_*` claim for `store_line` is confirmed in the 4.7.2 `FileAccess.xml`. |
 | **Post-Cutoff APIs Used** | `FileAccess.store_line(line) -> bool` (return type changed in 4.4). |
@@ -55,7 +55,7 @@ Sourced facts (class reference at the `4.7.2-stable` tag):
 - NOT SOURCEABLE: whether a flushed line survives the OS killing the app on Android and iOS. Run: the phone run in Validation Criteria (kill the app after a flush, read the file).
 - NOT SOURCEABLE: whether `user://` is writable and findable on each target phone, and how a tester finds and sends `user://run_log.jsonl`. Run: the first phone build; the retrieval route goes in `production/qa/`.
 - NOT SOURCEABLE: that `JSON.stringify` with the default empty `indent` emits one line with no newline (`JSON.xml` does not state it), and how an integer such as `3` prints once converted to `float`. Run: the `LogFormatter` unit test pins the text for every record schema (it fails on any `\n`).
-- NOT SOURCEABLE: that `res://build_info.json` is packed into an export (export filters for non-resource files are not covered by the reference). Run: the Android export check in the build-hash story; the file is read in an exported build and the build hash shown in a log line. Until it passes the log writes `"dev"` and says so.
+- NOT SOURCEABLE: that `res://build_info.json` is packed into an export (`ResourceLoader.xml@4.7.2-stable`: "non-resource files are not exported by default"; `FileAccess.xml` names a `*.json` non-resource filter or Keep File; add `*.json` to the export filter, subject to the JSON-as-Resource question in ADR-0002). Run: the Android export check in the build-hash story; the file is read in an exported build and the build hash shown in a log line. Until it passes the log writes `"dev"` and says so.
 - NOT SOURCEABLE: whether a main-thread write stalls a frame on a low-end phone, and by how much. Run: the phone run records the longest frame around a write.
 - NOT SOURCEABLE: that a headless `HeroSim`-absent battle (test builder option) ticks without error. Run: the first equivalence story, headless on 4.7.2 in CI.
 - NOT SOURCEABLE: the full list of export feature tags (`OS.xml` links to a tutorial outside the class reference). The design uses only `OS.is_debug_build()`, so this does not block, but no other tag may be used until it is sourced.
@@ -129,7 +129,7 @@ Rules every command follows:
 2. Read every stat the command needs (through the accessor, never cached) before the first mutation. If a read fails, the accessor calls the injected `fatal`, the command returns `HALTED`, and nothing is half done.
 3. A refusal mutates nothing and emits nothing. A test takes a snapshot before and after.
 4. After `OK`, commit state, then emit (principle 4): `gold_changed(current)` then `tower_built(slot_index, tower_id)` or `tower_upgraded(slot_index, level)`; `hero_pinned(position)` or `burst_started(aim_point, telegraph_ticks)`. Payload types are ADR-0006's.
-5. Callers compare with `== X.OK`, never by truthiness. Because `OK` is 0, `if result:` is true for every failure.
+5. Callers compare with `== X.OK`, never by truthiness. Always write the qualified name (`BuildResult.OK`): a bare `OK` inside a named enum is not class scope and resolves to `@GlobalScope` `Error.OK`. Because `OK` is 0, `if result:` is true for every failure.
 6. A new failure reason is added at its place in the check order, and no existing member changes meaning. A test per member proves each code is reachable.
 7. Callers map each code to feedback; the sim does not carry message text.
 
@@ -184,7 +184,7 @@ class_name GestureLog extends RefCounted         # record(gesture)
 
 - Attempt record (`RunLog`): one line when an attempt finishes (Won or Lost) or on Retry. A quit attempt leaves no line. Fields are read from the `HudLogic` snapshot taken on the frame after the outcome: towers built, lives, last wave, damage by source and kind, the Hero counters of section 4, `kills_per_burst`, `best_victims`, `got_through_by_type`, and the real seconds to first pin, first build and first burst and from the previous attempt's Retry to this attempt's Start.
 - Call record: remembered at `call_early`, written at the next `wave_cleared` or outcome, with `seconds_left`, burst readiness and lives lost in the called wave. Burst state comes from `HeroSim` queries, never through `TowerSim`.
-- Gesture record (`GestureLog`): one line when a gesture ends (`tap`, `ground_tap`, `drag_ended`, `drag_cancelled`, or `idle` after a cancelled press). A press ended by `cancel()` writes classification `cancelled`. The fields (device, insets, timing, travel, winners, classification, `expected_action`, `expected_target`) are ADR-0008's. The log also listens to `tower_upgraded`, `burst_started` (only it counts as a burst) and reads `chip_state()` at tower prompts. The resolver stays clock-free; the clock lives in the log.
+- Gesture record (`GestureLog`): one line when a gesture ends (`tapped`, `ground_tapped`, `drag_ended`, `drag_cancelled`, or `became_idle` after a cancelled press). A press ended by `cancel()` writes classification `cancelled`. The fields (device, insets, timing, travel, winners, classification, `expected_action`, `expected_target`) are ADR-0008's. The log also listens to `tower_upgraded`, `burst_started` (only it counts as a burst) and reads `chip_state()` at tower prompts. The resolver stays clock-free; the clock lives in the log.
 - Every line carries `schema_version`, `launch_id` and `build`. The first story fixes key names.
 - Time fields use the injected clock Callable. Which `Time` function backs it is left to the story; tests pass a fixed value.
 

@@ -4,7 +4,7 @@
 
 Proposed
 
-> TD-ADR: not run per ADR; batch review after all ADRs are written.
+> TD-ADR: batch review 2026-11-04, APPROVE; fixes applied.
 > Engine specialist validation: not run (no agents spawned for this batch).
 
 ## Date
@@ -118,7 +118,7 @@ Suite and function names follow `.claude/rules/test-standards.md`. Suites extend
 
 ### 3. Recording fakes (TR-input-014, TR-tower-014)
 
-- `RecordingListener` (support class). `listen(source: Object, signal_name: StringName)` connects a method Callable; every emit appends `{signal, args}` to `log: Array[Dictionary]` in order. Tests compare the whole log with an expected array, which asserts payloads, types and order in one check. Two runs with the same call list must give equal logs.
+- `RecordingListener` (support class). `listen(source: Object, signal_name: StringName)` connects a method Callable; every emit appends `{signal, args}` to `entries: Array[Dictionary]` in order. Tests compare the whole log with an expected array, which asserts payloads, types and order in one check. Two runs with the same call list must give equal logs.
 - Tests use the recording fake in place of `assert_signal`, as the TR requires.
 - `SpyAccessor` extends the production accessor interface, records every `(ctx.def_id, ctx.level, key)` read, and returns values from a dictionary the test supplies. It lets a test prove a value is read at use time and never cached.
 - `FakeHalted`, `FakeErrorSink`, `FakeTargets` are tiny classes with one method each, matching the injected callables in B9. `FakeHalted.value` flips mid-test. `FakeErrorSink.messages` collects `dev_error` calls.
@@ -233,7 +233,7 @@ func scan(files: Dictionary) -> Array[LintError]
 class_name RecordingListener extends RefCounted
 ## Records every emit as {signal, args}, in order.
 func listen(source: Object, signal_name: StringName) -> void
-var log: Array[Dictionary]
+var entries: Array[Dictionary]
 
 class_name BattleProbe extends RefCounted
 func systems() -> Dictionary

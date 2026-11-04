@@ -10,7 +10,9 @@ Proposed
 > This ADR also cannot be accepted until every item under
 > "NOT SOURCEABLE (blocks Acceptance)" has a recorded spike result.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
+
+2026-11-04: TD-ADR batch review and engine check fixes applied.
 
 Engine specialist validation: written by the Godot engine specialist against the 4.7.2 class reference; no separate specialist pass was run.
 

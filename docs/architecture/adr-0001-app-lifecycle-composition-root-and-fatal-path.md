@@ -19,7 +19,9 @@ Proposed
 
 godot-specialist (draft). Acceptance: the user, or technical-director on the user's confirmation.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
+
+2026-11-04: TD-ADR batch review and engine check fixes applied.
 
 ## Summary
 
@@ -73,7 +75,7 @@ TowerRiot has no autoloads, so one node must start the game, hold the catalogue,
 | Field | Value |
 |-------|-------|
 | **Depends On** | None |
-| **Enables** | ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009 (each lists ADR-0001 in its Depends On) |
+| **Enables** | ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011 (each lists ADR-0001 in its Depends On) |
 | **Blocks** | Game State & Stage Flow epic (boot, Retry, Fatal stories); every story that builds a battle; the bot and test harness |
 | **Ordering Note** | Lifecycle notifications (pause, focus) and the adapter's `cancel()` belong to ADR-0003. The Clock that this ADR stops on Retry belongs to ADR-0004. Accept those two with this one. |
 
@@ -106,12 +108,12 @@ No code exists. `project.godot` sets no autoloads.
 ## Decision
 
 1. **AppRoot is the main scene** (`application/run/main_scene`), a `Node`. No autoload is ever added. AppRoot owns: the app state (`BOOT`, `IN_STAGE`, `FATAL`), the Ready `Catalogue`, the app-level `FatalLatch`, the retry latch, the current `Battle` and the current `BattleWrapper` node. AppRoot's states are separate from Flow's `Phase`.
-2. **Boot** (Data Flow 4). In `AppRoot._ready`: create the app `FatalLatch`; the fatal scene is a `preload` constant, so it exists before any catalogue code runs. Call `Catalogue.load(manifest)` once. On `Failed`, call the app fatal handler with the error list and stop; there is no fallback and no reload, and saves are never opened. On `Ready`, keep the catalogue, pick `stage_id` and `seed`, set `IN_STAGE` and build.
-3. **The Builder is scene-free.** `BattleBuilder.build(catalogue, stage_id, seed, fatal_handler) -> Battle` touches no node, reads no engine clock and is never called from inside a signal. Order: (a) create the per-battle `FatalLatch` first, forwarding to `fatal_handler`; (b) validate stage inputs; (c) construct Flow, Combat, EnemyWave, TowerSim, HeroSim, the one per-battle StatAccessor and the tick-time object of ADR-0004; (d) make every signal connection and injection in this one function; (e) return the `Battle`. It checks `fatal_latch.is_fatal()` after each step and returns `null` once it is set, so a partial build is dropped and never ticked.
-4. **Battle holds everything strongly.** `Battle` keeps typed fields for every sim, the `FatalLatch` and the StatAccessor. The Builder holds nothing after it returns. Because a Callable does not keep its target alive (QQ-17), every object behind an injected Callable must be a field on `Battle`.
+2. **Boot** (Data Flow 4). In `AppRoot._ready`: create the app `FatalLatch`; the fatal scene is a `preload` constant, so it exists before any catalogue code runs. Call `Catalogue.from_manifest(manifest)` once. On `Failed`, call the app fatal handler with the error list and stop; there is no fallback and no reload, and saves are never opened. On `Ready`, keep the catalogue, pick `stage_id` and `rng_seed`, set `IN_STAGE` and build.
+3. **The Builder is scene-free.** `BattleBuilder.build(catalogue, stage_id, rng_seed, fatal_handler, options) -> Battle` touches no node, reads no engine clock and is never called from inside a signal. Order: (a) create the per-battle `FatalLatch` first, forwarding to `fatal_handler`; (b) validate stage inputs; (c) construct Flow, Combat, EnemyWave, TowerSim, HeroSim (skipped when `options.no_hero` is set), the one per-battle StatAccessor, whose failure Callable is the latch adapter `FatalLatch.on_accessor_fail` (Decision 7), and the tick-time object of ADR-0004; (d) make every signal connection and injection in this one function; (e) return the `Battle`. It checks `fatal_latch.is_fatal()` after each step and returns `null` once it is set, so a partial build is dropped and never ticked.
+4. **Battle holds everything strongly.** `Battle` keeps typed fields for every sim, the `FatalLatch`, the StatAccessor and the `TickTime` object (added by ADR-0004). The Builder holds nothing after it returns. Because a Callable is expected not to keep its target alive (QQ-17; unsettled, see NOT SOURCEABLE item 1), every object behind an injected Callable must be a field on `Battle`.
 5. **Injected callables are method Callables only.** No lambda and no `bind()` that captures a sim object, and no sim holds a reference to `Battle`. The injected set is B9 in architecture.md: `halted()`, `in_build()`, `targets()`, `cancel_input()`, `wave_index()`, `fatal(cause)`, `dev_error(msg)`, `to_ticks(seconds)`, the Hero record ID, `burst_id` and `left_handed`.
 6. **Builder versus wrapper.** The Builder injects into sims only. The `BattleWrapper` scene, built by AppRoot after `build` returns a `Battle`, reads `left_handed`, `hero_id`, `burst_id`, `dt`, `to_ticks` and `in_build` from the `Battle` and injects them into HeroInput and HudLogic; the Builder never sees those. The wrapper builds `InputResolver.create(drag_slop, tap_slop)` from the Input record (a null result calls the fatal handler), calls `battle.set_input_cancel(resolver.cancel)`, then adds, in order, InputAdapter, Clock, TowerInput, HudLogic, HeroInput, HudTopBand, HudField, HudModals and the field views. It checks the battle `FatalLatch` after each step. The stage scene named by `StageRecord.scene_ref` is loaded here; a null load calls the fatal handler. Hit radii are constants on the input objects, not catalogue fields.
-7. **Fatal path** (Data Flow 7). `FatalLatch` is pure: `fatal(cause)` keeps the first cause, is idempotent, and forwards once to its forward Callable; `is_fatal()` reads it. It emits `latched(cause)` once. The Builder connects `latched` to a Flow method, which sets Flow to `FATAL` (replacing WON, LOST or PAUSED), calls `cancel_input()` and emits `phase_changed(FATAL)`. `Battle.halted()` is true once the latch is set, so the rest of the current tick returns at once. The forward Callable is AppRoot's handler, which latches the app `FatalLatch` and sets `FATAL`. AppRoot's next `_process` tears the battle down (Decision 9, steps 2 and 3) and shows the fatal scene. Development builds (`OS.is_debug_build()`) show every error by file, record and field; release builds show the screen without them. Routes into `fatal`: catalogue load failure, a bad accessor call, a stage scene that fails to load, bad stage input, a null resolver.
+7. **Fatal path** (Data Flow 7). `FatalLatch` is pure: failure codes are `StringName` at the accessor (ADR-0005) and `String` here. `on_accessor_fail(cause: StringName, error: ValidationError)` is the adapter the Builder passes to the StatAccessor as its `fail` Callable; it calls `fatal(String(cause))` and keeps the error for the development screen. `fatal(cause)` keeps the first cause, is idempotent, and forwards once to its forward Callable; `is_fatal()` reads it. It emits `latched(cause)` once. The Builder connects `latched` to a Flow method, which sets Flow to `FATAL` (replacing WON, LOST or PAUSED), calls `cancel_input()` and emits `phase_changed(FATAL)`. `Battle.halted()` is true once the latch is set, so the rest of the current tick returns at once. The forward Callable is AppRoot's handler, which latches the app `FatalLatch` and sets `FATAL`. AppRoot's next `_process` tears the battle down (Decision 9, steps 2 and 3) and shows the fatal scene. Development builds (`OS.is_debug_build()`) show every error by file, record and field; release builds show the screen without them. Routes into `fatal`: catalogue load failure, a bad accessor call, a stage scene that fails to load, bad stage input, a null resolver.
 8. **Errors without `assert`.** Release-relevant checks call the injected `fatal` or `dev_error` and use `push_error`; `assert` is never used for them. `dev_error(msg)` is a method Callable on a `DevErrorSink` (`RefCounted`) whose default calls `push_error` and survives release builds; tests inject a recording sink. EnemyWave's `start_next_wave()` misuse reports there (TR-enemy-012).
 9. **Retry** (Data Flow 5). The Retry press only sets AppRoot's idempotent retry latch; it never frees its caller. AppRoot has a lower `process_priority` than the wrapper, so its `_process` runs first in the next process step. That step: (1) if the app state is `FATAL`, show the fatal screen and stop; (2) `wrapper.set_process(false)`, then `battle.cancel_input()`; (3) `remove_child(wrapper)` then `wrapper.queue_free()`; once out of the tree it gets no `_process` or input callbacks; (4) set the `Battle` field to null and keep no other reference; (5) `BattleBuilder.build(...)` again with the same catalogue, stage and seed; (6) build a new wrapper. Nodes are freed with `queue_free`, never `free`. Sim objects are never freed, only released.
 10. **Who cancels input** (settled, QQ-19). Flow cancels through `cancel_input()` on Won, Lost, Paused and Fatal; AppRoot cancels on Retry; the adapter cancels on lifecycle events (ADR-0003). `Battle.cancel_input()` guards with `is_valid()`; headless nothing is set and it does nothing. A second cancel finds the resolver Idle and does nothing.
@@ -122,8 +124,8 @@ No code exists. `project.godot` sets no autoloads.
  engine ─▶ AppRoot (main scene, Node; process_priority below the wrapper)
              state: BOOT ─▶ IN_STAGE ─▶ FATAL (absorbing)
              owns: Catalogue, app FatalLatch, retry latch, battle, wrapper
-             _ready: Catalogue.load ─Failed─▶ fatal(...) ─▶ fatal scene (preloaded)
-                     BattleBuilder.build(cat, stage, seed, _on_fatal) ─▶ Battle | null
+             _ready: Catalogue.from_manifest ─Failed─▶ fatal(...) ─▶ fatal scene (preloaded)
+                     BattleBuilder.build(cat, stage, rng_seed, _on_fatal) ─▶ Battle | null
                      BattleWrapper (scene): resolver, adapter, Clock, inputs, HUD, views
              _process: FATAL?  ─▶ teardown ; fatal scene
                        retry?  ─▶ set_process(false) ; cancel_input ; remove_child ;
@@ -149,6 +151,7 @@ class_name FatalLatch extends RefCounted
 signal latched(cause: String)              # emitted once, on the first fatal
 func _init(forward: Callable = Callable()) -> void
 func fatal(cause: String) -> void          # first cause wins; forwards once if forward.is_valid()
+func on_accessor_fail(cause: StringName, error: ValidationError) -> void   # adapter for ADR-0005 `fail`; calls fatal(String(cause))
 func is_fatal() -> bool
 func cause() -> String
 
@@ -156,7 +159,13 @@ class_name DevErrorSink extends RefCounted
 func report(msg: String) -> void           # default: push_error(msg); tests subclass and record
 
 class_name BattleBuilder extends RefCounted
-static func build(catalogue: Catalogue, stage_id: StringName, seed: int, fatal_handler: Callable) -> Battle  # null after a fatal
+static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fatal_handler: Callable, options: BuildOptions = null) -> Battle  # null after a fatal
+
+## Test-only. A null `options` means the full battle. `no_hero = true` builds no HeroSim
+## and Battle.tick step 5 skips HeroSim when it is null. The layer lint (ADR-0007) flags
+## any use of BuildOptions from src/.
+class_name BuildOptions extends RefCounted
+var no_hero: bool = false
 
 class_name Battle extends RefCounted
 func tick(dt: float) -> void               # ADR-0004

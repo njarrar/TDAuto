@@ -19,7 +19,9 @@ Proposed
 
 godot-specialist (draft). Acceptance: the user, or technical-director on the user's confirmation.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
+
+2026-11-04: TD-ADR batch review and engine check fixes applied.
 
 ## Summary
 
@@ -64,7 +66,7 @@ A battle must give the same result for the same stage, seed and command script o
 - NOT SOURCEABLE: the worst-case cost of one tick on the target phone, which sets `MAX_TICKS_PER_FRAME` (Decision 5). Settled by the phone session.
 - NOT SOURCEABLE: whether the same tick script gives bit-identical float results on x86_64 desktop and arm64 phones. The reference says float math is inexact, not whether it differs by CPU. Settled by CI (x86_64 baseline) plus the phone session (arm64 baseline).
 - NOT SOURCEABLE: whether `seconds / DT` gives an exact `x.5` for the authored halfway cases, so that `roundi` decides the direction. Settled by a desktop headless run of the `to_ticks` test, then CI.
-- NOT SOURCEABLE: whether `Vector2` is 32-bit in the stock 4.7.2 export templates used for the phone build (QQ-05). Settled by the phone session; until then PinGeometry uses float scalars.
+- NOT SOURCEABLE: whether `Vector2` is 32-bit in the stock 4.7.2 export templates used for the phone build (QQ-05). `Vector2.xml` says "By default ... 32-bit precision ... compile the engine with the option precision=double" (doc/classes/Vector2.xml@4.7.2-stable, class description), so only the build flags of the official export templates stay open. Settled by the phone session; until then PinGeometry uses float scalars.
 
 ## ADR Dependencies
 
@@ -124,10 +126,10 @@ No code exists. `project.godot` sets no physics or timing keys, so engine defaul
 7. **Real-time clocks.** HudLogic (button arming, Lost delay, Won beat), ChipWindow and HeroInput are presentation models with an explicit `advance(ms)` or `update()`. They are frozen while Paused, never read `delta`, `Time` or `Engine` themselves, and never feed the sim except by issuing a command.
 8. **Authored time.** `TickTime.to_ticks(seconds: float) -> int` returns `roundi(seconds / dt)`. It is the only time conversion, injected into Combat, EnemyWave, TowerSim, HeroSim, Flow and HudLogic as a method Callable. The catalogue stores seconds; systems convert at use. Spawn ticks come from an absolute schedule, never a float countdown.
 9. **Engine settings.** The game must never write `Engine.time_scale`, `Engine.physics_ticks_per_second` or `Engine.max_physics_steps_per_frame`. Physics settings stay at defaults and are unused. Delta smoothing stays at its default; it shapes only the real-time feel.
-10. **Randomness.** The `seed` given to `BattleBuilder.build` is held by `TickTime`. Any sim randomness uses one `RandomNumberGenerator` the Builder creates with that seed and injects; global `randi`, `randf` and `randomize` are banned in the sim. No MVP system draws from it, and waves never read it (TR-enemy-007). Cosmetic jitter uses a separate generator owned by the views, never seeded from the sim seed and never read by the sim. Because the reference does not promise the algorithm across versions, baselines are also keyed by engine version.
+10. **Randomness.** The `rng_seed` given to `BattleBuilder.build` is held by `TickTime`. Any sim randomness uses one `RandomNumberGenerator` the Builder creates with that seed and injects; global `randi`, `randf` and `randomize` are banned in the sim. No MVP system draws from it, and waves never read it (TR-enemy-007). Cosmetic jitter uses a separate generator owned by the views, never seeded from the sim seed and never read by the sim. Because the reference does not promise the algorithm across versions, baselines are also keyed by engine version.
 11. **Float policy.** Sim maths that needs exact compares uses scalar `float` (64-bit); PinGeometry uses float scalars only (TR-hero-006). `Vector2` carries positions across boundaries. Bot baselines are recorded per CPU architecture (x86_64, arm64) and per engine version; determinism is promised within one architecture only (TR-combat-014).
 12. **Determinism scope.** `(catalogue, stage_id, seed, command script)` determines the result, where a script is keyed by tick index. Bots and tests call commands and `tick(dt)` directly and never use the Clock. A human run is not reproducible from frame timing and need not be.
-13. **Frame budget** (Data Flow 10, proposal). Input and commands 0.5 ms; ticks 4.0 ms total; views and HUD 3.0 ms; engine and OS 7.0 ms; headroom 2.1 ms. The phone session confirms or revises it with ADR-0011.
+13. **Frame budget** (Data Flow 10, proposal). Input and commands 0.5 ms; ticks 4.0 ms total (the per-frame ceiling for all of `Battle.tick` across the frame's ticks, so with `MAX_TICKS_PER_FRAME` = 2 each tick gets 2.0 ms, again for all of `Battle.tick`; at the 30 fps floor a frame is 33 ms, which owes exactly 2 ticks, so a clamp of 2 keeps real time there); views and HUD 3.0 ms; engine and OS 7.0 ms; headroom 2.1 ms. The phone session confirms or revises it with ADR-0011.
 
 ### Architecture Diagram
 
@@ -154,7 +156,7 @@ No code exists. `project.godot` sets no physics or timing keys, so engine defaul
 class_name TickTime extends RefCounted
 const TICK_RATE: int = 60
 var dt: float                                   # 1.0 / TICK_RATE, set in _init
-var seed: int
+var rng_seed: int
 func to_ticks(seconds: float) -> int            # roundi(seconds / dt)
 
 class_name Clock extends RefCounted             # name may take a prefix (QQ-16)

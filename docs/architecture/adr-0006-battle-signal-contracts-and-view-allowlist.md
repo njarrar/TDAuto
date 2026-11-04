@@ -8,7 +8,7 @@ Proposed
 > user's explicit confirmation. No other agent, and no skill on its own.**
 > Stories that reference this ADR stay `Blocked` while it is `Proposed`.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
 
 ## Date
 
@@ -36,7 +36,7 @@ Battle systems tell each other and the views what happened through synchronous t
 | **Knowledge Risk** | MEDIUM (architecture table; signal behaviour is stable since 4.0 per `breaking-changes.md`, but several details are not in the pinned reference) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`; Godot 4.7.2 class reference fetched from `raw.githubusercontent.com/godotengine/godot/4.7.2-stable/doc/classes/`: `Signal.xml`, `Object.xml`, `RefCounted.xml`, `@GlobalScope.xml` |
 | **Post-Cutoff APIs Used** | None. The 4.7 rule that a typed-return override needs an explicit `return` applies to the recording fakes in ADR-0007 |
-| **Verification Required** | The NOT SOURCEABLE items below, run headless on the desktop editor before the wiring-test story, and item 5 on an export template |
+| **Verification Required** | The NOT SOURCEABLE items below, run headless on the desktop editor before the wiring-test story, and item 5 from ADR-0001's export probe |
 
 ### Sourced from the 4.7.2 class reference
 
@@ -55,7 +55,7 @@ Each item is not covered by `docs/engine-reference/godot/` or by the class refer
 2. NOT SOURCEABLE: whether an enum-typed signal parameter (`value: Flow.Phase`) is enforced at `emit()` or at `connect`. `Signal.xml` says only that arguments are passed. Run: headless test that emits an out-of-range int and a wrong type, once per declared type. The recording fakes assert payloads whatever the result is.
 3. NOT SOURCEABLE: whether `Object.get_signal_list()` lists script-declared signals on a `RefCounted`. `Object.xml` says only "the list of existing signals". Run: headless test on a `RefCounted` subclass with two declared signals, before the wiring-test story. Fallback if it does not: each class declares a `const SIGNAL_NAMES: Array[StringName]` that the test cross-checks against a source scan.
 4. NOT SOURCEABLE: what happens when a listener connects or disconnects the same signal during an emit. Run: headless test. The decision avoids it (Builder connects once, before any tick), so the run only confirms the avoidance is enough.
-5. NOT SOURCEABLE: that a connection to a `RefCounted` listener neither keeps it alive nor leaves a callable that errors when the listener is gone. The editor probe in architecture QQ-17 saw both on 4.7.2; `Object.xml` states only the freed-object case. Run: the same probe on an Android export template. ADR-0001 owns QQ-17; this ADR needs the answer for rule 9.
+5. NOT SOURCEABLE: that a connection to a `RefCounted` listener neither keeps it alive nor leaves a callable that errors when the listener is gone. The editor probe in architecture QQ-17 saw both on 4.7.2; `Object.xml` states only the freed-object case. Run: none here. ADR-0001 owns the probe (QQ-17), on a desktop export and an Android export; this ADR cites its result for rule 9.
 
 ## ADR Dependencies
 

@@ -6,7 +6,9 @@ Proposed
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. No other agent, and no skill on its own.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
+
+2026-11-04: TD-ADR batch review and engine check fixes applied.
 Engine validation (godot-specialist): not run per ADR; batch review after all ADRs are written.
 
 ## Date

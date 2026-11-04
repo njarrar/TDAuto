@@ -6,7 +6,7 @@ Proposed
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. No other agent and no skill may do it alone. Stories that cite this ADR stay blocked while it is `Proposed`.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, APPROVE; fixes applied.
 
 Engine validation (godot-specialist): written by the Godot specialist against the 4.7.2 class reference and `docs/engine-reference/godot/`; no separate validation pass.
 
@@ -40,7 +40,7 @@ Combat, Enemy & Wave, Tower and Hero all read and hit the same enemies, and the 
 
 ### NOT SOURCEABLE (blocks Acceptance)
 
-- **Per-tick targeting time on the low-end phone** (about 400 range checks, under 2 ms, TR-combat-013). No source gives GDScript loop cost on a device. Settled by: the first phone build profile, a bot-driven worst-case tick (48 alive, every slot built, hero attacking, a burst release) run at `MAX_TICKS_PER_FRAME`, timing `Battle.tick` with the check counter on (QQ-11).
+- **Per-tick targeting time on the low-end phone** (about 400 range checks, under 2 ms measured on the whole `Battle.tick`, TR-combat-013). No source gives GDScript loop cost on a device. Settled by: the first phone build profile, a bot-driven worst-case tick (48 alive, every slot built, hero attacking, a burst release) run at `MAX_TICKS_PER_FRAME`, timing `Battle.tick` with the check counter on (QQ-11).
 - **Allocation cost of one `RefCounted` per hit** (`DamageEvent`, Decision 5). Not in the class reference. Settled by: the same phone profile, comparing the worst tick with and without event creation.
 - **Cost of the `as Enemy` cast per enemy per tick** (Decision 3). Not in the class reference. Settled by: the same phone profile.
 - **Internal precision of `Vector2.distance_squared_to`.** `Vector2.xml` documents 32-bit components, not how that method accumulates. This design avoids the method and compares on 64-bit scalars. Settled by: the headless boundary tests on desktop (exact `dx*dx + dy*dy == r*r` is a hit) plus the per-architecture bot baselines on an ARM device that ADR-0004 owns (QQ-05).
@@ -212,7 +212,7 @@ Order: make the `ReadContext`; read `max_hp` through the accessor; check `halted
 Cost is counted in **range checks**: one per entry visited by a helper. A development-build counter on Combat, behind a `const` flag, records checks per tick.
 
 - **Gate 1, headless (bots):** the worst tick of every content stage is at most 400 checks. Over 400 is a content or design flag, not a code failure.
-- **Gate 2, device:** helper time per tick under 2 ms on the low-end phone at `MAX_TICKS_PER_FRAME` (NOT SOURCEABLE above). The sim slice in Data Flow 10 is 4.0 ms per frame; ADR-0004 sets the clamp from this measured cost.
+- **Gate 2, device:** whole `Battle.tick` time under 2 ms per tick on the low-end phone at `MAX_TICKS_PER_FRAME` (NOT SOURCEABLE above). The sim slice in Data Flow 10 is 4.0 ms per frame; ADR-0004 sets the clamp from this measured cost.
 - **Fallback if Gate 2 fails:** first, have each attacker reject out-of-range enemies with one `abs(dx) > r` test before the multiply; second, switch the range test to `distance_squared_to` only after a determinism baseline shows identical results.
 
 ### 9. ProjectileSpawner: cut, with a seam (QQ-08)
@@ -361,7 +361,7 @@ GDD sync: checked 4 referenced GDDs. No renames. Additions the GDDs do not name 
 ## Performance Implications
 
 - **CPU**: About 150 compares a tick for 48 path lookups (binary search on the starter path's 7 points); 48 entries per `_targets` rebuild; about 400 range checks in the worst tick. No time is claimed; the device run sets it.
-- **Memory**: Per live enemy one `Enemy`, one `Health`, one `Status`, one `ReadContext`; at most 48 alive. One `DamageEvent` per hit, freed by reference counting.
+- **Memory**: Per live enemy one `Enemy`, one `Health`, one `Status`, one `ReadContext`; at most 48 alive. One `DamageEvent` per hit, freed by reference counting (`doc/classes/RefCounted.xml@4.7.2-stable`, description: "RefCounteds keep an internal reference counter so that they are automatically released when no longer in use").
 - **Load Time**: One `PathTable` build per battle.
 - **Network**: None.
 

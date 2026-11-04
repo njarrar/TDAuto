@@ -8,7 +8,7 @@ Proposed
 > user's explicit confirmation. No other agent, and no skill on its own.**
 > Stories that reference this ADR stay `Blocked` while it is `Proposed`.
 
-TD-ADR: not run per ADR; batch review after all ADRs are written.
+TD-ADR: batch review 2026-11-04, CONCERNS; fixes applied.
 
 ## Date
 
@@ -53,14 +53,14 @@ None of these is covered by `docs/engine-reference/godot/` or by the class text 
 1. NOT SOURCEABLE: the order in which one signal calls its listeners (`Signal.xml` and `Object.xml` do not state it). The decision never relies on it: the resolver orders its own emits one after another, and no owner may depend on another owner's handler having run. Run: the headless listener-order test in ADR-0006 (item 1); a failure changes only the test text.
 2. NOT SOURCEABLE: that `emit()` on a plain connection returns only after every listener has run, including a listener that calls back into the emitting object. The queue (rule 7) is designed for exactly this case. Run: headless 4.7.2 test with a listener that calls `press()` from `tapped`, asserting the nested call returns before the outer emit does and runs no gesture code itself.
 3. NOT SOURCEABLE: whether a typed array of a script inner class (`Array[HitTarget]` with `class HitTarget` inside `input_resolver.gd`) is accepted at 4.7.2. Run: parse and run test in the editor. Fallback: a top-level `class_name InputHitTarget` in its own file (subject to the QQ-16 collision lint).
-4. NOT SOURCEABLE: `Vector2` component precision on 4.7 (QQ-05, documented as 32-bit in a stock build but unverified). The GDD requires exact boundary rules: slop exactly equal is a drag, and a press exactly on a disc edge hits. Run: boundary tests whose coordinates are exact in 32-bit floats (such as 3-4-5 triangles with radius 5), on the desktop editor and on the ARM phone run that ADR-0004 schedules. Results go in the QQ-05 record.
+4. NOT SOURCEABLE: `Vector2` component precision on 4.7 (QQ-05; `doc/classes/Vector2.xml@4.7.2-stable`, class description: "By default, these floating-point values use 32-bit precision, unlike [float] which is always 64-bit"). The GDD requires exact boundary rules: slop exactly equal is a drag, and a press exactly on a disc edge hits. Run: boundary tests whose coordinates are exact in 32-bit floats (such as 3-4-5 triangles with radius 5), on the desktop editor and on the ARM phone run that ADR-0004 schedules. Results go in the QQ-05 record.
 5. NOT SOURCEABLE: what happens when a listener connects or disconnects a resolver signal during an emit. Run: headless test shared with ADR-0006 (item 4). Owners connect once at build, before the first press, so the avoidance is in the contract; the run confirms it suffices.
 
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle (the only caller of the five gesture calls; positions arrive in field units; it calls `cancel()` on pause, focus loss and resize); ADR-0006 Battle Signal Contracts and View Allowlist (naming rule, commit-then-emit, listener-count test, typed payloads); ADR-0001 App Lifecycle, Composition Root and Fatal Path (the wrapper builds the resolver, `create()` null calls the failure handler, injected `cancel_input()`, method-Callable-only rule) |
+| **Depends On** | ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle (the only caller of the five gesture calls; positions arrive in field units; it calls `cancel()` on pause, focus loss and resize); ADR-0006 Battle Signal Contracts and View Allowlist (naming rule, commit-then-emit, listener-count test, typed payloads); ADR-0001 App Lifecycle, Composition Root and Fatal Path (the wrapper builds the resolver, `create()` null calls the failure handler, injected `cancel_input()`, method-Callable-only rule; the injected failure Callable for queue overflow); text also relies on ADR-0007 (fakes and fixtures) and ADR-0004 (tick and command timing) |
 | **Enables** | ADR-0007 (resolver fixtures and fakes), ADR-0010 (HeroInput and TowerInput register discs and bot equivalence), ADR-0011 (HUD draws from these signals) |
 | **Blocks** | Every Input & Gesture Resolver story; TowerInput, HeroInput and HUD input stories; the gesture-log story |
 | **Ordering Note** | ADR-0006 is accepted first so the naming rule and payload style are settled. The architecture lists ADR-0008 as depending on ADR-0003 and ADR-0006 only; ADR-0001 is added here because the build, null-handling and cancel injection rules come from it. |
@@ -84,7 +84,7 @@ The Input GDD fixes behaviour in detail: one pointer, two winners frozen at pres
 
 - Registry with `register`, `unregister`, `set_centre`, `set_enabled`, legal in any state and effective at once (TR-input-007).
 - Four-state machine with frozen winners and per-press slop (TR-input-008).
-- Signal API and `idle` last on every exit to Idle (TR-input-009).
+- Signal API and `became_idle` last on every exit to Idle (TR-input-009).
 - State commits before emit; nested calls queue FIFO and drain in the outermost call (TR-input-010).
 - Injected slops, `validate`, `create` returning null, non-finite input dropped with `push_error` (TR-input-011).
 - Dev gesture log (TR-input-015).
@@ -180,7 +180,7 @@ A non-finite `pos` (checked with `Vector2.is_finite()`, sourced above) makes the
 - The outermost call sets `_draining`, runs its own transition and emits its batch, then pops and runs queued calls one at a time in FIFO order, each only after the whole previous batch has reached every listener. It clears the queue and `_draining` when empty.
 - A nested `press` from a `tapped` handler therefore starts after that gesture's `became_idle`. A queued `cancel()` from a `pressed` handler means every listener hears `pressed` then `became_idle`, and the real release is dropped in Idle.
 - Registry calls are not queued (section 2).
-- A runaway handler that queues a call on every call would loop forever. The drain stops at 64 queued calls per outermost call, drops the rest and calls `push_error`. The limit is an addition to the GDD, a safety stop rather than a gameplay value, and a test covers it.
+- A runaway handler that queues a call on every call would loop forever. The drain stops at 64 queued calls per outermost call (a safety constant, not a gameplay value; an addition to the GDD). Past 64 the call is not dropped silently: the resolver calls an injected failure `Callable` (the ADR-0001 fatal path, passed in at construction) and also `push_error`. A test covers it.
 - This depends on NOT SOURCEABLE item 2.
 
 ### 8. Owner contracts (TR-tower-011, TR-hero-010, TR-hud-008, TR-hud-009)
@@ -301,7 +301,7 @@ The five calls and the registry are as in section 1. `last_press_info()` is a pr
 
 - Three GDDs and the architecture text need new names (see GDD Sync).
 - The queue adds state (`_draining`, packed arrays) that fakes in ADR-0007 must cover.
-- The 64-call drain limit is an addition the GDD did not ask for.
+- The 64-call drain limit is an addition the GDD did not ask for; overflow goes to the injected failure Callable plus `push_error`, never a silent drop.
 - Exact boundary rules depend on `Vector2` precision, which is open (item 4).
 
 ### Neutral
@@ -380,5 +380,5 @@ No code exists. Order of work: the resolver with its fixtures and a recording fa
 - `design/gdd/input-gesture-resolver.md` (Core Rules, States and Transitions, Edge Cases)
 - `design/gdd/battle-hud.md`, `design/gdd/hero-system.md`, `design/gdd/tower-system.md`, `design/gdd/game-state-stage-flow.md`
 - `docs/architecture/architecture.md` (B2, B3, B4, Open Questions QQ-05, QQ-07, QQ-16, QQ-19, QQ-20)
-- ADR-0001, ADR-0003, ADR-0006 (depend on); ADR-0007, ADR-0010, ADR-0011 (enabled)
+- ADR-0001, ADR-0003, ADR-0006 (depend on); ADR-0007, ADR-0010, ADR-0011 (enabled); ADR-0007, ADR-0004 (text also relies on)
 - GDD sync: 5 referenced GDD(s) checked by name; renamed signals appear in four of them, listed above.
