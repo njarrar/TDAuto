@@ -232,6 +232,9 @@ Read-only is a rule with a test, not an engine guarantee (GDD Rule 6): no code o
 func tower(id: StringName) -> TowerRecord             # and enemy, wave, stage, hero, burst
 func input() -> InputRecord                           # the one Input record
 func stage_ids() -> Array[StringName]                 # manifest file order, then order in file
+func hero_ids() -> Array[StringName]                  # same order; non-fatal (added 2026-11-04 during implementation)
+func tower_ids() -> Array[StringName]                 # same order; non-fatal (added 2026-11-04 during implementation)
+func enemy_ids() -> Array[StringName]                 # same order; non-fatal (added 2026-11-04 during implementation)
 func has_record(id: StringName) -> bool               # non-fatal
 func record_type(id: StringName) -> StringName        # non-fatal; &"" if unknown
 func is_tower(id: StringName) -> bool                 # non-fatal (GDD Rule 10)
@@ -239,7 +242,7 @@ func level_count(def_id: StringName) -> int           # non-fatal; 0 if not a to
 func snapshot() -> String                             # canonical string of the whole catalogue
 ```
 
-A typed lookup with an unknown ID, or the wrong type's ID, is a bad call: it returns null, and the caller reports it through its injected `fatal` (ADR-0001). The catalogue holds no failure handler, because it lives for the session and the handler is per battle (ADR-0001 session-lifetime rule). The stat accessor (ADR-0005) wraps these lookups and owns bad-call reporting for stat reads. `stage_ids()` is built from the file arrays, so its order is stable; it gives AppRoot its first stage (ADR-0001 boot step 4).
+A typed lookup with an unknown ID, or the wrong type's ID, is a bad call: it returns null, and the caller reports it through its injected `fatal` (ADR-0001). The catalogue holds no failure handler, because it lives for the session and the handler is per battle (ADR-0001 session-lifetime rule). The stat accessor (ADR-0005) wraps these lookups and owns bad-call reporting for stat reads. `stage_ids()` is built from the file arrays, so its order is stable; it gives AppRoot its first stage (ADR-0001 boot step 4). `hero_ids()`, `tower_ids()` and `enemy_ids()` (added 2026-11-04 during implementation) are built the same way and are non-fatal; BattleBuilder takes the first hero id from `hero_ids()` and builds `VisualKeys` from the records through them (ADR-0011).
 
 ### 7. Read-only proof: canonical snapshot
 
@@ -314,6 +317,9 @@ func hero(id: StringName) -> HeroRecord
 func burst(id: StringName) -> BurstRecord
 func input() -> InputRecord
 func stage_ids() -> Array[StringName]
+func hero_ids() -> Array[StringName]     # added 2026-11-04 during implementation
+func tower_ids() -> Array[StringName]    # added 2026-11-04 during implementation
+func enemy_ids() -> Array[StringName]    # added 2026-11-04 during implementation
 func has_record(id: StringName) -> bool
 func record_type(id: StringName) -> StringName
 func is_tower(id: StringName) -> bool

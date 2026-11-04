@@ -41,13 +41,11 @@ static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fat
 			relay.fatal(ERR_NO_WAVE)
 			return null
 		waves.append(wave)
-	var snap: Dictionary = {}
-	var parsed: Variant = JSON.parse_string(catalogue.snapshot())
-	if parsed is Dictionary:
-		snap = parsed
-	var hero_id: StringName = _first_hero_id(snap)
+	var hero_ids: Array[StringName] = catalogue.hero_ids()
+	var hero_id: StringName = &""
 	var hero_record: HeroRecord = null
-	if hero_id != &"":
+	if not hero_ids.is_empty():
+		hero_id = hero_ids[0]
 		hero_record = catalogue.hero(hero_id)
 	if hero_record == null:
 		relay.fatal(ERR_NO_HERO)
@@ -58,7 +56,7 @@ static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fat
 		return null
 	battle.input_record = input_record
 	battle.stage_record = stage
-	battle.visual_keys = VisualKeys.from_snapshot(snap, hero_id)
+	battle.visual_keys = VisualKeys.from_catalogue(catalogue, hero_id)
 	battle.resolver = resolver
 
 	# Step 3: construct the systems.
@@ -97,13 +95,3 @@ static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fat
 		return null
 	return battle
 
-
-## The first hero id in the snapshot, in sorted order, or &"" if none.
-## The catalogue has no hero list yet, so the snapshot is read (see report).
-static func _first_hero_id(snap: Dictionary) -> StringName:
-	var heroes: Dictionary = snap.get("hero", {}) as Dictionary
-	var ids: Array = heroes.keys()
-	if ids.is_empty():
-		return &""
-	ids.sort()
-	return StringName(String(ids[0]))

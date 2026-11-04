@@ -593,14 +593,14 @@ Invariants: every command first checks the injected `between_ticks()` (`fatal`, 
 | Name | Injected into | Meaning |
 |---|---|---|
 | `halted() -> bool` | EnemyWave, TowerSim, HeroSim, HudLogic; TowerInput, HeroInput (by the wrapper, ADR-0010) | `Battle.halted()`. Checked after every accessor read and every signal. |
-| `between_ticks() -> bool` | TowerSim, HeroSim, Flow | `Battle.between_ticks()`. Checked first in every command, in every build; false calls `fatal` (ADR-0010 Decision 2). |
-| `in_build() -> bool` | HeroSim, HeroInput, HudLogic | True while Flow is in BUILD. |
-| `targets() -> Array[Targetable]` | TowerSim, HeroSim | EnemyWave's `targets()`, so Tower and Hero never reference EnemyWave (Tower Rules 9, 13; Hero Rule 4). |
+| `between_ticks() -> bool` | TowerSim, HeroSim, Flow (changed 2026-11-04: EnemyWave takes none) | `Battle.between_ticks()`. Checked first in every command, in every build; false calls `fatal` (ADR-0010 Decision 2). |
+| `in_build() -> bool` | HeroSim, HeroInput, HudLogic (changed 2026-11-04: TowerSim takes none, as implemented) | True while Flow is in BUILD. |
+| `targets() -> Array[Targetable]` | TowerSim, HeroSim (EnemyWave owns it and takes none; noted 2026-11-04) | EnemyWave's `targets()`, so Tower and Hero never reference EnemyWave (Tower Rules 9, 13; Hero Rule 4). |
 | `cancel_input() -> void` | Flow | `Battle.cancel_input`, which calls the canceller the wrapper sets to `InputAdapter.cancel_all` (empties the adapter queue, then the resolver's `cancel()`; ADR-0001 Decision 5, ADR-0003 Decision 9), so Flow never references the adapter or the resolver (TR-state-007). Headless, a no-op. |
 | `left_handed: bool` | HeroSim, HeroInput, HudLogic | From the Input record, fixed per battle (Hero Rule 2, TR-hero-004). |
 | `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
-| `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
-| `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow | `battle.sim_time.to_ticks`: sign(x) * floor(abs(x) + 0.5) with x = seconds * 60; non-finite gives 0; `dt` = 1/60 fixed at build (ADR-0004 Decision 6). |
+| `dev_error(msg: String) -> void` | EnemyWave, TowerSim, Flow, InputResolver (changed 2026-11-04: HeroSim takes none) | Development-error sink that survives release builds. Tests replace it. |
+| `to_ticks(seconds: float) -> int` | Combat (its only injected callable, changed 2026-11-04), EnemyWave, TowerSim, HeroSim, Flow | `battle.sim_time.to_ticks`: sign(x) * floor(abs(x) + 0.5) with x = seconds * 60; non-finite gives 0; `dt` = 1/60 fixed at build (ADR-0004 Decision 6). |
 | `wave_index() -> int` | Flow | `enemy_wave.wave_index`, read once to build the `StageResult` (Game State Rule 15; ADR-0006 Decision 6). |
 | `dealt_by_kind(kind: Combat.SourceKind) -> float`, `dealt_total() -> float` | Flow | `combat.dealt_by_kind` and `combat.dealt_total`, read once to build the `StageResult` (ADR-0006 Decision 6). |
 | `dt: float` | Flow, EnemyWave, HeroSim (and Combat through `to_ticks` only) | `battle.sim_time.dt`, the value 1/60 (ADR-0004). |

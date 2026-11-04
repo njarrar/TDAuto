@@ -15,6 +15,9 @@ var _inputs: Dictionary = {}
 ## StringName id -> StringName record type.
 var _type_of: Dictionary = {}
 var _stage_ids: Array[StringName] = []
+var _hero_ids: Array[StringName] = []
+var _tower_ids: Array[StringName] = []
+var _enemy_ids: Array[StringName] = []
 var _input: InputRecord = null
 
 
@@ -103,6 +106,21 @@ func input() -> InputRecord:
 ## Stage IDs in manifest file order, then order in file.
 func stage_ids() -> Array[StringName]:
 	return _stage_ids.duplicate()
+
+
+## Hero IDs in manifest file order, then order in file. Non-fatal.
+func hero_ids() -> Array[StringName]:
+	return _hero_ids.duplicate()
+
+
+## Tower IDs in manifest file order, then order in file. Non-fatal.
+func tower_ids() -> Array[StringName]:
+	return _tower_ids.duplicate()
+
+
+## Enemy IDs in manifest file order, then order in file. Non-fatal.
+func enemy_ids() -> Array[StringName]:
+	return _enemy_ids.duplicate()
 
 
 ## Non-fatal: true if any record has this ID.
@@ -216,8 +234,10 @@ func _add_record(type_name: StringName, data: Dictionary) -> void:
 	if type_name == CatalogueSchema.TOWER:
 		var tower_record: TowerRecord = TowerRecord.from_dict(data)
 		_towers[id] = tower_record
+		_tower_ids.append(id)
 	elif type_name == CatalogueSchema.ENEMY:
 		_enemies[id] = EnemyRecord.from_dict(data)
+		_enemy_ids.append(id)
 	elif type_name == CatalogueSchema.WAVE:
 		_waves[id] = WaveRecord.from_dict(data)
 	elif type_name == CatalogueSchema.STAGE:
@@ -225,6 +245,7 @@ func _add_record(type_name: StringName, data: Dictionary) -> void:
 		_stage_ids.append(id)
 	elif type_name == CatalogueSchema.HERO:
 		_heroes[id] = HeroRecord.from_dict(data)
+		_hero_ids.append(id)
 	elif type_name == CatalogueSchema.BURST:
 		_bursts[id] = BurstRecord.from_dict(data)
 	elif type_name == CatalogueSchema.INPUT:

@@ -196,7 +196,7 @@ then _ticks_run += 1
 ```
 
 - `halted()` is checked before steps 2 to 6, and by each system after every read and signal. Leaks resolve before fire, so a fatal leak pays no bounty (Game State Rule 14).
-- `ticks_run()` counts ticks past the gate; it indexes bot scripts (ADR-0010) and the dev log.
+- `ticks_run()` counts ticks past the gate; it indexes bot scripts (ADR-0010) and the dev log. It counts every tick that passed the gate, including one halted mid-way (as implemented; noted 2026-11-04).
 - Order inside a step is its owner's. No step calls another's tick entry; no listener of an in-tick signal calls a tick entry or command (ADR-0006).
 - A new entry (Vertical Slice) needs a superseding ADR and a Data Flow 2 edit.
 
