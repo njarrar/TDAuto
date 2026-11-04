@@ -9,8 +9,8 @@
 - ADRs Referenced: none exist yet. 11 are proposed (ADR-0001 to ADR-0011, numbers provisional until `/architecture-decision` assigns them). Version 1 proposed 15; four pairs were folded together to cut scope for a solo developer. Every contract below that a GDD defers to an ADR is marked **ADR-pending**: it is a working default, not a decision.
 - Technical Requirements: 125, all registered in `docs/architecture/tr-registry.yaml` v4 (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud). Coverage by ADRs: 0 of 125.
 - Flow (`game-state-stage-flow`) and Battle HUD (`battle-hud`) are In Review with re-reviews pending, and Hero's Rule 2 amendment awaits a re-check. A rule change there can move this document again.
-- TD-ARCHITECTURE: 2026-11-03, REVISED after CONCERNS. v1 findings B1 to B4 and A3 (blocking) and A1, A2, A4 to A10 (advisory) applied in v2. A11 (acceptance of the four GDD amendments) waits for the ADRs (QQ-08). v2 has not been re-reviewed.
-- LP-FEASIBILITY: 2026-11-03, REVISED after CONCERNS. v1 findings 1 to 7 (blocking) applied in v2, except finding 1's note that `sink` was invented: the Input GDD defines it as a TAP-only `bool`, and v2 keeps it with that type. Advisory 8 to 15 applied or carried into the named ADRs. v2 has not been re-reviewed.
+- TD-ARCHITECTURE: 2026-11-04, REVISED after CONCERNS (v4, first gate pass since v1). No v4 change adds a blocker. Advisories 1 to 7 applied in v4 (engine gap row, QQ-17 priority and scope, weakref timing, the wrapper's strong hold on the resolver, a Fatal during build, allowlist wording, this line). The standing finding stays: no ADR exists, so criterion 4 (Foundation ADRs) is unmet until ADR-0001 to ADR-0008 are Accepted. Earlier: 2026-11-03, REVISED after CONCERNS on v1.
+- LP-FEASIBILITY: 2026-11-04, REVISED after CONCERNS (v4). Nothing infeasible, nothing blocks ADR-0001. Findings 1, 3, 4, 6 and 8 applied in v4 (clearing the cancel at teardown, null check before the latch, Flow's per-emit latch check, the held-finger rule moved to ADR-0003 and ADR-0008, the listener-count test's build); 2 and 5 are carried into ADR-0001 as probes and tests; 7 needed no change. Debt note: ADR-0001 is the heaviest (17 TRs, HIGH); its author may put the probe results in an appendix so the phone run does not hold its Accepted status. Earlier: 2026-11-03, REVISED after CONCERNS on v1.
 
 ## Engine Knowledge Gap Summary
 
@@ -20,7 +20,7 @@ The model's training covers Godot up to about 4.3. Versions 4.5, 4.6 and 4.7 are
 |---|---|---|---|
 | Input (touch, mouse emulation) | **HIGH** | 4.7 mouse and keyboard no longer report device `0`. 4.6 split touch focus from keyboard focus. `modules/input.md` has no touch coverage, so every touch API claim in the GDDs is unverified. | Input adapter, resolver, HUD Controls, all hit targets |
 | UI and display (stretch, safe area) | **HIGH** | 4.7 changed stretch defaults for new projects (`canvas_items` / `expand`). `project.godot` sets none, so the project inherits whatever the editor wrote. The 540x960 field space, layout rules L3 and L5 to L7 and the HUD layout all depend on it. | Display setup, every field-unit conversion, HUD layout |
-| GDScript language | **HIGH** | 4.7: an override of a typed method inherits the return type and needs an explicit `return`. Packed array element writes skip the property setter. 4.5 added `@abstract` and variadic `...args`. Not new, but it bites here: lambdas capture locals by value in every Godot 4 version, and signal parameter types are not checked at `emit()`. | Every `.gd` file; base classes; signal handlers; the Builder's injected callables |
+| GDScript language | **HIGH** | 4.7: an override of a typed method inherits the return type and needs an explicit `return`. Packed array element writes skip the property setter. 4.5 added `@abstract` and variadic `...args`. Not new, but it bites here: lambdas capture locals by value in every Godot 4 version, and signal parameter types are not checked at `emit()`. New, from a 4.7.2 editor probe and not in the pinned reference: a method `Callable` or signal connection does not keep a `RefCounted` target alive, and `.call()` on a dead one raises a script error that aborts the caller (QQ-17, TR-state-015). | Every `.gd` file; base classes; signal handlers; the Builder's injected callables |
 | Rendering (2D, Mobile renderer) | **MEDIUM** | 4.7: `CanvasItem` lines lose their antialiasing feather and look thinner. The Mobile renderer reference is desktop-leaning. The 60 draw-call budget is a proposal, not measured. | Field views, HUD `_draw`, path polygon |
 | Resources and file access | **MEDIUM** | `duplicate()` on nested resources is deprecated for `duplicate_deep()` (4.5). `FileAccess.store_*` returns `bool` (4.4). | Catalogue snapshot test, run log, save/load (VS) |
 | App lifecycle (pause, focus, background) | **HIGH, unreferenced** | The GDDs name `NOTIFICATION_APPLICATION_FOCUS_OUT`, `NOTIFICATION_APPLICATION_PAUSED` and `NOTIFICATION_WM_WINDOW_FOCUS_OUT`. None is in the pinned reference. | Pause rule (TR-state-010), held-press clearing |
@@ -30,7 +30,7 @@ The model's training covers Godot up to about 4.3. Versions 4.5, 4.6 and 4.7 are
 
 Rule for this document: any engine behaviour that sits in a HIGH row is written as **NEEDS VERIFICATION** until an ADR author has checked it against the live 4.7 documentation or a device.
 
-Owner of each HIGH row: Input and app lifecycle, ADR-0003 (verification spike first). UI and display, ADR-0003. GDScript language, ADR-0007 and the control manifest (QQ-15). Medium rows: rendering, ADR-0011; resources and file access, ADR-0002 and ADR-0010; audio, the Audio GDD (Alpha).
+Owner of each HIGH row: Input and app lifecycle, ADR-0003 (verification spike first). UI and display, ADR-0003. GDScript language, ADR-0007 and the control manifest (QQ-15), except the Callable lifetime probe, which ADR-0001 owns. Medium rows: rendering, ADR-0011; resources and file access, ADR-0002 and ADR-0010; audio, the Audio GDD (Alpha).
 
 ## System Layer Map
 
@@ -165,7 +165,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | **AppRoot** (main scene, no autoload) | App states Boot, InStage, Fatal (Game State GDD). The Ready catalogue for the session. The app-level FatalLatch. The retry latch. | Starts the catalogue load; builds battles and drops them | Catalogue, FatalLatch | `Node`, `PackedScene`, `Object.free()` vs `queue_free()` timing for the wrapper on retry (**MEDIUM, NEEDS VERIFICATION**), `weakref()` (LOW) |
-| **Builder** (`build(catalogue, stage_id, seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4; Callable reference semantics **NEEDS VERIFICATION**, QQ-17) |
+| **Builder** (`build(catalogue, stage_id, seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle`, or null after calling `fatal_handler` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4). The 4.7.2 editor probe answered the lifetime half: a Callable does not keep its target alive, so `Battle` holds every helper in a typed field (Flow Rule 2a). Export and phone **NEEDS VERIFICATION** (QQ-17) |
 | **BattleWrapper** (scene) | The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
 | **Fatal screen** (scene) | Catalogue-free, guaranteed to load. Shown by AppRoot. | None | AppRoot FatalLatch cause (development builds show it) | `PackedScene` (LOW) |
 
@@ -256,7 +256,7 @@ After any step that can commit an outcome (leak, kill, fatal), later steps check
 | `hero_pinned`, `burst_started` | HeroSim | Views, HUD | After state set; handlers never issue commands |
 | `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` |
 | Gesture signals | InputResolver | HeroInput, TowerInput, HudLogic | Re-entrant calls queue FIFO and drain in the outermost call |
-| `tower_upgraded`, `burst_started`, gesture signals (dev builds only) | TowerSim, HeroSim, InputResolver | Gesture log harness (Input Rule 13) | Listens and logs only; it also reads `chip_state()` at tower prompts. Only `burst_started` counts as a burst, since a `drag_ended` from the button may be a cancel. Absent in release builds, so it is not a listener the allowlist test may rely on (TR-input-015) |
+| `tower_upgraded`, `burst_started`, gesture signals (dev builds only) | TowerSim, HeroSim, InputResolver | Gesture log harness (Input Rule 13) | Listens and logs only; it also reads `chip_state()` at tower prompts. Only `burst_started` counts as a burst, since a `drag_ended` from the button may be a cancel. Absent in release builds, so it is not a listener the allowlist test may rely on: the listener-count test runs without it, and ADR-0006 confirms `tower_upgraded` and `burst_started` keep a release listener (HUD, views) or go on the allowlist (TR-input-015) |
 
 Rules for all of them (ADR-0006):
 1. **Commit, then emit.** State is final before the first listener runs.
@@ -281,8 +281,13 @@ Engine starts main scene ──► AppRoot._ready
        d. Make every signal connection; inject halted(), in_build(), targets(), cancel_input(),
           left_handed, to_ticks, wave_index(), the Hero and Burst IDs and the error sink (method Callables only, no capturing lambdas)
        e. Return Battle (headless-safe: no node touched)
-  6. BattleWrapper builds InputResolver.create(drag_slop, tap_slop) (null: fatal), sets battle.set_input_cancel(resolver.cancel),
-     and adds InputAdapter, Clock, HUD and field views around the Battle
+     AppRoot checks the result for null first (a Fatal during build), then the latch, and builds no wrapper
+     for either
+  6. BattleWrapper builds InputResolver.create(drag_slop, tap_slop) (null: fatal) and holds it in a typed
+     field for the battle's life, since the Callable it passes does not keep it alive; sets
+     battle.set_input_cancel(resolver.cancel), and adds InputAdapter, Clock, HUD and field views around
+     the Battle, checking battle.halted() after each step and stopping if it is set. At teardown it
+     clears the cancel with set_input_cancel(Callable()) before releasing the resolver
   7. Flow enters Build
 ```
 
@@ -300,8 +305,10 @@ AppRoot next frame:
      resolver: they are RefCounted, so they cannot be freed, only released. A weakref to the old
      Battle, every system, the accessor and the resolver must then read null (TR-state-009,
      TR-enemy-008, TR-tower-013). That holds only if no reference cycle exists: no lambda or bind()
-     capturing a sim object, no sim back-reference to Battle. A move from a finger held across the
-     retry is dropped until it lifts.
+     capturing a sim object, no sim back-reference to Battle. The weakrefs are sampled after the wrapper
+     is actually freed, not in the call stack that frees it: under `queue_free()` its fields hold the
+     resolver until the frame ends (ADR-0001). A move from a finger held across the retry is dropped
+     until it lifts (the new resolver starts Idle; ADR-0003 and ADR-0008).
   4. Builder.build(...) again with the SAME catalogue (it is held by AppRoot)
 ```
 Retry resets nothing in place. It rebuilds. A latch set outside Won or Lost causes no rebuild. A method `Callable` or signal connection does not keep a `RefCounted` target alive (4.7.2 editor probe, QQ-17), so the old battle's helpers live only through `Battle`'s typed fields and go when it goes (TR-state-015). `free()` vs `queue_free()` timing for the wrapper nodes, and the Callable probe on an export template and a phone, are **NEEDS VERIFICATION** (ADR-0001).
@@ -325,9 +332,13 @@ Any of: catalogue load failure · bad accessor call · stage scene that fails to
         · bad stage input, such as a null Stage record (build calls the handler and returns null)
         · InputResolver.create() returning null in the wrapper
   ─► fatal(cause)   (injected Callable; idempotent; keeps the FIRST cause)
-       latches the per-battle FatalLatch and the AppRoot FatalLatch; Flow enters FATAL from any
-       state, Won, Lost and Paused included, calls cancel_input() and emits phase_changed(FATAL);
-       a transition interrupted by it emits nothing more; the current tick halts;
+       latches the per-battle FatalLatch and the AppRoot FatalLatch. During build, before Flow exists,
+       that is all it does, and build returns null (Flow Rule 2: the handler needs no battle).
+       Otherwise Flow enters FATAL from any state, Won, Lost and Paused included, calls the guarded
+       cancel_input() (a no-op while the wrapper has set none) and emits phase_changed(FATAL).
+       Flow checks the latch before each of its own emits, so a transition interrupted by Fatal
+       emits no further signal; listeners already connected to the signal being emitted still run,
+       since GDScript gives no check between listeners of one emit; the current tick halts;
        a partial build is discarded with 0 ticks; the wrapper checks the latch after each
        assembly step and stops; AppRoot frees the wrapper and the battle on its next frame,
        then (state Fatal) shows the catalogue-free fatal screen and never opens saves
@@ -629,7 +640,7 @@ Covers (17): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, T
 **ADR-0002 Catalogue Storage Format, Manifest and Validation** (Foundation). Decides: Resource vs JSON, record classes, strict field checks, manifest load proven on an Android export, read-only proof with duplicate_deep, content tests.
 Covers (10): TR-data-001, TR-data-002, TR-data-003, TR-data-005, TR-data-007, TR-data-013, TR-data-015, TR-enemy-001, TR-hero-014, TR-hud-016.
 
-**ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle** (Foundation). Decides: engine event path and its order against _process and Controls (a spike first), touch and mouse emulation, 4.7 device IDs, safe area, stretch mode and aspect, minimum width, tall-phone behaviour, pause and focus notifications per platform; decided here, inherited later by the Mobile Platform GDD.
+**ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle** (Foundation). Decides: engine event path and its order against _process and Controls (a spike first), touch and mouse emulation, 4.7 device IDs, safe area, stretch mode and aspect, minimum width, tall-phone behaviour, pause and focus notifications per platform, and dropping a move from a finger held across a retry; decided here, inherited later by the Mobile Platform GDD.
 Covers (11): TR-input-002, TR-input-003, TR-input-004, TR-input-005, TR-input-006, TR-input-013, TR-input-016, TR-state-010, TR-hud-002, TR-hud-003, TR-hud-014.
 
 **ADR-0004 Fixed-Tick Clock, Tick Order, Frame Order and Determinism** (Foundation). Decides: tick driver and rate, clamp value and max ticks per frame, the one tick order, commands between ticks, the in-sim clock gate, real-time presentation clocks, seeded RNG and cosmetic RNG split, float policy and per-architecture baselines, frame budget split.
@@ -696,7 +707,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-14 | Stage tooling: a converter or editor for point-list stages before about 20 stages exist. | Low | tools-programmer, after MVP |
 | QQ-15 | GDScript 4.7 pitfalls have no rule yet: a typed-method override needs an explicit `return`; packed-array element writes skip setters; lambdas capture locals by value; signal parameter types are not checked at `emit()`. Turn them into Required and Forbidden rules. | Medium | ADR-0007, `/create-control-manifest` |
 | QQ-16 | Every `class_name` is global. Short names (`Flow`, `Combat`, `Battle`, `Catalogue`, `Clock`) risk collisions with engine or addon classes. Prefix them or lint for collisions. | Low | ADR-0007 |
-| QQ-17 | Method `Callable`s and signal connections did not keep a `RefCounted` alive in a 4.7.2 editor probe, and `.call()` on a dead or empty one raised a script error and aborted the calling function. So every target needs a strong holder (Flow review, 2026-11-04). Re-confirm on an export template. | Medium | ADR-0001 |
+| QQ-17 | Method `Callable`s and signal connections did not keep a `RefCounted` alive in a 4.7.2 editor probe, and `.call()` on a dead or empty one raised a script error and aborted the calling function. So every target needs a strong holder (Flow review, 2026-11-04). Re-confirm on an export template and a phone, as a headless test that also runs on the CI export. Also probe whether `is_valid()` reads false once a `RefCounted` target is released, not only when an `Object` is freed (LP-FEASIBILITY v4, 1). | High | ADR-0001 |
 | QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 |
 
 **Closed 2026-11-03 (the ADR records these, it does not reopen them):**
