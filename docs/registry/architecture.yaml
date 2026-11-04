@@ -149,7 +149,7 @@ state_ownership:
     status: active
     owner_system: enemy-wave
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
-    interface: "EnemyWave.roster() and targets() -> Array[Targetable], the internal arrays in ascending spawn_id, read-only by contract and never kept past the reader's slot; targets() is the in-field subset (0 <= x <= 540, 0 <= y <= 960); removal by remove_at, then the emit"
+    interface: "EnemyWave.roster() and targets() -> Array[Targetable], the same internal array instance each call, in ascending spawn_id, read-only by contract and never kept past the reader's slot; targets() is the in-field subset (0 <= x <= 540, 0 <= y <= 960); removal by remove_at, then the emit"
     write_access: "enemy-wave only: spawn_id, distance, x, y, removed on each Targetable; one add-enemy step for schedule spawns and later splitter children"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
@@ -433,7 +433,7 @@ interfaces:
       - hero-sim
       - battle
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
-    signal_signature: "Combat.new(to_ticks, dev_error), Battle.combat injected as an object into EnemyWave, TowerSim, HeroSim; no dt, no halted(), no catalogue; deliver(event: DamageEvent) -> float in a tick only, guards no-target, removed, amount or kind, dead (silent), applied = min(amount, hp), commit hp and counters, then emit; apply_slow(enemy, strength, seconds) stores max(1, to_ticks(seconds)); first_in, nearest_in, all_in_radius(list: Array[Targetable], origin: Vector2, r: float) inclusive squared test on x, y, skip dead, tie lowest spawn_id, never mutate; report_attack before deliver; callers reuse one DamageEvent and null its target after the attack"
+    signal_signature: "Combat.new(to_ticks, dev_error), Battle.combat injected as an object into EnemyWave, TowerSim, HeroSim; no dt, no halted(), no catalogue; deliver(event: DamageEvent) -> float in a tick only, guards no-target, removed, amount, kind, dead (silent), applied = minf(amount, hp), commit hp and counters (_dealt_by_id[id] = _dealt_by_id.get(id, 0.0) + applied), then emit; empty or null list gives null or empty silently; apply_slow(enemy, strength, seconds) stores maxi(1, to_ticks(seconds)); first_in, nearest_in, all_in_radius(list: Array[Targetable], origin: Vector2, r: float) inclusive squared test on x, y, skip dead, tie lowest spawn_id, never mutate; report_attack before deliver; callers reuse one DamageEvent (strong target) and null its target at the start of each attack and on every exit; Targetable has no _init"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
@@ -500,9 +500,10 @@ performance_budgets:
     revised: ""
   - system: combat-targeting
     status: active
-    budget_ms: 0.5
+    budget_ms: 0.8
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
-    notes: "Share of ADR-0004's 2.0 ms p95 tick: targeting helpers 0.5, Combat deliver/status/emit 0.2, EnemyWave move/leak/reap 0.3, stat reads 0.7 (ADR-0005 P1), bookkeeping 0.3; desktop bench P2 trigger 0.05 ms p95; unmeasured. ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    # was: 0.5 ms share, trigger 0.05 ms (before godot-specialist and TD-ADR review)
+    notes: "Allocation of ADR-0004's 2.0 ms p95 tick, design point 384 checks (5 towers and hero holding, plus slow second pass and splash victims): targeting 0.8, Combat deliver/status/emit 0.1, EnemyWave 0.2, stat reads 0.7 (ADR-0005 P1), bookkeeping and halted() 0.2; desktop bench P2 triggers share / 15 (targeting 0.053 ms p95), debug and release export; fallback one shared pass per tick (Combat.first_in_each over PackedFloat64Array data); V13 times the whole tick only. ADR-0009 Proposed 2026-11-04; not binding until Accepted"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
@@ -930,7 +931,7 @@ forbidden_patterns:
     notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
   - pattern: targetable_write_outside_enemy_wave
     status: active
-    description: "No code in src/ outside src/feature/enemy_wave/ assigns spawn_id, distance, x, y or removed on a Targetable, keeps a roster() or targets() list past its slot, or mutates one (lint L-COMBAT-2, ADR-0007 amendment owed)"
+    description: "No code in src/ outside src/feature/enemy_wave/ assigns spawn_id, distance, x, y or removed on a Targetable, keeps a roster() or targets() list past its slot, or mutates one; callers get the same instance (lints L-COMBAT-2 and L-COMBAT-4, ADR-0007 amendment owed)"
     why: "EnemyWave is the sole roster owner; a kept list or a second writer breaks spawn_id order and retry freeing"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
