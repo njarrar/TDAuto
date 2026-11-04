@@ -1,6 +1,6 @@
 # Hero System (incl. Burst Skill, Pin & Aim Feedback)
 
-> **Status**: Approved (lean design re-review 2026-11-04; 4 recommended items in the review log; the mono-role gate while calling fails today by design)
+> **Status**: Approved (lean design re-review 2026-11-04; 4 recommended items in the review log; the mono-role report while calling ties today, and human logs decide it)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, first about 3 lives and then about 2 (Rule 7), and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-04
@@ -108,8 +108,8 @@ The pinned-once column stands at (270, 480). Searching for the best single pin o
 
 | Measure, mid-skill on mixed builds | Result | Gate |
 |---|---|---|
-| Hero share | 25%, 35%, 24%, 25%; median 25.1% unrounded | Median 25% to 30%, none above 40%: passes, at the band's floor |
-| Burst alone | 20% to 30% | Reported, since it decides the spike |
+| Hero share | 25%, 35%, 24%, 25%; median 25.1% unrounded | Reported, not gated (Deferred criteria): inside the expected 25% to 30%, at its floor |
+| Burst alone | 20% to 30% | At least 15% on each mixed build (proposed): passes |
 | Median kills, bursts hitting 3 or more, per build | 3.5 to 4 | At least 2: passes |
 | Bursts per stage | 10 to 11 | None |
 | Burst share in 2, 2 and 1 against single only | 30% against 25% | At least 75% of it: passes |
@@ -130,7 +130,7 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 | 3 single, 2 splash | 9 | 9 | 9 | 9 | 9 |
 | 2 single, 1 splash, 2 slow | 9 | 9 | 6 | 9 | 9 |
 
-Cutting the bonus would not end the tie, since single only still reaches 9 calling when Ready, and it would fail the 2-lives gate on the last mix. So the bonus stays (user decision, 2026-11-04; Tower Rule 16), and a new gate holds mono-role builds below the mixes while calling. It fails today, and is reported only until first playable. Lives move in steps of 3, one leaked heavy, so "within 2 lives" means no extra heavy leaks.
+Cutting the bonus would not end the tie, since single only still reaches 9 calling when Ready, and it would fail the 2-lives gate on the last mix. So the bonus stays (user decision, 2026-11-04; Tower Rule 16), and bots report whether mono-role builds stay below the mixes while calling. They do not today. Human logs decide whether that matters (user decision, 2026-11-04; Deferred criteria). Lives move in steps of 3, one leaked heavy, so "within 2 lives" means no extra heavy leaks.
 
 **Content rules, added to the content test.** All bounds are proposed.
 
@@ -436,15 +436,17 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 |---|---|---|
 | Hero alone, slow-only | Hero stories | Both lose |
 | Towers-only | Hero stories | On the mixed builds, the towers-only bot without calling ends with 3 lives or fewer, a loss being 0; mid-skill at least 4 above it on each |
-| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 4 lives lower. The user accepted about 2 for MVP (2026-11-03). If it becomes a tie on all four, or humans re-pin without gaining, lanes come forward |
-| Share | Hero stories | Median of mixed builds 25% to 30%, none above 40%, at the mid-skill bot. Today's 25.1% is 0.1 above the floor, so a small bot change can flip it, and a flip goes to the user rather than a retune. It moves with skill, so ±1 s and ±25 aim are reported, not gated. Human logs replace it at first playable; if it cannot be held, the user decides whether to amend the pillar |
+| Pinned once | Hero stories | The best-single-pin bot, not the fixed one, ends below mid-skill on at least three of four mixed builds. This may fall short of Pillar 2's "clearly lose": today it is 1 to 4 lives lower. The user accepted about 2 for MVP (2026-11-03). If it becomes a tie on all four, or the lanes trigger below fires, lanes come forward |
+| Lanes trigger | User, first playable | From at least 5 testers with at least 4 won attempts each (proposed), split each tester's won attempts at their median `repins`. If the median across testers of the higher half's median lives minus the lower half's is under 1 life, Enemy & Wave's parallel lanes come forward, ahead of more content (user decision, 2026-11-04) |
+| Share | Hero stories, then user at first playable | Reported, never failing (user decision, 2026-11-04): it moves with skill, and today's 25.1% sits 0.1 above the expected floor. Each bot run and, from first playable, the human logs report the median of mixed builds. A median outside 25% to 30%, or any build above 40%, is flagged to the user, who decides whether to amend the pillar; it is not a retune. From Vertical Slice this is read across the stage set, and one stage may sit from 20% to 40% unflagged (proposed). The burst's values stay one record and are never tuned per stage (Pillar 3) |
+| Burst decides | Hero stories | On each mixed build, mid-skill wins, and loses without the burst; `dealt_burst` is at least 15% of stage damage (proposed). Today wins at 9, losses on wave 5 or 6, and 20% to 30%. From Vertical Slice these read as the stage set's median, and no single stage carries the 15% floor or the no-burst loss, so stages can differ |
 | Burst outcome | Hero stories | On each mixed build, the median of `kills_on_hit_3` is at least 2; an empty list fails |
 | `dealt_burst` | Hero stories | 2, 2 and 1 share at least 75% of single-only's |
 | Dominant build | Hero stories | On mid-skill, at least two mixed builds within 2 lives of the best one |
 | Upgrade order | Hero stories | On mid-skill, over every placement of each mixed build, the median with upgrading in pairs is at least the median with filling first. Today 9, 9, 9 and 6 against 7, 7, 8.5 and 4 (Tower System) |
 | Placement | Hero stories | On mid-skill, filling first, each mixed build's best placement ends at least 3 lives above its worst. Today 3 to 10 |
 | Mono-role | Hero stories | Towers-only: every mono build loses. Mid-skill: every mono build ends below the best mixed build |
-| Mono-role while calling (Tower Rule 16) | Hero stories | Mid-skill, calling when Ready and always calling: every mono build ends below the best mixed build at the same mode. Reported only until first playable, where it blocks, so no story or CI run fails on it before then. Today it fails: single only ties at 9 on both. The gold rate cannot pass it: from 0.3 to 8 s per gold single only stays at 9 calling when Ready, since the extra time lifts it with no gold at all, and from 3.0 the 2, 1, 2 mix drops to 6. Levers to try are heavy HP and the single tower's stats. No passing tuning is known; if none holds, the user rules on the gate |
+| Mono-role while calling (Tower Rule 16) | Hero stories, then user at first playable | Mid-skill, calling when Ready and always calling: whether every mono build ends below the best mixed build at the same mode. Reported, and never blocking (user decision, 2026-11-04, replacing a block at first playable): the gap is one leaked heavy, so bots alone cannot show a problem. Human logs decide. From at least 5 testers (proposed), if more than half of won attempts after a tester's first win are mono-role, tuning reopens. Today single only ties at 9 on both. The gold rate cannot pass it: from 0.3 to 8 s per gold single only stays at 9 calling when Ready, since the extra time lifts it with no gold at all, and from 3.0 the 2, 1, 2 mix drops to 6. If tuning reopens, the levers to try are heavy HP and the single tower's stats. No passing tuning is known; if none holds, the user rules |
 | Always-call, bots | Hero stories | Towers-only flips no loss, gains at most 2 lives and does not beat a driven hero; on mixed builds, mid-skill fires at most 1 more burst and gains at most 2 lives. Mono builds have their own row above |
 | Call when Ready (Flow Rule 9) | Hero stories | On every mixed build, mid-skill calling the moment the burst is Ready ends within 2 lives of never calling. Today 0 on all four. A won stage with every wave called runs at least 3.5 minutes (proposed). Today 3.6 to 3.8 on mixed builds, and 4.0 on single only. Both from `hero_bots.py --calls` |
 | Always-call, humans | User, first playable | Log `seconds_left`, burst readiness and next-wave lives lost per call. Calling is a fast-forward (Flow Rule 9), so callers losing no more than waiters is the expected result. If callers' median ends more than 2 lives below waiters', calling is not the safe skip it claims to be, and the user decides what changes |
@@ -467,7 +469,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 |---|---|---|
 | Is a gap this wide right for a first-time player: every build loses by wave 5 without the hero, while one pin plus bursts wins on all four mixes, with 2 to 5 lives at the fixed pin and 5 to 8 at the best one? | First-run test | First playable |
 | Does a burst of radius 70 still feel like the best moment? The tester loved radius 150 at 8 s against much weaker enemies. A thumb's aim may be too rough for it, and bot results swing hard with radius. Fallback: a soft aim magnet toward the densest cluster, then a wider, weaker burst with share over target for the user to rule on | Non-developer test | First phone build |
-| Re-pinning at about 2 lives was accepted for MVP (Rule 7). Do humans agree it earns its place? A 3 s bot re-pins about 110 times a stage for it. Log `repins` for humans against lives. Fallback: Enemy & Wave's parallel lanes | Bots + human logs | First playable |
+| Re-pinning at about 2 lives was accepted for MVP (Rule 7). Do humans agree it earns its place? A 3 s bot re-pins about 110 times a stage for it. Log `repins` for humans against lives. Fallback: Enemy & Wave's parallel lanes, on the lanes trigger (Deferred criteria) | Bots + human logs | First playable |
 | Is reach 160 felt as a clear limit or as the reticle getting stuck? Fallback: a wider reach, which weakens the pin | Playtest | First phone build |
 | One build sits at 35%, and a better player reaches 44%. Is a single band right for players who improve? If it cannot hold, the user rules on the pillar's target | Human logs | First playable |
 | Calling is nearly free for bots, and that is now intended (Flow Rule 9). Does a person feel preparation time? | Human logs | First playable |

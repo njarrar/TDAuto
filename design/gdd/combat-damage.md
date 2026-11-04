@@ -114,7 +114,7 @@ The **hero_share** formula is defined as:
 | `dealt_hero`, `dealt_burst` | float | 0 and up | calculated | Sums of `applied` by source kind |
 | `dealt_total` | float | 0 and up | calculated | `dealt_tower + dealt_hero + dealt_burst`, so rounding cannot push share above 1 |
 
-**Output Range:** 0–1. Target 0.25–0.30, unproven: no human data exists, and the prototype's 39% came from one tower type and a bug (see Open Questions). Read it as approximate, in no proven direction: credit follows HP applied, towers waste overkill too, and damage from a tower the hero buffs is not the hero's (Rule 5). The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
+**Output Range:** 0–1. Expected 0.25–0.30, reported rather than gated (Hero, Deferred criteria) and unproven: no human data exists, and the prototype's 39% came from one tower type and a bug (see Open Questions). Read it as approximate, in no proven direction: credit follows HP applied, towers waste overkill too, and damage from a tower the hero buffs is not the hero's (Rule 5). The combined figure can reach 30% with almost no burst, so it cannot show that the hero keeps the spike: bot baselines report `dealt_burst` separately.
 **Example:** 200 hero + 100 burst of 1,000 total = 0.30.
 
 The **speed_factor** formula is defined as:
