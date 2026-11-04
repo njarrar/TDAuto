@@ -37,7 +37,7 @@ Drawn from the UI Requirements sections of all 8 GDDs. Combat, Data & Config and
 | 3 | Gold | Tower (`gold_changed`) | Tower |
 | 4 | Next-wave line (glyph and count per enemy type) | Wave records | Enemy & Wave |
 | 5 | Start / Call button, with the early-call bonus, the seconds left and a burst glyph | Flow, Tower (`early_call_bonus`) | Flow, Tower |
-| 6 | Burst button: Locked, Ready, Telegraphing, Cooling (wedge and digit) | Hero (`burst_state()`, `cooldown_left()`), Data (Burst `cooldown`) | Hero |
+| 6 | Burst button: Locked, Ready, Telegraphing, Cooling (returning fill and digit) | Hero (`burst_state()`, `cooldown_left()`), Data (Burst `cooldown`) | Hero |
 | 7 | Build arc: three tower discs, their words and costs | Tower (`build`), Data (costs) | Tower |
 | 8 | Upgrade chip: cost, level-2 glyph, draining bar | Tower (`chip_state()`) | Tower |
 | 9 | Tower range rings (inspect, arc open, chip open, after build) | Tower, Data | Tower |
@@ -303,7 +303,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 | Ground ring (alpha 0.35, on the field) | neutral at 0.35 | 2.46:1 | Below 3:1; transient and non-essential (advisory, HQ-02) |
 | Lost life dash (alpha 0.2) | neutral at 0.2 | 1.63:1 | Deliberately low: it means "lost". The remaining full dashes carry the count |
 
-**Colour independence.** No state in the HUD relies on colour. Screen space is neutral. Unaffordable has a strike-through. Burst Ready vs Cooling differs by outline vs filled plus wedge and a digit. Pips differ by fill, outline and dots. Lives are counted by dashes. The arc's three towers differ by shape and word (all cyan).
+**Colour independence.** No state in the HUD relies on colour. Screen space is neutral. Unaffordable has a strike-through. Burst Ready vs Cooling differs by outline vs filled plus the returning fill and a digit. Pips differ by fill, outline and dots. Lives are counted by dashes. The arc's three towers differ by shape and word (all cyan).
 
 **Reduced motion.** Under Reduce Motion (data flag `reduce_motion` until Settings exists) the HUD drops the 2 px nudges and the 12-unit panel slides and cuts the 120 ms arc collapse. Fades and clock bars stay: lost dash, ground ring, range-ring fades, cooldown sweep, chip drain bar. **Gap:** a refused press then has only the standing dim, so a non-motion refusal cue is needed (P-12, AQ-10).
 
@@ -342,7 +342,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 | Result text delay | 400 ms | The beat before the result appears |
 | `advance(ms)` clamp | 100 ms per frame | Stops a hitch arming an unseen button |
 | Ground rings per battle | 3 | How long a new player is told a tap hit nothing |
-| Unaffordable alpha | 0.55 in the GDD; 0.6 proposed (HQ-01). The one place this document states the value; the contrast table shows what each gives | Legibility of a dimmed cost |
+| Unaffordable alpha | 0.55 in the GDD; 0.6 proposed (HQ-01). This row is the value to change; the contrast table, HQ-01 and the Unaffordable criterion only report what 0.55 and 0.6 give | Legibility of a dimmed cost |
 | Prompt count | 3 | How much the HUD teaches |
 
 ---
@@ -354,14 +354,14 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 - [ ] **Safe zone.** At inset 0 the top band occupies y 0 to 72 and the burst button's centre is at y 888, x 456 (x 84 with `left_handed`). With a bottom inset of 24 units the burst button's centre moves to y 864; with 100 units it stops at y 816.
 - [ ] **Elements per phase.** Build shows lives, pips, gold, the burst button (dotted until a first pin), "Start" and the next-wave line, and not "Call". Wave shows lives, pips, gold and the burst button, and no Start/Call or next-wave line. Intermission shows "Call +N" (or "Call" when N is 0), seconds left, the next-wave line and the burst button. In Build, Wave and Intermission, at most one prompt line may also show: "Drag the hero" while the hero has never been pinned in this battle; then, in Build and Intermission, "Tap a slot to build" while no tower has been built (hidden while an arc is open); then, in Wave, "Drag from the corner button" once the burst is Ready and none has fired. Won and Lost show no burst button, no Start/Call and no prompt.
 - [ ] **Budget.** With a build arc open, the HUD uses at most 12 draw calls and at most 3 text draws on a device.
-- [ ] **Targets.** Every tappable or draggable target measures at least 48 dp (72 units) on a 360 dp phone: Start/Call, burst button, arc discs, chip, tower, slot, hero.
+- [ ] **Targets.** Every tappable or draggable target measures at least 48 dp (72 units) on a 360 dp phone: Start/Call, burst button, arc discs, chip, tower, slot, hero; and Retry's and Play again's rects (128 x 72) have a short side of at least 72 units, exactly at the limit.
 - [ ] **Arming.** Pressing a newly shown Start/Call within 300 ms of it appearing does nothing, including when the finger lifts after 300 ms.
 - [ ] **Double tap.** Double-tapping a slot so the second tap lands on a disc inside 200 ms closes the arc and buys nothing.
 - [ ] **Unaffordable.** A disc or chip whose cost exceeds gold shows its cost struck through and dimmed, and the dimmed cost has a contrast ratio of at least 4.5:1 on the panel. (Depends on HQ-01: the GDD's alpha 0.55 gives 4.25:1 and fails this until it is raised to 0.6.)
 - [ ] **Result.** On a Lost, the modal blocks every touch at once, the text appears 400 ms later in the stated order with no percentage, and Retry rebuilds the battle in one tap even if tapped twice. A Won shows "Stage clear" and "Lives N of M" in the left column and the damage rows in the right after 400 ms, with no "Got through" row, a compact panel and the board visible above it. Retry and Play again stay at alpha 0.5 and ignore presses for 300 ms after their text shows.
 - [ ] **Paused.** Switching away from the app shows "Paused. Tap to resume" and no prompt line; a tap resumes and does not select a tower or move the hero; a finger held across the pause does nothing until lifted.
 - [ ] **Reduce Motion.** With the flag on, a refused press shows no 2 px nudge and no panel slide, and the arc closes without the 120 ms collapse (proposal: the GDD does not yet say what Reduce Motion does to the collapse, HQ-04); the lost-life fade and cooldown sweep still play.
-- [ ] **Colour independence.** With a battle screenshot passed through a protanopia and a deuteranopia simulator, these can still be told apart: burst Ready (filled, full ring) vs Cooling (outline, wedge, digit); an affordable cost vs a struck-through cost; done, current and upcoming pips (filled, outlined, dotted); a full life dash vs a lost one.
+- [ ] **Colour independence.** With a battle screenshot passed through a protanopia and a deuteranopia simulator, these can still be told apart: burst Ready (filled, full ring) vs Cooling (outline, returning fill, digit); an affordable cost vs a struck-through cost; done, current and upcoming pips (filled, outlined, dotted); a full life dash vs a lost one.
 - [ ] **Ground ring cap.** In a fresh battle, four taps on empty field show a ring for the first three and none for the fourth; a tap that dismisses an open arc shows none; after Retry, the count starts again at three.
 - [ ] **Screen share.** In Build with the hero unpinned and an arc open, the HUD's screen-space pieces (band, burst button, Start/Call, prompt) cover no more than 12.5% of the screen, and with the arc panels no more than 15.5%.
 - [ ] **Prompts.** "Drag the hero" shows until the first pin and never again in that battle; the other two prompts end on their act; none disappears on a timer.
