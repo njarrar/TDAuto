@@ -275,7 +275,7 @@ The **burst_spike** formula is defined as:
 **Output Range:** above 0. Below 2, one splash shot looks like half a burst. It ignores HP limits, kills, overlapping groups and hairpins, which change spacing, so it is a heuristic, not a bound.
 **Example:** burst 130 at radius 70, level-2 splash 30 at radius 75, normal×6 @0.6: `s` 36, `V_s` 3, `V_b` 4, so 520 / 90 = 5.78, the lowest of the starter groups.
 
-**The gate Combat Rule 6 asked for has three parts, and none is the one it named.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
+**The gate Combat Rule 6 asks for has three parts.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
 
 1. `burst_spike` of at least 2, for every splash level on every group of 5 or more, in the content test.
 2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated, burst only: 30% against 25%, a pass.

@@ -21,7 +21,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
 ### Core Rules
 
-**Three pieces.** The systems index asked for four to avoid a god object. A ProjectileSpawner is cut, because every hit is instant and nothing flies. Attackers enumerate victims at fire time, so adding projectiles later would change them too; that cost is accepted. The technical director has yet to confirm this.
+**Three pieces.** The systems index first asked for four to avoid a god object. A ProjectileSpawner is cut, because every hit is instant and nothing flies. Attackers enumerate victims at fire time, so adding projectiles later would change them too; that cost is accepted. The technical director has yet to confirm this.
 
 | Piece | Holds |
 |---|---|
@@ -86,7 +86,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead`; sets `removed` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, calls `tick_status` in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Battle HUD | reads | Counters, once at the outcome | Combat (counters); HUD (display) |
-| Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied`; Hero's `burst_started` for clearance | Views |
+| Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied`; Hero's `burst_started` and Flow's `phase_changed` for clearance | Views |
 
 ## Formulas
 
@@ -166,7 +166,7 @@ A slow of duration `d` is stored as `max(1, to_ticks(d))` whole ticks (Enemy & W
 
 ## Dependencies
 
-**Upstream:** `to_ticks`, a pure conversion defined in Enemy & Wave's Formulas, with no enemy state, so it makes no cycle. Combat reads no data, which corrects the systems index (callers read and pass values in). The Combat view, not Combat, also listens to Hero's `burst_started` for the clearance window.
+**Upstream:** `to_ticks`, a pure conversion defined in Enemy & Wave's Formulas, with no enemy state, so it makes no cycle. Combat reads no data, which corrects the systems index (callers read and pass values in). The Combat view, not Combat, also listens to Hero's `burst_started` and Flow's `phase_changed` for the clearance window.
 
 **Downstream (hard):**
 
@@ -216,7 +216,7 @@ The MVP minimum, drawn with primitives from one `_draw()` per kind, with no shad
 
 **Feature budget.** A flash is transient and does not count. Under 22 px: flash and slow only. Slowed and damaged together: slow shows and the core hides.
 
-**Burst clearance (about 0.4 s).** Tower flashes and splash rings are suppressed, with no other gold, glow or expanding ring, so the burst stays the brightest thing on screen (Pillar 2). The Combat view does this, from Hero's `burst_started` to 0.15 s after release (Hero, Visual Requirements). Release is the next `attack_fired` of kind BURST, which fires even for an empty burst. Tower-hit feedback is the accepted cost.
+**Burst clearance (about 0.4 s).** Tower flashes and splash rings are suppressed, with no other gold, glow or expanding ring, so the burst stays the brightest thing on screen (Pillar 2). The Combat view does this, from Hero's `burst_started` to 0.15 s after release (Hero, Visual Requirements). Release is the next `attack_fired` of kind BURST, which fires even for an empty burst. An outcome or Fatal stops the clock, so the view counts the 0.15 s in real time from then on, and if the burst never released, the window ends at that `phase_changed`. Tower-hit feedback is the accepted cost.
 
 **Flash markers.** The Combat view holds one global pool of 16 (art bible §8), one marker per flashing enemy, so a retrigger reuses that enemy's marker. Death discs use none. Edge Cases gives the eviction order.
 
@@ -239,7 +239,7 @@ None. The HUD shows the counters as plain text at stage end, as Towers, Hero and
 | This Document References | Target | Specific Element | Nature |
 |---|---|---|---|
 | Hero share metric, target, hero-only must fail | `design/gdd/game-concept.md` | Pillar 2 | Rule dependency |
-| Four pieces, source field, hit flashes here | `design/gdd/systems-index.md` | Core Layer TD note | Amended here |
+| Three pieces (the note first asked for four), source field, hit flashes here | `design/gdd/systems-index.md` | Core Layer TD note | Amended here; the index now agrees |
 | Slow strength domain, never cache, dealer vs grantor | `design/gdd/data-config-pipeline.md` | Field domains; Rule 10; Not owned | Rule dependency; exception stated |
 | Fixed tick, no timers, mid-tick outcome, tick order | `design/gdd/game-state-stage-flow.md` | Rules 4, 5, 14, 15 | Rule dependency |
 | `to_ticks`, `spawn_id`, `distance`, `position` | `design/gdd/enemy-wave.md` | Formulas; Rule 14 | Rule dependency |
@@ -278,7 +278,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Criterion | Owner | Passes when |
 |---|---|---|
 | Full determinism (Flow) | Combat stories | The same stage, seed and script give an identical result |
-| Micro-battle (Flow) | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
+| Micro-battle (Flow owns it) | Game State stories, once Combat, Enemy & Wave and Tower exist | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage, within 0.001 since real values are not binary-exact, with reaped enemies counted and the output retained in `production/qa/evidence/` |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Status counts down before Towers fire, and Towers fire by slot index; leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once. `deliver` running only inside a tick is caller discipline, checked here |
 | Burst between ticks (Rule 2) | Hero stories | A burst commanded between ticks releases in the Hero-and-burst slot at least one tick later, and its corpses are reaped without moving |
@@ -286,7 +286,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Damage shown | Battle HUD stories | Won and Lost show Towers, Hero and Burst, matching the counters, with no percentage; retained screenshot |
 | Splash vs burst gate (Rule 6) | Tower, Hero stories | Tower's `burst_spike` content test and Hero's `dealt_burst` row, which own the thresholds |
 
-**Manual** (frame-stepped screenshots retained in `production/qa/evidence/`): tower and hero hits tell apart in greyscale, in a side-by-side lead sign-off; a static splash ring whose drawn radius equals the data radius at the screen's scale; drag lines on every slowed enemy; a damaged core on enemies of 22 px and above and none below; no tower flash or ring in any frame of the clearance window. On the first phone build, a non-developer names hero or tower correctly on at least 8 of 10 kills with sound off (proposed; qa-lead confirms or changes it before that test). This proves the hits are legible, not that they are satisfying, which only playtests can judge.
+**Manual** (frame-stepped screenshots retained in `production/qa/evidence/`): tower and hero hits tell apart in greyscale, in a side-by-side lead sign-off; a static splash ring whose drawn radius equals the data radius at the screen's scale; drag lines on every slowed enemy; a damaged core on enemies of 22 px and above and none below; no tower flash or ring in any frame of the clearance window, and tower flashes never left suppressed after an outcome mid-telegraph. On the first phone build, a non-developer names hero or tower correctly on at least 8 of 10 kills with sound off (proposed; qa-lead confirms or changes it before that test). This proves the hits are legible, not that they are satisfying, which only playtests can judge.
 
 **Checked by code review, not tests:** slow stays out of the accessor (Rule 8), Combat reads no data (Rule 9), no view reads `event.target` (Rule 12).
 
@@ -294,7 +294,7 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Does the technical director accept cutting ProjectileSpawner and the tick order? Both override existing notes | technical-director | App Lifecycle ADR |
+| Does the technical director accept cutting ProjectileSpawner and the tick order? Both override existing notes | technical-director | ADR-0009 for ProjectileSpawner, ADR-0004 for the tick order (QQ-08) |
 | What is the hero's real share? The prototype's 39% had one tower type, bot-fitted values and a bug that could credit negative damage, by an unmeasured amount. Re-run once all three tower roles exist | qa-lead | First playable |
 | Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Tower GDD + bots | First playable |
 | Instant hits leave weapon upgrades a thin 100 ms line to show growth on (Pillar 1). What makes them visible? | Weapons GDD (Vertical Slice) | Vertical Slice |

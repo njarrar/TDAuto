@@ -249,7 +249,7 @@ After any step that can commit an outcome (leak, kill, fatal), later steps check
 | `enemy_killed(bounty)` | EnemyWave | TowerSim (gold) | Same |
 | `wave_cleared(intermission_duration)` | EnemyWave | Flow | Same; leaks come before the clear |
 | `waves_complete` | EnemyWave | Flow | Same |
-| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, TowerSim (`wave_called_early`, and `phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | The GDD names the signal `phase_changed`; renamed here because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1) |
+| `lives_changed(current)`, `phase_changed(value)`, `wave_called_early(seconds_left)` | Flow | HUD, Combat view (`phase_changed`, for burst clearance), TowerSim (`wave_called_early`, and `phase_changed` for the chip), BattleWrapper (zeroes the accumulator on PAUSED), views | The GDD names the signal `phase_changed`; renamed here because a member and a signal cannot share a name and Flow also needs a `phase()` read (TD-ARCHITECTURE B1) |
 | `gold_changed`, `tower_built`, `tower_upgraded` | TowerSim | HUD, views | Commit first, `gold_changed` then the tower signal; a refusal emits nothing |
 | `hero_pinned`, `burst_started` | HeroSim | Views, HUD | After state set; handlers never issue commands |
 | `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` |
