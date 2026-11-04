@@ -110,14 +110,16 @@ C1 to C11, S1, S2 and I3 were fixed the same day, on the user's instruction. The
 - **C5:** two Enemy & Wave open questions were removed, because the concept now answers them.
 - **C7:** Battle HUD is hard for HeroInput only. HeroSim runs without it.
 
-Left open: D1 to D11, I1, I2 and I4 to I7, and the four decisions below.
+Left open: D1 to D10, I1, I2 and I4 to I7. The four decisions below were applied separately.
 
 ### Verdict: CONCERNS
 
 No blocking issues. 11 consistency warnings, 11 design warnings and 2 scenario warnings should be resolved or accepted. Scenario premises and the registry baseline stay unverified as noted above.
 
-### Decisions for the user
-1. Mono-role gate at first playable: keep blocking, or let human logs decide.
-2. Share gate: keep 25% to 30%, make share telemetry and gate on `dealt_burst` and lives, or widen the band.
-3. Pillar 2 against Pillar 3: measure across stages with wider tolerance, or tune the burst per stage.
-4. Lanes trigger: set a number, or leave it to judgement.
+### Decisions (user, 2026-11-04: all as recommended)
+1. Mono-role while calling: bots report, human logs decide. If more than half of won attempts after a tester's first win are mono-role, tuning reopens.
+2. Share: reported, not gated. New gate "Burst decides" on `dealt_burst` and lives. `dealt_burst`'s 15% floor is proposed.
+3. Pillar 2 against Pillar 3: read across the stage set, one stage 20% to 40% (proposed), burst never tuned per stage.
+4. Lanes trigger: testers who re-pin more gain under 1 life. The 5 testers and 4 won attempts are proposed.
+
+These settle D11 and the numbers D3 and D4 asked for, and answer the mono-role challenge. The rest of D2 (a margin and mono builds across placements) stays open. Applied to the GDDs without a re-review.

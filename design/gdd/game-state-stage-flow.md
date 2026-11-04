@@ -281,7 +281,7 @@ A recording fake logs every Flow signal. The log is cleared when GIVEN ends, and
 | Injection of resolver and adapter (Input) | Game State stories | Every owner receives the one resolver, with no global |
 | Clock (Rules 4, 5, 17) | Game State stories, with the cap from ADR-0004 | A frame owing more than the cap runs exactly the cap's ticks. `phase_changed(Paused)` zeroes the accumulator, so a resume runs 0 ticks from time owed before the pause. Systems tick in the listed order |
 | Bonus and live actions (Rules 9, 10) | Tower stories | A bonus is paid per real call only, regardless of burst state; actions work in all three phases; the burst is refused in Build (Hero) |
-| Call-early gates (Rule 9) | Hero stories | Hero's deferred table holds the numbers: on every mixed build, calling when the burst is Ready ends within 2 lives of never calling; a won stage with every wave called runs at least 3.5 minutes; no mono-role build that calls ties the best mixed build; towers-only always-call flips no loss. Re-baselined on the fixed tick |
+| Call-early gates (Rule 9) | Hero stories | Hero's deferred table holds the numbers: on every mixed build, calling when the burst is Ready ends within 2 lives of never calling; a won stage with every wave called runs at least 3.5 minutes; towers-only always-call flips no loss. Mono-role builds that call are reported, and human logs decide (Hero). Re-baselined on the fixed tick |
 | Button arming | Battle HUD stories | A press begun before Start/Call or Retry arms does nothing |
 
 **Manual**
