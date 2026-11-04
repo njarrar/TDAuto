@@ -25,7 +25,7 @@ TowerRiot needs one place that builds a battle, holds what must outlive it, tear
 | **Knowledge Risk** | HIGH (VERSION.md: 4.5 to 4.7 are past the model's training; the App lifecycle row of `architecture.md` is HIGH and unreferenced) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `current-best-practices.md` (lambdas capture by value), `deprecated-apis.md` (Callable-based `connect`), `docs/architecture/architecture.md` (Engine Knowledge Gap Summary, Composition Root, Data Flow 4, 5 and 7, B4, B9) |
 | **Post-Cutoff APIs Used** | None new. The decision rests on long-standing APIs (`RefCounted`, `Callable`, `Signal.connect`, `Node.free`, `Node.remove_child`, `weakref`, `push_error`, `PackedScene.instantiate`) whose 4.7.2 behaviour was probed, not sourced. NOT SOURCEABLE: Callable and signal lifetime against `RefCounted` targets, and `free()` versus `queue_free()` timing, are not covered by `docs/engine-reference/godot/`. |
-| **Verification Required** | (1) Repeat the Callable lifetime probe on an export template (desktop release, then Android): a method Callable and a signal connection must not keep a `RefCounted` target alive, and `.call()` on a dead target must raise a script error (QQ-17). (2) Repeat the teardown probe on export: after `remove_child(wrapper)` and `wrapper.free()` plus dropping the `Battle`, a `weakref` to the old battle reads null in the same frame. (3) A release export with an invalid record shows the fatal screen and leaves saves untouched; a bad accessor call reaches it too (Data criterion 13). (4) A lambda that captures a `RefCounted` keeps it alive (probed on desktop; the ban stands whatever export shows). |
+| **Verification Required** | (1) Repeat the Callable lifetime probe on an export template (desktop release, then Android): a method Callable and a signal connection must not keep a `RefCounted` target alive, and `.call()` on a dead target must raise a script error (QQ-17). (2) Repeat the teardown probe on export: after `remove_child(wrapper)` and `wrapper.free()` plus dropping the `Battle`, a `weakref` to the old battle reads null in the same frame. (3) A release export with an invalid record shows the fatal screen and leaves saves untouched; a bad accessor call reaches it too (Data criterion 13). (4) A lambda that captures a `RefCounted` keeps it alive (probed on desktop; the ban stands whatever export shows). (5) `push_error` still writes to the log in a release export (NOT SOURCEABLE from the pinned reference). |
 
 ## ADR Dependencies
 
@@ -83,7 +83,7 @@ The reasoning, part by part:
 
 **One failure path.** `fatal(cause: String)` is a method Callable on the battle's `FatalLatch`. The first call stores the cause and sets the latch; later calls do nothing. Setting it also sets AppRoot's latch (the builder injects AppRoot's `on_fatal` method as the `fatal_handler` the latch forwards to), tells Flow to enter `FATAL`, which overrides Won, Lost and Paused, and makes `Battle.halted()` true so the rest of the current tick is skipped. Because GDScript has no exceptions, each caller checks `halted()` after every accessor read and every signal and returns; all stats are read before any change, so a bad read halts with nothing half done. Catalogue load failure (in `BOOT`, before any battle) calls AppRoot's handler directly. The fatal screen is a separate scene that uses no catalogue data; development builds show the cause by file, record and field, release builds show generic text.
 
-**Errors that are not fatal go to a sink.** A misuse that should be seen in development but must not stop play, such as `start_next_wave()` outside `Waiting`, calls an injected `dev_error(msg)` that wraps `push_error` and survives release builds. Tests replace it with a recorder. `assert` is never used to guard behaviour; it may appear only in test code.
+**Errors that are not fatal go to a sink.** A misuse that should be seen in development but must not stop play, such as `start_next_wave()` outside `Waiting`, calls an injected `dev_error(msg)` that wraps `push_error`. It reaches the log only, never the player; that it still logs in a release export is Verification 5. Tests replace it with a recorder. `assert` is never used to guard behaviour; it may appear only in test code.
 
 **Retry rebuilds between frames.** The Retry button sets AppRoot's retry latch and returns; it never frees its caller. At the top of AppRoot's next `_process`, in this order: if fatal, handle fatal and stop; stop the Clock; call `battle.cancel_input()`; `remove_child(wrapper)` then `wrapper.free()`; drop the `Battle` and resolver references; build again with the same catalogue. `queue_free()` is not used for the wrapper because it keeps the old battle alive until the end of the frame, overlapping two battles. The weakref test proves the old battle is gone.
 
@@ -157,14 +157,18 @@ Injected values and callables are as listed in `architecture.md` B9: `halted()`,
 - `Battle` must hold every helper `build` creates in a strong, typed field. No sim may hold a reference to `Battle`.
 - Injected callables and signal connections must be plain method Callables (`obj.method`). A lambda or `bind()` must never be used to inject or connect anything in the battle; code review checks this and ADR-0007 adds a lint if feasible.
 - Gameplay signals must not use `CONNECT_DEFERRED`.
+- Signals run one way across the sim and scene boundary: wrapper nodes connect their own methods to sim signals, and a sim must never hold a Callable or connection that targets a node. Godot drops a connection when its target node is freed, so a sim emit after teardown reaches nothing. The one sim-side Callable into the wrapper's world, `input_cancel`, targets the `RefCounted` resolver, not a node.
 - Every sim must call the injected `halted()` after every accessor read and after every signal it emits, and return at once if true. A command must read every stat it needs before it changes any state.
 - `fatal(cause)` must be idempotent and keep the first cause. Nothing may persist after it is set.
 - Behaviour must never be guarded by `assert`. Fatal conditions call `fatal`; development-only misuse calls the injected `dev_error`, which wraps `push_error` and stays in release builds.
 - The Retry button must only call `AppRoot.request_retry()`. Retry and fatal teardown run at the top of AppRoot's `_process`, never inside a signal or a tick.
-- Teardown must call `battle.cancel_input()` first, then `remove_child(wrapper)` and `wrapper.free()`. `queue_free()` must never be used to tear down the battle wrapper.
+- Teardown must call `battle.cancel_input()` first, then clear it with `battle.set_input_cancel(Callable())`, then `remove_child(wrapper)` and `wrapper.free()`. `cancel_input()` must test `is_valid()` before calling, so an empty or dead Callable does nothing. `queue_free()` must never be used to tear down the battle wrapper.
 - After teardown AppRoot must drop every reference to the old `Battle` and resolver. A test must hold only a `weakref` and assert it reads null.
 - The wrapper must check `battle.halted()` after each assembly step and stop if set, and must null-check the stage scene load and the resolver `create` result, calling `fatal` on null.
-- The fatal screen scene must not read the catalogue, open saves or depend on any battle object.
+- The fatal screen scene must not read the catalogue, open saves or depend on any battle object. AppRoot holds it with `preload`, so a missing file fails when the project loads, before any battle.
+- `Battle`, the sims and `FatalLatch` must never name the `AppRoot` type; anything from the root arrives as a `Callable`. This keeps `class_name` references one way and avoids cyclic parse errors.
+- Call `BattleBuilder.build` through the class name only.
+- 4.7: an override of a typed method needs an explicit `return` (typed-return override rule); this applies to every sim base class.
 - Retry has no reset function anywhere; no system may expose `reset()`.
 
 ## Alternatives Considered
@@ -215,7 +219,7 @@ Injected values and callables are as listed in `architecture.md` B9: `halted()`,
 - **Teardown timing differs on export.** Mitigation: Verification 2 runs the weakref test in an export build; the fallback is to skip the retry build until the next frame.
 - **A node in the wrapper holds a `Battle` reference after `free()`.** A freed node drops its script's references, so this cannot keep the battle alive, but a signal from the battle to a freed node would error. Mitigation: `cancel_input()` and Clock stop come first, and teardown runs between ticks, so no signal fires during it.
 - **A missed `halted()` check.** Mitigation: per-sim tests that inject a latch set mid-command and assert no later change; listener-count wiring test (TR-tower-013).
-- **The fatal screen itself fails to load.** Mitigation: it is a small scene with no script dependencies on game data, preloaded by AppRoot at `BOOT` so a load failure shows at startup in every build.
+- **The fatal screen itself fails to load.** Mitigation: it is a small scene with no script dependencies on game data, held by AppRoot with `preload`, so a missing or broken file fails when the project loads, in every build, never mid-game.
 - **Freeing a node during its own callback.** Retry and fatal are latched and act at the top of `_process`, never from the button's handler, so the button is never freed under its own call.
 - **Lambda keeps a target alive.** Probed on desktop; the ban stands whatever the export result.
 
@@ -253,7 +257,7 @@ No game code exists yet; prototypes under `prototypes/` are throwaway and are no
 - **Null stage**: `build` with a null Stage record calls a spy handler once and returns null.
 - **Idempotent fatal**: two `fatal` calls with different causes keep the first; the forward spy fires once.
 - **Halt mid-command**: a sim given a latch that fires during a read makes no later change (one test per sim).
-- **Weakref teardown**: after the retry sequence, a `weakref` to the old `Battle` reads null in the same frame (headless with a stand-in wrapper; editor and export as manual evidence).
+- **Weakref teardown**: after the retry sequence, a `weakref` to the old `Battle` reads null in the same frame (headless with a stand-in wrapper; editor and export as manual evidence). The test keeps no local, array, `print` argument or debugger watch on the battle, since any stray `Variant` delays the null.
 - **Retry latch**: pressing Retry twice in one frame builds once; Retry after Fatal builds nothing.
 - **No autoload**: CI lint finds an empty `[autoload]` section.
 - **Release fatal**: an exported release build with one invalid record shows the fatal screen and leaves the save file unchanged (Data criterion 13, screenshot in `production/qa/evidence/`).
