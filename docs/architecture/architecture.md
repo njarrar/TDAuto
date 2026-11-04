@@ -598,7 +598,7 @@ One name per command. Every command goes through `Battle`.
 
 ## ADR Audit
 
-Existing ADRs (updated 2026-11-04, after `/create-architecture` version 2): ADR-0001 to ADR-0014 are written, all Proposed. Each passed a batch TD-ADR review (5 APPROVE, 9 CONCERNS, all fixed) and an engine-specialist check against the 4.7.2 class reference. Each lists engine checks that block acceptance; see `production/qa/engine-verification-plan.md`. The full audit is in `architecture-review-2026-11-04.md`.
+Existing ADRs (updated 2026-11-04, after `/create-architecture` version 2): ADR-0001 to ADR-0014 are written, all Proposed. Each passed a batch TD-ADR review (5 APPROVE, 9 CONCERNS, all fixed) and an engine-specialist API check by `godot-specialist` (run after `/architecture-review`, so the review did not see it): no misuse found, ADR-0014 sourced from the 4.7.2 class reference. Each lists engine checks that block acceptance; see `production/qa/engine-verification-plan.md`. The full audit is in `architecture-review-2026-11-04.md`.
 
 | ADR | Engine Compat | Version | GDD Linkage | Conflicts | Valid |
 |-----|--------------|---------|-------------|-----------|-------|
