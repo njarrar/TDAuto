@@ -205,8 +205,8 @@ The manifest must repeat these as Required or Forbidden rules:
 - Injected callables are method Callables only; no lambda or `bind()` that captures a sim object.
 - No `CONNECT_DEFERRED` on gameplay signals.
 - `assert` never guards release-relevant behaviour.
-- `GDScript float` is 64-bit; `Vector2` is 32-bit unless the engine is built with double precision (doc/classes/float.xml and Vector2.xml at 4.7.2-stable, as cited in the earlier engine notes). Rule maths that must match across platforms uses scalar `float`.
-- Never use `Object.free()` on a `RefCounted`; drop references.
+- Float width and `Vector2` precision rules are ADR-0004's (float policy) and QQ-05's; this ADR sources neither, and the manifest copies them from ADR-0004.
+- Retire a battle by dropping references, as ADR-0001 decides; tests never call `free()` on a sim object.
 - Tests never rely on test execution order.
 
 ### Architecture Diagram
