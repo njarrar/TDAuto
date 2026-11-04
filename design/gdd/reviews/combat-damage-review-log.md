@@ -160,3 +160,6 @@ No edit for the Vertical Slice item: Visual Feedback & VFX and Stage Progression
 
 ## Revision — 2026-11-03 — cross-GDD warning pass
 From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Two deferred rows acknowledged from Flow (full determinism, micro-battle). No rule changed; Approved stands.
+
+## Revision — 2026-11-04 — after a lean read (not a new verdict)
+One adversarial reader checked the day's added rules (S1, S2, the four cross-review decisions) and returned NEEDS REVISION with 18 findings. All five rated BLOCKING were fixed (Flow Rule 9, Thumb cost pass condition, redraw key, criterion 6, HUD 0.55 evidence). Recommended items 3, 7, 9 to 14, 16 to 18 and part of 8 were fixed. Not done: concept `towers-only` unit at Vertical Slice (15). The fix pass was not re-read, per the one-review, one-fix cap the producer recommended. No hash stamped, because this text has no review verdict.

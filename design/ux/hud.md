@@ -148,7 +148,7 @@ One row per element. "Pattern" refers to `design/ux/interaction-patterns.md`; "T
 | Paused | Contextual | Full screen | Flow | "Paused. Tap to resume" | 40% scrim, 300 x 64 panel | Instant | Focus loss | None | MUST KEEP | P-11 |
 | Fatal | Contextual | Full screen | Flow | Generic failure text | Catalogue-free screen | Instant | Fatal | None | MUST KEEP | P-11 |
 
-**Redraw and modal visibility** [Rule 1]. HudField redraws when a quantised key changes (fill in steps of 1/60 of a turn, digit, bonus label, visible set, arming state, held press, affordability of each open disc and chip) and every frame while a timed visual runs: chip bar, ring fade, nudge, collapse. HudLogic owns which modal shows: it emits `modal_changed` (none, paused or result) synchronously with the phase change, and none on Fatal, and HudModals toggles visible on it.
+**Redraw and modal visibility** [Rule 1]. HudField redraws when a quantised key changes (every value `_draw` reads: fill in steps of 1/60 of a turn, digit and its position, bonus label and seconds, visible set, Locked and burst state, prompt, aim state, arming state, held press, affordability of each open disc and chip) and every frame while a timed visual runs: chip bar, ring fade, nudge, collapse. HudLogic owns which modal shows: it emits `modal_changed` (none, paused or result) synchronously with the phase change, and none on Fatal, and HudModals toggles visible on it.
 
 **Drawn by other systems, not by this HUD.** Inventory items 10 (tower and hero state rings), 11 (hero field visuals), 12 (enemy glyphs, danger chevrons, hit flashes) and 19 (build slots) are drawn by the Tower, Hero, Enemy & Wave and Combat views. They appear in this document for the budget and hierarchy only; their specs live in those GDDs and, for the hero, in the pin and aim spec still to be written.
 
@@ -301,8 +301,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 |---|---|---|---|
 | Neutral text | `#C8D0E0` | 11.0:1 | Yes |
 | Tower cyan contour (arc, chip) | `#2EC4D6` | 8.1:1 | Yes |
-| Unaffordable text at alpha 0.55 (GDD value) | neutral at 0.55 | **4.25:1** | **No** (HQ-01) |
-| Unaffordable text at alpha 0.6 (proposed) | neutral at 0.6 | 4.80:1 | Yes |
+| Unaffordable text at alpha 0.6 | neutral at 0.6 | 4.80:1 | Yes |
 | Start/Call, Retry, Play again during Arming (alpha 0.5 for 300 ms, then a step to full) | neutral at 0.5 | 3.75:1 | Below 4.5, but the state lasts 300 ms and the button cannot be used in it (advisory) |
 | Ground ring (alpha 0.35, on the field) | neutral at 0.35 | 2.46:1 | Below 3:1; transient and non-essential (advisory, HQ-02) |
 | Lost life dash (alpha 0.2) | neutral at 0.2 | 1.63:1 | Deliberately low: it means "lost". The remaining full dashes carry the count |
@@ -346,7 +345,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 | Result text delay | 400 ms | The beat before the result appears |
 | `advance(ms)` clamp | 100 ms per frame | Stops a hitch arming an unseen button |
 | Ground rings per battle | 3 | How long a new player is told a tap hit nothing |
-| Unaffordable alpha | 0.55 in the GDD; 0.6 proposed (HQ-01). This row is the value to change; the contrast table, HQ-01 and the Unaffordable criterion only report what 0.55 and 0.6 give | Legibility of a dimmed cost |
+| Unaffordable alpha | 0.6 (HQ-01, closed) | Legibility of a dimmed cost |
 | Prompt count | 3 | How much the HUD teaches |
 
 ---
@@ -361,7 +360,7 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 - [ ] **Targets.** Every tappable or draggable target measures at least 48 dp (72 units) on a 360 dp phone: Start/Call, burst button, arc discs, chip, tower, slot, hero; and Retry's and Play again's rects (128 x 72) have a short side of at least 72 units, exactly at the limit.
 - [ ] **Arming.** Pressing a newly shown Start/Call within 300 ms of it appearing does nothing, including when the finger lifts after 300 ms.
 - [ ] **Double tap.** Double-tapping a slot so the second tap lands on a disc inside 200 ms closes the arc and buys nothing.
-- [ ] **Unaffordable.** A disc or chip whose cost exceeds gold shows its cost struck through and dimmed, and the dimmed cost has a contrast ratio of at least 4.5:1 on the panel. (Depends on HQ-01: the GDD's alpha 0.55 gives 4.25:1 and fails this until it is raised to 0.6.)
+- [ ] **Unaffordable.** A disc or chip whose cost exceeds gold shows its cost struck through and dimmed, and the dimmed cost has a contrast ratio of at least 4.5:1 on the panel.
 - [ ] **Result.** On a Lost, the modal stops every new press at once, the text appears 400 ms later in the stated order with no percentage, and Retry rebuilds the battle in one tap even if tapped twice. A Won shows "Stage clear" and "Lives N of M" in the left column and the damage rows in the right after 400 ms, with no "Got through" row, a compact panel and the board visible above it. Retry and Play again stay at alpha 0.5 and ignore presses for 300 ms after their text shows.
 - [ ] **Paused.** Switching away from the app shows "Paused. Tap to resume" and no prompt line; a tap outside the rejected zones resumes and does not select a tower or move the hero; a finger held across the pause does nothing, even when lifted.
 - [ ] **Reduce Motion.** With the flag on, a refused press shows no 2 px nudge and no panel slide, and the arc closes without the 120 ms collapse (proposal: the GDD does not yet say what Reduce Motion does to the collapse, HQ-04); the lost-life fade and cooldown sweep still play.
@@ -377,7 +376,7 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 
 | ID | Question | Owner |
 |---|---|---|
-| HQ-01 | The GDD sets the unaffordable alpha at 0.55, which computes to 4.25:1 on panel, under the 4.5:1 text minimum. Alpha 0.6 gives 4.80:1. Raise it to 0.6 (the accessibility requirements already name 0.6 as the floor). | game-designer, Battle HUD GDD |
+| HQ-01 | Closed 2026-11-04: the GDD's unaffordable alpha is now 0.6, which gives 4.80:1 on panel. | closed |
 | HQ-02 | Ground ring at alpha 0.35 computes to 2.46:1 on the field, under the 3:1 non-text minimum. It is a transient, non-essential cue; raise to about 0.5 (3.8:1 equivalent) or accept. | art-director |
 | HQ-03 | Text size option vs the fixed HUD budget (see Accessibility). Which elements scale, and does the band reflow? | ux-designer, AQ-03 |
 | HQ-04 | Refusal cue that survives Reduce Motion (P-12, AQ-10). | ux-designer |

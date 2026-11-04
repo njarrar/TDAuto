@@ -3,7 +3,7 @@
 > **Status**: Approved (lean design re-review 2026-11-04, after the cross-GDD fixes; 13 recommended items in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 3 (Every Stage Reads Differently); Pillar 2 (waves are tuned assuming the hero)
 
@@ -509,7 +509,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot ties on all four, or Hero's lanes trigger fires (testers who re-pin more gain under 1 life), parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
+| On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If Hero's Pinned once row fails, or its lanes trigger flags it (testers who re-pin more gain under 1 life), the user decides, and parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them. They pass only if they differ in the bottom third, and a mirror does not count; if the rules forbid that, amend the rows, which are data | level-designer | Before Vertical Slice stages |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Tower GDD + bots | First playable |

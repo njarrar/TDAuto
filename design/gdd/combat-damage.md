@@ -3,7 +3,7 @@
 > **Status**: Approved (fourth design review 2026-11-03, lean: APPROVED; its recommended items applied afterwards) Cross-GDD text reconciliation later the same day changed no rule or value and kept this status; see the review log.
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (share is a lower bound with burst reported separately, splash gate, burst visual owner, kill-attribution test; the lower-bound wording was retracted in the 2026-11-03 review). User kept the invulnerable hero and instant hits; concept reworded.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 2 (One Hero, Not an Army: hero share is measured here); Pillar 1 (hits and slows must be visible)
 
@@ -216,7 +216,7 @@ The MVP minimum, drawn with primitives from one `_draw()` per kind, with no shad
 
 **Feature budget.** A flash is transient and does not count. Under 22 px: flash and slow only. Slowed and damaged together: slow shows and the core hides.
 
-**Burst clearance (about 0.4 s).** Tower flashes and splash rings are suppressed, with no other gold, glow or expanding ring, so the burst stays the brightest thing on screen (Pillar 2). The Combat view does this, from Hero's `burst_started` to 0.15 s after release (Hero, Visual Requirements). Release is the next `attack_fired` of kind BURST, which fires even for an empty burst. An outcome or Fatal stops the clock, so the view counts the 0.15 s in real time from then on, and if the burst never released, the window ends at that `phase_changed`. Tower-hit feedback is the accepted cost.
+**Burst clearance (about 0.4 s).** Tower flashes and splash rings are suppressed, with no other gold, glow or expanding ring, so the burst stays the brightest thing on screen (Pillar 2). The Combat view does this, from Hero's `burst_started` to 0.15 s after release (Hero, Visual Requirements). Release is the next `attack_fired` of kind BURST, which fires even for an empty burst. The 0.15 s runs on the frame clock, so an outcome or Fatal does not stop it, and if the burst never released, the window ends at that `phase_changed`. A `phase_changed` to any other phase, Paused included, leaves the window as it is. Tower-hit feedback is the accepted cost.
 
 **Flash markers.** The Combat view holds one global pool of 16 (art bible §8), one marker per flashing enemy, so a retrigger reuses that enemy's marker. Death discs use none. Edge Cases gives the eviction order.
 
