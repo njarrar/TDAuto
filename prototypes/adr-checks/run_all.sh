@@ -9,6 +9,13 @@ GODOT="${GODOT:-godot}"
 OUT="$DIR/results"
 mkdir -p "$OUT"
 
+# A missing binary is not a parse error: stop before any script runs.
+if ! command -v "$GODOT" > /dev/null 2>&1; then
+	echo "GODOT not found or not executable: $GODOT" >&2
+	echo "Set it to the editor binary, e.g. GODOT=/Applications/Godot.app/Contents/MacOS/Godot ./run_all.sh" >&2
+	exit 2
+fi
+
 SCRIPTS="check_callables.gd check_signals.gd check_numerics.gd check_json.gd check_types.gd check_files.gd check_harness.gd check_signals_nohold.gd"
 
 # Import first so the class_name stubs are in the class cache. The first
@@ -29,7 +36,7 @@ for s in $SCRIPTS; do
 	code=${PIPESTATUS[0]}
 	echo "EXIT $code" >> "$log"
 	if ! grep -q '^RESULT ' "$log"; then
-		echo "RESULT $s NOT_RUN parse error (exit $code)" | tee -a "$log"
+		echo "RESULT $s NOT_RUN no RESULT lines, likely a parse error; see the log (exit $code)" | tee -a "$log"
 	elif ! grep -q "^END $s" "$log"; then
 		echo "RESULT $s INCOMPLETE stopped before END (exit $code; a crash if 128 or more)" | tee -a "$log"
 	fi
