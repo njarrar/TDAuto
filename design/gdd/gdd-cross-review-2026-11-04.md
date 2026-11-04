@@ -147,7 +147,73 @@ None. Scenarios 1 to 3 resolve in the documented order:
 
 ## Verdict: FAIL
 
-One blocking issue must be resolved before architecture begins. Every phase ran on all 8 GDDs. One claimed blocker was rejected on checking: "bot acceptance modes run only through the resolver" appears in no GDD, and Input's row says bots call the commands, with one equivalence test through the resolver, which matches Hero.
+One blocking issue must be resolved before architecture begins. Every phase ran on all 8 GDDs. One claimed blocker was rejected on checking: "bot acceptance modes run only through the resolver" was reported as appearing in no GDD. **Corrected in the re-run below: that rejection was wrong.** The text is in input-gesture-resolver.md, line 387, and the blocker stands.
 
 ### Required actions before re-running
 1. enemy-wave.md criterion 20: scope its exact ID sets to Enemy & Wave's own rule IDs, or add the Battle HUD IDs each copy trips, and keep `stage_rules.py` in step.
+
+
+---
+
+# Re-run — 2026-11-04 — Focus: consistency
+
+GDDs Reviewed: 8 of 8 present
+Not read: none
+Focus: consistency only (design theory not run; the design-theory findings above stand from the full run)
+Change since the full run: enemy-wave.md criterion 20 now compares only Enemy & Wave's IDs, and battle-hud.md criterion 33 only `hud_*` IDs, each pointing to the other (user decision). The agent read the same per-GDD sections, now including UI Requirements, so Battle HUD's references into the siblings' UI Requirements were checked too.
+
+## Blocker status
+
+- **Fixed: content-test ID sets.** The two criteria no longer contradict, and the fix added no new contradiction. A small gap remains: Enemy & Wave says criterion 33 "checks them with its own copies", but only 3 of the 10 `hud_*` IDs have copies so far ("The other IDs get copies in their story").
+- 🔴 **Open: bots through the resolver.** The full run rejected this one wrongly. The text exists in two places:
+  - input-gesture-resolver.md, Deferred criteria, first row (line 387): "bot acceptance modes run only through the resolver".
+  - Its Overview (line 19): bots "drive the hero through the same press, move and release calls".
+
+  Both contradict Input's own Rule 11 and Interactions row ("Call Hero's and Tower's commands; one equivalence test passes through the resolver"). They also contradict hero-system.md, which says the resolver "is not in the headless build" and whose bots call `pin` and `burst` (criteria 28 and 29). The row cannot pass. → Replace the clause with "the equivalence test (Rule 11) passes through the resolver", and fix the Overview sentence.
+
+## New warnings
+
+- ⚠️ **Range ring owner.** tower-system.md UI Requirements ("Battle HUD draws these … shows its range ring for 1.5 s") and its Handed list ("draws … the range ring") contradict battle-hud.md Rule 9 and criterion 8 ("the HUD draws no ring (Tower's view does)"). → Fix Tower's list and Handed line.
+- ⚠️ **Top-band input.** input-gesture-resolver.md Interactions says "its top-band Controls consume their own events before the adapter". Input's own UI Requirements and battle-hud.md say the top band ignores input. → Correct Input's row.
+- ⚠️ **Prompt retirement.** hero-system.md UI Requirements says "Before a first pin, the nudge also repeats the prompt". battle-hud.md Rule 13 retires prompt 1 once the hero was pinned in an earlier battle this session. → Hero should say the nudge repeats only a prompt still showing.
+- ⚠️ **L1's reason.** enemy-wave.md L1 says y at least 304 keeps "its hit disc and build arc … in the field and below the band", with a margin of 16. Battle HUD's cost panel reaches `slot y − 144` (160 at y 304), and `hud_slot` needs 318. → Restate L1 as covering the discs, and point to `hud_slot` for the panels.
+- ⚠️ **Tower figures.** tower-system.md's burst-outcome median (3.5 to 4) differs from hero-system.md's (4), in addition to the 30% against 27% share already noted.
+
+## Prior warnings
+
+All thirteen still stand, each verified against the text:
+- Flow Rule 1 and the session flags
+- the three missing reverse dependencies
+- bot-gate ownership
+- Tower's stale L11, `burst_spike` and Rule 6 wording
+- "no GDD yet" in Input and Data
+- the HUD's cooldown total
+- Flow's "of 6"
+- Hero's intermission rule in seconds
+- ground rings per session
+- 30% against 27%
+- Input's `r` range
+- the phone thresholds
+- Data's Cross-References
+
+## Not assessed
+
+Battle HUD's reference to enemy-wave.md "Open Questions" was not checked; that section was not in the files the agent read.
+
+## GDDs flagged for revision
+
+| GDD | Reason | Type | Priority |
+|-----|--------|------|----------|
+| input-gesture-resolver.md | Deferred row and Overview require bots through the resolver; top-band row; `r` range; ground rings per session; "no GDD yet" | Consistency | Blocking |
+| tower-system.md | Range ring owner; 30% and 3.5 figures; stale L11 and Rule 6 wording; phone threshold | Consistency | Warning |
+| enemy-wave.md | L1's reason and margin; bot-gate rows; no reverse Combat row | Consistency | Warning |
+| hero-system.md | Prompt nudge after retirement; `speed_factor` in the Combat row; no cooldown total; intermission rule in seconds | Consistency | Warning |
+| game-state-stage-flow.md | Rule 1 session flags; `in_tick()` in Dependencies; "of 6" | Consistency | Warning |
+| combat-damage.md | Hero row interface incomplete | Consistency | Warning |
+| data-config-pipeline.md | HUD row; "no GDD yet"; Cross-References | Consistency | Warning |
+| battle-hud.md | "Checks them with its own copies" with 3 of 10 copies | Consistency | Warning |
+
+## Verdict: FAIL (consistency only — design theory not run)
+
+### Required actions before re-running
+1. input-gesture-resolver.md: replace the Deferred row's "bot acceptance modes run only through the resolver" with "the equivalence test (Rule 11) passes through the resolver", and make the Overview say bots call Hero's and Tower's commands.
