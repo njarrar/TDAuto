@@ -183,7 +183,7 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 |--------|----------------|---------------|-------------------|------------------|-----------|-------|
 | 1 Data & Config | None (owns no screen); owns the `reduce_motion` and `left_handed` flags | None | None | None | Yes | The fatal screen belongs to Game State. |
 | 2 Input & Gesture | None | Slops and edge rejection set the tap and drag feel; 48 dp targets with no margin | One pointer only | None | Partly | Slop values and edge margins need the phone test (PQ-01, PQ-02). |
-| 3 Game State & Stage Flow | Result, Paused and Fatal screens: plain text, no auto-dismiss | Resume uses the modal press model (P-11); whether it arms is open (PQ-09) | **No user pause button** | None | **Gap** | AQ-02. |
+| 3 Game State & Stage Flow | Result, Paused and Fatal screens: plain text, no auto-dismiss | Resume uses the modal press model (P-11) with no arming, so a brush can resume a live wave (logged in the phone test) | **No user pause button** | None | **Gap** | AQ-02. |
 | 4 Combat & Damage | Hit flash is an 80 ms white disc | None | Result shows damage by source as plain numbers, no percentage | None | Partly | Flash rate audit (AQ-09). |
 | 5 Enemy & Wave | Enemy types by size, notch and ring, not colour; danger needs chevron shape | None | Next-wave line is capped at 3 types | None | Yes | Danger pulse freezes under Reduce Motion. |
 | 6 Tower | Role by polygon, ready by ring shape | Chip is a 1.5 s timed commit | Mis-spend safeguard (chip, no selling) | None | Partly | Chip window setting (Alpha). Refusal cue without motion (P-12). |
