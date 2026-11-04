@@ -366,7 +366,7 @@ func emitters() -> Array[Object]
 # src/core/flow/stage_result.gd: Decision 6
 ```
 
-File paths are the proposed module folders of `architecture.md`; `class_name` collisions (QQ-16) are ADR-0007's, so names are provisional until then. Every signal declaration carries a `##` doc comment naming its ID (W1, P3, ...) and its timing.
+File paths are the proposed module folders of `architecture.md`; `class_name` collisions (QQ-16) are checked by ADR-0007 NAME-1 to NAME-4; names stand unless ADR-0007 V6 reports one. Every signal declaration carries a `##` doc comment naming its ID (W1, P3, ...) and its timing.
 
 ### Implementation Guidelines
 

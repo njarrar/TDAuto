@@ -656,6 +656,7 @@ api_decisions:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: ""
   - purpose: release_relevant_checks
@@ -676,6 +677,7 @@ api_decisions:
     reason: "A failed preload fails the script that holds the fatal fallback"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: ""
   - purpose: retry_node_teardown
@@ -731,6 +733,7 @@ api_decisions:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: ""
   - purpose: display_stretch
@@ -781,6 +784,7 @@ api_decisions:
     reason: "The desktop safe area is the usable screen, not window insets"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: ""
   - purpose: min_width_guard
@@ -884,6 +888,71 @@ api_decisions:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
+  - purpose: test_framework
+    status: active
+    api: "gdUnit4 6.2.0 vendored in addons/gdUnit4, CI version: installed, --import before every run (retry once on exit above 128)"
+    not: "GUT, the action's latest gdUnit4, a run without --import, --import as a parse gate"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "One pinned runner with a recorded exit ladder (V1); a stale class cache fails runs"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: test_error_capture
+    status: active
+    api: "project.godot [gdunit4] report/godot/push_error=true, report/godot/script_error=true, report/verbose_orphans=true; each expected push_error asserted once with assert_error(callable).is_push_error(CONSTANT), the callable pushing it once"
+    not: "reporting off, asserting engine-error text, one callable pushing the same error twice"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Any unasserted push_error, warning or engine error fails the test; leaked nodes give 101 (TR-combat-012, engine check E1)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: signal_test_recording
+    status: active
+    api: "tests/helpers/recording_fake.gd: one ordered log across emitters, count and typeof checked against the declared signal, whole-log expect()"
+    not: "assert_signal, monitor_signals, count-only assertions"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "emit() does not check parameter types; GDDs require whole ordered logs (TR-input-014)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: test_fixtures
+    status: active
+    api: "tests/helpers/catalogue_factory.gd minimal() edited per test, loaded with Catalogue.from_data; tests/helpers/fakes.gd inner classes for injected callables"
+    not: "fixture files, real data, scenes or engine input in unit tests"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Same validator as production with no file I/O (TR-data-012, TR-enemy-014)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: architecture_lint
+    status: active
+    api: "tools/lint/ GDScript (lint_rules const table mirroring docs/architecture/adr-0007-lint-rules.md, pure lint_engine, run_lint SceneTree), run in CI as tests/integration/lint/repo_lint_test.gd; each rule in its owning ADR's scope, with a seeded bad sample and a near miss; pending rules printed"
+    not: "gdtoolkit, shell grep, inline suppressions, rules stricter than their owner without a confirmed ADR-0007 C-item"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Needs ClassDB and the signal contract; one toolchain; a gate watched failing"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: class_name_policy
+    status: active
+    api: "No prefix; one class_name per src/ file, PascalCase of the file name; NAME-1 to NAME-4 (duplicates, ClassDB plus Variant-type list, none in tests/ or tools/); test subclasses reached by preload constant"
+    not: "a project prefix, class_name in tests/ or tools/ (such as a global FakeResolver)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "Collisions detected on every run, including after engine or addon upgrades (QQ-16)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -918,6 +987,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
   - pattern: sim_back_reference_to_battle
     status: active
@@ -927,6 +997,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
   - pattern: session_object_holds_battle_callable
     status: "superseded_by: ADR-0005"
@@ -972,6 +1043,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
   - pattern: in_place_reset
     # Note (ADR-0004): BattleClock.drop_backlog() is a wrapper clock call, not a sim reset; a lint must not flag it.
@@ -982,6 +1054,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
   - pattern: teardown_inside_signal_or_fatal
     status: active
@@ -1207,6 +1280,48 @@ forbidden_patterns:
     description: "GestureLog and run-log records hold no Vector2; positions are separate x and y fields, serialised with JSON.stringify(data, \"\", true, true)."
     why: "JSON.stringify writes a Vector2 as the string \"(x, y)\" (engine check)"
     adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+  - pattern: upward_layer_reference
+    status: active
+    description: "No src/ file references a class or res://src path of a higher layer (foundation < core < feature < presentation < root); no Feature module references a sibling; nothing outside root references root; no uid:// path in src/*.gd."
+    why: "GDScript has no module boundaries (architecture.md rules 1 to 6); uid:// would hide the dependency (LAYER-1 to LAYER-5)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: assert_signal_in_tests
+    status: active
+    description: "No assert_signal or monitor_signals under tests/; use the recording fake."
+    why: "Counts and awaits; no payload types or whole ordered log (TR-input-014)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: io_or_scene_in_unit_tests
+    status: active
+    description: "No FileAccess, DirAccess, ConfigFile, ResourceLoader, non-script load or preload, .tscn, instantiate, scene_runner or simulate_* under tests/unit/."
+    why: "Unit tests are headless, file-free and deterministic (TR-data-012, TR-enemy-014)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: skipped_test
+    status: active
+    description: "No do_skip or skip_reason parameter and no test parameter gdUnit4 does not know (gdUnit4 6.2.0 silently skips such a test)."
+    why: "Coding standards: never skip a failing test (TEST-6)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: class_name_outside_src
+    status: active
+    description: "No class_name under tests/ or tools/; helpers and test subclasses are preloaded by path."
+    why: "Keeps the global namespace and exports free of test names (QQ-16)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: inline_lint_suppression
+    status: active
+    description: "No comment that disables a lint rule; exceptions are FILE_EXCEPTIONS rows in tools/lint/lint_rules.gd citing their ADR."
+    why: "Inline suppressions erode a gate silently"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: push_warning_in_src
+    status: active
+    description: "No push_warning in src/."
+    why: "With gdUnit4 error reporting on, a warning fails tests; ADR-0001 has no warning tier (ERR-3)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
 
 # Example:

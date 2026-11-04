@@ -370,7 +370,7 @@ func attach(resolver: InputResolver, adapter: InputAdapter, sink: Callable, chip
 func detach() -> void
 ```
 
-Names are provisional until ADR-0007 settles `class_name` collisions (QQ-16); ADR-0007 also excludes `tests/` from export presets, because a test `class_name FakeResolver` registers globally.
+`class_name` collisions (QQ-16) are checked by ADR-0007 NAME-1 to NAME-4; names stand unless ADR-0007 V6 reports one. Test classes declare no `class_name` (ADR-0007 NAME-3): `FakeResolver` is `const FakeResolver := preload("res://tests/unit/input_gesture_resolver/helpers/fake_resolver.gd")`, used as `FakeResolver.new(15.0, 28.0)`; ADR-0007 PROJ-7 also keeps `tests/` out of export presets.
 
 ### Implementation Guidelines
 

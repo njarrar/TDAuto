@@ -47,7 +47,7 @@ The game needs one place that owns the app's lifetime, the loaded catalogue and 
 
 Verification items (the gap is wired to acceptance: this ADR stays `Proposed` until each has a recorded result):
 
-- **V1. Callable reference semantics.** Does `obj.method` on a `RefCounted` object keep the object alive, or hold only its object ID? Does a signal connection keep its target alive? Does a lambda or `bind()` that captures a `RefCounted` hold a strong reference, and does a lambda written inside a method bind `self` strongly even when it captures no locals? Expected (unsourced): method Callables and connections hold an ID only; lambdas and `bind()` hold strong references. The Builder's own wiring relies on the first answer, because `halted`, `in_build` and `cancel_input` point back at `Battle` and `FatalRelay` and Flow point at each other. Method: a headless test that builds objects wired this way, drops every other reference and reads `weakref(...).get_ref()`. Owner: the ADR-0007 test harness story; first run before any sim story starts. This closes QQ-17.
+- **V1. Callable reference semantics.** Does `obj.method` on a `RefCounted` object keep the object alive, or hold only its object ID? Does a signal connection keep its target alive? Does a lambda or `bind()` that captures a `RefCounted` hold a strong reference, and does a lambda written inside a method bind `self` strongly even when it captures no locals? Expected (unsourced): method Callables and connections hold an ID only; lambdas and `bind()` hold strong references. The Builder's own wiring relies on the first answer, because `halted`, `in_build` and `cancel_input` point back at `Battle` and `FatalRelay` and Flow point at each other. Method: a headless test that builds objects wired this way, drops every other reference and reads `weakref(...).get_ref()`. Owner: godot-specialist writes it as a standalone headless script outside `src/` (`prototypes/adr-0007-harness-check/` or ADR-0001's own prototype folder) and the user runs it before acceptance; the kept test (Validation 3b) is written by the ADR-0007 harness story, which builds the `battle_probe.alive()` helper first. This closes QQ-17.
 - **V2. Teardown timing.** After `wrapper.detach()`, `remove_child(wrapper)` and `wrapper.queue_free()`, do `_process`, `_input` and `_unhandled_input` stop firing on the wrapper and its children at once, and are the old battle, each sim and the resolver released (weakrefs null) one frame later? Method: integration test over two frames, plus one manual run on the editor with a Control under the pointer.
 - **V3. Load and instantiate failure.** What do `ResourceLoader.load()` and `PackedScene.instantiate()` return, and what is logged, for a missing scene path, a scene with a broken script and a scene with a missing sub-resource, in the editor and in an Android export? Method: deliberately broken scenes in a throwaway project, run in the editor and from an export.
 - **V4. Release error output.** Does `push_error` print or log in a release export, and does `OS.is_debug_build()` read false there? Method: first Android export run reading `adb logcat`.
@@ -282,7 +282,7 @@ func attach(battle: Battle, reduce_motion: bool) -> bool
 func detach() -> void
 ```
 
-Names are the contract, signatures are the contract; internal fields may change. `Battle` fields other than these are ADR-0004, ADR-0006 and ADR-0010's to define. `class_name` collision risk (QQ-16) is handled by ADR-0007; until then these names are provisional.
+Names are the contract, signatures are the contract; internal fields may change. `Battle` fields other than these are ADR-0004, ADR-0006 and ADR-0010's to define. `class_name` collisions (QQ-16) are checked by ADR-0007 NAME-1 to NAME-4; these names stand unless ADR-0007 V6 reports a collision.
 
 ### Implementation Guidelines
 
@@ -382,7 +382,7 @@ For `/create-control-manifest` and `/dev-story`:
 - **A per-battle callable leaks into a session-lived object.** Mitigation: the session-lifetime rule, and the retry weakref test run after a battle that made a bad accessor call.
 - **`push_error` is silent in release (V4).** Then release failures show only the generic fatal screen. Mitigation: the fatal path still latches and halts; add a write to the run log in dev builds; check on the first Android export.
 - **The fatal scene is missing or broken in an export (V3).** Mitigation: it is loaded at run time, not preloaded, so `app_root.gd` still loads and the code-built Label shows. Boot tests cover a missing path and a null instance. Accepted residual risk: if `app_root.gd` itself fails to parse, nothing can show; CI's headless boot test catches that before export.
-- **The Builder grows into a god object.** Mitigation: the "wiring only" rule, a lint (ADR-0007) that rejects `if` on gameplay fields in `src/root/`.
+- **The Builder grows into a god object.** Mitigation: the "wiring only" rule, checked in code review (ADR-0007 Decision 9: "a gameplay field" is not crisp enough to lint).
 - **Seed policy is a working default.** ADR-0004 may change it; the interface (`rng_seed` as a Builder argument) does not change.
 
 ## GDD Requirements Addressed

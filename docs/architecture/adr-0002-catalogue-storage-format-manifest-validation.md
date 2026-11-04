@@ -322,7 +322,7 @@ TowerRecord, TowerLevel, EnemyRecord, WaveRecord, WaveGroup, StageRecord, PinSha
 HeroRecord, BurstRecord, InputRecord
 ```
 
-These names are the ones ADR-0005, ADR-0009 and ADR-0010 inherit. `class_name` collisions (QQ-16) are ADR-0007's lint; `Catalogue` is a short global name and may gain a prefix there, in which case every ADR follows.
+These names are the ones ADR-0005, ADR-0009 and ADR-0010 inherit. `class_name` collisions (QQ-16) are ADR-0007's lint (NAME-1 to NAME-4); ADR-0007 Decision 10 keeps `Catalogue` unprefixed unless V6 reports a collision.
 
 ### Implementation Guidelines
 

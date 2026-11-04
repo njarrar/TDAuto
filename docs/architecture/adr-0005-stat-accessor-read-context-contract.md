@@ -372,7 +372,7 @@ Automated, headless (gdUnit4 under `tests/unit/data/`):
 3. `is_tower` and `level_count` never call `fatal`, for any input including unknown IDs and non-tower IDs.
 4. Consistency: every `StatKeys` key is a field on each record type it applies to, with the matching type in the ADR-0002 schema; every GDD stat-key row has a constant.
 5. No allocation per read: N reads on existing contexts leave `Performance.get_monitor(Performance.OBJECT_COUNT)` unchanged (no mutable static counter, which is banned).
-6. Lint (ADR-0007, soft dependency; code review until it exists): no string or `StringName` literal passed as the key argument of `stat_int` or `stat_float` under `src/`.
+6. Lint (ADR-0007 STAT-1; code review until it exists): no string or `StringName` literal passed as the key argument of `stat_int` or `stat_float` under `src/`.
 7. No cycle: in a fixture battle, weakrefs to an enemy and to its context read null once the enemy is reaped and the owner has dropped the context; the ADR-0001 retry weakref test passes with contexts in use.
 8. GDD Acceptance 8: two code-built fixtures with different values, each behind its own accessor, return their own values side by side with no file I/O.
 9. GDD Acceptance 12: a bad call invokes the injected handler and the catalogue stays `READY` (its snapshot is unchanged).

@@ -224,7 +224,7 @@ The adapter connects `get_viewport().size_changed` to `_on_viewport_size_changed
 
 Battle HUD Rule 2: the Result and Paused screens are the only Controls a player taps; everything else tappable is a resolver disc (Start/Call, burst, arc, chip, slots, towers, hero).
 
-- **Every non-modal Control in the battle** (HudTopBand, labels, panels, decorations) must set `mouse_filter = MOUSE_FILTER_IGNORE`. `Control`, `Panel` and `ColorRect` default to STOP, and SP3 expects PASS also to mark a touch handled, so anything else would swallow presses meant for discs. ADR-0007 adds a lint or scene test for this (soft dependency); until then code review checks it.
+- **Every non-modal Control in the battle** (HudTopBand, labels, panels, decorations) must set `mouse_filter = MOUSE_FILTER_IGNORE`. `Control`, `Panel` and `ColorRect` default to STOP, and SP3 expects PASS also to mark a touch handled, so anything else would swallow presses meant for discs. ADR-0007 checks it with the scene test SCENE-1 (first wrapper story); until then code review checks it.
 - **Modal screens** are full-rect Controls with `mouse_filter = STOP` over the 540x960 viewport. A press in a letterbox bar is outside them and outside the field, so the adapter rejects it; nothing beneath is reached (TR-hud-002, TR-state-010).
 - A modal screen reads `InputEventScreenTouch` in `_gui_input` (SP3 Branch A): it records a press it saw while Armed, fires on that index's release, ignores a release with `canceled == true`, and clears its press when the wrapper relays `lifecycle_paused()` or `display_changed()` (TR-hud-003, Battle HUD Rule 2). It never reads `InputEventMouseButton` or uses `Button.pressed` (Decision 3).
 - Every battle Control sets `focus_mode = FOCUS_NONE` (no keyboard path at MVP; SP13).
@@ -297,7 +297,7 @@ static func field_width_dp(window_size: Vector2, px_per_dp: float) -> float
 static func width_supported(width_dp: int) -> bool   # call with floori(field_width_dp(...))
 ```
 
-Private handlers are not interfaces. Names are provisional until ADR-0007 settles `class_name` collisions (QQ-16).
+Private handlers are not interfaces. `class_name` collisions (QQ-16) are checked by ADR-0007 NAME-1 to NAME-4; names stand unless ADR-0007 V6 reports one.
 
 ### Implementation Guidelines
 

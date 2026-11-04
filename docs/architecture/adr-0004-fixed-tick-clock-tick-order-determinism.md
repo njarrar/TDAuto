@@ -345,7 +345,7 @@ func _on_phase_changed(value: Flow.Phase) -> void    # drop_backlog on PAUSED en
 # HudLogic.advance(ms: float); TowerInput.advance(ms: float) -> ChipWindow.advance(ms: float); HeroInput.update()
 ```
 
-`BattleBuilder.build(...)` is unchanged (ADR-0001). Names are provisional until ADR-0007 settles QQ-16.
+`BattleBuilder.build(...)` is unchanged (ADR-0001). `class_name` collisions (QQ-16): ADR-0007 Decision 10; names stand unless ADR-0007 V6 reports one.
 
 ### Implementation Guidelines
 
