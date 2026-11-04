@@ -593,7 +593,8 @@ sys.stdout.buffer.write(("CCGS-JSON-CHECKED\n" + "".join("B\t" + p + "\n" for p 
     fi
 fi
 
-# Check design documents for the sections REQUIRED AT THIS PROJECT'S TIER.
+# Check design documents for the sections REQUIRED AT EACH GDD'S TIER: its
+# `workflow_overrides.system_overrides` row if it has one, else the project's.
 #
 # Demanding all 8 sections unconditionally would contradict
 # .claude/docs/coding-standards.md and workflow-modes.md: the required count is
@@ -625,9 +626,18 @@ DESIGN_FILES=$(echo "$STAGED" | grep -E '^design/gdd/[^/]+\.md$' \
   | grep -vE '/(game-concept|systems-index|game-pillars|gdd-cross-review-[^/]*|gameplay-tags|fixture-swap-ledger|entity-registry|sound-bible)\.md$')
 if [ -n "$DESIGN_FILES" ]; then
     WORKFLOW="standard"
+    # Per-system tiers. `workflow_overrides.system_overrides` sets a tier for
+    # one GDD by its file stem, and every skill that judges a GDD's sections
+    # (design-system, consistency-check, gate-check) uses that row first. This
+    # check read only the project tier, so a system the user pinned to
+    # `standard` on a `full` project warned on every commit for two sections
+    # its own tier does not require. One resolve_config call gives every row
+    # as `stem=tier` pairs; the scan below picks each file's tier from them.
+    _VC_OVR=""
     if [ "$_VC_HELPER" = 1 ]; then
         W=$(resolve_setting modes.workflow 2>/dev/null | cut -f1)
         [ -n "$W" ] && WORKFLOW="$W"
+        _VC_OVR=$(resolve_config --keys system_overrides 2>/dev/null | sed -n 's/^system_overrides: //p')
     fi
 
     # "Detailed" (not "Detailed Rules") because the canonical heading has a
@@ -638,13 +648,20 @@ if [ -n "$DESIGN_FILES" ]; then
         full)    REQUIRED="Overview|Player Fantasy|Detailed|Formulas|Edge Cases|Dependencies|Tuning Knobs|Acceptance Criteria" ;;
         *)       REQUIRED="Overview|Detailed|Edge Cases|Dependencies|Acceptance Criteria" ;;
     esac
+    # A `minimal` project can still pin one system to standard or full, so the
+    # scan runs whenever ANY tier in play requires sections. REQUIRED stays the
+    # project tier's list for this test only; the scan decides per file.
+    _VC_NEED="$REQUIRED"
+    if [ -z "$_VC_NEED" ] && printf '%s' "$_VC_OVR" | grep -qE '=(standard|full)( |$)'; then
+        _VC_NEED=1
+    fi
 
-    if [ -n "$REQUIRED" ] && [ -z "$_VC_PY" ]; then
+    if [ -n "$_VC_NEED" ] && [ -z "$_VC_PY" ]; then
         # A skipped step announces itself (obligation 3, as below). Handing the
         # scan to a `python` that is not there printed nothing, which read as a
         # GDD with every section its tier requires.
         WARNINGS="$WARNINGS\nSKIPPED: no Python 3 interpreter found (tried python, python3, py), so the GDD section check did NOT run on the staged design doc(s)."
-    elif [ -n "$REQUIRED" ]; then
+    elif [ -n "$_VC_NEED" ]; then
         # One pass for every file x section pair.
         #
         # A nested shell loop -- for each staged design doc, `echo |
@@ -670,8 +687,18 @@ if [ -n "$DESIGN_FILES" ]; then
           | CCGS_VC_PREFIX="$_VC_PREFIX" "$_VC_PY" -c '
 import sys, os, subprocess
 argv = sys.argv
-required = [x for x in argv[1].split("|") if x]
-workflow = argv[2]
+workflow = argv[1]
+TIERS = {
+    "minimal": [],
+    "standard": ["Overview", "Detailed", "Edge Cases", "Dependencies", "Acceptance Criteria"],
+    "full": ["Overview", "Player Fantasy", "Detailed", "Formulas", "Edge Cases",
+             "Dependencies", "Tuning Knobs", "Acceptance Criteria"],
+}
+overrides = {}
+for pair in argv[2].split():
+    stem, sep, tier = pair.partition("=")
+    if sep and tier in TIERS:
+        overrides[stem] = tier
 items = [l.split("\t", 1) for l in sys.stdin.buffer.read().decode("utf-8").splitlines() if "\t" in l]
 staged = [p for mode, p in items if mode == "I"]
 # Paths are project-relative; the index names them from the repository top.
@@ -705,15 +732,21 @@ for mode, path in items:
                 data = fh.read()
         except OSError:
             continue
+    stem = os.path.basename(path)[:-3]
+    if stem in overrides:
+        tier, how = overrides[stem], " (system override)"
+    else:
+        # An unknown project tier falls back to standard, as the shell case does.
+        tier, how = (workflow if workflow in TIERS else "standard"), ""
     body = data.decode("utf-8", "replace").lower()
-    for section in required:
+    for section in TIERS[tier]:
         if section.lower() not in body:
-            out.append("DESIGN: %s missing section required at workflow=%s: %s"
-                       % (path, workflow, section))
+            out.append("DESIGN: %s missing section required at workflow=%s%s: %s"
+                       % (path, tier, how, section))
 if out:
     # Bytes, not text -- see the CRLF note in the JSON scan above.
     sys.stdout.buffer.write(("\n".join(out) + "\n").encode("utf-8"))
-' "$REQUIRED" "$WORKFLOW" > "$TMP_DESIGN" 2>/dev/null
+' "$WORKFLOW" "$_VC_OVR" > "$TMP_DESIGN" 2>/dev/null
         if [ -z "$TMP_DESIGN" ]; then
             # Obligation 3 of .claude/rules/skill-authoring.md: a skipped step
             # announces itself. Silence here is indistinguishable from a GDD
