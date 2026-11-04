@@ -3,7 +3,7 @@
 > **Status**: In Design
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04
-> **Version**: 0.4 (arc and chip proposals added; 0.3 aligned with the Battle HUD GDD approved in PR #7: Paused has no arming, Won omits Got through, burst fill, arming steps)
+> **Version**: 0.5 (pin and aim spec linked; 0.4 arc and chip proposals added; 0.3 aligned with the Battle HUD GDD approved in PR #7: Paused has no arming, Won omits Got through, burst fill, arming steps)
 > **Engine**: Godot 4.7.2
 > **UI Framework**: Two surfaces. Everything that can be tapped or dragged in the field is a registered disc in the Input & Gesture Resolver, drawn by `CanvasItem._draw`. Only the modal screens (Result, Paused, Fatal) and the top information band are Godot `Control` nodes.
 > **Related Documents**:
@@ -322,13 +322,15 @@ accessibility notes match each pattern's accessibility line.
 
 **Description**: Dragging the hero pins it to a spot. It fights only inside a leash around the pin.
 
+**Screen-level source**: `design/ux/pin-and-aim.md` holds the full behaviour, geometry, states and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
+
 **Specification**:
 - Grab disc is 56 units (drag priority 200). The hero is at least 44 px visible.
 - The leash is a 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Where it crosses the lifted path it is drawn in two tones or raised to alpha 0.7 so it clears 3:1.
 - Invalid pins are clamped or refused (rejected zones, under the burst button). Refusal uses P-12.
 - Before a first pin, a one-line prompt "Drag the hero" (P-17).
 - The pin ghost is a 2 px unfilled kite. The ground ring is 2 px solid at radius 30.
-- Open: re-grabbing a hero pinned high on the screen with one thumb.
+- Open: re-grabbing a hero pinned high on the screen with one thumb. Measured in `design/ux/pin-and-aim.md` (PAQ-03): a hero at y 174 needs a thumb about 183 dp from the top of the screen even to aim near it.
 - Accessibility: one finger, one drag, no hold. The leash's in-zone and out-of-zone states differ by dash density, not tint.
 
 **When to Use**: Moving the hero.
@@ -344,6 +346,8 @@ accessibility notes match each pattern's accessibility line.
 **Status**: Draft
 
 **Description**: Dragging from the burst button aims the hero's burst; releasing fires it there, unless the release is in the cancel zone.
+
+**Screen-level source**: `design/ux/pin-and-aim.md` holds the full behaviour, geometry, states and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
 
 **Specification**:
 - Burst button: 84 px visible, 96 px hit, bottom corner on the dominant-hand side. Shown in Build, Wave and Intermission; Paused shows it as the phase it left; Won and Lost hide it. A tap does nothing (P-04). Locked in Build or before a first pin (P-14).
@@ -569,8 +573,8 @@ accessibility notes match each pattern's accessibility line.
 | PQ-01 | Drag slop and tap slop shipped values (Pillar 4 aims at about 10 to 12 dp). Needs a phone test with at least two non-developer testers | game-designer, Pillar 4 phone test |
 | PQ-02 | Real safe-area and gesture-inset values on Android and iOS; whether the 24 dp side margin for the burst button is enough | technical-director, ADR-0003 |
 | PQ-03 | Whether the chip's draining bar reads under a thumb, and its look when expired | ux-designer, arc and chip spec |
-| PQ-04 | Re-grabbing a hero pinned high on the screen with one thumb | ux-designer, pin and aim spec |
-| PQ-05 | Reticle far from the thumb when clamped; preview overhanging the reach ring; ring clipping at 540 wide; reach-dot contrast | ux-designer, pin and aim spec |
+| PQ-04 | Re-grabbing a hero pinned high on the screen with one thumb | Analysed in the pin and aim spec (PAQ-03): options and a phone-test plan; awaiting the phone test |
+| PQ-05 | Reticle far from the thumb when clamped; preview overhanging the reach ring; ring clipping at 540 wide; reach-dot contrast | Settled in the pin and aim spec: reticle distance table and a tether proposal (PAQ-01); overhang by design (PAQ-05); no clipping, ring edge at x 520 (PAQ-02); reach dots 4.98:1 on the field (computed) |
 | PQ-06 | Where a dismissed first-time prompt can be read again | ux-designer |
 | PQ-07 | Font choice (tabular numerals, licence). Affects the text draw-call budget | art-director |
 | PQ-08 | Should the arc panels (word and cost) become tap targets, or keep dismissing the arc (Battle HUD edge case)? | ux-designer, arc and chip spec |
