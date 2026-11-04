@@ -411,7 +411,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | Do three prompts crowd a first run, or still leave room for the first-run target? | First-run test | First playable |
 | Is the prompt at the top seen, while the eyes are on the lane? | First-run test | First playable |
 | Which font? Tabular figures and a licence must be checked | art-director | First render |
-| Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16 | technical-director | Mobile Platform |
+| Does the stretch mode change every inset check? A 360 x 800 dp phone is taller than 9:16. Proposed in ADR-0003: aspect `keep` letterboxes, and an inset counts in field units only where it exceeds the bar, so 9:20 phones usually give 0 | technical-director | ADR-0003 (Proposed), then Mobile Platform |
 | At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |

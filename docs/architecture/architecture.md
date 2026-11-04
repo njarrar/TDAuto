@@ -121,7 +121,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | **Validator** (inside Data & Config) | Error list `{code, source, record_id, field}`. Tiered checks. | `validate(records) -> Array[ValidationError]` | Catalogue records | None (plain GDScript) |
 | **StatAccessor** (Data & Config) | Stat-key vocabulary and int/float type per key. Nothing else; no stored values. | `stat_int(ctx, key) -> int`, `stat_float(ctx, key) -> float`; a type mismatch or bad call goes to the injected failure handler | Catalogue; later Stat & Modifier | None |
 | **InputResolver** | Hit-target registry, the four-state machine, the FIFO re-entrancy queue, the frozen winners of the current press. No clock, no scene. | `press`, `move`, `release`, `cancel_pointer`, `cancel`; `register`, `unregister`, `set_centre`, `set_enabled`; signals `pressed`, `tap`, `ground_tap`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `idle` (payloads in B2) | `drag_slop`, `tap_slop` from the Input record, passed to `create()` by the Builder | None |
-| **InputAdapter** (the only engine-facing input code) | Translation of engine events to the five resolver calls; edge and safe-area rejection; touch/mouse de-duplication; lifecycle `cancel()` calls | Forwards one lifecycle signal (pause) for Flow | Godot input events, `DisplayServer`, viewport | `InputEventScreenTouch`, `InputEventScreenDrag` and the `canceled` flag (**HIGH, NEEDS VERIFICATION**); `_unhandled_input` vs `Control` ordering (**HIGH**); `Node.PROCESS_MODE_ALWAYS` (LOW); `DisplayServer.get_display_safe_area()` (**HIGH**); `Viewport.size_changed` (LOW); app lifecycle notifications (**HIGH**); mouse device ID change (4.7, **HIGH**) |
+| **InputAdapter** (the only engine-facing input code) | Translation of engine events to the five resolver calls; edge and safe-area rejection; touch/mouse de-duplication; lifecycle `cancel()` calls | `lifecycle_paused` (pause) for Flow and the HUD; `display_changed` and `field_insets()` for the HUD; `flush()` for the wrapper's frame step 0; `cancel_all()` as the Battle input canceller (ADR-0003) | Godot input events, `DisplayServer`, viewport | `InputEventScreenTouch`, `InputEventScreenDrag` and the `canceled` flag (**HIGH, NEEDS VERIFICATION**); `_unhandled_input` vs `Control` ordering (**HIGH**); `Node.PROCESS_MODE_ALWAYS` (LOW); `DisplayServer.get_display_safe_area()` (**HIGH**); `Viewport.size_changed` (LOW); app lifecycle notifications (**HIGH**); mouse device ID change (4.7, **HIGH**) |
 | **FatalLatch** | One per battle plus one on AppRoot. Pure: keeps the first cause, idempotent, `is_fatal()`. No screen, no scene, no catalogue. | `fatal(cause)` (injected as a `Callable`), `is_fatal()` | Nothing | `push_error` (LOW). `assert` is never used for release-relevant checks (stripped in exports) |
 | *Mobile Platform (VS)* | Safe-area mapping, export presets, effect pooling, particle caps | Reserved | | `DisplayServer` (HIGH) |
 | *Save/Load (VS)* | Save file, version field, migration | Reserved | | `FileAccess` (MEDIUM) |
@@ -202,11 +202,12 @@ Every flow below is a **working default** drawn from the GDDs. Items marked ADR-
 ### 1. Frame update path
 
 ```
-Engine delivers input events (before this frame's _process; NEEDS VERIFICATION, ADR-0003 spike)
+Engine delivers input events (between frames expected; ADR-0003 SP1). InputAdapter queues the five calls
   InputAdapter ──► InputResolver ──► signals ──► HeroInput / TowerInput / HudLogic
                                                     │ commands: pin, burst, build, upgrade,
                                                     │ start_wave, call_early  (run NOW, between ticks)
 BattleWrapper._process(delta):
+  0. adapter.flush(): queued calls reach the resolver; gesture signals and commands run now (ADR-0003)
   1. Advance real-time models:  HudLogic.advance(ms), ChipWindow.advance(ms), HeroInput.update()
   2. Clock: accumulator += delta; ticks_owed = min(floor(acc / dt), MAX_TICKS_PER_FRAME)
   3. for each owed tick:  battle.tick(dt)
@@ -218,13 +219,13 @@ BattleWrapper._process(delta):
 | Data | Producer | Consumer | Kind |
 |---|---|---|---|
 | Touch/mouse events | Godot | InputAdapter | Engine callback |
-| Five resolver calls | InputAdapter | InputResolver | Synchronous call |
+| Five resolver calls | InputAdapter | InputResolver | Queued during event delivery; synchronous calls from `flush()` at frame step 0 (ADR-0003) |
 | Gesture signals | InputResolver | HeroInput, TowerInput, HudLogic | Signal (synchronous) |
 | Commands | HeroInput, TowerInput, HudLogic, bots | HeroSim, TowerSim, Flow | Synchronous call, **only between ticks**, returns a result enum |
 | `tick(dt)` | Clock (BattleWrapper) | Battle | Synchronous call; gated inside Battle |
 | View reads | Views | Sim modules | Read-only query |
 
-Rule: commands run from the input call stack, before the frame's ticks, so the bonus the HUD shows equals the bonus paid (TR-hud-005). Whether input is delivered before `_process` on 4.7 is **NEEDS VERIFICATION**. ADR-0003 verifies the engine's event order in a spike; ADR-0004 owns the frame order that relies on it. `MAX_TICKS_PER_FRAME` is an explicit output of ADR-0004.
+Rule: commands run from `adapter.flush()` at frame step 0, before the frame's ticks, so the bonus the HUD shows equals the bonus paid (TR-hud-005). The queue makes the order independent of when the engine delivers events; ADR-0003 SP1 measures that timing (latency only) and SP11 the release-before-focus-loss case; ADR-0004 owns the frame order. `MAX_TICKS_PER_FRAME` is an explicit output of ADR-0004.
 
 ### 2. Simulation tick path
 
@@ -304,8 +305,8 @@ Retry resets nothing in place. It rebuilds. `free()` vs `queue_free()` timing fo
 ### 6. Pause and focus path
 
 ```
-App loses focus / backgrounds  (notification names NEEDS VERIFICATION, ADR-0003)
-  InputAdapter ─► resolver.cancel()  and forwards one lifecycle signal
+App loses focus / backgrounds / Android back  (APPLICATION_FOCUS_OUT, APPLICATION_PAUSED, WM_WINDOW_FOCUS_OUT, WM_GO_BACK_REQUEST; ADR-0003 Decision 6, SP10)
+  InputAdapter ─► cancel_all() (empty queue, clear forwarded set, resolver.cancel())  then emits lifecycle_paused()
   Flow: remember phase, enter PAUSED, call the injected cancel_input(), emit phase_changed(PAUSED)
   Battle.tick now returns at once (the in-sim gate); BattleWrapper zeroes its accumulator
   A finger held across the pause stays dead until lifted; the resume tap reaches nothing beneath
@@ -367,7 +368,7 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | `Health` | `RefCounted` | `src/core/combat/health.gd` | `hp: float`, `max_hp: float` (the spawn seed). Holds no reference | ADR-0009 |
 | `Status` | `RefCounted` | `src/core/combat/status.gd` | `strength: float`, `ticks_left: int`. Holds no reference | ADR-0009 |
 | `PathTrack` | `RefCounted` | `src/feature/enemy_wave/path_track.gd` | `static make(path_points) -> PathTrack` (null on unusable points); cumulative lengths; `place(e: Enemy)` | ADR-0009 |
-| `FieldBounds` | `RefCounted` (constants only) | `src/foundation/field_bounds.gd` | `WIDTH := 540.0`, `HEIGHT := 960.0`; injected into EnemyWave by the Builder | ADR-0009 (ADR-0003 may take ownership) |
+| `FieldBounds` | `RefCounted` (constants only) | `src/foundation/field_bounds.gd` | `WIDTH := 540.0`, `HEIGHT := 960.0`; injected into EnemyWave by the Builder | ADR-0009 (ADR-0003 uses it for the field size and does not take ownership) |
 | `DamageEvent` | `RefCounted` | `src/core/combat/damage_event.gd` | `target: Targetable`, `amount: float`, `source_kind: Combat.SourceKind`, `source_id: StringName` | ADR-0009 |
 | `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, per-source damage copied from Combat | ADR-0006 |
 | `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005) | ADR-0001 |
@@ -431,12 +432,22 @@ Invariants: ids start at 1 and are never reused; `NONE` marks an absent winner. 
 
 ```gdscript
 class_name InputAdapter extends Node        # process_mode = PROCESS_MODE_ALWAYS
-signal lifecycle_paused()                   # one signal; the wrapper connects it to Flow.pause()
+const MOUSE_POINTER := 1000                 # touches emulated from the mouse, when SP5 can tell them apart
+signal lifecycle_paused()                   # the wrapper connects it to Flow.pause() and the HUD press clear
+signal display_changed()                    # after a window-size or inset change
+func attach(resolver: InputResolver, edge_reject_margin: float) -> void
+func detach() -> void
+func flush() -> void                        # frame step 0: queued calls to the resolver, in order
+func cancel_all() -> void                   # the Battle input canceller (ADR-0003 Decision 9)
+func set_presses_blocked(blocked: bool) -> void   # SP3 fallback only
+func field_insets() -> FieldInsets          # field units; 0 on desktop
+func field_width_dp() -> float
 # Contract: every forwarded press is followed by exactly one release, cancel_pointer or cancel()
 # for that index, even when a Control with mouse_filter = STOP lies under the drag.
-# Calls resolver.cancel() on pause, focus loss and viewport resize.
+# Presses from _unhandled_input; moves and releases of forwarded indices from _input (consumed).
+# Calls cancel_all() on the four loss notifications and on a window-size change (ADR-0003).
 ```
-Everything in this block is **NEEDS VERIFICATION** against live 4.7 docs: event path (`_unhandled_input` vs `_input`), `InputEventScreenTouch.canceled`, emulation settings, pointer-index collision, the 4.7 mouse device ID, `get_display_safe_area()` units. ADR-0003 decides stretch mode, aspect, minimum width and tall-phone behaviour itself; the Mobile Platform GDD (Vertical Slice) inherits the decision rather than blocking it (TD-ARCHITECTURE A3).
+ADR-0003 (Proposed) decides this block; each engine fact is a spike item (SP0 to SP13) answered by `prototypes/adr-0003-device-spike/`, with a stated fallback per outcome. Display: 540x960, `canvas_items`, `keep`, portrait, fullscreen on phones; taller phones letterbox; 360 dp logging guard. Only modal screens are tappable Controls; every other battle Control is `MOUSE_FILTER_IGNORE`. The Mobile Platform GDD (Vertical Slice) inherits the decision rather than blocking it (TD-ARCHITECTURE A3).
 
 ### B4. Battle and Builder (ADR-0001, ADR-0004)
 
@@ -446,6 +457,7 @@ func tick(dt: float) -> void      # the ONLY way simulation time advances.
                                   # Returns at once unless flow.phase() is WAVE or INTERMISSION
                                   # and halted() is false.
 func halted() -> bool             # flow outcome WON, LOST or FATAL, or fatal_latch set
+var input_record: InputRecord     # read-only; set by the Builder; the wrapper reads it in attach() (ADR-0003)
 
 class_name BattleBuilder extends RefCounted
 static func build(catalogue: Catalogue, stage_id: StringName, seed: int, fatal_handler: Callable) -> Battle
@@ -672,11 +684,11 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | ID | Question | Priority | Resolved by |
 |---|---|---|---|
 | QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 |
-| QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. | High | ADR-0003 |
+| QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. Proposed in ADR-0003: `canvas_items`, `keep`, portrait, fullscreen on phones, 360 dp guard (log only), taller phones letterbox (off-field entry not revealed at MVP; pending user confirmation C3, C4). | High | ADR-0003 (Proposed) |
 | QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 (float policy); ADR-0009 makes every sim position a float scalar pair and verifies `Vector2` precision (V1) |
-| QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |
+| QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return; a release synthesised before a focus loss. Spike items SP1, SP2, SP3, SP10, SP11; kit in `prototypes/adr-0003-device-spike/`. | High | ADR-0003 (spike) |
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
 | QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009 |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |

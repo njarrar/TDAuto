@@ -137,6 +137,28 @@ state_ownership:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
+  - state: field_insets
+    status: active
+    owner_system: input-adapter
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    interface: "InputAdapter.field_insets() -> FieldInsets{top, bottom, left, right} in field units, 0 on desktop; display_changed() after a window-size or inset change; the wrapper passes them to the HUD"
+    write_access: input-adapter-only
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - state: battle_input_record
+    status: active
+    owner_system: battle-builder
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    interface: "Battle.input_record: InputRecord, read-only by contract, set by BattleBuilder; the BattleWrapper reads it in attach() for InputAdapter, HeroInput and the HUD"
+    write_access: battle-builder-only
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -203,6 +225,7 @@ interfaces:
     signal_signature: "BattleWrapper.attach(battle: Battle, reduce_motion: bool) -> bool; BattleWrapper.detach() -> void clears every sim, resolver and Battle reference in the wrapper subtree"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
     revised: ""
   - contract: catalogue_load
@@ -285,6 +308,32 @@ interfaces:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
+  - contract: lifecycle_pause
+    status: active
+    pattern: signal
+    producer: input-adapter
+    consumers:
+      - flow
+      - battle-hud
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    signal_signature: "InputAdapter.lifecycle_paused() -> wrapper connects to Flow.pause() and the HUD press clear; emitted after cancel_all(), possibly several times per loss; every listener idempotent"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - contract: resolver_drive
+    status: active
+    pattern: direct_call
+    producer: input-adapter
+    consumers:
+      - input-resolver
+      - battle-wrapper
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    signal_signature: "press/move/release(pointer: int, pos: Vector2 field units), cancel_pointer(pointer), cancel(); queued by InputAdapter and delivered in InputAdapter.flush(), which the wrapper calls at frame step 0; cancel_all() empties the queue; every forwarded press ends exactly once"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -354,6 +403,7 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
     revised: ""
   - purpose: release_relevant_checks
@@ -427,6 +477,66 @@ api_decisions:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
+  - purpose: display_stretch
+    status: active
+    api: "540x960 viewport, display/window/stretch/mode canvas_items, aspect keep, orientation portrait, window mode fullscreen on mobile, all set explicitly in project.godot"
+    not: "engine or editor defaults, stretch mode viewport or disabled, aspect expand or keep_width, Camera2D on the battle field"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "Field units equal viewport units on every device; 4.7 changed new-project defaults"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: input_event_path
+    status: active
+    api: "InputAdapter: presses in _unhandled_input; moves and releases of forwarded indices in _input, marked handled; every call queued and delivered by flush() at frame step 0; modal screens read InputEventScreenTouch in _gui_input"
+    not: "forwarding from the engine callback, _unhandled_input for every event, _input or _unhandled_input outside InputAdapter, polling Input for pointers"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "Controls win presses over them, no Control can strand a forwarded gesture, and a release in the same batch as a focus loss is dropped"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: pointer_event_family
+    status: active
+    api: "InputEventScreenTouch and InputEventScreenDrag only, with emulate_touch_from_mouse and emulate_mouse_from_touch both true"
+    not: "InputEventMouse* or Button.pressed in battle code, event.device compared to a literal"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "One physical press is one gesture; one adapter code path on desktop and phone; mouse emulation follows touch index 0 only"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: lifecycle_pause_triggers
+    status: active
+    api: "NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_WM_GO_BACK_REQUEST in InputAdapter._notification, with quit_on_go_back false"
+    not: "SceneTree.paused, resuming on focus-in or resume notifications"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "One idempotent pause path on desktop and phone; only the Paused screen's tap resumes"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: safe_area_source
+    status: active
+    api: "DisplayServer.get_display_safe_area(), window_get_size() and window_get_position(), read in InputAdapter only when OS.has_feature(\"mobile\"), converted to Rect2 and Vector2 and passed to FieldMapping.insets_from_safe_area"
+    not: "safe area on desktop, DisplayServer reads in the HUD or views"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "The desktop safe area is the usable screen, not window insets"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: min_width_guard
+    status: active
+    api: "FieldMapping.width_supported(floori(field_width_dp(...))) against MIN_FIELD_WIDTH_DP 360, push_error once, play continues"
+    not: "a float comparison at the boundary, blocking play"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    reason: "Input GDD Formulas floor to integers first so 360 dp does not depend on rounding; the store filter enforces the floor"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -458,6 +568,9 @@ forbidden_patterns:
     description: "No [autoload] section in project.godot and no global singleton. Inject through BattleBuilder or constructors."
     why: "Breaks headless runs and makes retry a hand-written reset"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
   - pattern: sim_back_reference_to_battle
     status: active
@@ -578,6 +691,48 @@ forbidden_patterns:
     description: "No element is removed from an array inside a for-in loop over it; removal loops are while i < arr.size() index loops that do not advance i after remove_at(i)."
     why: "Skips the next element and misses children appended by listeners (Enemy & Wave Acceptance 28)"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: engine_input_outside_adapter
+    status: active
+    description: "No _input or _unhandled_input override, and no Input pointer polling, in src/ outside InputAdapter; modal screens read their own events in _gui_input only."
+    why: "Two readers of engine input break one-press-one-gesture and the exactly-one-ending contract"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: tappable_non_modal_control
+    status: active
+    description: "Every battle Control except the Result and Paused modal screens uses MOUSE_FILTER_IGNORE; game targets are resolver discs, never Controls."
+    why: "Control, Panel and ColorRect default to STOP, and PASS also takes a touch press, so any other filter swallows presses meant for discs"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: mouse_event_in_battle_code
+    status: active
+    description: "No InputEventMouseButton read and no Button.pressed use in battle code; the adapter and modal screens read the touch family."
+    why: "Mouse emulation follows touch index 0 only, so a second finger is lost"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: device_id_literal
+    status: active
+    description: "Never compare InputEvent.device to a number; compare event types, or device to InputEvent.DEVICE_ID_* constants."
+    why: "4.7 moved mouse and keyboard off device 0, which some joypads use"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: battle_camera_or_canvas_transform
+    status: active
+    description: "No Camera2D and no non-identity canvas transform on the battle field."
+    why: "Field units must equal viewport units (TR-input-016)"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: scene_tree_pause
+    status: active
+    description: "Never use get_tree().paused for the lifecycle pause; pause is Flow's PAUSED phase and the in-sim tick gate."
+    why: "One pause mechanism; the sim is plain objects ticked by the wrapper"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    added: 2026-11-04
+  - pattern: canceled_touch_as_release
+    status: active
+    description: "A touch with canceled true is cancel_pointer, never release, in the adapter and in modal screens."
+    why: "An OS cancel treated as a release fires a tap or a drag end: a mis-fire"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
 
 # Example:

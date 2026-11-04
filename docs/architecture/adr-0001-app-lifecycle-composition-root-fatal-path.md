@@ -189,13 +189,13 @@ Rules for the Builder and for everything it builds:
 - **No mutable `static var`** in any class under `src/`. Static state lives per script, survives a retry and defeats the rebuild.
 - **No deferred connections** on gameplay signals (TR-enemy-004, ADR-0006).
 - **Headless-safe.** The Builder touches no `Node`, `SceneTree` or `DisplayServer`.
-- `cancel_input() -> void` is a method on `Battle`. It calls a held `Callable` that defaults to a no-op and that the wrapper sets to the resolver's `cancel` after build. Flow gets `battle.cancel_input`. Headless, it stays a no-op.
+- `cancel_input() -> void` is a method on `Battle`. It calls a held `Callable` that defaults to a no-op and that the wrapper sets to `InputAdapter.cancel_all` after build (ADR-0003 Decision 9), which empties the adapter's input queue and forwarded presses and then calls the resolver's `cancel()`. Flow gets `battle.cancel_input`. Headless, it stays a no-op.
 
 The injected callable list is the one in `architecture.md` B9 (`halted`, `in_build`, `targets`, `cancel_input`, `left_handed`, `fatal`, `dev_error`, `to_ticks`). This ADR owns the injection mechanism; the signatures stay where B9 and the system GDDs define them.
 
 ### 6. BattleWrapper and attach
 
-`BattleWrapper` is a scene that `AppRoot` loads at run time (`ResourceLoader.load(wrapper_scene_path)`) and instantiates. It adds the `InputAdapter`, the Clock, the HUD and the field views around the `Battle`, and holds no gameplay logic. `AppRoot` calls `wrapper.attach(battle, reduce_motion) -> bool` after `add_child`. A failed load, a null instance or a `false` return is fatal, sent through `battle.report_fatal`. The wrapper exposes `detach() -> void`, which stops processing (`set_process(false)` and the input flags), calls `resolver.cancel()`, calls `detach()` on every child node that holds a sim or resolver reference (adapter, HUD, views; each such node must implement it), disconnects its own connections and sets its references to the `Battle` and the resolver to null. After `detach()` no node in the wrapper subtree holds a sim, the resolver or the Battle. The wrapper is absent in headless runs. The Clock, tick rate, clamp and frame order are ADR-0004's; pause entry through the adapter's lifecycle signal is ADR-0003's and Flow's.
+`BattleWrapper` is a scene that `AppRoot` loads at run time (`ResourceLoader.load(wrapper_scene_path)`) and instantiates. It adds the `InputAdapter`, the Clock, the HUD and the field views around the `Battle`, and holds no gameplay logic. In `attach` it reads `battle.input_record` (a read-only member the Builder sets, ADR-0003 Decision 1) and gives it, or the fields they need, to the adapter (`edge_reject_margin`), HeroInput and the HUD, and it calls `adapter.flush()` as frame step 0 (ADR-0003 Decision 2, ADR-0004). `AppRoot` calls `wrapper.attach(battle, reduce_motion) -> bool` after `add_child`. A failed load, a null instance or a `false` return is fatal, sent through `battle.report_fatal`. The wrapper exposes `detach() -> void`, which stops processing (`set_process(false)` and the input flags), calls `resolver.cancel()`, calls `detach()` on every child node that holds a sim or resolver reference (adapter, HUD, views; each such node must implement it), disconnects its own connections and sets its references to the `Battle` and the resolver to null. After `detach()` no node in the wrapper subtree holds a sim, the resolver or the Battle. The wrapper is absent in headless runs. The Clock, tick rate, clamp and frame order are ADR-0004's; pause entry through the adapter's lifecycle signal is ADR-0003's and Flow's.
 
 ### 7. Retry and teardown
 
@@ -260,6 +260,7 @@ func is_over() -> bool                  # true when Flow is WON or LOST
 func report_fatal(cause: String) -> void  # calls the relay; for AppRoot's own InStage failures
 func cancel_input() -> void             # calls the wrapper-set Callable; no-op headless
 func set_input_canceller(c: Callable) -> void
+var input_record: InputRecord           # read-only by contract; set by BattleBuilder (ADR-0003, ADR-0005 Decision 8)
 
 # src/root/app_root.gd
 class_name AppRoot extends Node
