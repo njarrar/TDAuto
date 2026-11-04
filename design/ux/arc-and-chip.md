@@ -1,6 +1,6 @@
 # UX Spec: Build Arc and Upgrade Chip
 
-> **Status**: In Design (autonomous draft, 2026-11-04; run `/ux-review design/ux/arc-and-chip.md`)
+> **Status**: In Design (autonomous draft, 2026-11-04; revised after the first `/ux-review` the same day)
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04
 > **Journey Phase(s)**: none recorded; `design/player-journey.md` does not exist (UQ-10). The arc and chip appear in every battle, from the first wave onward
@@ -8,6 +8,7 @@
 > **Template**: UX Spec
 > **Source of truth**: `design/gdd/tower-system.md` (Core Rules 5 to 8, Visual/Audio, UI Requirements) and `design/gdd/battle-hud.md` (Rules 6 to 9 and 11, Layout, Content rules) own every rule and number. This spec organises them as a screen-level UX spec and settles the points the Tower GDD flags for this pass. A value marked **(proposal)** is mine, not the GDDs'; a value marked **(derived)** is computed from GDD numbers, with the arithmetic shown. If this spec and a GDD ever differ, the GDD is right and this file is stale.
 > **Related**: `design/ux/hud.md`, `design/ux/interaction-patterns.md` (patterns P-nn), `design/accessibility-requirements.md`, `design/art/art-bible.md` sections 3, 4, 7
+> **Relation to the pattern library**: this spec is the screen-level statement for the arc and chip. Patterns P-06 and P-07 keep a summary and point here; when the two differ, this spec (after the GDDs) is right.
 
 ---
 
@@ -30,7 +31,7 @@ What goes wrong without them, or when they are hard to use:
 
 | Question | Answer |
 |---|---|
-| When does the player first meet this? | In the first battle. The first prompt after the hero is pinned is "Tap a slot to build" (Battle HUD Rule 13). Nothing else teaches it |
+| When does the player first meet this? | In the first battle. Once the hero is pinned and while no tower is built, the prompt in Build and Intermission is "Tap a slot to build" (in Wave it is the burst prompt instead) (Battle HUD Rule 13). Nothing else teaches it |
 | What were they just doing? | Planning in Build (clock stopped, calm), or mid-wave watching enemies approach (time-pressured), or in Intermission deciding whether to call early |
 | Emotional state to design for | Build and Intermission: deliberate, a little uncertain which tower fits. Wave: hurried, one thumb possibly still near the hero. The arc must be safe to open by accident and quick to dismiss |
 | Voluntary or sent? | Voluntary. The player opens the arc by tapping a slot; nothing opens it for them |
@@ -100,7 +101,7 @@ Build arc (slot S, R = 96, all three affordable)
 Upgrade chip (tower at S, level 1)
 
           +--------------------+
-          |  /\2    N         |   panel 76 x 44, centre (S.x, S.y - 76)
+          |  /\2    N         |   panel 84 x 44 (proposal; GDD 76), centre (S.x, S.y - 76)
           | =================  |   bar, 3 units, drains left to right over 1.5 s
           +--------------------+
                   /\             tower (level 1), hit disc radius 36
@@ -117,7 +118,7 @@ Field units, 540 x 960 reference. Presses are tested against discs, not drawings
 | Arc disc, hexagon (Splash) | `S + (0, -96)`, hit radius 36 | Same | TAP 300 |
 | Arc disc, square (Slow) | `S + (+83.1, -48)`, hit radius 36 | Same | TAP 300 |
 | Arc panels | 80 x 56, centred over each disc, bottom edge 8 above the polygon's top edge (**derived**: the GDD's starter panel top of y 117 at S.y 305 gives 305 - 96 - 28 - 8 - 56 = 117) | Word (14 dp) and cost (14 dp), two lines | None (display; UQ-07) |
-| Chip panel | 76 x 44, centre `(S.x, S.y - 76)` | Level-2 glyph (20 px, cyan), cost (16 dp), bar | None (the chip disc takes the press) |
+| Chip panel | **84 x 44 (proposal, UQ-16; the GDD says 76 x 44)**, centre `(S.x, S.y - 76)` | Level-2 glyph (20 px, cyan), cost (16 dp, up to 3 digits), bar | None (the chip disc takes the press; its radius 40 is unchanged, so the 88.7 and 122.4 clearances hold) |
 | Chip disc | Centre `(S.x, S.y - 76)`, radius 40, while the window is open | Nothing drawn | TAP 300 (TowerInput) |
 | Chip bar | 3 units tall along the panel's bottom edge, neutral | Time left | None |
 | Range rings | Centred on the slot or tower, under entities | See States | None |
@@ -128,6 +129,23 @@ Field units, 540 x 960 reference. Presses are tested against discs, not drawings
 - At the extreme slots allowed by rule L1 (x 156 and 384), the outer discs sit at x 72.9 and x 467.1. Their hit discs span x 36.9 to 108.9 and 431.1 to 503.1, clear of the 36-unit edge-reject margin by 0.9 and 0.9 units. That is why L1 is x 156 to 384.
 - At the lowest slot y allowed (304) the top panel reaches y 116, clear of the band at inset 0 (the band ends at y 72) and meeting the prompt line at `I_top` 11 (GDD).
 - The chip's top is at `S.y - 98` and `S.y >= 304`, so the chip never reaches above y 206 and never meets the band (at most 174 high). Its hit disc is 88.7 from Start/Call's and 122.4 from either burst button (GDD content rules). **The "chip leaving the field" flag cannot occur under L1.**
+
+### Text Fit
+
+The Tower GDD flags that "a polygon plus digits in 56 px is tight". In the GDDs' design the digits are never inside the 56 px polygon: the arc puts word and cost in an 80 x 56 panel above each disc, and the chip puts a 20 px glyph beside the cost in its own panel. What must fit is the panel. Costs can have 3 digits: the content rules allow a level-1 cost up to `starting_gold` (120 in the starter), and nothing caps a level-2 cost. Starter costs are 50 to 80.
+
+**Estimate** (the font is not chosen, PQ-07; a tabular digit or average letter is taken as 0.55 em; 14 dp = 21 units, 16 dp = 24 units):
+
+| Element | Content, worst case | Width needed | Width available | Fits? |
+|---|---|---|---|---|
+| Arc panel, line 1 | "Splash", 6 letters at 14 dp | 69.3 units of text | 80 | Yes, with about 5 units each side |
+| Arc panel, line 2 | 3 digits at 14 dp | 34.7 | 80 | Yes |
+| Chip, at the GDD's 76 | 8 padding + 20 glyph + 8 + 3 digits at 16 dp (39.6) + 8 | 83.6 | 76 | **No**: only 2 digits fit (70.4) |
+| Chip, at 84 (proposal) | Same | 83.6 | 84 | Yes, just |
+
+**Decision (proposal, UQ-16):** widen the chip panel to 84 x 44 and keep its hit disc (radius 40) where it is. Recheck on a render once the font is chosen; the alternative is a content rule that every cost stays at 2 digits. Two lines of 14 dp in a 56-unit panel need 42 units of text height, leaving 7 above and below.
+
+**Clearance check for the wider chip (derived).** At inset 0, a sweep over every slot the content rules allow (x 156 to 384, y 304 to 924, in 0.5-unit steps, keeping the slot and chip-disc clearances to Start/Call and both burst buttons) finds no position where an 84 x 44 chip panel overlaps Start/Call's 88 x 72 rect or either burst button's 84-unit disc. The same holds at 76. Recheck when insets are known.
 
 ### Component Inventory
 
@@ -192,14 +210,14 @@ Mapping interactions for: **touch** (the desktop build's mouse stands in for it)
 | Component | Action | Input | Immediate feedback | Outcome |
 |---|---|---|---|---|
 | Free slot | Tap | Tap, TAP 200 | Arc opens on the next frame (guard look) | `slot_tapped`; arc state Open |
-| Arc disc | Tap at 200 ms or later | Tap, TAP 300 | Gold falls; tower appears on the first frame; arc collapses | `build(slot_index, tower_id)` returns `OK` |
+| Arc disc | Tap whose **press** is at 200 ms or later after the arc opened | Tap, TAP 300 | Gold falls; tower appears on the first frame; arc collapses | `build(slot_index, tower_id)` returns `OK` |
 | Arc disc | Tap while unaffordable | Tap, TAP 300 | Nudge (unless Reduce Motion) plus the refusal cue; arc stays open | `build` returns `NO_GOLD`; nothing changes |
-| Arc disc | Tap under 200 ms | Tap | Arc closes (a cut) | No `build` call |
+| Arc disc | Tap whose **press** is under 200 ms after opening (released whenever) | Tap | Arc closes (a cut) | No `build` call |
 | Arc backdrop | Tap or press outside the discs | Tap, TAP 250 sink | Arc closes | Dismiss; the later `tap` is ignored |
 | Arc | Drag | `drag_started` | Arc closes | Dismiss; the drag then goes to whichever owner it started on |
 | Level-1 tower | Tap | Tap, TAP 200 | Chip opens (guard look) | Chip state Open, window starts |
-| Tower or chip | Tap, `200 <= elapsed < 1500` ms | Tap | Gold falls; level-2 inset on the first frame; chip closes | `upgrade(slot_index)` returns `OK` |
-| Tower or chip | Tap under 200 ms | Tap | None | Ignored; the window keeps running |
+| Tower or chip | Tap whose **release** falls at `200 <= elapsed < 1500` ms | Tap | Gold falls; level-2 inset on the first frame; chip closes | `upgrade(slot_index)` returns `OK` |
+| Tower or chip | Tap released under 200 ms | Tap | None | Ignored; the window keeps running |
 | Tower or chip | Tap, unaffordable | Tap | Refusal cue; chip stays open and dimmed | `upgrade` returns `NO_GOLD`; window does not restart |
 | Other tower | Tap while a chip is open | `pressed`, then `tap` | The first chip closes; that tower's own chip opens | Dismiss, then a new chip |
 | Empty field | Tap while an arc is open | `pressed` naming the backdrop | Arc closes; no ground ring, because the backdrop takes the tap (Battle HUD Rule 14) | Dismiss |
@@ -312,9 +330,9 @@ Strings are fixed English at MVP; a localization path is deliberately not built 
 
 | Element | Constraint | 40% expansion |
 |---|---|---|
-| Arc panel word ("Single", "Splash", "Slow") | 80 x 56 panel, 14 dp, one line. 80 units is 53 dp, so about 7 characters at 14 dp | "Splash" has 6 characters; at +40% it is 8 or 9, which overflows. **HIGH PRIORITY** if localised: allow two lines or widen the panel (the panels are 3 units apart, so widening needs the discs apart) |
+| Arc panel word ("Single", "Splash", "Slow") | 80 x 56 panel, 14 dp, one line. "Splash" (6 letters) leaves about 5 units each side (estimate, see Text Fit) | "Splash" has 6 characters; at +40% it is 8 or 9, which overflows. **HIGH PRIORITY** if localised: allow two lines or widen the panel (the panels are 3 units apart, so widening needs the discs apart) |
 | Arc panel cost | 1 to 3 digits, tabular numerals | No expansion; numbers need locale-neutral formatting only |
-| Chip cost | 16 dp, 1 to 3 digits in a 76 x 44 panel | None |
+| Chip cost | 16 dp, 1 to 3 digits in an 84 x 44 panel (proposal; 76 fits only 2 digits) | None |
 | "Max" label (proposal) | 3 characters, 14 dp | Low risk |
 
 ---
@@ -326,18 +344,19 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 - [ ] **Arc geometry.** Tapping a free slot opens an arc on the next frame (within 16.6 ms at 60 fps) with three discs at `S + (-83.1, -48)`, `S + (0, -96)` and `S + (+83.1, -48)` (within 0.1), showing a triangle, a hexagon and a square left to right, in that order, with the right-handed and left-handed setting alike.
 - [ ] **Panels.** Each disc has a panel above it with two lines: the words "Single", "Splash" and "Slow" and that tower's current cost; panel text is at least 14 dp and the panels do not overlap each other or any disc.
 - [ ] **Hit areas.** A press within 36 units of a disc's centre selects it; a press in the 24-unit gap between two discs selects neither and closes the arc without a purchase (the backdrop takes it); each disc's diameter measures at least 48 dp at a 360 dp width.
-- [ ] **Guard.** A second tap that lands on a disc under 200 ms after the arc opened closes the arc, buys nothing and leaves gold unchanged. At 200 ms or later a tap on a disc builds.
+- [ ] **Guard.** A second tap whose press lands on a disc under 200 ms after the arc opened (even if released later) closes the arc, buys nothing and leaves gold unchanged. At 200 ms or later a tap on a disc builds.
 - [ ] **Build.** With gold at least the cost, tapping a disc reduces gold by exactly that cost, closes the arc, and shows the new tower at its slot on the first frame with a white overlay that fades over 120 ms (and scales from 1.15 to 1 unless Reduce Motion is on).
-- [ ] **Unaffordable disc.** A disc whose cost exceeds gold shows its cost struck through and dimmed to at least alpha 0.6 (4.5:1 against the panel); tapping it leaves the arc open and gold unchanged, and shows a visible cue even with Reduce Motion on. Raising gold above the cost makes the disc live at once.
+- [ ] **Unaffordable disc.** A disc whose cost exceeds gold shows its cost struck through and dimmed to at least alpha 0.6 (depends on HQ-01: the GDD's 0.55 gives 4.25:1 and fails this; 4.5:1 against the panel); tapping it leaves the arc open and gold unchanged, and shows a visible cue even with Reduce Motion on. Raising gold above the cost makes the disc live at once.
 - [ ] **Dismiss.** A press anywhere off the discs, or a drag, closes the arc without a purchase; pausing the app closes it; a change from Build to Wave or Intermission to Wave leaves it open; Start/Call does nothing while it is open.
 - [ ] **Chip open.** Tapping a level-1 tower opens a chip centred 76 units above it, showing the level-2 cost, a level-2 glyph and a bar that drains from full to empty in 1,500 ms. Only one chip is open at a time.
 - [ ] **Chip guard and commit.** Tapping the tower or chip under 200 ms after it opened does nothing and the window keeps running. A tap between 200 and 1,499 ms, with gold at least the level-2 cost, upgrades the tower, reduces gold by that cost, closes the chip and shows the level-2 inset on the first frame.
 - [ ] **Chip expiry.** At 1,500 ms the chip disappears. Tapping the tower then opens a new chip and does not upgrade. A press held past 1,500 ms does nothing.
 - [ ] **Chip unaffordable.** With gold below the level-2 cost, a tap in the window leaves the chip open, dimmed and struck through, does not restart the bar, and shows the refusal cue.
 - [ ] **Chip switching.** With a chip open on tower A, tapping tower B closes A's chip and opens B's chip; tapping empty field closes A's chip.
-- [ ] **Max level.** Tapping a level-2 tower shows its range ring for 1.5 s and the label "Max", and opens no chip.
+- [ ] **Max level.** Tapping a level-2 tower shows its range ring for 1.5 s and opens no chip; it also shows the label "Max" (proposal, UQ-03).
+- [ ] **Guard look (proposal, UQ-02).** For 200 ms after an arc or chip opens, its discs, panels or chip draw at alpha 0.5, then step to full; no fade between.
 - [ ] **Range rings.** With an arc open, one ring per distinct level-1 range is visible under the entities; with a chip open, the current range ring plus the next at alpha 0.25; after a build or upgrade, a ring visible at 400 ms and gone by 600 ms.
-- [ ] **Reduce Motion.** With the flag on, no 2 px nudge, no scale on the build overlay and no arc collapse animation play; a refused tap still shows the cue; the bar, ring fades and overlay fade still play.
+- [ ] **Reduce Motion.** With the flag on, no 2 px nudge, no scale on the build overlay and (proposal, UQ-01 and HUD HQ-04) no arc collapse animation play; a refused tap still shows the cue; the bar, ring fades and overlay fade still play.
 - [ ] **Closing by the game.** Pausing, winning, losing or a fatal error closes any arc or chip at once, and the tap that resumes cannot commit a purchase.
 - [ ] **Never off the field.** For every slot allowed by the content rules (x 156 to 384, y 304 to 924), the whole arc (discs and panels) and the chip lie within x 0 to 540 and y 0 to 960, and the chip never overlaps the top band.
 - [ ] **Budget.** With an arc open, the whole HUD uses at most 12 draw calls and at most 3 text draws on a device.
@@ -363,3 +382,6 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 | UQ-12 | **Chip closing fade (proposal)** of 120 ms on expiry or dismiss; the GDDs say the chip closes but not how | ux-designer |
 | UQ-13 | **Roll-off from a disc.** A press on one disc released on another: confirm the disc under the release does not commit unless it also received the press | game-designer, Input |
 | UQ-14 | **Start/Call 78.5 units from the arc** at the starter layout; rechecked if `R` grows. If the phone test forces `R` up (UQ-06), recheck the content rules | game-designer |
+| UQ-15 | Arc discs are exactly 48 dp across at a 360 dp width, with no margin (Input Method Checklist; PQ-02). Confirm on the narrowest supported phone | technical-director, phone test |
+| UQ-16 | **Chip width (proposal).** Widen the chip panel from 76 to 84 units so a 3-digit cost fits beside the glyph; or add a content rule capping costs at 2 digits. Needs a Battle HUD GDD edit either way; confirm on a render once the font is chosen | game-designer, art-director |
+| UQ-17 | **Unaffordable alpha.** This spec uses 0.6 (4.80:1); the approved GDD says 0.55 (4.25:1, under 4.5:1). Same question as HUD HQ-01 | game-designer |
