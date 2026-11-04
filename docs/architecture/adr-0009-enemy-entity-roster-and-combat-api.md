@@ -388,7 +388,7 @@ No code exists. Order: `Targetable`, `Health`, `Status`, `DamageEvent`; Combat w
 
 ## Related
 
-- `docs/architecture/architecture.md` v3: Dependency rule 5, B0, B6, B7, Data Flow 2 and 10, QQ-05, QQ-08, QQ-11
+- `docs/architecture/architecture.md` v4 (this ADR was written against v3; v4 takes in the deviations listed below): Dependency rule 5, B0, B6, B7, Data Flow 2 and 10, QQ-05, QQ-08, QQ-11
 - `design/gdd/combat-damage.md` (Core Rules, Edge Cases, Dependencies); `design/gdd/enemy-wave.md` (Rules 4, 8 to 15; Formulas: `d_next`, position); `design/gdd/tower-system.md`; `design/gdd/hero-system.md`
 - ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007 (depends on); ADR-0010, ADR-0011 (enabled)
 

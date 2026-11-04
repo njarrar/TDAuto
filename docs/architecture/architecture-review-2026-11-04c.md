@@ -195,3 +195,11 @@ No new ADR is needed. Revisions only: ADR-0009 (two partial TRs), ADR-0001, ADR-
 - Implicit coverage graded Covered (Proposed), not Partial, where the ADR Decision text decides the requirement.
 - Registry wording drift reported, not edited, since the GDDs still carry the old names and this run is append-only.
 - Systems index not edited (GDD folder out of bounds for this run).
+
+---
+
+### Note (2026-11-04, after this review)
+
+- An engine-specialist check of all 11 ADRs did run on 2026-11-04, before this review: it found no removed or deprecated API, and its fixes were applied. The "Engine Specialist Findings" section above did not know of it.
+- Then fixed: the missing GDD Requirements Addressed rows (TR-state-015 and TR-state-016 in ADR-0001, TR-hud-017 in ADR-0011, TR-hud-018 in ADR-0010); TR-enemy-016 and TR-enemy-017, now decided in ADR-0009 Decision 7 with table rows; and the stale `architecture.md` v4 claims (coverage line, matrix review, layer counts, "Depends on" column). ADR-0001 and ADR-0004 now cite `architecture.md` v4.
+- The verdict above is unchanged.

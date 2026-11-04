@@ -7,7 +7,7 @@
 - GDDs Covered (8 MVP systems): `data-config-pipeline`, `input-gesture-resolver`, `game-state-stage-flow`, `combat-damage`, `enemy-wave`, `tower-system`, `hero-system`, `battle-hud`. Context only: `game-concept`, `systems-index`.
 - Vertical Slice and Alpha systems (14 of 22) have no GDD yet. They appear in the layer map as reserved slots with the seams MVP code must leave for them. This document is revised when those GDDs exist.
 - ADRs Referenced: ADR-0001 to ADR-0011 are written, all **Proposed**. A TD-ADR batch review (2026-11-04) returned CONCERNS with no REJECT, and its fixes were applied; an engine-specialist check followed. Each ADR lists the runs (desktop, export or phone) that block its acceptance. A contract below that cites an ADR is that ADR's decision, but it stays a working default until the ADR is Accepted on the user's confirmation.
-- Technical Requirements: 126, all registered in `docs/architecture/tr-registry.yaml` (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud). Coverage: every TR is assigned to a written ADR (126 of 126 Proposed, 0 Accepted). v4 split TR-hud-018 (launch ID and build hash) from TR-hud-006.
+- Technical Requirements: 126, all registered in `docs/architecture/tr-registry.yaml` (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud). Coverage: every TR is assigned to a written ADR, 0 Accepted. The 2026-11-04c review found 124 covered by Proposed ADRs and 2 partial (TR-enemy-016, TR-enemy-017); after its fixes on 2026-11-04, 126 of 126 are covered by Proposed ADRs. v4 split TR-hud-018 (launch ID and build hash) from TR-hud-006.
 - TD-ARCHITECTURE: 2026-11-03, REVISED after CONCERNS. v1 findings B1 to B4 and A3 (blocking) and A1, A2, A4 to A10 (advisory) applied in v2. A11 (acceptance of the four GDD amendments) waits for the ADRs (QQ-08). v2 has not been re-reviewed.
 - LP-FEASIBILITY: 2026-11-03, REVISED after CONCERNS. v1 findings 1 to 7 (blocking) applied in v2, except finding 1's note that `sink` was invented: the Input GDD defines it as a TAP-only `bool`, and v2 keeps it with that type. Advisory 8 to 15 applied or carried into the named ADRs. v2 has not been re-reviewed.
 
@@ -607,18 +607,18 @@ All 11 ADRs are written and **Proposed**. A TD-ADR batch review (2026-11-04) ret
 
 ### Traceability Coverage Check
 
-Technical Requirements Baseline: **126 requirements from 8 GDDs, 126 registered, 0 provisional** (TR registry read, 126 entries, all `active`; TR-hud-018 added in v4). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the review that built it is `docs/architecture/architecture-review-2026-11-03.md`.
+Technical Requirements Baseline: **126 requirements from 8 GDDs, 126 registered, 0 provisional** (TR registry read, 126 entries, all `active`; TR-hud-018 added in v4). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the review that built it is `docs/architecture/architecture-review-2026-11-04c.md`.
 
 | Status | Count |
 |---|---|
 | Covered by an Accepted ADR | 0 |
-| Covered by a Proposed ADR | 126 |
-| Partial | 0 |
+| Covered by a Proposed ADR | 126 (124 at the 2026-11-04c review, plus TR-enemy-016 and TR-enemy-017 closed in ADR-0009 after it) |
+| Partial | 0 (2 at the 2026-11-04c review) |
 | **Gap** | **0** |
 
-By GDD: data-config 15, input 16, game-state 16, combat 14, enemy-wave 17, tower 15, hero 15, battle-hud 18. The layer and engine-risk counts (v3: 53 Foundation, 44 Core, 3 Feature, 20 Presentation; 14 HIGH, 31 MEDIUM, 75 LOW) cover the first 120 only; the next `/architecture-review` recounts them.
+By GDD: data-config 15, input 16, game-state 16, combat 14, enemy-wave 17, tower 15, hero 15, battle-hud 18. By layer (2026-11-04c review, all 126): Foundation 47, Core 31, Feature 30, Presentation 18. The engine-risk counts (v3: 14 HIGH, 31 MEDIUM, 75 LOW) still cover the first 120 only; the next `/architecture-review` recounts them.
 
-The per-ADR coverage in the next section assigns every one of the 126 requirements to exactly one written ADR. `requirements-traceability.md` still shows 125 and lacks TR-hud-018 until the next review.
+The per-ADR coverage in the next section assigns every one of the 126 requirements to exactly one written ADR. `requirements-traceability.md` was refreshed by the 2026-11-04c review and lists all 126.
 
 ## Required ADRs
 
@@ -633,10 +633,10 @@ Eleven ADRs close all 126 gaps. All are written and Proposed; the numbers below 
 | ADR-0005 | Stat Accessor and Read-Context Contract | Foundation | ADR-0002, ADR-0001 | P04 | 6 | LOW |
 | ADR-0006 | Battle Signal Contracts and View Allowlist | Foundation | ADR-0001, ADR-0004 | P10 | 10 | MEDIUM |
 | ADR-0007 | Headless Test Harness, gdUnit4 and Layer Lint | Foundation | ADR-0001, ADR-0006 | P08 | 6 | MEDIUM |
-| ADR-0008 | Input Resolver Core and Signal Contract | Foundation | ADR-0003, ADR-0006 (text also relies on ADR-0004, ADR-0007; not on ADR-0010) | P09, part of P15 | 11 | MEDIUM |
-| ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0005 | P11, P12 | 18 | MEDIUM |
-| ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Feature and Presentation (sims in Feature, input objects in Presentation) | ADR-0004, ADR-0008, ADR-0009 | P13, part of P15 | 11 | LOW |
-| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0009, ADR-0010 | P14 | 6 | MEDIUM |
+| ADR-0008 | Input Resolver Core and Signal Contract | Foundation | ADR-0001, ADR-0003, ADR-0006 (text also relies on ADR-0004, ADR-0007; not on ADR-0010) | P09, part of P15 | 11 | MEDIUM |
+| ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0005 (text also relies on ADR-0002, ADR-0004, ADR-0006, ADR-0007) | P11, P12 | 18 | MEDIUM |
+| ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Feature and Presentation (sims in Feature, input objects in Presentation) | ADR-0004, ADR-0008, ADR-0009 (text also relies on ADR-0001, ADR-0005, ADR-0006, ADR-0007) | P13, part of P15 | 11 | LOW |
+| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0009, ADR-0010 (text also relies on ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0008) | P14 | 6 | MEDIUM |
 
 ### What each ADR decides and which requirements it covers
 
