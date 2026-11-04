@@ -339,7 +339,7 @@ performance_budgets:
     status: active
     budget_ms: 4.0
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
-    notes: "All ticks in one frame; one tick at most 2.0 ms p95 on an Adreno 5xx-class phone; unmeasured (QQ-11). ADR-0004 Proposed 2026-11-04; not binding until Accepted"
+    notes: "All ticks in one frame; one tick at most 2.0 ms p95 on an Adreno 5xx-class phone; unmeasured (QQ-11). ADR-0004 Accepted 2026-11-04; binding"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
