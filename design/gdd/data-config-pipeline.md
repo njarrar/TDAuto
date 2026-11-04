@@ -215,6 +215,7 @@ None beyond the generic fatal screen, owned by Game State & Stage Flow. This sys
 | Hero and Burst fields, `pin_exclusion` | `design/gdd/hero-system.md` | Rules 2, 14; Starter values | Rule dependency |
 | Input record | `design/gdd/input-gesture-resolver.md` | Rule 9 | Rule dependency |
 | Catalogue load, failure handler, injection | `design/gdd/game-state-stage-flow.md` | Rules 1, 2, 18 | Rule dependency |
+| Costs, stats and `level_count` through the accessor; Stage and Wave records read directly | `design/gdd/battle-hud.md` | Rules 5, 7, 9; Interactions | Rule dependency |
 
 ## Acceptance Criteria
 
