@@ -1,0 +1,34 @@
+{
+  "enemy": [
+    {
+      "id": "normal",
+      "rationale": "Prototype starter values; not balance.",
+      "max_hp": 125.0,
+      "move_speed": 60.0,
+      "bounty": 4,
+      "lives_cost": 1,
+      "visual_key": "enemy_normal",
+      "tags": []
+    },
+    {
+      "id": "fast",
+      "rationale": "Prototype starter values; not balance.",
+      "max_hp": 60.0,
+      "move_speed": 110.0,
+      "bounty": 3,
+      "lives_cost": 1,
+      "visual_key": "enemy_fast",
+      "tags": []
+    },
+    {
+      "id": "heavy",
+      "rationale": "Prototype starter values; not balance.",
+      "max_hp": 750.0,
+      "move_speed": 38.0,
+      "bounty": 16,
+      "lives_cost": 3,
+      "visual_key": "enemy_heavy",
+      "tags": []
+    }
+  ]
+}

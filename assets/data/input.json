@@ -1,0 +1,13 @@
+{
+  "input": [
+    {
+      "id": "input",
+      "rationale": "Prototype starter values; not balance.",
+      "drag_slop": 15.0,
+      "tap_slop": 28.0,
+      "edge_reject_margin": 36.0,
+      "left_handed": false,
+      "reduce_motion": false
+    }
+  ]
+}

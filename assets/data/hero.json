@@ -1,0 +1,25 @@
+{
+  "hero": [
+    {
+      "id": "hero",
+      "rationale": "Prototype starter values; not balance.",
+      "damage": 4.0,
+      "attack_interval": 1.0,
+      "leash_radius": 90.0,
+      "walk_speed": 240.0,
+      "burst_id": "burst",
+      "visual_key": "hero"
+    }
+  ],
+  "burst": [
+    {
+      "id": "burst",
+      "rationale": "Prototype starter values; not balance.",
+      "damage": 130.0,
+      "radius": 70.0,
+      "reach": 160.0,
+      "cooldown": 10.0,
+      "telegraph_duration": 0.25
+    }
+  ]
+}
