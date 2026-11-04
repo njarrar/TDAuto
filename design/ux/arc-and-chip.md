@@ -8,6 +8,7 @@
 > **Template**: UX Spec
 > **Source of truth**: `design/gdd/tower-system.md` (Core Rules 5 to 8, Visual/Audio, UI Requirements) and `design/gdd/battle-hud.md` (Rules 6 to 9 and 11, Layout, Content rules) own every rule and number. This spec organises them as a screen-level UX spec and settles the points the Tower GDD flags for this pass. A value marked **(proposal)** is mine, not the GDDs'; a value marked **(derived)** is computed from GDD numbers, with the arithmetic shown. If this spec and a GDD ever differ, the GDD is right and this file is stale.
 > **Related**: `design/ux/hud.md`, `design/ux/interaction-patterns.md` (patterns P-nn), `design/accessibility-requirements.md`, `design/art/art-bible.md` sections 3, 4, 7
+> **Decisions**: UQ-01 (refusal cue), UQ-02 (guard look), UQ-03 ("Max" label), UQ-12 (chip close fade), UQ-16 (chip 84 x 44) and the Reduce Motion fallbacks were accepted on 2026-11-04 and written into the Battle HUD and Tower GDDs. Where this file still says "(proposal)" for one of them, read "accepted".
 > **Relation to the pattern library**: this spec is the screen-level statement for the arc and chip. Patterns P-06 and P-07 keep a summary and point here; when the two differ, this spec (after the GDDs) is right.
 
 ---
@@ -368,9 +369,9 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 
 | ID | Question | Owner |
 |---|---|---|
-| UQ-01 | **Refusal cue (proposal).** The Tower GDD requires a cue that does not rely on motion. Proposed: the refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms. Confirm, or choose another (for example a short neutral outline only). Closes HQ-04 and AQ-10 when accepted | ux-designer, game-designer |
-| UQ-02 | **Guard look (proposal).** Showing the arc and chip at alpha 0.5 for the first 200 ms makes the guard visible but may make the overlay feel sluggish. Test in the phone build; fallback is no visible guard | ux-designer, phone test |
-| UQ-03 | **"Max" label is a new string.** The Tower GDD only says the level-2 tap shows a range ring so the tap is not silent. The label tells the player why no chip appears. It needs adding to the HUD and Tower GDDs | game-designer |
+| UQ-01 | **Refusal cue (accepted)** The Tower GDD requires a cue that does not rely on motion. Proposed: the refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms. Confirm, or choose another (for example a short neutral outline only). Closes HQ-04 and AQ-10 when accepted | Accepted 2026-11-04 (user, accepting recommended settings); now in the Battle HUD and Tower GDDs |
+| UQ-02 | **Guard look (accepted)** Showing the arc and chip at alpha 0.5 for the first 200 ms makes the guard visible but may make the overlay feel sluggish. Test in the phone build; fallback is no visible guard | Accepted 2026-11-04 (user, accepting recommended settings); now in the Battle HUD and Tower GDDs |
+| UQ-03 | **"Max" label is a new string.** The Tower GDD only says the level-2 tap shows a range ring so the tap is not silent. The label tells the player why no chip appears. It needs adding to the HUD and Tower GDDs | Accepted 2026-11-04 (user, accepting recommended settings); now in the Battle HUD and Tower GDDs |
 | UQ-04 | **Chip bar thickness.** The GDD sets 3 units (2 dp). Whether it reads under a thumb is a device question. Fallback: 6 units | ux-designer, phone test |
 | UQ-05 | **Arc panels over the lane.** In Wave at slot (270, 305) the arc panels cover the lane, against the art bible's rule that the lane is never under a panel (HQ-17). Options: accept (panels are brief and the clock is stopped in Build only), raise panel transparency, or shift the arc | art-director |
 | UQ-06 | **No refund for a wrong disc** (user decision, 2026-11-04; Tower Rule 4). This spec adds no undo. Watch the mis-fire rate in the Pillar 4 test; fallbacks in order are a larger hit radius (44), then a 1.5 s refund | game-designer, phone test |
@@ -379,9 +380,9 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 | UQ-09 | **Panel text overflow if localised** ("Splash" at +40%) | localization-lead, later |
 | UQ-10 | **No player-journey document.** Context on arrival is inferred from the GDDs and prompts | ux-designer |
 | UQ-11 | **Range ring contrast.** The current-level ring computes 3.05:1 over the path (just passing) and the next-level ring at alpha 0.25 computes 1.65:1 (fails 3:1). Alpha 0.4 gives 2.38:1, and 3:1 needs about 0.5, the same as the current ring, which would make the preview as loud as the real range. The path colour is an assumption (see Accessibility), and the result also depends on each stage's field hue. Decide, and add a per-stage contrast check to the content test | art-director |
-| UQ-12 | **Chip closing fade (proposal)** of 120 ms on expiry or dismiss; the GDDs say the chip closes but not how | ux-designer |
+| UQ-12 | **Chip closing fade (proposal)** of 120 ms on expiry or dismiss; the GDDs say the chip closes but not how | Accepted 2026-11-04 (user, accepting recommended settings); now in the Battle HUD and Tower GDDs |
 | UQ-13 | **Roll-off from a disc.** A press on one disc released on another: confirm the disc under the release does not commit unless it also received the press | game-designer, Input |
 | UQ-14 | **Start/Call 78.5 units from the arc** at the starter layout; rechecked if `R` grows. If the phone test forces `R` up (UQ-06), recheck the content rules | game-designer |
 | UQ-15 | Arc discs are exactly 48 dp across at a 360 dp width, with no margin (Input Method Checklist; PQ-02). Confirm on the narrowest supported phone | technical-director, phone test |
-| UQ-16 | **Chip width (proposal).** Widen the chip panel from 76 to 84 units so a 3-digit cost fits beside the glyph; or add a content rule capping costs at 2 digits. Needs a Battle HUD GDD edit either way; confirm on a render once the font is chosen | game-designer, art-director |
+| UQ-16 | **Chip width (proposal).** Widen the chip panel from 76 to 84 units so a 3-digit cost fits beside the glyph; or add a content rule capping costs at 2 digits. Needs a Battle HUD GDD edit either way; confirm on a render once the font is chosen | Accepted 2026-11-04 (user, accepting recommended settings); now in the Battle HUD and Tower GDDs |
 | UQ-17 | **Unaffordable alpha.** Closed 2026-11-04: the GDD now says 0.6 (4.80:1), on cost text only (HUD HQ-01) | closed |

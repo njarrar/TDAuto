@@ -1,6 +1,6 @@
 # Accessibility Requirements
 
-> **Status**: Committed (tier chosen in autonomous mode on 2026-11-04; the user may revise it, see AQ-01)
+> **Status**: Committed (tier chosen in autonomous mode on 2026-11-04 and confirmed by the user the same day, AQ-01)
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04 (result timing corrected after `/ux-review`)
 > **Accessibility Tier Target**: Standard, phased (MVP ships the Basic subset the design already meets; the Standard items arrive with Settings & Accessibility at Alpha)
@@ -97,7 +97,7 @@ All rows come from art bible section 4 ("Colour-blind safety") or from the GDDs.
 | Burst button Ready vs Cooling | Fill level | Can fire or not | Outline vs filled plus sweep wedge plus a digit | Designed |
 | Tower Ready vs Cooling | Fill level | Can fire or not | Complete ring vs regrowing ring | Designed |
 | Stage A vs stage B | Hue | Which stage | Path curve and grid tilt | Designed |
-| Leash in-zone vs out-of-zone | Tint | Hero is inside or outside the leash | Dash density, up to solid | Designed |
+| Leash in-zone vs out-of-zone | Tint | Listed by the art bible, but no GDD defines the state | Dash density, up to solid (art bible) | Undefined (PAQ-17) |
 | Tower role | Cyan for all three | Single, Splash or Slow | Triangle, hexagon, square, plus the word on the arc panel | Designed |
 | Unaffordable cost | Dim | Cannot afford | Strike-through | Designed |
 | Wave pips | Fill | Done, current, upcoming | Filled, outlined, dotted | Designed |
@@ -250,7 +250,7 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | ID | Question | Owner | Deadline | Resolution |
 |----|----------|-------|----------|-----------|
-| AQ-01 | Confirm or change the Standard (phased) tier. It was chosen in autonomous mode. | user | Before `/gate-check pre-production` | Open |
+| AQ-01 | Confirm or change the Standard (phased) tier. It was chosen in autonomous mode. | user | Before `/gate-check pre-production` | Closed 2026-11-04: confirmed (user accepted recommended settings) |
 | AQ-02 | Game State Rule 17 has no pause button, but the Basic tier requires "pause anywhere". Add a user pause control (for example at Alpha with Settings), or record a formal exception with the producer. | game-designer, producer | Before the Game State GDD is Approved | Open, **High** |
 | AQ-03 | Standard requires adjustable text size, but the HUD is built to three text sizes, a 48 dp band and at most 3 text draws. Decide how the HUD scales, or limit the option to the Control screens. | ux-designer, art-director | HUD UX spec | Open |
 | AQ-04 | Is a colourblind palette needed, given colour independence by design? Run Coblis on the first battle screenshots before building it. | ux-designer | Vertical Slice | Open |
@@ -259,4 +259,4 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 | AQ-07 | If the phone test shows drag failures, what is the alternative to pin and aim? | game-designer, ux-designer | After the Pillar 4 test | Open |
 | AQ-08 | Who owns the first-launch photosensitivity notice (Menu & Screen Flow, Vertical Slice)? | ux-designer | Menu GDD | Open |
 | AQ-09 | Aggregate hit-flash rate: many 80 ms flashes in one second could pass 3 per second on screen. Define a cap or a merge rule. | technical-artist, qa-tester | Vertical Slice | Open |
-| AQ-10 | Refusal cue that survives Reduce Motion (pattern P-12). | ux-designer | Arc and chip spec | Open |
+| AQ-10 | Refusal cue that survives Reduce Motion (pattern P-12). | ux-designer | Arc and chip spec | Closed 2026-11-04: accepted and in the Battle HUD GDD |

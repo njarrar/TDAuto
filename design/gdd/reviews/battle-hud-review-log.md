@@ -158,3 +158,6 @@ Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc8769
 
 ## Revision — 2026-11-04 — after a lean read (not a new verdict)
 One adversarial reader checked the day's added rules (S1, S2, the four cross-review decisions) and returned NEEDS REVISION with 18 findings. All five rated BLOCKING were fixed (Flow Rule 9, Thumb cost pass condition, redraw key, criterion 6, HUD 0.55 evidence). Recommended items 3, 7, 9 to 14, 16 to 18 and part of 8 were fixed. Not done: concept `towers-only` unit at Vertical Slice (15). The fix pass was not re-read, per the one-review, one-fix cap the producer recommended. No hash stamped, because this text has no review verdict.
+
+## Revision - 2026-11-04 - UX decisions accepted (not a new verdict)
+The user accepted the recommendations of `design/ux/arc-and-chip.md`, `design/ux/hud.md` and `design/ux/pin-and-aim.md`: chip panel 84 × 44, refusal cue, guard look on the arc and chip, chip close fade, arc dismiss cut, "Max" label, ground ring hold 600 ms and 200 ms fade. Values only; no rule or acceptance criterion changed. Status stands.

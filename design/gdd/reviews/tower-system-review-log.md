@@ -109,3 +109,6 @@ Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc8769
 
 ## Revision — 2026-11-04 — after the review above (not a new verdict)
 Recommended text applied after the Approved verdict: the rate claim, uncalled qualifiers and `chip_state()`'s window. Status stands; the hashes above no longer match.
+
+## Revision - 2026-11-04 - UX decisions accepted (not a new verdict)
+The user accepted the recommendations of `design/ux/arc-and-chip.md`, `design/ux/hud.md` and `design/ux/pin-and-aim.md`: "Max" label on a level-2 tap, the refusal cue beside the nudge, and the build overlay's Reduce Motion fallback. Values only; no rule or acceptance criterion changed. Status stands.

@@ -348,7 +348,7 @@ The MVP minimum, primitives only, drawn by one `_draw()` node for all towers. Al
 | Level 2 | Inset outline at 60% scale, 3 px, field colour | §3 Accretion |
 | Ready | Complete 2 px ring, radius 34 | §2 |
 | Cooling | The ring regrows clockwise, linear; the body stays solid | §2, §4, amended |
-| Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms | §8 |
+| Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms. Under Reduce Motion, no scale: the overlay alone fades from 0.6 to 0 over 120 ms (user decision, 2026-11-04, accepting the UX specs' recommendations) | §8 |
 | Upgrade | First frame: the inset is present, with the same overlay | §1 |
 | Slow fires | Cyan line, no flash; violet only on the victim, plus Combat's slow drag lines, so a slowed enemy reads without a number | §4 |
 | Range ring | Solid 2 px cyan, unfilled, alpha 0.5, under entities. Arc open: one ring per distinct level-1 range. Chip open: current, plus next at alpha 0.25. After a build or upgrade: 400 ms, then a 200 ms fade | §1 |
@@ -369,8 +369,8 @@ Battle HUD draws these; this system supplies the data.
 
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
-- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion.
-- A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
+- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion. It also gets the refusal cue (Battle HUD Visual/Audio), which is not motion and so stays under Reduce Motion (user decision, 2026-11-04, accepting the UX specs' recommendations).
+- A tap on a level-2 tower shows its range ring for 1.5 s and a "Max" label where the chip would be, so the tap is not silent and says why. It opens no chip (user decision, 2026-11-04, accepting the UX specs' recommendations).
 
 📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path. That pass must specify a refusal cue that does not rely on motion, since Reduce Motion leaves a refused tap with only the standing dim. It must also cover an expired or closed chip, an armed look after the 200 ms guard, a maximum-level cue beside the range ring, a chip that would leave the field, static fallbacks for the build overlay and arc collapse, and the unit-to-dp scale behind the 44 pt / 48 dp targets.
 
