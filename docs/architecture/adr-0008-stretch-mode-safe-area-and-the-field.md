@@ -126,7 +126,7 @@ I_left, I_right  likewise on x, clamped to 0 .. edge_reject_margin bound of 48
 - With letterbox bars a notch or gesture area that fits inside a bar gives an inset of 0. Only the part that reaches into the field counts. This is the "letterbox bars" case Enemy & Wave describes; its content rules assume the worse "panels over a width-fit view" case, so they remain safe margins.
 - A clamp that bites is logged as a development error with the raw value; the content rules then need a recheck for that device.
 - `FieldFrame` recomputes on the root viewport's `size_changed` signal (`Viewport.xml`); ADR-0006 cancels the gesture on the same signal.
-- Insets flow down from `FieldFrame` to HudLogic (via `BattleReadModel`-independent shell injection) and to the InputAdapter (`attach`). The sim never reads them; `burst_y`'s clamp keeps the simulation device-independent.
+- Insets flow down from `FieldFrame` to HudLogic (injected by the ShellBuilder) and to the InputAdapter (`attach`). The sim never reads them; `burst_y`'s clamp keeps the simulation device-independent.
 
 ### 4. Field scale floor
 
