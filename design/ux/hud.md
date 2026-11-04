@@ -163,9 +163,9 @@ The game has no exploration, dialogue or cutscene. The four contexts the review 
 
 | Context | Clock | Always on | Added | Hidden | What changes on entry |
 |---|---|---|---|---|---|
-| Build (exploration) | Stopped | Lives, pips, gold | Burst button (Locked until a first pin), Start, next-wave line, prompt | Call | Start arms over 300 ms |
-| Wave (combat) | Running | Lives, pips, gold | Burst button, prompt 3 when Ready and none yet fired | Start/Call, next-wave line | Start/Call is hidden |
-| Intermission (exploration) | Running | Lives, pips, gold | Burst button, "Call +N", seconds left, next-wave line | none | Call arms over 300 ms |
+| Build (exploration) | Stopped | Lives, pips, gold | Burst button (Locked until a first pin), Start, next-wave line; at most one prompt line: prompt 1 while the hero is unpinned, else prompt 2 while no tower is built (prompt 2 hides while an arc is open) | Call | Start arms over 300 ms |
+| Wave (combat) | Running | Lives, pips, gold | Burst button; at most one prompt line: prompt 1 while the hero is unpinned, else prompt 3 once the burst is Ready and none has fired | Start/Call, next-wave line | Start/Call is hidden |
+| Intermission (exploration) | Running | Lives, pips, gold | Burst button, "Call +N", seconds left, next-wave line; at most one prompt line: prompt 1 while the hero is unpinned, else prompt 2 while no tower is built | none | Call arms over 300 ms |
 | Paused | Stopped | Whatever the phase it left showed, frozen | 40% scrim and "Paused. Tap to resume" | Arc and chip are closed | Instant; arming clocks are held, not reset |
 | Won | Stopped | Lives, pips (all done), gold | Won panel, Play again | Burst button, Start/Call, prompt | Brighten sequence cut; text after 400 ms |
 | Lost | Stopped | Lives, pips, gold | Lost panel, Retry | Burst button, Start/Call, prompt | Text after 400 ms |
@@ -274,14 +274,14 @@ The HUD has no toasts or banners. The transient items are below. None queues: ea
 | Keyboard, gamepad | Not supported; every game action is a disc | HUD GDD |
 | Dropped on a platform | Nothing | |
 
-**Per platform.** Every value below is "to be measured" on a device; none is in the pinned engine reference, and `DisplayServer.get_display_safe_area()` is unverified on 4.7 (ADR-0003).
+**Per platform.** Cells marked "Assumed" are not backed by any source in this repository and must be confirmed on a device. Every value below is "to be measured" on a device; none is in the pinned engine reference, and `DisplayServer.get_display_safe_area()` is unverified on 4.7 (ADR-0003).
 
 | Topic | iOS | Android |
 |---|---|---|
-| Top inset (`I_top`) | Status bar plus notch or Dynamic Island; varies by model. To be measured | Status bar plus display cutout (punch-hole or notch); varies by model. To be measured |
-| Bottom inset (`I_bottom`) | Home indicator area. To be measured | Gesture navigation handle, or the 3-button bar when that mode is on (larger). To be measured for both modes |
-| Side edges | No system back gesture from the side in-app | Back gesture from both side edges in gesture navigation; the burst hit box ends at least 24 dp from the side (unverified) |
-| System back | None | The back button or gesture in battle is undefined (HQ-07) |
+| Top inset (`I_top`) | Assumed: status bar plus notch or Dynamic Island; varies by model. To be measured | Assumed: status bar plus display cutout (punch-hole or notch); varies by model. To be measured |
+| Bottom inset (`I_bottom`) | Assumed: home indicator area. To be measured | Assumed: gesture navigation handle, or the 3-button bar when that mode is on (assumed larger). To be measured for both modes |
+| Side edges | Assumed: no system back gesture from the side in a full-screen game. To be confirmed | Assumed: back gesture from both side edges in gesture navigation; the burst hit box ends at least 24 dp from the side (unverified) |
+| System back | Assumed: none. To be confirmed | The back button or gesture in battle is undefined (HQ-07) |
 | Landscape | Not supported; portrait only | Not supported; portrait only |
 | Elements moved or dropped | None | None |
 
@@ -352,7 +352,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 Each can be checked by a tester with a build and the numbers here. Positions are field units at inset 0; "dp" assumes a 360 dp width.
 
 - [ ] **Safe zone.** At inset 0 the top band occupies y 0 to 72 and the burst button's centre is at y 888, x 456 (x 84 with `left_handed`). With a bottom inset of 24 units the burst button's centre moves to y 864; with 100 units it stops at y 816.
-- [ ] **Elements per phase.** Build shows lives, pips, gold, the burst button (dotted until a first pin), "Start" and the next-wave line, and not "Call". Wave shows lives, pips, gold and the burst button only. Intermission shows "Call +N" (or "Call" when N is 0), seconds left, the next-wave line and the burst button. Won and Lost show no burst button and no Start/Call.
+- [ ] **Elements per phase.** Build shows lives, pips, gold, the burst button (dotted until a first pin), "Start" and the next-wave line, and not "Call". Wave shows lives, pips, gold and the burst button, and no Start/Call or next-wave line. Intermission shows "Call +N" (or "Call" when N is 0), seconds left, the next-wave line and the burst button. In Build, Wave and Intermission, at most one prompt line may also show: "Drag the hero" while the hero has never been pinned in this battle; then, in Build and Intermission, "Tap a slot to build" while no tower has been built (hidden while an arc is open); then, in Wave, "Drag from the corner button" once the burst is Ready and none has fired. Won and Lost show no burst button, no Start/Call and no prompt.
 - [ ] **Budget.** With a build arc open, the HUD uses at most 12 draw calls and at most 3 text draws on a device.
 - [ ] **Targets.** Every tappable or draggable target measures at least 48 dp (72 units) on a 360 dp phone: Start/Call, burst button, arc discs, chip, tower, slot, hero.
 - [ ] **Arming.** Pressing a newly shown Start/Call within 300 ms of it appearing does nothing, including when the finger lifts after 300 ms.
