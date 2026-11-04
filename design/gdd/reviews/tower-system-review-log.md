@@ -55,3 +55,6 @@ Decided without asking, in autonomous mode: the income bounds (cheapest cost, tw
 
 ## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
 A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are refreshed; single alone now wins with 6 lives. `burst_spike` no longer cites a gate of 5 hits, since Enemy & Wave's gates use 4.
+
+## Revision — 2026-11-04 — ADR sync
+Tables only; no balance value changed. Interactions and the downstream Dependencies table gain a row for Input's Rule 13 gesture log, which hears `tower_upgraded` and reads `chip_state()` in development builds. The log belongs to the test harness story, not the resolver. This makes the link two-way, as cross-review N3 asked (gdd-cross-review-2026-11-03.md, Consistency Re-check), alongside the ADR-0001 to ADR-0003 sync of the other GDDs.

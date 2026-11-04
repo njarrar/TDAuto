@@ -97,3 +97,13 @@ Reviewed-Content-Hash: design/gdd/systems-index.md bdde32bd2e24d37db0ad44a7fa731
 
 ## Revision — 2026-11-03 — Two cross-GDD blockers applied, re-review still pending
 From design/gdd/gdd-cross-review-2026-11-03.md. B1: the deferred row and edge case now say headless bots call commands directly, matching Rule 11. B3: Rule 13's harness logs `tower_upgraded` and `chip_state()`, and P1 no longer cites a Tower chip log.
+
+## Revision — 2026-11-04 — ADR sync
+Wording and tables only; no balance value changed; re-review still pending.
+- Rule 7 lists all three `cancel()` callers: the adapter (pause, focus loss, resize, Android back), Flow through `cancel_input()`, and the app root at teardown (ADR-0001 Decision 7, QQ-20; ADR-0003 2.3 and 2.5). Closes cross-review C2 on this side.
+- Rule 9 and the Input record domains: the CI content test checks `tap_slop` > `drag_slop`, and the Builder sends a null resolver to the fatal screen (ADR-0002 Decision 7, QQ-19). Closes C1 on this side.
+- Rule 12: gesture insets have no engine source at MVP; `edge_reject_margin` stands in; insets are read once per battle (ADR-0003 Decision 3, item G2).
+- Positions and units, `field_scale`, `target_ok`, the Output Ranges, the size table note, the small-screen edge case and AC 33: scale is `min(width_dp / 540, height_dp / 960)`, the minimum screen is 360 × 640 dp, and `target_ok` gains a height term (ADR-0003 Decision 1, item G1).
+- Open Questions: the adapter row is answered by ADR-0003 pending S0; the tablet scale-cap row is closed for MVP. The resize edge case and both "becomes an ADR" notes point to ADR-0003.
+- Rule 13, the Tower Dependencies row and Cross-References: the gesture log is the test harness story's, and it reads Tower's `tower_upgraded` and `chip_state()` (cross-review N3).
+- Edge Cases: "(a bot)" reads "(a resolver fixture)" (N1). The Overview's last bot phrase, which still said bots drive the resolver, now names the equivalence test (same stale B1 text, missed by N1).

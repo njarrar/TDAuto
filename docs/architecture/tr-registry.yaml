@@ -37,8 +37,8 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 3
-last_updated: "2026-11-03"
+version: 4
+last_updated: "2026-11-04"
 
 requirements:
 - id: TR-data-001
@@ -254,9 +254,9 @@ requirements:
 - id: TR-input-016
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Minimum width 360 dp by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
+  requirement: "Minimum 360 x 640 dp effective scale by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-001
   system: state
@@ -786,9 +786,9 @@ requirements:
 - id: TR-hud-002
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Result and Paused screens are full-screen modal Controls that consume every event before the Input adapter sees it"
+  requirement: "Result and Paused screens are full-screen modal Controls that consume every press before the Input adapter sees it"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-003
   system: hud

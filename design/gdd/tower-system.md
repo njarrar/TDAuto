@@ -3,7 +3,7 @@
 > **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers, one user decision and all recommended items applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
@@ -191,6 +191,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
+| Input's gesture log (Input Rule 13) | listens, reads | Development builds only: hears `tower_upgraded` and reads `chip_state()` at each tower prompt, so Tower needs no log of its own | Test harness story |
 
 ## Formulas
 
@@ -326,6 +327,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 |---|---|
 | Battle HUD & Build UI | Rule 17's signals and reads; calls `build` |
 | Hero System | None in code; bot gates and `burst_spike` |
+| Input & Gesture Resolver's gesture log (Input Rule 13, test harness story) | Hears `tower_upgraded` and reads `chip_state()`, development builds only; the resolver itself names no Tower API |
 
 **Downstream (these have no GDD yet, so the interfaces are provisional until they confirm them):**
 
