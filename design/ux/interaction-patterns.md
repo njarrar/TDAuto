@@ -24,13 +24,13 @@ This library names every interaction pattern TowerRiot uses, so specs, stories a
 | One thumb, one tap or one drag | No hold, no double tap, no long press, no two-finger gesture, no tap time limit | AR-M-01, AR-M-09, Input Rule 3 |
 | 48 dp hit floor | Every hit disc has a radius of at least 36 units; the drawn shape may be smaller | AR-M-02, Input `target_ok` |
 | Text floor and contrast | Text 14 dp or more on panel, 4.5:1 in every state, dimmed included; a graphic needed to act, 3:1 on field and on path | AR-V-01, AR-V-04 |
-| Shape before colour | No state is told by hue alone; each has a shape, fill, outline, dot or strike backup | AR Colour audit |
-| Answer on the press or the next frame | Press feedback shows on the first frame after `pressed`; a purchase lands on the first frame | Input Game Feel, HUD Game Feel |
+| Shape before colour | No state is told by hue alone | AR Colour audit |
+| Answer on the next frame | Press feedback and a purchase show on the first frame | Input Game Feel, HUD Game Feel |
 | Silence is a valid answer | A miss shows nothing, except a ground tap (IP-14) | Input Game Feel |
 
 ### Animation Standards
 
-Art bible §7 and HUD UI Requirements set the timings: ease-out on entry, ease-in on exit, clocks linear. Never animated: the leash, panel opacity, counter digits. AR-V-10 overrides the template's "fades reduced by 50%": under Reduce Motion fades keep their full length, and motion is cut or frozen as below.
+Art bible §7 and HUD UI Requirements set the timings: ease-out on entry, ease-in on exit, clocks linear. Never animated: the leash, panel opacity, counter digits. AR-V-10 overrides the template's "fades reduced by 50%": fades keep full length; motion is cut or frozen as below.
 
 | Motion | Timing | Used by | Reduce Motion |
 |---|---|---|---|
@@ -52,7 +52,7 @@ Art bible §7 and HUD UI Requirements set the timings: ease-out on entry, ease-i
 
 ### Sound Standards
 
-None at MVP. From Alpha every sound repeats a visual that already carries the fact, and no sound carries meaning alone (AR-A-01). Music, SFX and UI volumes (AR-A-02), mono (AR-A-03), the silent switch and other apps' audio (AR-A-04), no cue above 4 kHz alone (AR-A-05). A ground tap stays silent.
+None at MVP. From Alpha every sound repeats a visual; none carries meaning alone (AR-A-01). Also: three volumes, mono, the silent switch, no cue above 4 kHz alone (AR-A-02 to AR-A-05). A ground tap stays silent.
 
 ---
 
@@ -99,7 +99,7 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 #### IP-01 Tap
 
 **Category**: Input · **Used in**: slots, towers, arc discs, chip, Start/Call, sinks
-**Description**: A press that lifts before it moves past its slop, and lifts inside the disc that won at press. The one way to build, upgrade, inspect, call a wave or dismiss.
+**Description**: A press that lifts before passing its slop, inside the disc that won at press. The way to build, upgrade, inspect, call or dismiss.
 **Specification**:
 - Slop is `tap_slop` (default 28 units, 18.7 dp) when the press has a real tap winner or no winner at all, else `drag_slop` (default 15). Crossing is inclusive.
 - The release must lie inside the winner's disc as frozen at press. A finger that rolls off and lifts emits nothing: slide off to abort, a miss and never a mis-fire.
@@ -131,7 +131,7 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 #### IP-03 Press response
 
 **Category**: Input / Feedback · **Used in**: hero, ready burst button, open arc and chip
-**Description**: Some targets answer the press itself, before the gesture is classed, so the first frame of touch says "this is yours".
+**Description**: Some targets answer the press before the gesture is classed, so the first frame says "this is yours".
 **Specification**:
 - `pressed(best_tap, best_drag, press_pos)` fires on every press, even on nothing.
 - Hero as `best_drag`: dashed leash on the first frame (Hero Visual "Press hero"). Hidden on `became_idle()`, which ends every gesture, tap or nothing included.
@@ -147,7 +147,7 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 #### IP-04 Class winners frozen at press
 
 **Category**: Input · **Used in**: every registered target
-**Description**: At press the resolver picks the best tap target and the best drag target under the finger, and nothing changes them for the rest of the gesture. A tap reaches only the tap winner, a drag only the drag winner, with no fall-through.
+**Description**: At press the resolver picks the best tap and drag targets under the finger; nothing changes them later. A tap reaches only the tap winner, a drag only the drag winner.
 **Specification**:
 - Every target is a disc. Ties break by priority, then nearer centre, then earlier id.
 - Tap class: burst sink 400, Start/Call 350, arc disc 300, chip 300, arc backdrop 250, tower and slot 200 (same tier, nearest wins). Drag class: hero 200, burst button 100.
@@ -252,9 +252,9 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 |---|---|---|
 | Guard | Under 200 ms at release | Ignored |
 | Open | 200 ms to under 1,500 ms at release | Upgrades; any result but NO_GOLD closes the chip |
-| Refused | After NO_GOLD | Chip stays open and dimmed, window not restarted, refusal (IP-24); a later tap in the window may still commit |
+| Refused | After NO_GOLD | Stays open and dimmed, window not restarted (IP-24); a later tap may commit |
 | Expired | 1,500 ms | Chip closes; the next tap on the tower opens a fresh chip and never commits |
-| Closed | A press on another tap target or none; Paused, Won, Lost, Fatal. A press on another tower opens that tower's chip | Nothing until the next tap on a tower |
+| Closed | A press on another tap target or none; Paused, Won, Lost, Fatal. Another tower opens its own chip | Nothing |
 
 **When to Use**: an irreversible spend on a field object.
 **When NOT to Use**: the build itself (IP-09 is already two taps); anything at its last level (IP-11).
@@ -294,15 +294,13 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 **Category**: Field drag · **Used in**: burst button
 **Description**: Drag from the big button to aim the burst at a point 100 units above the finger; lift to fire. Drag back onto the button to cancel.
 **Specification**:
-- Arms only if the burst is Ready, the hero is pinned and the phase is not Build. Otherwise the whole press is dead (IP-24 for Locked; digit for Cooling). Sampled at `pressed`.
 - Aim point: finger plus (0, -100), clamped to the field, then to `reach` (160) from the hero. No flip. Re-clamped each frame while the hero walks.
-- Live aim: 3 px reticle with four ticks, solid radius preview (70), dotted reach ring, a kill mark on each enemy the burst would kill.
 
 | State | Entered by | Shows | On release |
 |---|---|---|---|
-| Dead | Not Ready, hero unpinned, or Build, sampled at `pressed` | Digit (Cooling) or refusal (Locked, IP-24) | Nothing |
+| Dead | At `pressed`: not Ready, hero unpinned, or Build. The whole press is dead | Digit (Cooling) or refusal (Locked, IP-24) | Nothing |
 | Cancelling | Every aim starts here; returns when the finger is 48 or less from the button centre | Reticle alpha 0.3, no ticks; preview and kill marks hidden | Nothing |
-| Live | Finger over 64 from the button centre | Reticle, preview, reach ring, kill marks | Fires; no cancel after release |
+| Live | Finger over 64 from the button centre | 3 px reticle, four ticks; solid preview (radius 70); dotted reach ring; a kill mark on each enemy it would kill | Fires; no cancel after release |
 | Clamped | Live, aim point at `reach` | ±20° of the reach arc solid, alpha 0.7 | Fires |
 | Cancelled | Host cancel (IP-08) | Aim cleared | Nothing fires |
 
@@ -340,7 +338,7 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 **When NOT to Use**: Paused (no timer; IP-22).
 **Sources**: HUD Rules 10, 11, States table; Flow Game Feel. See OI-05, OI-10.
 **Accessibility**: AR-V-04: labels at 4.5:1 or above in every state; only the outline dims (OI-05, AR change 15).
-**Implementation Notes**: `HudLogic.advance(ms)` from the wrapper, clamped to 100 ms per frame (ADR-0004).
+**Implementation Notes**: `HudLogic.advance(ms)` from the wrapper (ADR-0004).
 
 #### IP-16 Hero first in an overlap
 
@@ -549,11 +547,11 @@ None at MVP. From Alpha every sound repeats a visual that already carries the fa
 | Chip details: armed look after the guard, a chip that would leave the field, maximum-level cue (IP-11) | MVP | Arc-and-chip UX spec | Tower UX flag |
 | Aim details: clamped reticle far from the thumb, preview past the reach ring, ring clipping, re-grabbing a hero pinned high | MVP | Pin-and-aim UX spec | Hero UX flag |
 | Pause control placement (IP-29) | Vertical Slice | HUD spec with Menu & Screen Flow | AR-C-01; OI-06 |
-| Menu controls: primary and secondary button, toggle, slider, list, focus order with accessible names | Vertical Slice | Menu & Screen Flow | AR-P-01, AR-M-02 |
+| Menu controls and focus order with accessible names (see Standard controls) | Vertical Slice | Menu & Screen Flow | AR-P-01, AR-M-02 |
 | First-launch screens: hand choice, photosensitivity notice | Vertical Slice | Menu & Screen Flow | AR-M-03, AR-V-09 |
 | "How to play" help, reached from Pause | Vertical Slice | Onboarding Prompts | AR-C-04 |
 | Skill tree node (owned filled, available outlined, locked dotted) | Vertical Slice | Skill Tree System | Art bible §3; AR matrix row 11 |
-| Settings rows: Larger text, hit scale, steady hand, two-tap, timing multipliers, game speed, volumes, with "applies next battle" | Alpha | Settings & Accessibility | AR-V-03, AR-M-04 to AR-M-08, AR-C-08, AR-C-10 |
+| Settings rows, each with "applies next battle"; game speed only if technical-director clears AR-C-08 | Alpha | Settings & Accessibility | AR-V-03, AR-M-04 to AR-M-08, AR-C-08, AR-C-10 |
 | Two-tap mode details (IP-28) | Alpha | Hero, Input, Settings | OI-12 |
 
 ### Standard controls
