@@ -165,7 +165,7 @@ Edge results fixed by these bodies, each a GDD edge case: exact gold buys and le
 
 ### 5. Positions at the command boundary
 
-- `pin(pos: Vector2)` and `burst(aim_point: Vector2)` keep `Vector2` arguments, as ADR-0009 allows: line one after the checks of Decision 4 step 0 and 1 reads `var x: float = pos.x` and `var y: float = pos.y`; nothing else touches `pos`. Every stored position (hero position, walk origin, pin target, aim point) is a `float` pair; slot origins are read from `StageRecord.slot_positions` (`PackedFloat64Array`, ADR-0002), never copied into `Vector2`.
+- `pin(pos: Vector2)` and `burst(aim_point: Vector2)` keep `Vector2` arguments, as ADR-0009 allows: after Decision 4 steps 0 and 1 the body reads `var x: float = pos.x`, `var y: float = pos.y`; nothing else touches `pos`. Every stored position (hero position, walk origin, pin target, aim point) is a `float` pair; slot origins are read from `StageRecord.slot_positions` (`PackedFloat64Array`, ADR-0002), never copied into `Vector2`.
 - Reason for `Vector2` over `(x, y)` arguments: the resolver hands `Vector2` payloads (ADR-0008 Decision 3), the Hero GDD's `clamp_pin` "arrives and leaves as `Vector2`" with margins sized for 32-bit rounding, and bots and HeroInput then pass the same type, so the equivalence test compares like with like.
 - HeroInput computes the aim point, the reach clamp and the ghost in `float` scalars (finger plus offset, field clamp, reach clamp to `reach - 0.01`) and builds a `Vector2` only for the command call, so no `Vector2` operator decides what a command receives.
 - Queries that return positions return a new `Vector2` built from the floats (`position()`, `pin_target()`, `slot_position(i)`). They are view and bot reads; sim code never calls them. The registry entry `sim_position_representation` gains "query returns for views and bots" in its allowed list (cascade).
@@ -310,13 +310,7 @@ func tick() -> void                                             # Battle step 4 
 func on_enemy_killed(bounty: int) -> void                       # W2 only
 func on_wave_called_early(seconds_left: float) -> void          # W5 only
 func gold() -> int
-func slot_count() -> int
-func slot_tower(slot_index: int) -> StringName
-func slot_level(slot_index: int) -> int
-func slot_cooldown_left(slot_index: int) -> int
-func slot_position(slot_index: int) -> Vector2
-func slows_applied() -> int
-func state_fields() -> Dictionary
+# slot_count, slot_tower, slot_level, slot_cooldown_left, slot_position, slows_applied, state_fields: Decision 7
 
 # src/feature/hero/hero_sim.gd
 class_name HeroSim extends RefCounted
@@ -333,23 +327,9 @@ func _init(stage: StageRecord, hero_id: StringName, burst_id: StringName, left_h
 func pin(pos: Vector2) -> PinResult
 func burst(aim_point: Vector2) -> BurstResult
 func tick() -> void                                             # Battle step 5 only
-func position() -> Vector2
-func pin_target() -> Vector2
-func pin_state() -> PinState
-func burst_state() -> BurstState
-func cooldown_left() -> int
-func hero_id() -> StringName
-func burst_id() -> StringName
-func repins() -> int
-func bursts_fired() -> int
-func bursts_hit_0() -> int
-func bursts_hit_3() -> int
-func bursts_hit_5() -> int
-func burst_victims() -> int
-func burst_kills() -> int
-func kills_per_burst() -> PackedInt32Array      # copy
-func kills_on_hit_3() -> PackedInt32Array       # copy
-func best_victims() -> PackedInt32Array         # copy
+# position, pin_target, pin_state, burst_state, cooldown_left, hero_id, burst_id: Decision 7
+# counters, Decision 7: repins, bursts_fired, bursts_hit_0, bursts_hit_3, bursts_hit_5,
+# burst_victims, burst_kills -> int; kills_per_burst, kills_on_hit_3, best_victims -> PackedInt32Array (copies)
 func state_fields() -> Dictionary
 
 # src/feature/hero/pin_geometry.gd
@@ -389,13 +369,7 @@ func _on_tower_built(slot_index: int, tower_id: StringName) -> void
 class_name ChipWindow extends RefCounted
 const MIN_COMMIT_MS := 200.0
 const WINDOW_MS := 1500.0
-func open(slot_index: int) -> void
-func close() -> void
-func advance(ms: float) -> void
-func is_open() -> bool
-func slot() -> int
-func elapsed_ms() -> float
-func can_commit() -> bool
+# open(slot_index), close(), advance(ms), is_open(), slot(), elapsed_ms(), can_commit(): Decision 8
 
 # src/presentation/hero/hero_input.gd
 class_name HeroInput extends RefCounted
@@ -405,9 +379,7 @@ func attach(resolver: InputResolver, hero_sim: HeroSim, accessor: StatAccessor, 
             burst_button_centre: Vector2, dev_error: Callable) -> void
 func detach() -> void
 func update() -> void                            # frame step 4, first
-func aim_state() -> AimState
-func aim_point() -> Vector2
-func cooldown_digit() -> int
+# aim_state() -> AimState, aim_point() -> Vector2, cooldown_digit() -> int
 # listeners: _on_pressed, _on_drag_started, _on_drag_moved, _on_drag_ended, _on_drag_cancelled, _on_became_idle
 
 # src/presentation/dev/jsonl_file_sink.gd, run_log.gd; src/root/dev_logs.gd
@@ -457,53 +429,48 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Alternatives Considered
 
+Estimated effort of every alternative is within a story of the chosen approach, so it is not repeated per entry.
+
 ### Alternative 1: Input halves as `Node`s with their own `_process`
 - **Description**: TowerInput and HeroInput extend `Node`, run their own `_process` for the chip clock and the hero centre.
 - **Pros**: Familiar Godot shape.
 - **Cons**: Breaks ADR-0004 Decision 5 (one `_process` in the battle subtree; sibling order unsourced); tests need a scene tree.
-- **Estimated Effort**: Similar.
 - **Rejection Reason**: Contradicts the registry's `engine_time_in_sim` and `frame_order` stances.
 
 ### Alternative 2: A single `Battle.command(cmd, args) -> int` dispatcher
 - **Description**: One string-keyed entry point for all callers and bots.
 - **Pros**: One place to log and check between ticks.
 - **Cons**: String dispatch is not parser-checked; loses typed enums; a second API to keep in step with the GDDs.
-- **Estimated Effort**: Slightly less for logging, more for tests.
 - **Rejection Reason**: The registry bans string Callables and prefers parse-time names; the injected check gives the same guarantee.
 
 ### Alternative 3: Debug-only between-ticks check
 - **Description**: Check `between_ticks()` only when `OS.is_debug_build()`.
 - **Pros**: Zero release cost.
 - **Cons**: Sim code may not read `OS`; a release defect would desync silently; the cost saved is one call per command.
-- **Estimated Effort**: Same.
 - **Rejection Reason**: Architecture Principle 5 (fail loudly in every build) and the sim's no-`OS` rule.
 
 ### Alternative 4: `HeroSim.cooldown_total()`
 - **Description**: HeroSim stores the tick length the current cooldown began with; the HUD divides by it.
 - **Pros**: Exact wedge; no per-frame accessor read in the HUD.
 - **Cons**: Stores a stat-derived value for later display, which the registry's `cached_stat_value` forbids; contradicts ADR-0005 Decision 7, which already names the HUD's per-frame `COOLDOWN` read.
-- **Estimated Effort**: Less.
 - **Rejection Reason**: Would supersede an ADR-0005 stance for a cosmetic gain. Revisit if a Vertical Slice modifier makes the wedge jump.
 
 ### Alternative 5: Float-pair command arguments `pin(x, y)`
 - **Description**: Commands take two `float`s so bots keep 64-bit positions.
 - **Pros**: No 32-bit rounding on bot positions.
 - **Cons**: HeroInput still converts from `Vector2` payloads; the GDD's `clamp_pin` and criteria are written for `Vector2` in and out; two shapes for one command in tests.
-- **Estimated Effort**: Similar.
 - **Rejection Reason**: Equivalence compares like with like only if both routes pass the same type; the margins already absorb the rounding.
 
 ### Alternative 6: One merged dev log file
 - **Description**: Run and gesture records in `user://dev_log.jsonl` with a `kind` field.
 - **Pros**: One file to send.
 - **Cons**: Gesture records come per press, run records per attempt; the phone-test analysis and the balance analysis read different records; one failure stops both.
-- **Estimated Effort**: Same.
 - **Rejection Reason**: Separate files keep each consumer simple; `launch_id` joins them when needed.
 
 ### Alternative 7: RunLog connects to `wave_called_early` (W5)
 - **Description**: The log listens to Flow's W5 directly for call records.
 - **Pros**: The log needs no HUD hook; bot calls would also be logged.
 - **Cons**: W5 is a sim-to-sim wiring signal, not on ADR-0006's view allowlist; adding a wrapper listener changes the listener-count contract.
-- **Estimated Effort**: Less code, more contract change.
 - **Rejection Reason**: The HUD is the only human caller and already feeds the log its snapshot.
 
 ## Consequences
