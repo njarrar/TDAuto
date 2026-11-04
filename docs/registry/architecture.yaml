@@ -144,7 +144,7 @@ state_ownership:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -389,7 +389,7 @@ interfaces:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -636,7 +636,7 @@ api_decisions:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
   - purpose: gesture_trace_and_log
     status: active
     # was: trace fresh per press, chip_state() on TowerInput (before godot-specialist and TD-ADR review)
@@ -648,7 +648,7 @@ api_decisions:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -833,7 +833,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
   - pattern: resolver_gesture_call_outside_adapter
     status: active
     # was: no InputResolver.new() or state() rule; trace ban scoped to owners (before TD-ADR review)
@@ -842,7 +842,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0008 Accepted 2026-11-04; binding"
 
 # Example:
 #

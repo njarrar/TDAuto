@@ -397,7 +397,7 @@ Harness tests:
 | TD | gdUnit4 version; exit 101; PresentationSettings; TR-combat-012; trims | 6.2.2 Migration 0; 101 fails with report; `src/presentation/`; Full; trims made |
 
 ## Amendments
-- **2026-11-04, with ADR-0008** (pending the user's confirmation at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
+- **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.

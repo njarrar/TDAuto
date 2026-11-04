@@ -1,7 +1,7 @@
 # ADR-0008: Input Resolver Core and Signal Contract
 
 ## Status
-Proposed
+Accepted
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. Route: `/architecture-decision accept ADR-0008`.
 
@@ -12,6 +12,7 @@ Proposed
 2026-11-04 (against `docs/engine-reference/godot/` for Godot 4.7.2, `architecture.md` v4, ADR-0001 to ADR-0007 as Accepted, `tr-registry.yaml`, `docs/registry/architecture.yaml`, and the Input, Tower, Hero and Battle HUD GDDs by section; revised after godot-specialist and TD-ADR reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar), with the dated ADR-0006 and ADR-0007 amendments
 - Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`, 2026-11-04)
 - godot-specialist: CONCERNS. TD-ADR: CONCERNS. Findings resolved under Reviews.
 - Acceptance: the user, who also confirms the ADR-0006 and ADR-0007 amendments.
@@ -336,5 +337,5 @@ godot-specialist: **CONCERNS** (none blocking). TD-ADR: **CONCERNS**. All findin
 | G16 resolver-internal error | R2b |
 
 ## Related
-- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0007 (Accepted). Narrows ADR-0006's INPUT role for `drag_cancelled` and `became_idle`, and amends ADR-0006 and ADR-0007 (pending). Enables ADR-0010.
+- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0007 (Accepted). Narrows ADR-0006's INPUT role for `drag_cancelled` and `became_idle`, and amends ADR-0006 and ADR-0007 (confirmed 2026-11-04). Enables ADR-0010.
 - GDDs: `design/gdd/input-gesture-resolver.md` (primary), `tower-system.md`, `hero-system.md`, `battle-hud.md`. Sync items: Migration Plan 3 and 4.

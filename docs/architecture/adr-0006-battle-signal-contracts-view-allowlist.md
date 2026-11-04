@@ -339,7 +339,7 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 | D7 (coordinator) keep the guard | Decision 7; ADR-0004 amended; handler lint dropped |
 
 ## Amendments
-- **2026-11-04, with ADR-0008** (pending the user's confirmation at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
+- **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
 
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.
