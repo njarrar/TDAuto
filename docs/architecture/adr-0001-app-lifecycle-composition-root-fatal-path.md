@@ -269,6 +269,8 @@ func report_fatal(cause: String) -> void  # calls the relay; for AppRoot's own I
 func cancel_input() -> void             # calls the wrapper-set Callable; no-op headless
 func set_input_canceller(c: Callable) -> void
 var input_record: InputRecord           # read-only by contract; set by BattleBuilder (ADR-0003, ADR-0005 Decision 8)
+var stage_record: StageRecord           # read-only by contract; set by BattleBuilder (ADR-0011)
+var visual_keys: VisualKeys             # read-only by contract; StringNames only; set by BattleBuilder (ADR-0011)
 
 # src/root/app_root.gd
 class_name AppRoot extends Node

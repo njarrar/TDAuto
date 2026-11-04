@@ -195,7 +195,7 @@ BattleWrapper._process(delta):
                        hud_logic.advance(ms); tower_input.advance(ms)  (feeds its ChipWindow)
   2. clock             var n := clock.advance(delta)
   3. ticks             n times: battle.tick(battle.sim_time.dt)
-  4. sync and views    hero_input.update(); refresh view-models (read-only); queue_redraw()
+  4. sync and views    hero_input.update(); view_ms = clamp(ms, 0, 100), 0 while PAUSED; each model.refresh(view_ms) (read-only); queue_redraw() on changed drawers (ADR-0011)
 (engine) render
 ```
 

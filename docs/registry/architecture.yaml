@@ -116,6 +116,7 @@ state_ownership:
     write_access: enemy-wave-only
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
   - state: enemy_health_and_status
@@ -323,6 +324,7 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
   - contract: catalogue_load
@@ -465,6 +467,7 @@ interfaces:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
   - contract: realtime_model_step
@@ -624,6 +627,7 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
 
@@ -703,7 +707,20 @@ performance_budgets:
     status: active
     budget_ms: 3.0
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
-    notes: "Frame step 4 (HeroInput.update, view refresh) and _draw; draw calls are ADR-0011's. Proposed, unmeasured. Engine/render/OS 7.0 ms and 2.1 ms headroom complete the 16.6 ms"
+    # notes before 2026-11-04 revision (ADR-0011): "Frame step 4 (HeroInput.update, view refresh) and _draw; draw calls are ADR-0011's. Proposed, unmeasured. Engine/render/OS 7.0 ms and 2.1 ms headroom complete the 16.6 ms"
+    notes: "Frame step 4 (HeroInput.update, view refresh) and _draw; draw calls are ADR-0011's. Proposed, unmeasured. Engine/render/OS 7.0 ms and 2.1 ms headroom complete the 16.6 ms; includes ADR-0011 view-model refresh and CombatViewModel's per-frame max_hp reads (frame-side, outside the per-tick stat-reads budget)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+    revised: 2026-11-04
+  - system: draw-calls
+    status: active
+    budget_draw_calls: 34
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    notes: "Draw calls per frame, counted by ADR-0011 V1's method. Ceiling 60 (project.yaml); this ADR's ceilings sum to 34: FieldBackdrop 3, TowerView 3, EnemyView 4, CombatView 4, HeroView 4 (field 18); HudField 8, HudTopBand 4 (HUD 12, expected 8); one modal 4. Proposed, unmeasured until V2 (prototype) and A1 (first phone build). Time stays in views-and-hud (3.0 ms), which now also counts CombatViewModel's up to 48 max_hp reads per frame"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
 
@@ -725,6 +742,16 @@ performance_budgets:
 #     referenced_by:
 #       - docs/architecture/adr-0003-combat-system.md
 #     added: 2026-03-26
+#     revised: ""
+#
+#   - system: draw-calls
+#     status: active
+#     budget_draw_calls: 34    # a count per frame, used in place of budget_ms
+#     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+#     notes: "Draw calls per frame; ceiling 60 (project.yaml); per-node ceilings sum to 34"
+#     referenced_by:
+#       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+#     added: 2026-11-04
 #     revised: ""
 
 
@@ -838,6 +865,7 @@ api_decisions:
     reason: "Field units equal viewport units on every device; 4.7 changed new-project defaults"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
   - purpose: input_event_path
@@ -1072,6 +1100,26 @@ api_decisions:
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
     revised: ""
+  - purpose: battle_field_drawing
+    status: active
+    api: "Seven _draw drawers (FieldBackdrop, TowerView, EnemyView, CombatView, HeroView, HudField Node2D; HudTopBand Control IGNORE) in that sibling order on one canvas; buffers as pools; in each _draw primitives, then textures, then text by size; LINE_BIAS 1.0 provisional (V4), stroke floor 2.0, antialiased false"
+    not: "one node per entity, Polygon2D, Line2D, Sprite2D, CanvasLayer, non-zero z_index, instantiate() during a battle"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    reason: "One _draw per kind (TR-combat-011, TR-tower-015, TR-hud-001); retry safety; per-node budget"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: path_rendering
+    status: active
+    api: "PathOutline.bake(path_points, width) -> mitred quad strip (4 points per segment) baked in attach, drawn with draw_primitive; drawability (deflection at most 90 degrees; each segment at least (w/2)(tan(d_a/2)+tan(d_b/2))) checked by the ADR-0002 catalogue validator, re-checked by the bake for code-built stages"
+    not: "draw_polyline or Line2D joints for the path"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    reason: "Exact square corners at width 72 without an unsourced joint algorithm"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -1153,6 +1201,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
   - pattern: mutable_static_var
     status: active
@@ -1225,6 +1274,9 @@ forbidden_patterns:
     description: "No caller appends to, erases from, sorts, clears or keeps the arrays returned by roster() or targets(); filtered lists go in the caller's own buffer."
     why: "They are EnemyWave's internal buffers; mutation corrupts the sole-owner roster"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
   - pattern: listener_stores_damage_event
     status: "superseded_by: ADR-0006"   # was: active; replaced by sim_object_in_signal_payload
@@ -1249,6 +1301,9 @@ forbidden_patterns:
     description: "Every battle Control except the Result and Paused modal screens uses MOUSE_FILTER_IGNORE; game targets are resolver discs, never Controls."
     why: "Control, Panel and ColorRect default to STOP, and PASS also takes a touch press, so any other filter swallows presses meant for discs"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
   - pattern: mouse_event_in_battle_code
     status: active
@@ -1333,6 +1388,7 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
   - pattern: emit_before_commit
     status: active
@@ -1375,6 +1431,9 @@ forbidden_patterns:
     description: "Listeners of attack_fired and damage_applied never call the StatAccessor."
     why: "Combat injects no halted(); its listeners must not be able to reach fatal (ADR-0009 Decision 4)"
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
   - pattern: registry_holds_owner
     status: active
@@ -1474,6 +1533,24 @@ forbidden_patterns:
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+  - pattern: canvas_shader_or_particles_in_battle
+    status: active
+    description: "No CanvasItem material, shader, Light2D, CanvasModulate or particle node in the battle at MVP; effects are alpha and shapes in _draw."
+    why: "Combat GDD forbids them; TIME ignores Pause and the view clock; batching cost unsourced (QQ-10)"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+  - pattern: draw_reads_sim
+    status: active
+    description: "No _draw() calls a sim query or holds a sim object; models copy reads into buffers in refresh or a P7 to P9 handler."
+    why: "A redraw after detach() would touch a freed battle; keeps the weakref proof valid"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-04
+  - pattern: view_engine_clock
+    status: active
+    description: "No view duration reads Engine, Time, Timer, delta or a shader TIME; every view clock runs on view_ms."
+    why: "View clocks stop on Pause and clear on retry (Combat V/A)"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
 
 # Example:

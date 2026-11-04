@@ -242,7 +242,7 @@ Comparing strings avoids relying on deep `==` on nested containers, and `duplica
 
 The CI content tests live in `tests/integration/content/`. Each owning GDD's content rules (Enemy & Wave layout and wave rules, Hero and Burst rules, Battle HUD layout rules, non-empty `rationale`, declared balance ranges) are one function each, `check_<rule>(catalogue: Catalogue) -> Array[ValidationError]`, run against the real catalogue and, for each rule, against a broken fixture that must fail it (TR-hero-014, TR-hud-016). The suite also:
 
-- opens every Stage `scene_ref` with `ResourceLoader.exists()` and `load()`, failing with the stage named (GDD Rule 9);
+- opens every Stage `scene_ref` with `ResourceLoader.exists()` and `load()`, failing with the stage named (GDD Rule 9), and checks that its root is a `StageLook` whose hue, base value and grid tilt are inside art bible §6's ranges, and that every record's `visual_key` has a `ViewStyles` entry (ADR-0011);
 - re-reads each real data file as text and scans it for a duplicate key inside one object (`duplicate_key`) and a leading BOM (`bom_present`), until W1 shows the parser itself rejects them.
 
 These run only in CI, never at boot, and never as warnings. The rules are defined by the owning GDDs; this ADR fixes only where they live and their shape.

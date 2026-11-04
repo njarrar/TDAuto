@@ -83,7 +83,7 @@ A role field without its tag is rejected, because dead data could still be targe
 
 Stage has no row: its fields are structural and read directly (Rule 10). Role keys apply only to a tower holding that role's tag: reading `splash_radius` on a `slow` tower is an inapplicable key.
 
-**Stage visuals are not catalogue values.** Field hue, base value and grid tilt (`design/art/art-bible.md` §6) are presentation and live in the stage scene. Path points, slot positions and path width are on the Stage record, because they set time to leak and tower coverage (Rule 1), and the builder runs with no scene. MVP has one path per stage.
+**Stage visuals are not catalogue values.** Field hue, base value and grid tilt (`design/art/art-bible.md` §6) are presentation and live in the stage scene, whose root is a `StageLook` node exporting the three values (ADR-0011). Path points, slot positions and path width are on the Stage record, because they set time to leak and tower coverage (Rule 1), and the builder runs with no scene. MVP has one path per stage.
 
 There is no separate economy record: gold values sit on the records that spend or earn them. Weapon, tree node and modifier records are reserved for Vertical Slice in prose only, with no empty fields or loaders now. Entity `tags` exist from MVP because modifiers will select their targets by tag ("nearby towers") and a source tag alone cannot express that.
 

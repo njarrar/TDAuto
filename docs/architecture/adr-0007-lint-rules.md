@@ -134,6 +134,9 @@ in brackets.
 | INPUT-8 | Outside `input_adapter.gd`, `DisplayServer.get_display_safe_area`, `DisplayServer.screen_get_dpi`, `DisplayServer.screen_get_scale`, `DisplayServer.window_get_size` or `DisplayServer.window_get_position` | ADR-0003 `safe_area_source` |
 | INPUT-9 | `InputResolver.new(` outside `input_resolver.gd` (tests are outside `src/`) | ADR-0008 Validation 7 (**pending ADR-0008; verify against final ADR-0008**) |
 | INPUT-10 | In `input_resolver.gd`, a `Vector2` method call or a member typed `Dictionary` | ADR-0008 Validation 7 (**pending; verify against final ADR-0008**; Vector2 operators are code review) |
+| REND-1 | Under `src/presentation/` or in the BattleWrapper scene: `material =`, `ShaderMaterial`, `CanvasItemMaterial`, a `.gdshader` reference, `Light2D`, `PointLight2D`, `CanvasModulate`, `GPUParticles2D`, `CPUParticles2D` | ADR-0011 Decision 7 |
+| REND-2 | Under `src/presentation/` (dev overlay excepted) or in the BattleWrapper scene: `CanvasLayer`, `z_index =` with a non-zero value, `z_as_relative`, `top_level = true`, `Line2D`, `Polygon2D`, `Sprite2D` (modal screen scenes excepted) | ADR-0011 Decision 1 |
+| REND-3 | Under `src/presentation/`: `instantiate(` outside an `attach` method; `antialiased = true` or a literal `true` in the antialiased argument position is code review | ADR-0011 Decisions 4, 6 (partial) |
 
 (INPUT-2 is withdrawn: ADR-0003 says modal screens read events in `_gui_input`, not that no other Control may; SCENE-1 proves the other Controls ignore input.)
 

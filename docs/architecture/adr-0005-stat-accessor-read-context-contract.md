@@ -181,7 +181,7 @@ These never call `fatal`. A command or a bot that holds an untrusted ID or level
 
 ### 8. Direct reads are given, not looked up
 
-Structural data is not read through the accessor (GDD Rule 10). The Builder looks up the records a system reads directly and passes them in at construction: the `StageRecord` to Flow, EnemyWave, TowerSim and HeroSim; the stage's `WaveRecord`s to EnemyWave; the `InputRecord` to the resolver and HeroSim, and it sets the read-only `Battle.input_record`, from which the BattleWrapper gives it to the wrapper-built HeroInput, HUD and InputAdapter (ADR-0003 Decision 1; ADR-0001 B9 `left_handed`). Sims never hold the `Catalogue`; they hold the accessor and the specific records they were given. Records are read-only (ADR-0002); no system writes to them (TR-enemy-006).
+Structural data is not read through the accessor (GDD Rule 10). The Builder looks up the records a system reads directly and passes them in at construction: the `StageRecord` to Flow, EnemyWave, TowerSim and HeroSim; the stage's `WaveRecord`s to EnemyWave; the `InputRecord` to the resolver and HeroSim, and it sets the read-only `Battle.input_record`, `Battle.stage_record` and `Battle.visual_keys` (ADR-0011), from which the BattleWrapper gives it to the wrapper-built HeroInput, HUD and InputAdapter (ADR-0003 Decision 1; ADR-0001 B9 `left_handed`). Sims never hold the `Catalogue`; they hold the accessor and the specific records they were given. Records are read-only (ADR-0002); no system writes to them (TR-enemy-006).
 
 ### 9. Test spies
 

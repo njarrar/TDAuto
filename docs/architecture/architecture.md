@@ -150,12 +150,12 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 |---|---|---|---|---|
 | **HudLogic** | HUD presentation state (button arm model, arc state, snapshot). No gameplay state. | `advance(ms)`, view-model reads | Flow, TowerSim, HeroSim, EnemyWave, Combat (read-only), accessor for costs | None |
 | **HudTopBand** | Display-only `Control`s that ignore input | None | HudLogic | `Control`, `mouse_filter` (HIGH, 4.6 dual focus) |
-| **HudField** | One `_draw` for field art; hit targets are resolver discs | None | HudLogic, resolver registry | `CanvasItem._draw` (MEDIUM, 4.7 line feather) |
+| **HudField** | One `_draw` (`Node2D`) for HUD field art; hit targets are resolver discs | None | HudLogic, resolver registry | `CanvasItem._draw` (MEDIUM, 4.7 line feather; `LINE_BIAS`, ADR-0011 Decision 6) |
 | **ResultScreen, PausedScreen** | Full-screen modal `Control`s | Retry, Resume requests | Result snapshot | `Control` input consumption before the adapter (**HIGH, NEEDS VERIFICATION**) |
 | **HeroInput** (`RefCounted`, built in `attach`) | Aim state machine (Idle, Cancelling, Live), aim-point re-clamp, cancel hysteresis | `update()`, `aim_state()`, `aim_point()`, `cooldown_digit()` | Resolver signals, HeroSim queries, accessor (`REACH`), injected `halted()` and `in_build()`, `burst_button_centre` value from the HUD | None |
 | **TowerInput** (`RefCounted`, built in `attach`) | Slot, tower and chip discs, `ChipWindow` | `slot_tapped`, `tower_inspected`, `chip_state()`, `is_chip_open()`, `advance(ms)` | Resolver, TowerSim reads and `tower_built`, accessor (`level_count`), Flow `phase_changed`, injected `halted()` | None |
 | **ChipWindow** | Real-time upgrade-chip timing (200 and 1500 ms consts) | `advance(ms)`, `can_commit()` | Fed by TowerInput each frame | None |
-| **Field views** (enemy, tower, combat, path) | Pools, draw order, flash markers (16 max), enemy view pool (at least 48) | None | `roster()`, TowerSim per-slot reads (ADR-0010), Combat view signals | `CanvasItem._draw`, `draw_polyline` or a baked polygon (MEDIUM, **NEEDS VERIFICATION** for 90 degree corners at width 72) |
+| **Field views** (FieldBackdrop, TowerView, EnemyView, CombatView, HeroView, each a drawer plus a `RefCounted` model) | Buffer pools (enemies 48 growing with a dev error, flash markers 16, tracers 64, death discs 48, glow 8), fixed sibling draw order on one canvas, the baked path strip (ADR-0011) | None | `roster()`, TowerSim per-slot reads (ADR-0010), Combat reads, P7 to P9, `Battle.stage_record`, `Battle.visual_keys` | `CanvasItem._draw` (MEDIUM; batching, counters and line look NEEDS VERIFICATION, ADR-0011 V1 to V4). Path corners are a baked mitred quad strip; its geometry rule is Stage validation (ADR-0002) |
 | **RunLog / GestureLog** (dev only) | JSONL records in `user://run_log.jsonl` and `user://gesture_log.jsonl` | Injectable sink (`JsonlFileSink.write_line`); `DevLogs` session object on AppRoot | View signals P1, P4, P6, P7; HudLogic's `snapshot_taken` and `call_made` Callables | `FileAccess` append (MEDIUM; check the `bool` return). Decided in ADR-0010 and ADR-0008 |
 
 ### Composition Root
@@ -217,7 +217,7 @@ BattleWrapper._process(delta):
        and halted() is false. The gate lives in the sim, so it holds headless too.
   4. HeroInput.update() (hit-disc centre, aim point and digit from post-tick state, so they match
      the drawn frame; ADR-0004 Decision 5), then refresh views from read-only queries
-     (roster, TowerSim slot reads, hero queries, HUD view-models)
+     (each view model's refresh(view_ms), then queue_redraw() on changed drawers; ADR-0011 Decision 2)
 ```
 
 | Data | Producer | Consumer | Kind |
@@ -723,8 +723,8 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. Proposed in ADR-0006: those four renames, `pressed` kept, no exception; GDDs updated in the same change. | Medium | ADR-0006 (Proposed) |
 | QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009; ADR-0004 Decision 4 states the one tick order (Proposed) |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |
-| QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
-| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004 (frame split, per-tick 1.33 ms, V6), ADR-0011 (draw calls), performance-analyst |
+| QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | ADR-0011 (Proposed): zero CanvasItem shaders and particles at MVP; flash is an alpha disc; V5 measures shader cost for a Vertical Slice reopen. Art bible §8 edit needs art-director and technical-artist sign-off |
+| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004 (frame split, per-tick 1.33 ms, V6), ADR-0011 (Proposed: per-node draw-call ceilings summing to 34 of 60, V1/V2 before acceptance, A1 at the first phone build), performance-analyst |
 | QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. | Medium | Mobile Platform GDD |
 | QQ-13 | `tests/README.md` is stale: gdUnit4 is now in `addons/` and the class cache is tracked in git. Whether the CI test command needs a prior `--import` step on a fresh clone. | Low | ADR-0007 Decision 2 (Proposed): import before every run, retry once on an exit above 128; 101 and zero tests fail; README rewritten; V4, V5 |
 | QQ-14 | Stage tooling: a converter or editor for point-list stages before about 20 stages exist. | Low | tools-programmer, after MVP |
