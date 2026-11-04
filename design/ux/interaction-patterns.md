@@ -200,7 +200,7 @@ accessibility notes match each pattern's accessibility line.
 - Arc sits above the slot, never below, where the thumb is. Each disc is a 56 px role polygon with a 72 px hit disc; a panel above holds the word and the cost on two lines.
 - A disc press within 200 ms of opening is ignored, because a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy.
 - The disc always calls `build`; the result decides: `OK` closes the arc at once (120 ms collapse is art only), `NO_GOLD` leaves it open with a refusal (P-12), `HALTED` closes it.
-- Closing: a press outside the discs closes it (backdrop sink); `drag_started` closes it; Paused, an outcome and Fatal close it. A phase change among Build, Wave and Intermission leaves it open. A finger rolling off a disc leaves it open.
+- Closing: a press outside the discs closes it (backdrop sink); `drag_started` closes it; Paused, an outcome and Fatal close it. A phase change among Build, Wave and Intermission leaves it open. A finger rolling off a disc under slop still taps it (Input Rule 3); a press dragged past slop with no drag winner is dead and leaves it open.
 - Start/Call is disabled while an arc is open.
 - Unaffordable discs use P-13.
 - Reduce Motion: the 120 ms collapse becomes a cut. Static fallback for the open and close is still to be specified (Open Questions).
