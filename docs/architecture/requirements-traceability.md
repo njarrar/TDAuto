@@ -150,7 +150,7 @@ deprecated. Earlier the same day: TR-enemy-016 added.
 | TR-hud-014 | battle-hud.md | Battle HUD | Presentation | Layout is in 540x960 field units with safe-area insets converted to field units; burst_y = clamp(888 - I_bottom, 816, 888) | — (planned: ADR-0003) | ❌ GAP |
 | TR-hud-015 | battle-hud.md | Battle HUD | Presentation | HUD budget about 8 (max 12) of 60 draw calls and at most 3 text draws; hit targets at least 72 units (48 dp), text at least 21 units | — (planned: ADR-0011) | ❌ GAP |
 | TR-hud-016 (revised 2026-11-04) | battle-hud.md | Battle HUD | Foundation | Content tests enforce HUD layout rules (slot bounds, clearances including the burst line at least edge_reject_margin + 48 from a side edge, at most 3 next-wave types, a next-try line per enemy type, an early-call bonus of at most 2 digits, 6 waves, 10 lives) | — (planned: ADR-0002) | ❌ GAP |
-| TR-hud-017 (new 2026-11-04) | battle-hud.md | Battle HUD | Presentation | HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set, arming state, held press, open-disc and chip affordability) and while a timed visual runs, not every frame | — (planned: ADR-0011) | ❌ GAP |
+| TR-hud-017 (new 2026-11-04) | battle-hud.md | Battle HUD | Presentation | HudField redraws only when a quantised view-model key changes (every value its draw reads, including open-disc and chip affordability) and while a timed visual runs, not every frame | — (planned: ADR-0011) | ❌ GAP |
 
 ## Known Gaps
 #### ADR-0001 (proposed). App Lifecycle, Composition Root and Fatal Path (Foundation, engine risk HIGH)

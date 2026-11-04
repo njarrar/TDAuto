@@ -112,6 +112,20 @@ C1 to C11, S1, S2 and I3 were fixed the same day, on the user's instruction. The
 
 Left open: D1 to D10, I1, I2 and I4 to I7. The four decisions below were applied separately.
 
+### Owners for what stays open (from the 2026-11-04 gate check)
+
+| Items | Owner | When |
+|---|---|---|
+| D1 (now a Hero Deferred row), D2, D3, D4, D5, D6, D7 | Hero and Tower stories, with `hero_bots.py` | Before first-playable gates bind |
+| D8 | game-designer | Before Vertical Slice |
+| D9 | technical-director | ADR-0009 records what `path_id` would change |
+| D10 | creative-director | After D1 and D3, before first-playable feel work |
+| I1, I2, I6, I7 | ux-designer, in the Battle HUD stories | Before those stories |
+| I4 | Hero stories, with D1 | Before first-playable gates bind |
+| I5 | Enemy & Wave stories | Before those stories |
+| Rule 19 log details left undefined (first-burst seconds when none fired) | ui-programmer, first HUD story | Before that story |
+| Concept's towers-only rule: per stage or across the stage set | game-designer, with D8 | Before Vertical Slice |
+
 ### Verdict: CONCERNS
 
 No blocking issues. 11 consistency warnings, 11 design warnings and 2 scenario warnings should be resolved or accepted. Scenario premises and the registry baseline stay unverified as noted above.
@@ -120,6 +134,6 @@ No blocking issues. 11 consistency warnings, 11 design warnings and 2 scenario w
 1. Mono-role while calling: bots report, human logs decide. If more than half of won attempts after a tester's first win are mono-role, tuning reopens.
 2. Share: reported, not gated. New gate "Burst decides" on `dealt_burst` and lives. `dealt_burst`'s 15% floor is proposed.
 3. Pillar 2 against Pillar 3: read across the stage set, one stage 20% to 40% (proposed), burst never tuned per stage.
-4. Lanes trigger: testers who re-pin more gain under 1 life. The 5 testers and 4 won attempts are proposed.
+4. Lanes trigger: testers who re-pin more gain under 1 life. The 5 testers and 4 won attempts are proposed. Changed after the 2026-11-04 gate check, on the user's choice: a firing flags the decision to the user with the logs, rather than moving lanes forward by itself.
 
 These settle D11 and the numbers D3 and D4 asked for, and answer the mono-role challenge. The rest of D2 (a margin and mono builds across placements) stays open. Applied to the GDDs without a re-review.

@@ -293,7 +293,7 @@ Cross-reference: `design/accessibility-requirements.md` (tier Standard, phased; 
 |---|---|
 | Target size | Arc disc 72 units = 48.0 dp at 360 dp, 54.9 dp at 412 dp, 57.3 dp at 430 dp (the field scales with width: dp per unit = width / 540). Chip disc 80 units = 53.3 dp at 360 dp. Exactly at the limit on the narrowest phone |
 | Text size | Panel text 14 dp (the floor) for word and cost; chip cost 16 dp. Both at or above the floors |
-| Text contrast | Neutral `#C8D0E0` on panel `#141B30`: 11.0:1. Dimmed cost at alpha 0.6: 4.80:1 passes; at the GDD's 0.55: 4.25:1 fails (HQ-01). **This spec uses 0.6** |
+| Text contrast | Neutral `#C8D0E0` on panel `#141B30`: 11.0:1. Dimmed cost at alpha 0.6: 4.80:1 passes (HQ-01, closed) |
 | Non-text contrast, tower contour | Cyan `#2EC4D6` 3 px contour on panel: 8.1:1 |
 | Non-text contrast, range ring | Solid 2 px cyan at alpha 0.5 over a path assumed to be the field colour with its value raised 3 points (about `#0E1428`; the art bible gives only "about 3% lighter"): computed 3.05:1, just over the 3:1 minimum. The next-level ring at alpha 0.25 computes 1.65:1, under 3:1 (UQ-11). Contrast also varies with each stage's field hue |
 | Colour independence | All three arc discs are cyan; the choice is carried by shape (triangle, hexagon, square) and by the word on the panel. Unaffordable is carried by the strike-through, not the dim alone. The guard look and the refusal cue are brightness steps with an outline, not hue |

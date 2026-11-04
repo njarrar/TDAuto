@@ -368,3 +368,6 @@ Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc8769
 
 ## Revision — 2026-11-04 — after the review above (not a new verdict)
 User chose to keep the mono-role gate while calling, reported only until first playable. Applied: `button_press()`, the digit decision, the corrected rate claim and stage-length wording. Status stands; the hashes above no longer match.
+
+## Revision — 2026-11-04 — after a lean read (not a new verdict)
+One adversarial reader checked the day's added rules (S1, S2, the four cross-review decisions) and returned NEEDS REVISION with 18 findings. All five rated BLOCKING were fixed (Flow Rule 9, Thumb cost pass condition, redraw key, criterion 6, HUD 0.55 evidence). Recommended items 3, 7, 9 to 14, 16 to 18 and part of 8 were fixed. Not done: concept `towers-only` unit at Vertical Slice (15). The fix pass was not re-read, per the one-review, one-fix cap the producer recommended. No hash stamped, because this text has no review verdict.
