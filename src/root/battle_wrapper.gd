@@ -8,6 +8,9 @@ class_name BattleWrapper extends Node
 const MAX_VIEW_MS: float = 100.0
 const ADAPTER_NAME: String = "InputAdapter"
 
+## Top band height above the top inset, in field units (Battle HUD layout table).
+const TOP_BAND_BASE_HEIGHT: float = 72.0
+
 var _battle: Battle = null
 var _reduce_motion: bool = false
 var _was_paused: bool = false
@@ -333,6 +336,7 @@ func _connect_signals() -> void:
 		b.resolver.ground_tapped.connect(_hud_logic._on_ground_tapped)
 		b.resolver.drag_started.connect(_hud_logic._on_drag_started)
 		b.resolver.became_idle.connect(_hud_logic._on_became_idle)
+		b.hero_sim.burst_started.connect(_hud_logic._on_burst_started)
 		_adapter.lifecycle_paused.connect(_hud_logic.clear_press)
 		_tower_input.slot_tapped.connect(_hud_logic._on_slot_tapped)
 		_tower_input.tower_inspected.connect(_hud_logic._on_tower_inspected)
@@ -389,6 +393,7 @@ func _disconnect_signals() -> void:
 		_drop(b.resolver.ground_tapped, _hud_logic._on_ground_tapped)
 		_drop(b.resolver.drag_started, _hud_logic._on_drag_started)
 		_drop(b.resolver.became_idle, _hud_logic._on_became_idle)
+		_drop(b.hero_sim.burst_started, _hud_logic._on_burst_started)
 		if _adapter != null:
 			_drop(_adapter.lifecycle_paused, _hud_logic.clear_press)
 		if _tower_input != null:
@@ -451,4 +456,5 @@ func _on_display_changed() -> void:
 	_result_screen.clear_press()
 	_paused_screen.clear_press()
 	_hud_top_band.position = Vector2.ZERO
-	_hud_top_band.size = Vector2(FieldBounds.WIDTH, FieldBounds.HEIGHT)
+	# Battle HUD layout: the band runs from y 0 to the top inset plus 72.
+	_hud_top_band.size = Vector2(FieldBounds.WIDTH, insets.top + TOP_BAND_BASE_HEIGHT)

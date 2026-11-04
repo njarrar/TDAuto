@@ -31,6 +31,8 @@ var _stage_id: StringName = &""
 var _wrapper_path: String = DEFAULT_WRAPPER_PATH
 var _fatal_path: String = DEFAULT_FATAL_PATH
 var _builds_made: int = 0
+## Development logs (ADR-0010 Decision 10): one per session, debug builds only.
+var _dev_logs: DevLogs = null
 
 
 ## Tests only, before add_child. Keys: manifest, stage_id, rng_seed,
@@ -155,7 +157,9 @@ func _attach_wrapper() -> void:
 	var reduce_motion: bool = false
 	if _battle.input_record != null:
 		reduce_motion = _battle.input_record.reduce_motion
-	var attached: bool = bool(_wrapper.call(&"attach", _battle, reduce_motion))
+	if _dev_logs == null and OS.is_debug_build():
+		_dev_logs = DevLogs.new()
+	var attached: bool = bool(_wrapper.call(&"attach", _battle, reduce_motion, _dev_logs))
 	if not attached:
 		_battle.report_fatal(ERR_WRAPPER_ATTACH)
 
@@ -235,3 +239,10 @@ func _describe_errors(result: LoadResult) -> String:
 		if parts.size() >= 3:
 			break
 	return "; ".join(parts)
+
+
+## Closes the development log files when the app root leaves the tree (ADR-0010).
+func _exit_tree() -> void:
+	if _dev_logs != null:
+		_dev_logs.close()
+		_dev_logs = null
