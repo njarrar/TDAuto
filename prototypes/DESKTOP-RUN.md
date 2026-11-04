@@ -1,0 +1,54 @@
+# Desktop run: every ADR desktop check in one sitting
+
+PROTOTYPE - NOT FOR PRODUCTION. One ordered checklist for macOS arm64 with
+Godot 4.7.2. About 90 minutes. Each folder's README has the details and the
+results table.
+
+Before you start:
+
+```
+export GODOT=/Applications/Godot.app/Contents/MacOS/Godot
+cd /path/to/TDAuto/prototypes
+$GODOT --version
+```
+
+If any project shows a script error when it opens or runs, copy the error
+text and go on with the next step. Do not fix it.
+
+## Checklist
+
+1. **Headless checks again** (after the session's fixes):
+   `cd adr-checks && GODOT=$GODOT ./run_all.sh; cd ..`
+   Paste: the Summary block and every FAIL, NOT_RUN or INCOMPLETE line.
+2. **ADR-0001 V2 headless**: `cd adr-0001-checks && $GODOT --headless --path . --import > /dev/null 2>&1; $GODOT --headless --path . > results-v2-headless.txt 2>&1; cd ..`
+   Paste: `results-v2-headless.txt`.
+3. **ADR-0001 V2 windowed** (pointer on the button): README "V2, manual".
+   Paste: `results-v2-window.txt`.
+4. **ADR-0001 V3 editor leg**: README "V3, editor leg", F6 on `v3_main.tscn`, then the terminal run.
+   Paste: the Output panel text, the Errors tab, and `results-v3-window.txt`.
+5. **ADR-0010 V3**: `cd adr-0010-checks && $GODOT --path . > results-v3.txt 2>&1; cd ..`, then find the file.
+   Paste: `results-v3.txt` and "file found: yes or no".
+6. **ADR-0004 SP14** (spike): open `adr-0003-device-spike` in the editor, open
+   `sp14_stall.tscn`, F6. Press Stall 300 ms, Stall 1000 ms, then Cadence 10 s
+   and do not touch anything for 10 s. Close. Then Project Settings >
+   Application > Run > Delta Smoothing off (Advanced Settings on), F6 again,
+   same three presses, close, and set Delta Smoothing back on (do not keep
+   the change). Paste: both `sp14_log.txt` runs (Copy log button, or the file
+   in `~/Library/Application Support/Godot/app_userdata/ADR-0003 device spike/`).
+7. **ADR-0011 V1 to V5**: README "How to run it" in `adr-0011-render-budget`.
+   Paste: `results-desktop.txt` (or `adr0011_log.txt`) and attach the
+   screenshots from `~/Library/Application Support/Godot/app_userdata/adr-0011-render-budget/`.
+8. **ADR-0007 V1**: `cd adr-0007-harness-check && ./run_v1.sh`.
+   Paste: `results/v1-summary.txt` and the test counts for run7a and run7b.
+9. **ADR-0007 V4**: `./v4_fresh_clone.sh`. Paste: `results/v4.txt`.
+10. **ADR-0007 V7**: `DESKTOP.md` V7 steps 1 to 6 in the editor.
+    Paste: the `v7_read.sh` output (it never prints values).
+11. Fill in `Date`, `godot --version` and each results table, or paste the
+    files and let the session fill them.
+
+## What to paste back
+
+One message per step, in order, starting with the step number. Logs as text,
+not screenshots, except ADR-0011 V3 and V4, where the screenshots are the result.
+Keep copies of all logs and screenshots; the session moves them to
+`production/qa/evidence/`.

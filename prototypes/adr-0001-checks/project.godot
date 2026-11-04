@@ -1,0 +1,24 @@
+; PROTOTYPE - NOT FOR PRODUCTION. ADR-0001 V2 (teardown timing) and V3 editor leg.
+; Its own project: open it with --path or import it in the Project Manager.
+; The files in broken/ are broken on purpose. Their import errors are expected.
+config_version=5
+
+[application]
+
+config/name="adr-0001-checks"
+run/main_scene="res://v2_main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+run/flush_stdout_on_print=true
+
+[display]
+
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/size/window_width_override=450
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="mobile"

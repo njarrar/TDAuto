@@ -153,6 +153,10 @@ panel, `adb logcat`, or the Xcode console).
 3. Do the phone actions below. Read the log in the Xcode console, or tap
    **Copy** and paste it into a note.
 
+### SP14 stall and frame cadence (desktop, ADR-0004 V2, V3, V9)
+
+Open `sp14_stall.tscn` and press F6. Press Stall 300 ms, then Stall 1000 ms, then Cadence 10 s (hands off). Then turn Delta Smoothing off in Project Settings, repeat, and turn it back on. Log: `user://sp14_log.txt`, cadence data in `sp14_cadence_<n>.csv`. Record the two `PROC after_stall` lines per stall, the `CADENCE` tick counts and the `DISPLAY` lines.
+
 ## Actions
 
 Tap **Mark** before each numbered action. "Phone" means Android, and iOS if you

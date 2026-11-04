@@ -1,0 +1,4 @@
+[gd_scene format=3]
+
+[node name="MissingSub" type="Sprite2D"]
+texture = SubResource("GradientTexture2D_absent")
