@@ -30,7 +30,7 @@ Every number a modifier could change (tower, enemy, hero and burst stats) must r
 | **Knowledge Risk** | LOW. Every API used but `@abstract` dates from 4.0, and `breaking-changes.md` lists no 4.4 to 4.7 change to them. `@abstract` (4.5) is in `current-best-practices.md`. The 4.7 typed-override rule applies to the test spy. |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md` (4.5 and 4.7 GDScript and Core rows), `deprecated-apis.md` (untyped container row), `current-best-practices.md` (GDScript 4.5, 4.7), `modules/input.md` (StringName in hot paths). No `modules/` file covers scripting. `architecture.md` v4 (Seams, Module Ownership, B0, B1, B1a, B9, B10, Required ADRs); `tr-registry.yaml`; ADR-0001, ADR-0002, ADR-0004 |
 | **Post-Cutoff APIs Used** | `@abstract` (4.5) on `StatKeys` only. Also used: `StringName` and `&"..."`, `const` Dictionary literals, `Dictionary.get(key, default)`, `Object.get(StringName)`, `weakref()`, `WeakRef.get_ref()`, `Array.has()`; in tests `Performance.get_monitor()`, `Time.get_ticks_usec()`, `ClassDB.class_exists()`. Typed `Dictionary[K, V]` (4.4) is not used. |
-| **Verification Required** | All unverified (memory); none is in the pinned reference and none can be checked offline. Each probe is still required; once a 4.7.2 binary runs them, results go into `docs/engine-reference/godot/` with date and version. **E1** `const K := &"x"` and `const` Dictionaries keyed by such constants parse, and `ROWS`, each inner table, `KIND` and `ROLE_TAG` report `is_read_only()`. **E3** `Object.get(&"name")` returns a script `var`'s value and `null` for an unknown name with no error; the same probe records whether a `StringName`-keyed Dictionary hits on a `String` key of the same text (was E2). **E4** `WeakRef.get_ref()` returns `null` once the last strong reference to a `RefCounted` drops. **E5** (optional) a `String` literal passed to a `StringName` parameter converts on each call and costs more than a constant. **E6** a read creates no `Object` and leaves static memory flat after warm-up. **E7** `ClassDB.class_exists()` is false for `StatKeys`, `ReadContext` and `StatAccessor` (no engine class of that name). |
+| **Verification Required** | All probes ran on the 4.7.2 binary (`docs/engine-reference/godot/probe-results.md`): E1, E3, E4, E6 and E7 match, E5 does not (Amendments). The rows below still become CI tests (ADR-0007 Decision 7). **E1** `const K := &"x"` and `const` Dictionaries keyed by such constants parse, and `ROWS`, each inner table, `KIND` and `ROLE_TAG` report `is_read_only()`. **E3** `Object.get(&"name")` returns a script `var`'s value and `null` for an unknown name with no error; the same probe records whether a `StringName`-keyed Dictionary hits on a `String` key of the same text (was E2). **E4** `WeakRef.get_ref()` returns `null` once the last strong reference to a `RefCounted` drops. **E5** (corrected) a `String` literal passed to a `StringName` parameter costs the same as a constant: the compiler converts it once (ratio 0.99). A `String` variable costs 1.42x. **E6** a read creates no `Object` and leaves static memory flat after warm-up. **E7** `ClassDB.class_exists()` is false for `StatKeys`, `ReadContext` and `StatAccessor` (no engine class of that name). |
 
 ## ADR Dependencies
 
@@ -80,7 +80,7 @@ A read checks in this order and stops at the first failure:
 - The checks are plain `if` branches, per ADR-0001 Guideline 10.
 
 ### 3. Key vocabulary: `StatKeys`, one file of `StringName` constants
-- `src/foundation/data/stat_keys.gd`: `@abstract class_name StatKeys extends RefCounted`, constants only, so it can never be instanced. Data & Config owns it (TR-data-010).
+- `src/foundation/data/stat_keys.gd`: `@abstract class_name StatKeys extends RefCounted`, constants only, so it cannot be constructed by name: `StatKeys.new()` is a parse error. Dynamic instancing is not blocked: `load(path).new()` still builds an instance, and `can_instantiate()` is true. Nothing does that at MVP, so no lint is needed. Data & Config owns it (TR-data-010).
 - One `const` per key, upper snake case, valued as a `&"..."` literal equal to the schema field name: `COST`, `DAMAGE`, `RANGE`, `ATTACK_INTERVAL`, `SPLASH_RADIUS`, `SLOW_STRENGTH`, `SLOW_DURATION`, `BOUNTY`, `LIVES_COST`, `MAX_HP`, `MOVE_SPEED`, `LEASH_RADIUS`, `WALK_SPEED`, `RADIUS`, `REACH`, `COOLDOWN`, `TELEGRAPH_DURATION` (17). A key is shared across types: `damage` is one key that Tower, Hero and Burst all allow.
 - `enum Kind { INT, FLOAT }`. Three tables:
   - `KIND`: every key to its `Kind`, the whole vocabulary.
@@ -89,7 +89,7 @@ A read checks in this order and stops at the first failure:
 - **Untyped on purpose.** A `const` Dictionary is read-only (E1); typed Dictionaries do not nest a typed value Dictionary; and typing gives no read-speed gain. This settles `deprecated-apis.md`'s untyped-container row for these tables. Each read site types its local. If E1 finds an inner table writable, the tables become `static var`s with `make_read_only()` on each, and no caller changes.
 - Lookups use `Dictionary.get(key, default)`, never `has()` then `[]`.
 - **Schema test V4 ties the tables to `schema.gd`.** Every `ROWS` key must name a field on that type's schema table (`tower_level` for towers) of the kind `KIND` gives; every `INT` or `FLOAT` field on `tower_level`, `enemy`, `hero` and `burst` must be in `ROWS`; every `KIND` key must be in some row. An owning GDD that adds a numeric field adds its key in the same change, or CI fails.
-- Callers name keys only through these constants (L-STAT-1). The main reason is the vocabulary: a literal skips it. Speed is secondary, pending E5.
+- Callers name keys only through these constants (L-STAT-1). The reasons are the vocabulary and typo safety: a literal skips the vocabulary, and a mistyped constant fails the parse. Cost is not a reason: a literal costs the same as a constant (E5).
 
 ### 4. `ReadContext`: one per caller, reused, live entity held weakly
 - `src/foundation/data/read_context.gd`: `class_name ReadContext extends RefCounted` with `def_id: StringName`, `level: int` and private `_live: WeakRef`. `_init(p_def_id: StringName = &"", p_level: int = 0, p_live: Object = null)` sets `_live = weakref(p_live)` only when `p_live` is not null; otherwise `_live` stays `null`. `live_entity() -> Object` returns `_live.get_ref()`, or null.
@@ -154,7 +154,7 @@ Every caller: read ──► if halted(): return
 
 ```gdscript
 @abstract
-class_name StatKeys extends RefCounted   # constants only
+class_name StatKeys extends RefCounted   # constants only; cannot be constructed by name
 enum Kind { INT, FLOAT }
 const COST := &"cost"
 const DAMAGE := &"damage"
@@ -278,7 +278,7 @@ Names are proposed. QQ-16 may add a prefix (ADR-0007); E7 checks for engine-clas
 
 ## Risks
 - **R1 Read cost.** Estimated 1 to 3 µs per read on desktop and 5 to 15 µs on an A53/A73-class phone core. About 150 reads a tick (100 enemies, 10 towers, hero, burst) could take 0.75 to 2.25 ms against ADR-0004's 2.0 ms p95 per tick: the top of the range breaks the budget alone. Mitigation: P1 with a desktop trigger (above 0.5 µs per read, build the `match` fallback now); R1's range suggests the trigger will fire, so Alternative 7 is benched in the same run.
-- **R2 String keys.** If a `String` key misses a `StringName`-keyed Dictionary, a literal call reports `stat_unknown_key`; if it hits, it is silently slow. L-STAT-1 bans literals either way; E3 records which.
+- **R2 String keys.** A `String` key hits a `StringName`-keyed Dictionary (E3), and a literal costs the same as a constant (E5), so the risk is a key outside the vocabulary, not speed. L-STAT-1 bans literals for vocabulary and typo safety.
 - **R3 Const tables (E1).** If an inner table is writable, switch to `static var` plus `make_read_only()` on each table; no caller changes.
 - **R4 A missed `halted()` check** lets a value reach state. Mitigation: ADR-0001 V5; every consumer story uses the recording spy, which fires `fatal` on a chosen read and returns the poison value, then asserts no state change and no emit. The spy helper is ADR-0007's.
 - **R5 Weak entity freed early.** `live_entity()` returns null. Nothing reads it at MVP; the Stat ADR treats null as "no instance".
@@ -314,12 +314,12 @@ Fixtures are code-built through `Catalogue.from_documents` (ADR-0002); no file I
 - **V3 `test_lookups_never_fatal`**: `is_tower` on enemy, wave and unknown IDs is false; `level_count` is 0; the spy never fires.
 - **V4 `test_stat_keys_match_schema`**: `ROWS` against `schema.gd` both ways; `KIND` covers every `ROWS` key and no key outside them.
 - **V5 `test_bad_read_keeps_catalogue_ready`** (Data AC 12): spy held for the whole test; after a bad call a fresh accessor reads the same catalogue.
-- **V6 `test_read_context_holds_entity_weakly`** (E4): (a) a context made by the test over a `RefCounted` owner; (b) a context made inside the owner's own `_init`, as `Enemy` does. In each, set the test's local to null (never pass the owner to a gdUnit assert first, per ADR-0001's weakref rule); the owner's weakref is dead and `live_entity()` is null. (c) no entity: `_live` is null.
-- **V7 `test_reads_allocate_nothing`** (E6): after a warm-up pass, 10,000 mixed reads leave `Performance.OBJECT_COUNT` equal and `Performance.MEMORY_STATIC` flat (debug build). It claims only "creates no Object" and flat static memory.
-- **E1 `test_const_stringname_tables`**: `is_read_only()` on `ROWS`, each inner table, `KIND` and `ROLE_TAG`.
-- **E3 `test_object_get_and_string_keys`**: `Object.get(&"damage")` returns the field, an unknown name returns null with no error; records whether `ROWS[&"tower"].get("cost", false)` hits.
-- **E5 `bench_string_vs_stringname_key`** (optional): cost of a `String` literal key against a constant.
-- **E7 `test_class_names_free`**: `ClassDB.class_exists()` is false for the three names.
+- **V6 `test_read_context_holds_entity_weakly`** (E4, verified 4.7.2 headless, see probe-results.md): (a) a context made by the test over a `RefCounted` owner; (b) a context made inside the owner's own `_init`, as `Enemy` does. In each, set the test's local to null (never pass the owner to a gdUnit assert first, per ADR-0001's weakref rule); the owner's weakref is dead and `live_entity()` is null. (c) no entity: `_live` is null.
+- **V7 `test_reads_allocate_nothing`** (E6, verified 4.7.2 headless, see probe-results.md): after a warm-up pass, 10,000 mixed reads leave `Performance.OBJECT_COUNT` equal and `Performance.MEMORY_STATIC` flat (debug build). It claims only "creates no Object" and flat static memory.
+- **E1 `test_const_stringname_tables`**: `is_read_only()` on `ROWS`, each inner table, `KIND` and `ROLE_TAG`. verified 4.7.2 headless, see probe-results.md.
+- **E3 `test_object_get_and_string_keys`**: `Object.get(&"damage")` returns the field, an unknown name returns null with no error; records whether `ROWS[&"tower"].get("cost", false)` hits (it does). verified 4.7.2 headless, see probe-results.md.
+- **E5 `bench_string_vs_stringname_key`** (optional): cost of a `String` literal key against a constant. Ratio 0.99 for a literal, 1.42 for a `String` variable; verified 4.7.2 headless, see probe-results.md.
+- **E7 `test_class_names_free`**: `ClassDB.class_exists()` is false for the three names. verified 4.7.2 headless, see probe-results.md.
 - **P1 `bench_stat_reads`** (logged): V1's fixture; warm-up first; 150 reads per simulated tick, each a read plus a `halted()` call, for 600 ticks, timed with `Time.get_ticks_usec()`; reports p95 per tick and µs per read, and records debug or release build. Benches Alternative 7 in the same run. Desktop trigger: above 0.5 µs per read, build the `match` fallback now. Device run at the first phone build against 2.0 ms p95 per tick.
 - **Lints (ADR-0007)**: L-STAT-1 no literal key argument; L-STAT-2 no direct read of a `ROWS` field outside `src/foundation/data/`; L-STAT-3 no `assert` in the two files.
 - **Consumer stories** (Tower, Hero, HUD, Enemy & Wave): Data's deferred never-cache criterion (a spy changes a value between two uses, the second use shows it), and the poison spy (R4). HUD stories also check that no read runs inside a sim signal handler.
@@ -355,3 +355,6 @@ Fixtures are code-built through `Catalogue.from_documents` (ADR-0002); no file I
 - Enables ADR-0007, ADR-0009, ADR-0010
 - `architecture.md` v4: Seams, Module Ownership (StatAccessor), B0, B1, B1a, B4, B9, B10
 - GDDs: `data-config-pipeline.md` (stat-key table, Rules 10, 11, Edge Cases, AC 6, 7, 12), `enemy-wave.md` (Rules 9 to 11, 13), `tower-system.md` (Rules 5, 9, 12), `hero-system.md` (Rule 8), `battle-hud.md` (Rules 7, 12)
+
+## Amendments
+- **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). E5 is corrected: a `String` literal key costs the same as a `StringName` constant (ratio 0.99); a `String` variable costs 1.42x. Decision 3 and R2 drop the cost reason, so L-STAT-1 rests on the vocabulary and typo safety only. Decision 3 and Key Interfaces now say `@abstract` makes `StatKeys` impossible to construct by name; `load(path).new()` still builds one, which needs no lint at MVP. Engine Compatibility and the E rows, V6 and V7 are marked verified.

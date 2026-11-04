@@ -30,7 +30,7 @@ Every battle system needs one source of sim time, one fixed order inside a tick 
 | **Knowledge Risk** | HIGH. The pinned reference says nothing about `_process` timing, frame caps, physics stepping, `RandomNumberGenerator` or `Vector2` precision. Only `_process(delta)`, `application/run/max_fps` and plain arithmetic are load-bearing. |
 | **References Consulted** | `docs/engine-reference/godot/` (`VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`, `modules/physics.md`, `modules/input.md`); `architecture.md` v4 (Composition Root, Data Flow 1 to 3, 6, 10, B0, B4 to B9, Required ADRs, QQ-01, 05, 08, 11); `tr-registry.yaml`; ADR-0001 to ADR-0003; the registry; GDDs under Related |
 | **Post-Cutoff APIs Used** | None. Used: `_process(delta)`, `RefCounted`, `roundi`, `floori`, `sqrt`, `Vector2` storage, project settings below, `RandomNumberGenerator` (reserved). `breaking-changes.md` lists no change to them in 4.4 to 4.7. Checked in the reference: Jolt became the 4.6 default for 3D only; 2D stays on Godot Physics 2D, and the sim uses no physics at all (Flow Rule 4). |
-| **Verification Required** | **E1 to E8 are from memory only, unverified against 4.7.2; each needs its V11 probe** (V11 table). S1 (ADR-0003) still runs but no longer gates TR-hud-005 (Decision 4). V13 on a phone. |
+| **Verification Required** | E1 to E8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); E3 was wrong and is corrected (Amendments, V11 table). S1 (ADR-0003) still runs but no longer gates TR-hud-005 (Decision 4). V13 on a phone. |
 
 ## ADR Dependencies
 
@@ -62,7 +62,7 @@ TR-state-003 to 007, 012, 014; TR-combat-009, 014; TR-enemy-002, 003, 007; TR-to
 ## Decision
 
 ### 1. Tick driver (QQ-01)
-- Sim time is driven by an accumulator in a pure `TickClock extends RefCounted`, owned by the wrapper and advanced from `BattleWrapper._process(delta)` through `step(delta)`. `_physics_process`, `Engine.physics_ticks_per_second`, `max_physics_steps_per_frame` and `Timer` nodes play no part; physics settings stay at defaults.
+- Sim time is driven by an accumulator in a pure `TickClock extends RefCounted`, owned by the wrapper and advanced from `BattleWrapper._process(delta)` through `step(delta)`. `_physics_process`, `Engine.physics_ticks_per_second`, `max_physics_steps_per_frame` and `Timer` nodes play no part in stepping. But the engine caps `_process` delta at about `max_physics_steps_per_frame / physics_ticks_per_second` **[E3]**, so the physics settings are load-bearing and Guideline 11 pins them at their defaults (8 and 60, a cap near 0.13 s). The clock's `MAX_TICKS_PER_FRAME = 4` (about 0.067 s) sits below that cap, so the clock works as written.
 - Why `_process`: (1) Decision 4 needs real-time models, ticks and view refresh in one callback; (2) the clock must reset on pause and use this project's cap, and for physics steps the engine offers only a global clamp and no reset; (3) no input callback can run between a frame's ticks and its view refresh, which takes S1's second clause off the critical path; (4) tests and bots call `battle.tick` directly.
 - **Process order**: AppRoot is the wrapper's parent and both keep `process_priority` 0, so AppRoot's `_process` (ADR-0001 latches) runs before the wrapper's each frame (tree order, parent first **[E7]**). V9 asserts it.
 
@@ -184,7 +184,7 @@ Names are proposed; QQ-16 may add a prefix (ADR-0007).
 8. Real-time models take time only from the wrapper's `advance(ms)` or `update()`.
 9. Randomness follows Decision 8's ban and scope.
 10. Sim maths follows Decision 9's allowed list and bans.
-11. `project.godot` pins, checked through `ProjectSettings` (V11e): `application/run/max_fps` 60, `application/run/low_processor_mode` off, `display/window/vsync/vsync_mode` enabled, `application/run/delta_smoothing` on. Nothing sets `Engine.time_scale`, `Engine.physics_ticks_per_second` or `SceneTree.paused`.
+11. `project.godot` pins, checked through `ProjectSettings` (V11e): `physics/common/physics_ticks_per_second` 60 and `physics/common/max_physics_steps_per_frame` 8 (they set the engine's `_process` delta cap, Decision 1; a lower value would starve the clock's cap of 4), `application/run/max_fps` 60, `application/run/low_processor_mode` off, `display/window/vsync/vsync_mode` enabled, `application/run/delta_smoothing` on. Nothing sets `Engine.time_scale`, `Engine.physics_ticks_per_second` or `SceneTree.paused`.
 12. Baselines are read and written under `tests/baselines/<os>_<arch>/`.
 13. ADR-0002's validator reads `TickMath.TICK_SECONDS` for every one-tick floor.
 14. An override of a typed method returns a value on every path (4.7).
@@ -241,7 +241,7 @@ Names are proposed; QQ-16 may add a prefix (ADR-0007).
 - A stall drops time (the GDD's choice); baselines per OS and CPU; a 60 fps cap gives up 120 Hz smoothness.
 
 ### Neutral
-- Physics settings stay at defaults. `rng_seed` is read by nothing at MVP.
+- Physics settings stay at defaults, pinned (Guideline 11). `rng_seed` is read by nothing at MVP.
 
 ## Risks
 - **E1 fails** (`roundi` rounds halves to even): use `floori(x + 0.5)` for the non-negative inputs it accepts; re-run ADR-0002's floor test.
@@ -308,16 +308,16 @@ Headless unless marked; ADR-0007 hosts them. Recording fakes log into an `Array`
 - **V13 device** (manual, `production/qa/evidence/`): p95 tick cost and frame time at 60 and 30 fps; pacing on a 90 or 120 Hz phone under `max_fps` 60; sets `MAX_TICKS_PER_FRAME`.
 - **V14**: S1's result is recorded here; input inside the wrapper's `_process` reopens Decision 4.
 
-| Fact | Memory answer (unverified) | Probe |
+| Fact | Answer (memory, then probed) | Probe |
 |---|---|---|
-| E1 `roundi` / `round` halves | Away from zero | V6 |
-| E2 `Vector2` precision | 32-bit | V11a: `Vector2(0.1, 0).x == 0.1` is false |
-| E3 `_process` delta | Real seconds, unclamped, times `Engine.time_scale`; smoothed when `delta_smoothing` is on | V9, V11e |
-| E4 architecture name | `Engine.get_architecture_name()` exists | V11b; else `OS.has_feature("arm64")` |
-| E5 RNG | Equal `seed` repeats; `shuffle`, `pick_random`, global `randi` use the global generator | V11c, before the first sim consumer |
-| E6 low processor mode | Off by default | V11d: project setting false and `OS.low_processor_usage_mode` false |
-| E7 order | Parent `_process` before child at equal priority; deferred calls flush after `_process` | V9 |
-| E8 `max_fps` | `application/run/max_fps`, default 0 (no cap) | V11e settings dump; V13 |
+| E1 `roundi` / `round` halves | Away from zero | V6; verified 4.7.2 headless, see probe-results.md |
+| E2 `Vector2` precision | 32-bit | V11a: `Vector2(0.1, 0).x == 0.1` is false; verified 4.7.2 headless, see probe-results.md |
+| E3 `_process` delta | Corrected: real seconds times `Engine.time_scale`, capped by the engine at about `max_physics_steps_per_frame / physics_ticks_per_second` (0.13 to 0.15 s at 8 and 60). First frame is a nominal 1/60 or 0.0083, bounded by the first-running-frame rule. Smoothing on paced frames is not judged headless | V9, V11e; verified 4.7.2 headless, see probe-results.md |
+| E4 architecture name | `Engine.get_architecture_name()` exists | V11b; else `OS.has_feature("arm64")`; verified 4.7.2 headless, see probe-results.md (arm64 value needs a phone) |
+| E5 RNG | Equal `seed` repeats; `shuffle`, `pick_random`, global `randi` use the global generator | V11c, before the first sim consumer; verified 4.7.2 headless, see probe-results.md |
+| E6 low processor mode | Off by default | V11d: project setting false and `OS.low_processor_usage_mode` false; verified 4.7.2 headless, see probe-results.md |
+| E7 order | Parent `_process` before child at equal priority; deferred calls flush after `_process` | V9; verified 4.7.2 headless, see probe-results.md |
+| E8 `max_fps` | `application/run/max_fps`, default 0 (no cap) | V11e settings dump; V13; verified 4.7.2 headless, see probe-results.md |
 
 ## Reviews
 **godot-specialist: CONCERNS. TD-ADR: CONCERNS.** All relayed findings applied. The relayed list named no G1, G2, G5, TD7 or TD8; if those were separate findings, they are not covered here.
@@ -357,3 +357,4 @@ Headless unless marked; ADR-0007 hosts them. Recording fakes log into an `Array`
 
 ## Amendments
 - **2026-11-04, with ADR-0006 (confirmed by the user 2026-11-04 at ADR-0006 acceptance).** Status stays Accepted. Decision 6 and Guideline 7 change: every public command holds the `TickGuard` for its body, shaped `if in_tick(): return refusal; enter(); var r := _body(...); exit(); return r`, with one return path, so a command called from any signal handler, inside a tick or inside another command, is refused and changes nothing. `ERR_COMMAND_IN_TICK` now means "inside a tick or another command" (ADR-0010 may rename it `BUSY`). The Builder injects `TickGuard.enter` and `TickGuard.exit` as method Callables into Flow, TowerSim and HeroSim beside `in_tick`. `enter()` reports a dev error if the guard is already entered. `Battle.tick` reports a dev error and resets the guard if it finds it already set. `Flow.pause()` and `Flow.resume()` call `enter()` and `exit()` only when `in_tick()` is false; a pause during a tick keeps Decision 5's behaviour. Nothing else in this ADR changes.
+- **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). E3 is corrected: the engine caps `_process` delta at about `max_physics_steps_per_frame / physics_ticks_per_second`. Decision 1 now says the physics settings are load-bearing, and Guideline 11 pins `physics/common/physics_ticks_per_second` 60 and `physics/common/max_physics_steps_per_frame` 8. `MAX_TICKS_PER_FRAME = 4` sits below the cap, so the clock and V1 stand. First-frame delta (1/60 or 0.0083) needs no change. Engine Compatibility and the V11 table now mark E1 to E8 verified.

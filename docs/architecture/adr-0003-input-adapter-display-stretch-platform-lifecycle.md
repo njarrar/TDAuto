@@ -28,8 +28,8 @@ The pure input resolver needs one engine-facing node that turns Godot touch and 
 | **Layer** | Foundation |
 | **Knowledge Risk** | HIGH. 4.5 to 4.7 are post-cutoff; `modules/input.md` has no touch coverage; the pinned reference names no lifecycle notification and no safe-area API. |
 | **References Consulted** | `docs/engine-reference/godot/` (`VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`, `modules/input.md`, `modules/ui.md`); `architecture.md` v3 (Gap Summary, Module Ownership, Data Flow 1, 5, 6, B2, B3, Required ADRs, QQ-02, QQ-06, QQ-20); `tr-registry.yaml`; ADR-0001; `docs/registry/architecture.yaml` |
-| **Post-Cutoff APIs Used** | In the pinned reference: the 4.7 `event.device == 0` ban (the adapter identifies events by class), the 4.7 new-project stretch defaults (overridden by explicit keys), 4.6 dual focus (avoided: `focus_mode = FOCUS_NONE`), 4.5 recursive Control mouse disable (optional, S9). **From memory, unverified**: `InputEvent.DEVICE_ID_EMULATION`, `InputEvent.is_canceled()`, `DisplayServer.get_display_safe_area()`, `get_display_cutouts()`, `screen_get_dpi()`, the notifications `NOTIFICATION_APPLICATION_FOCUS_OUT` / `_IN` / `_PAUSED` / `_RESUMED`, `NOTIFICATION_WM_WINDOW_FOCUS_OUT` / `_IN`, `NOTIFICATION_WM_GO_BACK_REQUEST`, and every setting name in Decision 1. S0a parse-checks the names offline; behaviour needs S0a or S0b. |
-| **Verification Required** | Task S0 (S0a desktop, S0b device), per check. Guideline 15. |
+| **Post-Cutoff APIs Used** | In the pinned reference: the 4.7 `event.device == 0` ban (the adapter identifies events by class), the 4.7 new-project stretch defaults (overridden by explicit keys), 4.6 dual focus (avoided: `focus_mode = FOCUS_NONE`), 4.5 recursive Control mouse disable (optional, S9). **From memory, unverified**: `InputEvent.DEVICE_ID_EMULATION`, `InputEvent.is_canceled()`, `DisplayServer.get_display_safe_area()`, `get_display_cutouts()`, `screen_get_dpi()`, the notifications `NOTIFICATION_APPLICATION_FOCUS_OUT` / `_IN` / `_PAUSED` / `_RESUMED`, `NOTIFICATION_WM_WINDOW_FOCUS_OUT` / `_IN`, `NOTIFICATION_WM_GO_BACK_REQUEST`, and every setting name in Decision 1. S0a parse-checks the names offline; behaviour needs S0a or S0b. The names and every Decision 1 key are now verified 4.7.2 headless, see probe-results.md; edge-to-edge is an export preset option, not a setting (Decision 1). |
+| **Verification Required** | Task S0 (S0a desktop, S0b device), per check. Guideline 15. S0a's parse check and settings dump are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); S1 to S8 and TapScreen are not run. |
 
 ## ADR Dependencies
 
@@ -63,11 +63,11 @@ Items that rest on an unverified engine fact carry **[Sn]**, and the S0 table sa
 A throwaway scene under `prototypes/input_spike/` (outside the code root). It logs events, notifications and display values to `user://spike_log.txt` and **scores itself on screen**: one PASS / FAIL / NOT ASSESSED line per check. Results go into a dated "Spike results" section here and into `docs/engine-reference/godot/modules/input.md`, with logs and photos in `production/qa/evidence/`. A fail switches to the fallback and this ADR is revised before acceptance.
 
 **S0a, desktop (macOS, pinned 4.7.2, no device; two sessions at most):**
-- Parse check, offline: a probe script that names `InputEvent.DEVICE_ID_EMULATION`, `is_canceled()`, the seven notification constants above, `get_display_safe_area()`, `screen_get_dpi()` and `get_display_cutouts()`, run through `res://.claude/scripts/godot-parse-check.gd`. A name that fails is renamed here.
-- Settings dump: a headless `SceneTree` script prints `ProjectSettings.has_setting()` and `get_setting()` for every key in Decision 1. The editor drops a value equal to the engine default on save, so the dump checks effective values, never file text.
+- Parse check, offline: a probe script that names `InputEvent.DEVICE_ID_EMULATION`, `is_canceled()`, the seven notification constants above, `get_display_safe_area()`, `screen_get_dpi()` and `get_display_cutouts()`, run through `res://.claude/scripts/godot-parse-check.gd`. A name that fails is renamed here. All pass (verified 4.7.2 headless, see probe-results.md).
+- Settings dump: a headless `SceneTree` script prints `ProjectSettings.has_setting()` and `get_setting()` for every key in Decision 1. The editor drops a value equal to the engine default on save, so the dump checks effective values, never file text. 7 of the 13 Decision 1 keys equal the default (verified 4.7.2 headless, see probe-results.md).
 - Then S1, S2, S3, S5, S6 and S9 on desktop, each run both embedded in the editor's Game workspace and as a separate window.
 
-**S0b, device (one Android phone with gesture navigation and a cutout; iOS if available, else NOT ASSESSED, which blocks only an iOS export):** S1 and S2 on Android, S4, S5 mobile, S7, S8, and the TapScreen check.
+**S0b, device (one Android phone with gesture navigation and a cutout; iOS if available, else NOT ASSESSED, which blocks only an iOS export):** S1 and S2 on Android, S4, S5 mobile, S7, S8, the TapScreen check, and the export preset check: the Android preset in `export_presets.cfg` sets `screen/edge_to_edge=true` beside `screen/immersive_mode`.
 
 | Check | What to do | Pass | If it fails |
 |---|---|---|---|
@@ -77,9 +77,9 @@ A throwaway scene under `prototypes/input_spike/` (outside the code root). It lo
 | **S4 Cancel** | Drag, then pull the shade, swipe a system gesture, take an incoming call or alarm, add a palm touch | Each ends the drag by `is_canceled()` or a lifecycle notification; none emits `tap` or `drag_ended`. "Not observed" is an allowed result for each case | Rename if the API differs; the lifecycle path still covers the case |
 | **S5 Lifecycle** | Phone: home, app switcher, shade, lock, call, back swipe. Desktop: alt-tab, minimise, click another window. Log each `NOTIFICATION_*` per node class (adapter Node, root Window, a Control) | Every case reaches the adapter by at least one notification in its set, and the battle shows Paused. Note which edge swipes the OS takes before the app sees them | Add the notification seen. If `WM_WINDOW_FOCUS_*` reaches only the Window: fallback, connect `get_window().focus_exited` / `focus_entered` to adapter methods |
 | **S6 Positions and resize** | Windows 540x960, 720x1600, 1080x1440; press the field corners and a bar; resize by hand | Corners read (0, 0) and (540, 960) within 1 unit; a bar press reads outside the field; `get_viewport().size_changed` fires on resize | Window pixels: convert with `get_viewport().get_final_transform().affine_inverse()`. No signal: poll `get_window().size` each frame |
-| **S7 Safe area** | With the Decision 1 window and edge-to-edge keys, and the export preset's immersive setting recorded: log `get_display_safe_area()`, `get_display_cutouts()`, window rect, at frame 1 and after 3 s; draw the computed safe rect as debug outlines; photograph the screen | Outlines clear the cutout in the photo; safe area and cutouts agree; values are stable by battle build | Units differ: scale by `screen_get_scale()`; unstable: sample later |
+| **S7 Safe area** | With the Decision 1 window keys, and the export preset's `screen/edge_to_edge` and immersive settings recorded: log `get_display_safe_area()`, `get_display_cutouts()`, window rect, at frame 1 and after 3 s; draw the computed safe rect as debug outlines; photograph the screen | Outlines clear the cutout in the photo; safe area and cutouts agree; values are stable by battle build | Units differ: scale by `screen_get_scale()`; unstable: sample later |
 | **S8 Density** | Log `screen_get_dpi()` | `width_dp` within 5% of the published value | The guard only logs; the store device filter is the gate |
-| **S9 Settings** | Settings dump; open Project Settings (Advanced) | Every Decision 1 key exists with that effective value; the 4.5 recursive mouse-filter property and the Android edge-to-edge key are named | Use the 4.7.2 name and revise |
+| **S9 Settings** | Settings dump; open Project Settings (Advanced) | Every Decision 1 key exists with that effective value; the 4.5 recursive mouse-filter property is named (`mouse_behavior_recursive`). verified 4.7.2 headless, see probe-results.md. Edge-to-edge is no setting; S0b checks it in the export preset | Use the 4.7.2 name and revise |
 | **TapScreen** | 50 taps on the Paused screen, by touch | 50 `tapped`, never 100 | See Decision 4 |
 
 ### 1. Display, window and platform settings (QQ-02)
@@ -106,7 +106,9 @@ pointing/emulate_mouse_from_touch=true
 buffering/agile_event_flushing=false
 ```
 
-Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so the window reaches the cutout and `SafeAreaMath` sees it. `orientation=1` is portrait; `mode` 0 is windowed on desktop and `mode.mobile` 3 is fullscreen (feature override; both unverified, S9). `quit_on_go_back=false` is a product choice the user confirmed (Decision 5).
+7 of these 13 keys equal the engine default (`mode`, `aspect`, `scale`, `scale_mode`, both `pointing` keys, `agile_event_flushing`), so the editor drops them on save. A11 and S9 check effective values, so that is fine (verified 4.7.2 headless, see probe-results.md).
+
+**Export preset, not `project.godot`**: the Android preset in `export_presets.cfg` sets `screen/edge_to_edge=true`, beside `screen/immersive_mode`, so the window reaches the cutout and `SafeAreaMath` sees it. It is not a `ProjectSettings` key, so the settings dump cannot see it; S0b checks the preset. `orientation=1` is portrait; `mode` 0 is windowed on desktop and `mode.mobile` 3 is fullscreen (feature override; names verified 4.7.2 headless, see probe-results.md; use on a phone is S0b). `quit_on_go_back=false` is a product choice the user confirmed (Decision 5).
 
 - **`canvas_items` + `keep`**: the viewport scales by `s = min(window_w / 540, window_h / 960)` and centres. Tall phones letterbox top and bottom, squat screens left and right. Field units equal viewport units with no offset **[S6]**.
 - **No Camera2D** in the battle; the field root keeps the identity transform.
@@ -162,7 +164,7 @@ Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so t
 - So a phone tap (touch plus its emulated mouse) fires once. The godot-specialist notes only the first finger is emulated and the emulated event comes first, so mouse-only is enough for a one-finger modal; S2 and S3 (c) confirm.
 - Retry and Play again are `TapScreen` regions with the same rule.
 - The wrapper calls `clear_press()` on show and on `lifecycle_paused` (HUD Rule 2). Paused resumes on `tapped`; its press was taken by the screen and gated at the adapter, so it reaches nothing beneath (TR-state-010).
-- **Every non-interactive Control** in the wrapper has `mouse_filter = MOUSE_FILTER_IGNORE`, set on each node and checked by a lint. The 4.5 recursive property may replace that once S9 names it. The wrapper root is a `Node2D`, never a full-rect Control.
+- **Every non-interactive Control** in the wrapper has `mouse_filter = MOUSE_FILTER_IGNORE`, set on each node and checked by a lint. The 4.5 recursive property (`mouse_behavior_recursive`, named by S9) may replace that. The wrapper root is a `Node2D`, never a full-rect Control.
 
 ### 5. Product choices (confirmed by the user 2026-11-04)
 1. Letterbox at MVP, reviewed before Vertical Slice.
@@ -363,7 +365,7 @@ Headless gdUnit4 tests (ADR-0007 places them; names proposed). Constructed `Inpu
 - **A9** `SafeAreaMath`: 540x960 (zero); 1080x2400 with a 96 px cutout inside the bar (zero); 1080x1920 with an 80 px cutout (positive `top`); 1536x2048 (side bars); `dp_per_unit` is exactly 2/3 at 360x800 dp and fails at 400x600 dp.
 - **A10** `TapScreen`: a release with no seen press does nothing; `clear_press()` between press and release does nothing; a canceled release does nothing; a seen press and release fires once.
 - **A10b** a real touch press and release plus its emulated mouse press and release give exactly one `tapped`.
-- **A11** `ProjectSettings` reports every Decision 1 key with its value (part of ADR-0007's lint).
+- **A11** `ProjectSettings` reports every Decision 1 key with its value (part of ADR-0007's lint). Effective values, since the editor drops the 7 default-valued keys on save.
 
 Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at 540x960 and resized; Paused on alt-tab and resume by click; Lost and Won block the field; on the phone, letterbox, insets, back swipe, 50 taps on Paused give 50 `tapped`.
 
@@ -407,3 +409,4 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 
 ## Amendments
 - **2026-11-04, with ADR-0007 (confirmed by the user 2026-11-04 at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.
+- **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Android edge-to-edge is the export preset option `screen/edge_to_edge` in `export_presets.cfg`, not a `ProjectSettings` key: Decision 1 moves it to an export preset note, S0b checks it, and S7 and S9 follow. Decision 1, S0a, S9 and A11 record that 7 of the 13 Decision 1 keys equal engine defaults and are dropped on save, so checks read effective values. S9 names `mouse_behavior_recursive`. S0a's parse check and settings dump are marked verified 4.7.2 headless.

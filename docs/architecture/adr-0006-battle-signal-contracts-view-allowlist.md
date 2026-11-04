@@ -30,7 +30,7 @@ Battle systems talk through Godot signals, and the GDDs leave open how signals f
 | **Knowledge Risk** | MEDIUM. The signal APIs date from 4.0 and `breaking-changes.md` lists no 4.4 to 4.7 change to them, but no file in `docs/engine-reference/godot/` covers signals, so each behaviour here is unverified on 4.7.2 (probes E1 to E6). |
 | **References Consulted** | `VERSION.md`; `breaking-changes.md` (4.4 to 4.7); `deprecated-apis.md` (string `connect()`); `current-best-practices.md` (4.5 rest parameters; 4.7 typed-return overrides). `architecture.md` v4; `tr-registry.yaml`; ADR-0001, ADR-0003, ADR-0004, ADR-0005 |
 | **Post-Cutoff APIs Used** | Rest parameters (`...args`, 4.5) in fakes only; the 4.7 typed-return override rule applies to any fake that overrides a typed method (return on every path). All else dates from 4.0: typed `signal` parameters, `Signal` methods, `get_signal_list`, `get_signal_connection_list`, `get_property_list`, `get_script_signal_list`, `ClassDB.class_get_signal_list`, `typeof()`, `make_read_only()`. |
-| **Verification Required** | Probes E1 to E6 (Validation Criteria), each still required on a 4.7.2 binary before the first story that relies on it. |
+| **Verification Required** | Probes E1 to E6 (Validation Criteria) are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); all match. They still become CI tests (ADR-0007 Decision 7). |
 
 ## ADR Dependencies
 
@@ -301,10 +301,10 @@ No code exists. On acceptance:
 - **V3 commit order**: for build, upgrade, a leak to Lost, a clear to Won, an early call and a pin, a fake reads the queries inside each handler and asserts they show the committed values (gold, tower, lives, phase); the log order matches Decision 4; a refusal logs nothing.
 - **V4 listeners removed**: one scripted battle runs with no view listeners, then with fakes on every VIEW and INPUT signal that call every read-only query; the ADR-0007 state snapshot (resolver registry excluded) is equal after every tick, and the fakes' logs hold the expected events.
 - **V5 command guard**: a fake on each VIEW and WIRING signal calls each command; inside a tick or a command each returns `ERR_COMMAND_IN_TICK` and changes nothing; a nested `enter()` and a stuck guard at `Battle.tick` each report a dev error; a mid-tick `Flow.pause()` follows ADR-0004 Decision 5.
-- **V6 payload types**: emitting `tower_built` with a `String` id fails the fake.
+- **V6 payload types**: emitting `tower_built` with a `String` id fails the fake. The fake takes untyped arguments and checks `typeof()`, since a typed `StringName` parameter takes a `String` silently (E3).
 - **V7 snapshot**: counts a fatal leak; one instance for screen and log, never rebuilt; no `Object`; every nested container read-only; `got_through` is `StringName` to `int`; bots read the same values.
 - **V8 lints**: L-SIG-1 to L-SIG-5 each fail on a planted sample.
-- **Engine probes** (`tests/unit/engine/test_signal_probes.gd`, proposed). Every answer below is unverified (memory); each probe is still required, and results go into `docs/engine-reference/godot/` with date and version.
+- **Engine probes** (`tests/unit/engine/test_signal_probes.gd`, proposed). Every answer below is verified 4.7.2 headless, see probe-results.md; each probe still becomes a CI test.
   - **E1** `get_script_signal_list()` lists only script signals, base script included, with `name`, `type`, `class_name`, `usage` per argument; an enum reports `TYPE_INT`, its `class_name` and the enum bit.
   - **E2** `emit()` does not check argument types; a wrong count fails at the listener call; a wrong type may convert.
   - **E3** a `String` converts silently to a `StringName` parameter, and `"a" == &"a"` is true.
@@ -340,6 +340,7 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 
 ## Amendments
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
+- **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Probe E3 confirms that a `String` payload converts silently into a typed `StringName` parameter. Decision 8 already says recording fakes take untyped arguments and check `typeof()`; V6 now says so too. E1 to E6 are marked verified in Engine Compatibility and Validation Criteria.
 
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.

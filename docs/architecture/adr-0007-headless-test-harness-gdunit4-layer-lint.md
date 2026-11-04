@@ -30,7 +30,7 @@ ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, 
 | **Knowledge Risk** | MEDIUM: runner behaviour and GDScript rules are post-cutoff (4.5 rest parameters, `@abstract`; 4.7 typed-override return, packed-array setter); gdUnit4 6.2.x lists Godot up to 4.7.1 |
 | **References Consulted** | Engine reference (`VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`); gdUnit4 6.2.0 source; `architecture.md` v4; `tr-registry.yaml`; ADR-0001 to ADR-0006; the registry; project test docs and CI files |
 | **Post-Cutoff APIs Used** | gdUnit4 on 4.7.2; its error monitor's `Logger` subclass with `ScriptBacktrace` (4.5); `...args` rest parameters (4.5); `@abstract` (4.5); typed-override return (4.7) |
-| **Verification Required** | H1 to H9 (Validation Criteria). H1, H2 and H7 gate the CI story |
+| **Verification Required** | H1 to H9 (Validation Criteria). H1, H2 and H7 gate the CI story. H4, H5, H7 (name and hash) and H8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); H1, H2, H3, H6 and H9 need gdUnit4 |
 
 ## ADR Dependencies
 
@@ -80,7 +80,7 @@ Six Accepted ADRs say "ADR-0007 places them" for tests (ADR-0001 V1 to V8, ADR-0
   4. **Tests**: the coding-standards CI command plus `--path .` and `-c`, with `-a` narrowed so benches stay out: `"$GODOT" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c`. Reports go to `res://reports/`.
   5. **Exit map**: 0 passes only if `results.xml` under `reports/` counts at least one test case once a suite exists (console text is not read). **101 fails**, and the script prints gdUnit4's orphan report. 101 covers orphan `Node`s only; `RefCounted` leaks are the weakref tests' job (ADR-0001 V2). A non-zero gdUnit4 code passes through; the script's own codes are 110 import, 111 parse, 112 lint, 113 empty run, 124 timeout.
 - **Flags**: `--harness-selftest` runs `tools/ci/selftest/<case>/` (H1, H2, H3); `--perf` runs `tests/performance/` (ADR-0005 P1 and E5 benches), on demand, never in CI.
-- **CI** (`tests.yml`, job `Run GdUnit4 Tests`, `timeout-minutes: 20`, `permissions: contents: read`): checkout; download the Godot 4.7.2 Linux editor from a URL pinned in the file and check it against a SHA512 pinned in the file, both copied from the release page by the CI story (names unverified, H7); never trust a sums file fetched at run time; run the script; upload `reports/` with `if: always()`. The gdUnit4 action goes: its 101 handling and install cannot be checked offline, and CI would differ from desktops.
+- **CI** (`tests.yml`, job `Run GdUnit4 Tests`, `timeout-minutes: 20`, `permissions: contents: read`): checkout; download the Godot 4.7.2 Linux editor from a URL pinned in the file and check it against a SHA512 pinned in the file, both copied from the release page by the CI story (archive name and SHA512 confirmed, H7; the CI story still copies the URL); never trust a sums file fetched at run time; run the script; upload `reports/` with `if: always()`. The gdUnit4 action goes: its 101 handling and install cannot be checked offline, and CI would differ from desktops.
 - **Class cache leaves git** (Migration 3). Step 1 rebuilds it each run, so the old fresh-clone warning no longer applies to the script.
 - **Settings**: `project.godot` sets `gdunit4/report/godot/push_error=true`, keeps `script_error` at default `true`, and keeps the gdUnit4 editor plugin off (an autoload it adds would fail the settings suite).
 
@@ -221,7 +221,9 @@ Each item is a story (Visual/Feel, UI, or Integration with a documented playtest
 ### 9. GDScript 4.7 rules for the control manifest (QQ-15)
 **Required**: R1 an override of a typed method returns that type on every path (4.7; a missing `return` is a parse error per `breaking-changes.md`, so step 2 catches it). R2 to change one element of a packed-array property whose setter must run, assign the whole array. R3 state a lambda changes lives in an `Array`, `Dictionary` or object member. R4 every battle signal has a `battle_signals.gd` row and fakes check each argument, since `emit()` checks no types. R5 a rest parameter is `...name: Array` or untyped, last. R6 helpers load by `const X := preload(...)`.
 
-**Forbidden**: F1 relying on a setter for `arr[i] = v` on a packed array. F2 assigning a captured outer local in a lambda (if H5 finds `CONFUSABLE_CAPTURE_REASSIGNMENT`, set it to error and keep `debug/gdscript/warnings/exclude_addons=true`). F3 trusting declared signal types at runtime. F4 `return null` in an override typed `int`, `float` or `bool`; `--check-only` as a parse check. F5 `class_name` in `tests/` or `tools/`.
+**Forbidden**: F1 relying on a setter for `arr[i] = v` on a packed array. F2 assigning a captured outer local in a lambda (H5 found `debug/gdscript/warnings/confusable_capture_reassignment`: set it to error, 2. 4.7.2 has no `exclude_addons`; keep `debug/gdscript/warnings/directory_rules` at its default `{"res://addons": 0}`, which already skips addon warnings). F3 trusting declared signal types at runtime. F4 `return null` in an override typed `int`, `float` or `bool`; `--check-only` as a parse check. F5 `class_name` in `tests/` or `tools/`.
+
+**Notes** (verified 4.7.2 headless, see probe-results.md): N1 `debug/gdscript/warnings/inference_on_variant` defaults to error, so write `var w: WeakRef = weakref(x)`, never `var w := weakref(x)`. N2 never name a variable `log`: it shadows the global `log()` and breaks the parse.
 
 ### 10. Class names (QQ-16)
 No prefix; the short names in ADR-0001 to ADR-0006 stay. L-NAME-1 fails a clash by name on every run, so an engine or addon upgrade that adds a class shows at once; it extends ADR-0005 E7 to script classes. Taken today: every gdUnit4 global (`Comparator`, `Fuzzer`, `LocalTime`, `ValueProvider`, `ErrorLogEntry`, `RPC`, `XmlElement`, the `Gd` and `GdUnit` names). A class a future clash forces to rename takes a `Tr` prefix alone.
@@ -316,7 +318,7 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 - **Import fails twice**. Mitigation: exit 110 names it; rerun the job.
 - **Lint false hits**. Mitigation: typed-receiver matching for L-DATA-2 and L-STAT-2; a real exception moves into `scopes.gd` by an ADR change.
 - **`DisplayServer` in wrapper build blocks ADR-0006 V2 headless**. Mitigation: inject the value.
-- **Hidden folder** (H8): if `res://.claude/` scripts do not load on Linux, copy the parse check to `tools/ci/`.
+- **Hidden folder** (H8): if `res://.claude/` scripts do not load on Linux, copy the parse check to `tools/ci/`. H8 passed, so no copy is needed.
 - **Other tools call Godot directly** (`.claude/scripts/test-run.sh`, `/smoke-check`, `/dev-story`, `/test-setup`) and skip import and lint. Mitigation: `commands.test` points at the script (Migration 4).
 
 ## GDD Requirements Addressed
@@ -352,11 +354,11 @@ Harness probes and self-tests; results to `probe-results.md`:
 - **H1** (`--harness-selftest`): a run with no class cache exits 1; a run with no test cases exits 0 and the script maps it to 113 from `results.xml`. Record whether 101 ever means anything but orphans.
 - **H2** setting on unless noted: (a) one claimed `push_error` passes; (b) one claimed `push_error` passes with the setting off; (c) one unclaimed fails; (d) an unclaimed `push_warning` fails, and an engine `ERR_*` and a runtime script error are each counted; (e) two identical, one claimed, fails. (a), (b) in `harness_probe_test.gd`; (c) to (e) in `tools/ci/selftest/`, which must exit 100.
 - **H3** (`--harness-selftest`): a leaked `Node` makes the script fail on 101 and print the orphan report.
-- **H4** (once): confirm that a typed override with no `return` fails the parse check; the reference says it is an error.
-- **H5**: whether `debug/gdscript/warnings/confusable_capture_reassignment` exists on 4.7.2 (`ProjectSettings.has_setting()`).
+- **H4** (once): confirm that a typed override with no `return` fails the parse check; the reference says it is an error. It fails; verified 4.7.2 headless, see probe-results.md.
+- **H5**: whether `debug/gdscript/warnings/confusable_capture_reassignment` exists on 4.7.2 (`ProjectSettings.has_setting()`). It exists, default 1 (warn); verified 4.7.2 headless, see probe-results.md.
 - **H6** (once): record a fresh-clone run's exit without step 1.
-- **H7** (CI story, open): the 4.7.2 Linux archive name, URL and SHA512 from the release page.
-- **H8**: `load("res://.claude/scripts/godot-parse-check.gd")` is not null headless on Linux.
+- **H7**: archive `Godot_v4.7.2-stable_linux.x86_64.zip`, SHA512 `9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65`, confirmed (verified 4.7.2 headless, see probe-results.md). The CI story still copies the URL from the release page.
+- **H8**: `load("res://.claude/scripts/godot-parse-check.gd")` is not null headless on Linux. It loads; verified 4.7.2 headless, see probe-results.md.
 - **H9** (print only): what an un-awaited `is_push_error` reports; tests always `await` either way.
 
 Harness tests:
@@ -398,6 +400,7 @@ Harness tests:
 
 ## Amendments
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
+- **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). F2: `debug/gdscript/warnings/exclude_addons` does not exist in 4.7.2; F2 now keeps `debug/gdscript/warnings/directory_rules` at its default `{"res://addons": 0}`, which already skips addon warnings. Decision 9 gains notes N1 (`inference_on_variant` is an error by default: type a `weakref()` local as `WeakRef`, not `:=`) and N2 (a variable named `log` breaks the parse). H7: archive name and SHA512 confirmed; the CI story still copies the URL. H4, H5, H7 and H8 are marked verified.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.

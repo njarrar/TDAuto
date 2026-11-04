@@ -501,14 +501,15 @@ api_decisions:
     notes: "ADR-0002 Accepted 2026-11-04; binding"
   - purpose: display_stretch
     status: active
-    api: "viewport 540x960, stretch mode canvas_items, aspect keep, scale 1.0, scale_mode fractional, portrait, window mode 0 (mode.mobile 3), Android edge-to-edge on, quit_on_go_back false; effective values checked through ProjectSettings"
+    # was: "Android edge-to-edge on" listed with the project settings (before 2026-11-04 engine probes)
+    api: "viewport 540x960, stretch mode canvas_items, aspect keep, scale 1.0, scale_mode fractional, portrait, window mode 0 (mode.mobile 3), quit_on_go_back false; effective values checked through ProjectSettings; Android edge-to-edge is the export preset option screen/edge_to_edge true in export_presets.cfg, not a ProjectSettings key"
     not: "aspect expand or keep_width (4.7 new-project default is expand); Camera2D in the battle"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     reason: "Only keep makes field units equal viewport units with no offset; letterbox absorbs most notch insets"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-03
-    revised: "2026-11-03"
+    revised: "2026-11-04"
     notes: "ADR-0003 Accepted 2026-11-04; binding"
   - purpose: pointer_event_source
     status: active
@@ -534,7 +535,8 @@ api_decisions:
     notes: "ADR-0003 Accepted 2026-11-04; binding"
   - purpose: tick_driver
     status: active
-    api: "Own accumulator in a pure TickClock, advanced from BattleWrapper._process(delta) through step(delta); 60 Hz fixed tick; frame order real-time models, ticks, view refresh; application/run/max_fps 60 in project settings"
+    # was: physics settings not pinned (before 2026-11-04 engine probes)
+    api: "Own accumulator in a pure TickClock, advanced from BattleWrapper._process(delta) through step(delta); 60 Hz fixed tick; frame order real-time models, ticks, view refresh; application/run/max_fps 60 in project settings; physics/common/physics_ticks_per_second 60 and physics/common/max_physics_steps_per_frame 8 pinned, since the engine caps _process delta at about their ratio"
     not: "_physics_process, Engine.physics_ticks_per_second, max_physics_steps_per_frame, Timer nodes, variable dt"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     reason: "The accumulator must be zeroed on pause and clamped by this project; one callback keeps shown bonus equal to paid bonus whatever spike S1 finds"
@@ -777,9 +779,11 @@ forbidden_patterns:
   - pattern: stat_key_literal
     status: active
     description: "No String or &-literal key argument to stat_int or stat_float; keys come only from StatKeys constants (lint L-STAT-1)"
-    why: "A literal skips the vocabulary and a String converts to StringName on every call"
+    # was: "A literal skips the vocabulary and a String converts to StringName on every call" (before 2026-11-04 engine probes)
+    why: "A literal skips the vocabulary and loses typo safety; cost is not a reason (a literal costs the same as a constant)"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
+    revised: "2026-11-04"
     notes: "ADR-0005 Accepted 2026-11-04; binding"
   - pattern: read_context_per_read
     status: active
