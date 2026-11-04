@@ -61,3 +61,6 @@ Tables only; no balance value changed. Interactions and the downstream Dependenc
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. Signal renames: `tap` to `tapped`, `phase` to `phase_changed`, `waves_complete` to `waves_completed` (ADR-0006 Decision 5). Rule 17 and both gesture-log rows name `GestureLog` and its `set_prompt` (ADR-0008 Decision 8), and Rule 17 says the HUD reads costs when drawing, never in a sim signal handler (ADR-0005 Decision 5). The ADR note records that the wrapper feeds `ChipWindow.advance(ms)` in frame step 1 (ADR-0004 Decision 4). Not applied: ADR-0008 makes `chip_state()` TowerSim's read, but this GDD gives it and the chip window to TowerInput; left for the user to settle.
+
+## Note — 2026-11-04 — `chip_state()` owner settled
+The GDD stands: `chip_state()` and `ChipWindow` belong to TowerInput (Rules 8 and 17). It is presentation state on a real-time clock, so keeping it out of TowerSim keeps the sim identical with or without views. architecture.md, ADR-0008's review table and the registry entry now match the GDD. No GDD text changed.

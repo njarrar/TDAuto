@@ -640,7 +640,7 @@ api_decisions:
   - purpose: gesture_trace_and_log
     status: active
     # was: trace fresh per press, chip_state() on TowerInput (before godot-specialist and TD-ADR review)
-    api: "InputResolver.last_trace() -> GestureTrace, built once at the exit to Idle before became_idle, and state(), read only in src/foundation/input/, src/presentation/dev/ and tests (L-INPUT-7); GestureLog shipped but built by the wrapper only when OS.is_debug_build(), listens through view_wiring to the eight resolver signals and tower_upgraded, reads TowerSim.chip_state() at each tower prompt, writes JSON lines through ADR-0010's sink"
+    api: "InputResolver.last_trace() -> GestureTrace, built once at the exit to Idle before became_idle, and state(), read only in src/foundation/input/, src/presentation/dev/ and tests (L-INPUT-7); GestureLog shipped but built by the wrapper only when OS.is_debug_build(), listens through view_wiring to the eight resolver signals and tower_upgraded, reads TowerInput.chip_state() at each tower prompt, writes JSON lines through ADR-0010's sink"
     not: "A clock or log in the resolver; a log inside TowerSim or TowerInput"
     adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     reason: "Sub-slop travel, silent endings and tie-break rules reach no signal; the Pillar 4 phone test needs them (TR-input-015)"

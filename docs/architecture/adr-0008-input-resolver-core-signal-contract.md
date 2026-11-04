@@ -321,7 +321,7 @@ godot-specialist: **CONCERNS** (none blocking). TD-ADR: **CONCERNS**. All findin
 | T3 no-command reason | Restated as cleanup edges; teardown not guarded; narrows ADR-0006; V12, no lint |
 | T4 replacement order | Named a deliberate choice; GDD line 115 in sync; V3 extended |
 | T5 TR coverage | Tower and Hero Full; TR-input-013 and 015 Partial; ADR-0010 sync item |
-| T6 `chip_state()` owner | TowerSim |
+| T6 `chip_state()` owner | TowerInput, which owns `ChipWindow` (Tower GDD Rules 8 and 17); settled 2026-11-04 after review, architecture.md moved to match |
 | T7 Decision 9 values | Rules only; GDD tables cited; Start/Call registration added |
 | T8, G5 enum not checked | V6 uses `2 as InputResolver.Accepts`; check required; R6 |
 | T11 trace fields | `candidates` dropped; `Rule` enum |
