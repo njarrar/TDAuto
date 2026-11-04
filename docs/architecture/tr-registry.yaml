@@ -37,8 +37,8 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 2
-last_updated: "2026-11-03"
+version: 3
+last_updated: "2026-11-04"
 
 requirements:
 - id: TR-data-001
@@ -247,9 +247,9 @@ requirements:
 - id: TR-input-015
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification for the Pillar 4 phone test"
+  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, and listening to tower_upgraded and chip_state() at tower prompts, for the Pillar 4 phone test"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-input-016
   system: input
@@ -296,9 +296,9 @@ requirements:
 - id: TR-state-006
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost) with a result readable after the outcome"
+  requirement: "Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost) with a result readable after the outcome; last wave started is Enemy & Wave's wave_index()"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-007
   system: state
@@ -559,6 +559,13 @@ requirements:
   created: 2026-11-03
   revised: ""
   status: active
+- id: TR-enemy-016
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "wave_index() is the 1-based position in wave_ids of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text"
+  created: 2026-11-04
+  revised: ""
+  status: active
 - id: TR-tower-001
   system: tower
   gdd: design/gdd/tower-system.md
@@ -688,9 +695,9 @@ requirements:
 - id: TR-hero-004
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim, HeroInput and the HUD"
+  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim, HeroInput and the HUD, and the Burst ID into the HUD for the cooldown wedge"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hero-005
   system: hero
@@ -835,9 +842,9 @@ requirements:
 - id: TR-hud-010
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and new view-only queries; phase and lives_changed join the view allowlist"
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), tower_inspected); the burst wedge is cooldown_left() / to_ticks(Burst cooldown) read through the accessor with the Burst ID the builder injects; phase and lives_changed join the view allowlist"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-011
   system: hud
