@@ -31,18 +31,30 @@ Two development-build logs are needed for the first phone tests: the gesture log
 | **Domain** | Core (file I/O in the shell) |
 | **Layer** | Presentation |
 | **Knowledge Risk** | MEDIUM for the file API (4.4 changed `store_*` return types, per `breaking-changes.md` as quoted in architecture.md); HIGH for the version overall (VERSION.md). |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` (Module Ownership: HumanLog row; Engine Knowledge Gap Summary). `breaking-changes.md` was not re-read for this ADR, so the 4.4 claim is second-hand through architecture.md. The live 4.7.2 `FileAccess` and `OS` class references were not fetched for this ADR. |
-| **Post-Cutoff APIs Used** | `FileAccess.store_*` returning `bool` (4.4, as quoted in architecture.md). |
-| **Verification Required** | See the NOT SOURCEABLE list below. All need the live 4.7.2 class reference or a phone run before Acceptance. |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` (Module Ownership: HumanLog row; Engine Knowledge Gap Summary). `breaking-changes.md` was not re-read for this ADR, so the 4.4 claim is second-hand through architecture.md. The 4.7.2 class reference XML (`FileAccess`, `OS`, `Time`, `JSON`, `Engine`) at the `4.7.2-stable` tag was read for the sourced list below. |
+| **Post-Cutoff APIs Used** | `FileAccess.store_*` returning `bool` (4.4; `store_line` confirmed in doc/classes/FileAccess.xml@4.7.2-stable). |
+| **Verification Required** | See the NOT SOURCEABLE list below. Each needs a phone run or a test before Acceptance. |
+
+Sourced from the 4.7.2 class reference:
+
+- Open modes: there is no append flag. `WRITE` truncates an existing file and creates a missing one; `READ_WRITE` does not truncate and puts the cursor at the beginning; `WRITE_READ` truncates (doc/classes/FileAccess.xml@4.7.2-stable, enum `ModeFlags`). `seek_end(position: int = 0)` sets the cursor relative to the end of the file (doc/classes/FileAccess.xml@4.7.2-stable, `seek_end`).
+- Failed open: `FileAccess.open(path, flags)` returns `null`; the static `FileAccess.get_open_error()` returns the `Error` of the last `open` in the current thread (doc/classes/FileAccess.xml@4.7.2-stable, `open`, `get_open_error`).
+- Write: `store_line(line: String) -> bool` appends `\n`, encodes UTF-8 and returns `true` on success; after an error the cursor position is indeterminate (doc/classes/FileAccess.xml@4.7.2-stable, `store_line`).
+- Flush and close: `flush()` writes the buffer to disk and protects data if the project crashes; closing flushes automatically; the docs warn that needless flushing costs performance. A `FileAccess` closes when it is freed (doc/classes/FileAccess.xml@4.7.2-stable, `flush`, `close`).
+- `user://` location: on Android and iOS it is "a sandboxed directory in either internal or external storage, depending on the user's configuration" (doc/classes/OS.xml@4.7.2-stable, `get_user_data_dir`).
+- Build kind: `OS.is_debug_build()` returns `true` for a debug export template or the editor and `false` for a release export template; `OS.has_feature("template")` tells an export template from the editor; `has_feature` tag names are case-sensitive (doc/classes/OS.xml@4.7.2-stable, `is_debug_build`, `has_feature`).
+- JSON: `JSON.stringify(data: Variant, indent: String = "", sort_keys: bool = true, full_precision: bool = false) -> String` is static; it converts every number to `float`, writes `INF` as `1e99999` and `NAN` as `null` (doc/classes/JSON.xml@4.7.2-stable, `stringify`).
+- Time: `Time.get_ticks_msec()` and `get_ticks_usec()` return `int` time since engine start, never negative, 64-bit; `Time.get_unix_time_from_system()` returns UTC Unix seconds as `float`; `get_datetime_string_from_system(utc, use_space)` returns ISO 8601 (doc/classes/Time.xml@4.7.2-stable, those members).
+- Hash: the only hash in the reference is the engine's Git commit hash, `Engine.get_version_info()["hash"]` (doc/classes/Engine.xml@4.7.2-stable, `get_version_info`); it is not a game build hash.
 
 NOT SOURCEABLE (each stays a gap; none is filled from memory):
 
-- NOT SOURCEABLE: `FileAccess` flush and close behaviour for an append log on Android and iOS (also listed in architecture.md).
-- NOT SOURCEABLE: the open mode that appends to an existing file without truncating it, and whether the `user://` path is writable and findable on each platform.
-- NOT SOURCEABLE: what a failed open returns, and the error query for it.
-- NOT SOURCEABLE: how a tester finds and sends `user://run_log.jsonl` on a phone.
-- NOT SOURCEABLE: the engine query that tells a debug or development build from a release build, and the export feature tags.
-- NOT SOURCEABLE: the JSON serialiser API, the wall-clock and monotonic time APIs for log timestamps, and the source of a build hash.
+- NOT SOURCEABLE: whether `READ_WRITE` creates a missing file (`FileAccess.xml` says so for `WRITE` and `WRITE_READ` only).
+- NOT SOURCEABLE: whether a flushed line survives the OS killing the app on Android and iOS; needs a phone run.
+- NOT SOURCEABLE: whether `user://` is writable and findable on each target phone, and how a tester finds and sends `user://run_log.jsonl`; needs a phone run.
+- NOT SOURCEABLE: the full list of export feature tags (`OS.xml` links to the Feature Tags tutorial, which is not in the class reference).
+- NOT SOURCEABLE: that `JSON.stringify` with the default empty `indent` emits one line with no newline (`JSON.xml` does not state it); the `LogFormatter` test pins it.
+- NOT SOURCEABLE: the source of a game build hash and a launch ID.
 - NOT SOURCEABLE: whether a write on the main thread can stall a frame on a low-end phone, and by how much.
 
 ## ADR Dependencies

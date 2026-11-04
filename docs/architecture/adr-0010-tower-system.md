@@ -120,7 +120,7 @@ func state() -> int
 - `guard_ms` is 200 and `expire_ms` is 1500. They are constructor arguments held in one constants file so tests can vary them. Whether they belong in the catalogue is not settled: the GDD text that classifies them was cut off in my read, so this is an open point for the review.
 - The feed: the frame hook of `BattleWrapper` (ADR-0003) calls one shell-side `advance(ms)` per frame, with the real delta converted to whole milliseconds. That call runs `TowerInput.advance(ms)`, which calls `ChipWindow.advance(ms)`, then `HudLogic.advance(ms)`. One clock feeds both, so the chip bar and the window agree (TR-hud-012). ADR-0003 owns the 100 ms clamp the HUD uses; if it also applies here, a long frame shortens the window in wall time, and this ADR accepts that.
 - Order of input against the feed: the window can only be read at the last `advance`. A release handled before this frame's `advance` sees `elapsed` from the previous frame. So a commit near 200 ms or 1500 ms can be off by one frame (16.7 ms at 60 fps). This ADR accepts that error and does not try to timestamp events. Whether the engine runs the input callback before the frame hook is NOT SOURCEABLE; the answer changes which side of a boundary the error falls on, not its size.
-- While the phase is Paused, Won, Lost or Fatal, `TowerInput` closes the window on the `phase` signal and ignores taps while `halted()`. A tap that resumes from Paused cannot commit.
+- While the phase is Paused, Won, Lost or Fatal, `TowerInput` closes the window on the `phase_changed` signal and ignores taps while `halted()`. A tap that resumes from Paused cannot commit.
 
 ### 6. Hit targets
 

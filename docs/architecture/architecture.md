@@ -139,7 +139,7 @@ The systems index lists Combat under the Gameplay category. The architecture put
 | ChipWindow | The 200 to 1500 ms upgrade window and the chip state | `advance(ms)`, `open`, `close`, `elapsed`, `state()` | Nothing | none: plain class |
 | PinGeometry | Pin validity and `clamp_pin` | `is_valid`, `clamp` | Stage shapes | none: plain class, scalar `float` fields |
 | AimModel | Aim state, cancel hysteresis (64 and 48), the shared aim-point function, the kill preview, the cooldown digit | `aim_state()`, `aim_point()`, `aim_ring_radius()`, `preview_kills()`, `cooldown_digit()`, `update(hero, roster, finger)` | HeroSim reads, Combat helpers, Stage shapes | none: plain class |
-| TowerInput (shell) | Tower and slot target registration only, and the chip disc while the window is open | forwards `slot_tapped`, `tower_inspected`; calls `TowerSim.upgrade` on a chip commit | InputResolver, ChipWindow, TowerSim, FlowSim `phase` | `Node` (thin adapter) |
+| TowerInput (shell) | Tower and slot target registration only, and the chip disc while the window is open | forwards `slot_tapped`, `tower_inspected`; calls `TowerSim.upgrade` on a chip commit | InputResolver, ChipWindow, TowerSim, FlowSim `phase_changed` | `Node` (thin adapter) |
 | HeroInput (shell) | Hero and burst button registration only | forwards resolver gestures to AimModel; calls `HeroSim.pin` and `burst` | InputResolver, AimModel, HeroSim | `Node` (thin adapter) |
 
 Two shell callers reach TowerSim on purpose: HudLogic calls `build` (from the arc) and TowerInput calls `upgrade` (from the chip). This is not a duplication to merge. Both TowerInput and HeroInput get an equivalence test: a resolver-driven script and a direct-command script must give the same battle.

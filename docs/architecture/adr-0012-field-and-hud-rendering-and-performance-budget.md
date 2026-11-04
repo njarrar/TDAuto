@@ -102,7 +102,7 @@ No rendering code. `project.godot` sets `rendering/renderer/rendering_method="mo
 
 | View | Change key |
 |---|---|
-| FieldView | ticks advanced this frame and roster non-empty, or `phase` changed |
+| FieldView | ticks advanced this frame and roster non-empty, or `phase_changed` seen |
 | TowerView | `tower_built`, `tower_upgraded`, `gold_changed` seen, or a ring timer running |
 | HeroView | hero moved, `pin_state`, `burst_state`, `aim_state` or the finger position changed |
 | CombatView | an `attack_fired` or `damage_applied` this frame, or a flash still fading |
