@@ -680,54 +680,67 @@ These run only in the editor or on a device. ADR-0007 lists them as manual-evide
 
 ### ADR Quality Check
 
-No ADRs exist (`docs/architecture/adr-*.md` matches nothing; `adr-dep-graph.sh` reports `ADRS: 0`). There is nothing to check for engine compatibility, version, post-cutoff flags, GDD linkage or conflict with the layers above. The first `/architecture-review` after the ADRs are written performs this check.
+Three ADRs exist, all Accepted by the user on 2026-11-04: ADR-0001, ADR-0002 and ADR-0003. Each has an Engine Compatibility table pinned to 4.7.2, lists its post-cutoff and unverified APIs, maps its GDD requirements, and passed a TD-ADR and a godot-specialist review (both CONCERNS, all findings applied). Version 4 of this document applies each ADR's architecture.md sync list. Engine facts each ADR leaves open are tracked by named tests: ADR-0001 V1, V6 and V8; ADR-0002 E1 to E3, X1 and X2; ADR-0003 spike S0a and S0b. The next `/architecture-review` performs the full check across all three, and again once ADR-0004 to ADR-0011 exist.
 
 ### Traceability Coverage Check
 
-Technical Requirements Baseline: **121 requirements from 8 GDDs, 121 registered, 0 provisional** (TR registry read, 121 entries, all `active`). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the latest review is `docs/architecture/architecture-review-2026-11-03b.md`.
+Technical Requirements Baseline: **121 requirements from 8 GDDs, 121 registered, 0 provisional** (TR registry version 4, 121 entries, all `active`; TR-input-016 and TR-hud-002 reworded 2026-11-04 to match ADR-0003). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the latest review is `docs/architecture/architecture-review-2026-11-03b.md`. Both still show the version 3 counts until the next `/architecture-review` updates them.
 
 | Status | Count |
 |---|---|
-| Covered by an Accepted ADR | 0 |
-| Covered by a Proposed ADR | 0 |
-| Partial | 0 |
-| **Gap** | **121** |
+| Covered by an Accepted ADR (in full) | 31 |
+| Covered by a Proposed ADR | 0 (no proposed ADR is written yet) |
+| Partial (an Accepted ADR covers part; the rest has a named owner) | 5 |
+| **Gap** | **85** |
+
+Each requirement is counted once. The five partial requirements and who owns the rest:
+
+| TR | Covered now | Rest owned by |
+|---|---|---|
+| TR-data-003 | ADR-0002: manifest, no `DirAccess`, export include filter, desktop pack smoke test (X1) | ADR-0002 X2: the Android export proof, on a device, at Technical Setup |
+| TR-data-015 | ADR-0002: one small synchronous load, no import step, no scene at boot | ADR-0002 P1 and P2: device timings at the first phone build (QQ-11) |
+| TR-input-006 | ADR-0003: `edge_reject_margin` and safe-area insets in field units | Mobile Platform GDD: Android gesture insets (QQ-21) |
+| TR-input-013 | ADR-0003: HUD Controls consume presses before the adapter; the press gate | ADR-0008: burst button, build arc and world targets as resolver discs |
+| TR-state-010 | ADR-0003: focus loss enters Paused, input cancels, the resume tap reaches nothing | ADR-0004: ticks stop at the tick gate; the Clock zeroes its accumulator |
 
 By GDD: data-config 15, input 16, game-state 14, combat 14, enemy-wave 16, tower 15, hero 15, battle-hud 16. By layer tag: 53 Foundation, 45 Core, 3 Feature, 20 Presentation. By engine risk: 14 HIGH, 31 MEDIUM, 76 LOW.
 
-The per-ADR coverage in the next section assigns every one of the 121 requirements to exactly one proposed ADR, so no requirement is left without a planned decision.
+The per-ADR coverage in the next section assigns every one of the 121 requirements to one primary ADR, so no requirement is left without a planned decision. Two requirements are split across two ADRs (TR-state-010, TR-input-013); each is counted once, under its primary ADR, and the second ADR lists it as shared with the part it covers.
 
 ## Required ADRs
 
-Eleven ADRs close all 121 gaps. Numbers are proposed, in dependency order, and `/architecture-decision` assigns the final ones. The review used labels P01 to P15; the column maps them. Version 1 proposed 15. To cut scope for a solo part-time developer (LP-FEASIBILITY 13), four pairs were folded: Fatal Path into App Lifecycle, Determinism into the Tick ADR, Combat API into the Enemy Entity ADR, and Dev Telemetry into the command and resolver ADRs. Input Resolver moved to Foundation to match its module. TR-hero-012 (bot equivalence) moved to ADR-0010 because it needs the command enums.
+Eleven ADRs close all 121 gaps. ADR-0001 to ADR-0003 are Accepted, with those numbers. The other numbers are proposed, in dependency order, and `/architecture-decision` assigns the final ones. The review used labels P01 to P15; the column maps them. Version 1 proposed 15. To cut scope for a solo part-time developer (LP-FEASIBILITY 13), four pairs were folded: Fatal Path into App Lifecycle, Determinism into the Tick ADR, Combat API into the Enemy Entity ADR, and Dev Telemetry into the command and resolver ADRs. Input Resolver moved to Foundation to match its module. TR-hero-012 (bot equivalence) moved to ADR-0010 because it needs the command enums.
 
-| Proposed ID | Title | Layer | Depends on | Review label | TRs | Engine risk |
-|---|---|---|---|---|---|---|
-| ADR-0001 | App Lifecycle, Composition Root and Fatal Path | Foundation | none | P01, P06 | 15 | HIGH |
-| ADR-0002 | Catalogue Storage Format, Manifest and Validation | Foundation | ADR-0001 | P03 | 10 | HIGH |
-| ADR-0003 | Input Adapter, Display Stretch and Platform Lifecycle | Foundation | ADR-0001 | P05 | 11 | HIGH |
-| ADR-0004 | Fixed-Tick Clock, Tick Order, Frame Order and Determinism | Foundation | ADR-0001, ADR-0003 | P02, P07 | 20 | HIGH |
-| ADR-0005 | Stat Accessor and Read-Context Contract | Foundation | ADR-0002, ADR-0001 | P04 | 6 | LOW |
-| ADR-0006 | Battle Signal Contracts and View Allowlist | Foundation | ADR-0001, ADR-0004 | P10 | 10 | MEDIUM |
-| ADR-0007 | Headless Test Harness, gdUnit4 and Layer Lint | Foundation | ADR-0001, ADR-0006 | P08 | 6 | MEDIUM |
-| ADR-0008 | Input Resolver Core and Signal Contract | Foundation | ADR-0003, ADR-0006 | P09, part of P15 | 11 | MEDIUM |
-| ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0005 | P11, P12 | 17 | MEDIUM |
-| ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Core | ADR-0004, ADR-0008, ADR-0009 | P13, part of P15 | 10 | LOW |
-| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0009, ADR-0010 | P14 | 5 | MEDIUM |
+| ID | Title | Status | Layer | Depends on | Review label | TRs | Engine risk |
+|---|---|---|---|---|---|---|---|
+| ADR-0001 | App Lifecycle, Composition Root and Fatal Path | Accepted 2026-11-04 | Foundation | none | P01, P06 | 15 | HIGH |
+| ADR-0002 | Catalogue Storage Format, Manifest and Validation | Accepted 2026-11-04 | Foundation | ADR-0001 | P03 | 10 | HIGH |
+| ADR-0003 | Input Adapter, Display Stretch and Platform Lifecycle | Accepted 2026-11-04 | Foundation | ADR-0001 | P05 | 11 | HIGH |
+| ADR-0004 | Fixed-Tick Clock, Tick Order, Frame Order and Determinism | Proposed | Foundation | ADR-0001, ADR-0003 | P02, P07 | 20 (+1 shared) | HIGH |
+| ADR-0005 | Stat Accessor and Read-Context Contract | Proposed | Foundation | ADR-0002, ADR-0001 | P04 | 6 | LOW |
+| ADR-0006 | Battle Signal Contracts and View Allowlist | Proposed | Foundation | ADR-0001, ADR-0004 | P10 | 10 | MEDIUM |
+| ADR-0007 | Headless Test Harness, gdUnit4 and Layer Lint | Proposed | Foundation | ADR-0001, ADR-0006 | P08 | 6 | MEDIUM |
+| ADR-0008 | Input Resolver Core and Signal Contract | Proposed | Foundation | ADR-0003, ADR-0006 | P09, part of P15 | 11 (+1 shared) | MEDIUM |
+| ADR-0009 | Enemy Entity, Roster and Combat API | Proposed | Core | ADR-0001, ADR-0005 | P11, P12 | 17 | MEDIUM |
+| ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Proposed | Core | ADR-0004, ADR-0008, ADR-0009 | P13, part of P15 | 10 | LOW |
+| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Proposed | Presentation | ADR-0009, ADR-0010 | P14 | 5 | MEDIUM |
+
+The TRs column sums to 121. "+1 shared" marks a requirement whose primary ADR is ADR-0003; it is not counted again.
 
 ### What each ADR decides and which requirements it covers
 
-**ADR-0001 App Lifecycle, Composition Root and Fatal Path** (Foundation). Decides: no autoloads, AppRoot states (Boot, InStage, Fatal), scene-free builder, injected callables (method Callables only, no capturing lambdas or bind), per-battle FatalLatch, push_error vs assert, dev-error sink, retry by dropping references and the weakref proof, free() vs queue_free() timing, Reduce Motion location.
+**ADR-0001 App Lifecycle, Composition Root and Fatal Path** (Foundation, **Accepted** 2026-11-04). Decided: no autoloads; AppRoot as the main scene with states `BOOT`, `IN_STAGE`, `FATAL`; a scene-free static `BattleBuilder.build(catalogue, stage_id, rng_seed, fatal_handler)` that returns null on a fatal during build; `Battle` holding every Callable target; `HaltGate`; method Callables only; two `Wiring` records undone at teardown; one `FatalLatch` class with a battle and an app instance; `DevErrorSink`; push_error, never assert; retry by latch, then teardown in a fixed order (`remove_child` then `queue_free`, then `unwire()`) and rebuild, with the weakref proof; a code-built `FatalScreen`; Reduce Motion through `PresentationSettings`.
 Covers (15): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, TR-state-001, TR-state-002, TR-state-009, TR-state-011, TR-enemy-005, TR-enemy-012, TR-tower-006, TR-tower-013, TR-hero-004, TR-hud-006.
 
-**ADR-0002 Catalogue Storage Format, Manifest and Validation** (Foundation). Decides: Resource vs JSON, record classes, strict field checks, manifest load proven on an Android export, read-only proof with duplicate_deep, content tests.
-Covers (10): TR-data-001, TR-data-002, TR-data-003, TR-data-005, TR-data-007, TR-data-013, TR-data-015, TR-enemy-001, TR-hero-014, TR-hud-016.
+**ADR-0002 Catalogue Storage Format, Manifest and Validation** (Foundation, **Accepted** 2026-11-04). Decided: JSON files read with `FileAccess` and a `JSON` instance; an explicit `manifest.json`; one schema table per record type driving the parser, validator and snapshot; typed `RefCounted` records with read-only lists; `load_manifest`, `from_texts` and `from_documents`; a tiered validator; a schema-walk `CatalogueSnapshot` in place of `duplicate_deep()`; a CI content test with one broken-fixture test per rule; export filters and a desktop pack smoke test.
+Covers (10): TR-data-001, TR-data-002, TR-data-003 (partial: Android proof X2 owed), TR-data-005, TR-data-007, TR-data-013, TR-data-015 (partial: device timings owed), TR-enemy-001, TR-hero-014, TR-hud-016.
 
-**ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle** (Foundation). Decides: engine event path and its order against _process and Controls (a spike first), touch and mouse emulation, 4.7 device IDs, safe area, stretch mode and aspect, minimum width, tall-phone behaviour, pause and focus notifications per platform; decided here, inherited later by the Mobile Platform GDD.
-Covers (11): TR-input-002, TR-input-003, TR-input-004, TR-input-005, TR-input-006, TR-input-013, TR-input-016, TR-state-010, TR-hud-002, TR-hud-003, TR-hud-014.
+**ADR-0003 Input Adapter, Display Stretch and Platform Lifecycle** (Foundation, **Accepted** 2026-11-04). Decided: explicit `canvas_items` + `keep` letterbox at a 540x960 viewport; a 360 x 640 dp minimum size guard; no Camera2D; an `InputAdapter` that reads presses in `_unhandled_input` and endings in `_input`, drops emulated pointer events and has a modal press gate; a mouse-only `TapScreen` for modals; a union of lifecycle notifications plus the Android back request as a pause; safe-area insets read once per battle on mobile through `SafeAreaMath`; a two-part spike (S0a desktop, S0b device) whose checks gate the stories that rest on them. The Mobile Platform GDD inherits it.
+Covers (11): TR-input-002, TR-input-003, TR-input-004, TR-input-005, TR-input-006 (partial: gesture insets go to the Mobile Platform GDD, QQ-21), TR-input-013 (partial: the disc part is ADR-0008's), TR-input-016, TR-state-010 (partial: the tick gate and accumulator are ADR-0004's), TR-hud-002, TR-hud-003, TR-hud-014.
 
 **ADR-0004 Fixed-Tick Clock, Tick Order, Frame Order and Determinism** (Foundation). Decides: tick driver and rate, clamp value and max ticks per frame, the one tick order, commands between ticks, the in-sim clock gate, real-time presentation clocks, seeded RNG and cosmetic RNG split, float policy and per-architecture baselines, frame budget split.
 Covers (20): TR-state-003, TR-state-004, TR-state-005, TR-state-006, TR-state-007, TR-state-012, TR-state-014, TR-combat-009, TR-combat-014, TR-enemy-002, TR-enemy-003, TR-enemy-007, TR-tower-005, TR-tower-010, TR-hero-003, TR-hero-006, TR-hero-011, TR-hero-013, TR-hud-005, TR-hud-007.
+Shared, not counted in the 20: TR-state-010, the part where ticks stop and the Clock zeroes its accumulator on Paused. ADR-0003 covers the rest (focus loss enters Paused, input cancels, the resume tap reaches nothing).
 
 **ADR-0005 Stat Accessor and Read-Context Contract** (Foundation). Decides: stat_int and stat_float, ReadContext reuse per caller, key vocabulary and types, non-fatal lookups.
 Covers (6): TR-data-008, TR-data-010, TR-enemy-006, TR-tower-003, TR-hero-005, TR-hud-011.
@@ -740,6 +753,7 @@ Covers (6): TR-data-012, TR-input-014, TR-state-013, TR-combat-012, TR-enemy-014
 
 **ADR-0008 Input Resolver Core and Signal Contract** (Foundation). Decides: pure resolver, hit-target registry, state machine, re-entrancy queue, payloads, gesture log.
 Covers (11): TR-input-001, TR-input-007, TR-input-008, TR-input-009, TR-input-010, TR-input-011, TR-input-015, TR-tower-011, TR-hero-010, TR-hud-008, TR-hud-009.
+Shared, not counted in the 11: TR-input-013, the part where the burst button, build arc and world targets are resolver discs, not Controls. ADR-0003 covers the rest (HUD Controls consume presses before the adapter).
 
 **ADR-0009 Enemy Entity, Roster and Combat API** (Core). Decides: Targetable base class, Health and Status attachment, roster ownership and typed lists, path lookup, view-only reads (`wave_index()`, `got_through_by_type()`), deliver guards, targeting helpers, per-tick budget.
 Covers (17): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-combat-005, TR-combat-006, TR-combat-007, TR-combat-008, TR-combat-013, TR-enemy-008, TR-enemy-009, TR-enemy-010, TR-enemy-011, TR-enemy-013, TR-enemy-016, TR-tower-007, TR-hero-007.
@@ -752,7 +766,7 @@ Covers (5): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015.
 
 ### Priority
 
-**Must have before any code is written (Foundation, 8):** ADR-0001 to ADR-0008. ADR-0003 starts with a short verification spike on a device (event order, touch fields, lifecycle notifications, safe area), because ADR-0004 and ADR-0008 rely on what it finds. Treat that spike as real work, not paperwork.
+**Must have before any code is written (Foundation, 8):** ADR-0001 to ADR-0008. ADR-0001 to ADR-0003 are Accepted; ADR-0004 to ADR-0008 remain. ADR-0003's spike has not run: S0a (desktop, two sessions at most) comes first, S0b (device) at the first phone build. ADR-0004 and ADR-0008 rely on what it finds, so treat it as real work, not paperwork.
 
 **Must have before the named system's first story (Core, 2):** ADR-0009 before any Combat or Enemy & Wave story (the Combat GDD names the enemy object kind and Health/Status attachment as a prerequisite). ADR-0010 before any Hero or Tower story (HeroInput and TowerInput placement).
 
@@ -764,7 +778,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 
 ## Architecture Principles
 
-1. **The battle is a plain function of its inputs.** `(catalogue, stage_id, seed, command script)` determines the result. The sim runs headless, with no scene, no clock and no engine event. Bots, tests and the phone build run the same code. Everything else in this document follows from that.
+1. **The battle is a plain function of its inputs.** `(catalogue, stage_id, rng_seed, command script)` determines the result. The sim runs headless, with no scene, no clock and no engine event. Bots, tests and the phone build run the same code. Everything else in this document follows from that.
 2. **No globals, no autoloads.** The App Root holds the catalogue. The Builder injects it, plus `halted()`, `fatal()`, `targets()`, `cancel_input()`, the error sink and `to_ticks`, into whoever needs them. Dependency injection over singletons is a coding standard, and it is what makes each system unit-testable.
 3. **Data drives gameplay, read at use time.** No gameplay number lives in code. Every value a modifier could ever touch goes through the one stat accessor and is never cached, so the Vertical Slice stat resolver drops in without call-site changes.
 4. **Commit, then emit; observe, never steer.** State is final before any signal. Views and logs listen but cannot change a result, and a battle with all of them removed is identical.
@@ -776,22 +790,23 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | ID | Question | Priority | Resolved by |
 |---|---|---|---|
 | QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 |
-| QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. | High | ADR-0003 |
-| QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
+| QQ-02 | **Resolved** by ADR-0003 (Accepted 2026-11-04). Stretch mode and aspect: `canvas_items` + `keep` at a 540x960 viewport, set explicitly in `project.godot`. Minimum size: 360 x 640 dp effective scale, a guard that logs. Taller phones letterbox; revealing the off-field entry needs a superseding ADR (reviewed before Vertical Slice). The Mobile Platform GDD inherits. Setting names wait on spike check S9. | High | ADR-0003 |
+| QQ-03 | **Resolved** by ADR-0002 (Accepted 2026-11-04), except the Android proof. JSON read with `FileAccess`; `field_missing`, `fractional_int` and `unknown_property` caught by the schema-driven validator; read-only containers plus a schema-walk snapshot, not `duplicate_deep()`. **Still open:** proof that the catalogue loads from an Android export (X2, on a device at Technical Setup). | High | ADR-0002 (X2) |
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 |
-| QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |
+| QQ-06 | **Resolved pending S0** by ADR-0003 (Accepted 2026-11-04). Presses are read after GUI in `_unhandled_input`; endings of forwarded pointers before GUI in `_input`; the adapter listens to a union of lifecycle notifications plus the back request; a stale ending after a `cancel()` reaches the resolver in Idle and is dropped. Each part holds only once its spike check passes (S1, S3, S4, S5), or its fallback is in place. | High | ADR-0003 (spike S0a, S0b) |
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
-| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. | High | ADR-0001, ADR-0004, ADR-0009 |
-| QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |
+| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. **Composition-root part accepted** by the user on 2026-11-04 with ADR-0001. The other three parts still wait for ADR-0004 and ADR-0009. | High | ADR-0001 (done), ADR-0004, ADR-0009 |
+| QQ-09 | **Resolved** by ADR-0001 (Accepted 2026-11-04). At MVP Reduce Motion lives in the Input record. AppRoot reads it once into `PresentationSettings`, and views read it only from there, never from the catalogue. At Alpha, Settings becomes the source and no view changes. | Low | ADR-0001 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
 | QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004, ADR-0011, performance-analyst |
-| QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. | Medium | Mobile Platform GDD |
+| QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. **Narrowed** by ADR-0003's letterbox: on a tall phone the notch and gesture bar usually sit in the bars, so in-field insets are often 0. The collision remains possible only where a safe-area inset reaches past the letterbox bar into the field. | Medium | Mobile Platform GDD |
 | QQ-13 | `tests/README.md` is stale: gdUnit4 is now in `addons/` and the class cache is tracked in git. Whether the CI test command needs a prior `--import` step on a fresh clone. | Low | ADR-0007, `/test-setup` |
 | QQ-14 | Stage tooling: a converter or editor for point-list stages before about 20 stages exist. | Low | tools-programmer, after MVP |
 | QQ-15 | GDScript 4.7 pitfalls have no rule yet: a typed-method override needs an explicit `return`; packed-array element writes skip setters; lambdas capture locals by value; signal parameter types are not checked at `emit()`. Turn them into Required and Forbidden rules. | Medium | ADR-0007, `/create-control-manifest` |
 | QQ-16 | Every `class_name` is global. Short names (`Flow`, `Combat`, `Battle`, `Catalogue`, `Clock`) risk collisions with engine or addon classes. Prefix them or lint for collisions. | Low | ADR-0007 |
-| QQ-17 | Does a method `Callable` hold a strong reference to its object on 4.7? The retry weakref test depends on the answer. | Medium | ADR-0001 |
+| QQ-17 | Does a method `Callable` hold a strong reference to its object on 4.7? The retry weakref test depends on the answer. **Design part resolved** by ADR-0001 (Accepted 2026-11-04): every Callable target is held by `Battle` or `AppRoot`, and both `Wiring` records are undone at teardown, so the design holds either way. **Still open:** the engine fact itself, which ADR-0001 test V1 records into `docs/engine-reference/godot/` with date and version. | Medium | ADR-0001 (V1) |
 | QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 |
-| QQ-19 | An Input record with `tap_slop > drag_slop` passes the catalogue, and the resolver's `create()` then returns null with no Fatal route (cross-GDD warning C1). Check it in the catalogue validator or content test, or route a null resolver to Fatal in the builder. | Medium | ADR-0002, ADR-0008 |
-| QQ-20 | Input Rule 7 names only the adapter as `cancel()`'s caller; B9 also injects it into Flow for outcomes, Paused and retry (cross-GDD warning C2). ADR-0001 records it and Input Rule 7 follows. | Low | ADR-0001 |
+| QQ-19 | An Input record with `tap_slop > drag_slop` passes the catalogue, and the resolver's `create()` then returns null with no Fatal route (cross-GDD warning C1). Check it in the catalogue validator or content test, or route a null resolver to Fatal in the builder. **Resolved**, both halves. Builder part (ADR-0001): a null resolver calls `fatal("input_record_invalid")`, so a device reaches the fatal screen. Catalogue part (ADR-0002): the boot validator does not check the rule, as the Data GDD asks; the CI content test (`content_rules_input.gd`) fails it. | Medium | ADR-0001, ADR-0002 |
+| QQ-20 | **Resolved** by ADR-0001 (Accepted 2026-11-04). `cancel()` has three callers: the adapter (away, back request, resize; ADR-0003), Flow through the injected `cancel_input()` (Won, Lost, Paused, Fatal) and AppRoot at teardown (retry and fatal). Input Rule 7 is to be widened to list all three (ADR-0001 Migration Plan item 2, a GDD edit). | Low | ADR-0001 |
+| QQ-21 | Android gesture insets: the pinned reference has no Godot API for them, so presses near a back-swipe edge are rejected only by `edge_reject_margin` (data, 0 to 48) at MVP. Find the engine source, or confirm the margin is enough, before the first phone release. Raised by ADR-0003 (sync item A3); it is the open part of TR-input-006. | Medium | Mobile Platform GDD |
