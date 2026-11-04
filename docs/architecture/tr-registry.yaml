@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 4
+version: 5
 last_updated: "2026-11-04"
 
 requirements:
@@ -310,9 +310,9 @@ requirements:
 - id: TR-state-008
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow listens to synchronous wave_cleared, waves_complete and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
+  requirement: "Flow listens to synchronous wave_cleared, waves_completed and enemy_leaked (leak before completed) and emits lives_changed, phase_changed and wave_called_early"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-009
   system: state
@@ -478,9 +478,9 @@ requirements:
 - id: TR-enemy-004
   system: enemy
   gdd: design/gdd/enemy-wave.md
-  requirement: "enemy_leaked, enemy_killed, wave_cleared and waves_complete fire synchronously (no CONNECT_DEFERRED) in spawn_id order after commit; leaks come before the clear"
+  requirement: "enemy_leaked, enemy_killed, wave_cleared and waves_completed fire synchronously (no CONNECT_DEFERRED) in spawn_id order after commit; leaks come before the clear"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-enemy-005
   system: enemy
@@ -646,9 +646,9 @@ requirements:
 - id: TR-tower-012
   system: tower
   gdd: design/gdd/tower-system.md
-  requirement: "Signals have typed signatures (tower_id type undecided); gameplay may not depend on them and results match with or without listeners"
+  requirement: "Signals have typed signatures (tower_id is a StringName); gameplay may not depend on them and results match with or without listeners"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-tower-013
   system: tower
@@ -842,9 +842,9 @@ requirements:
 - id: TR-hud-010
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and new view-only queries; phase and lives_changed join the view allowlist"
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and new view-only queries; phase_changed and lives_changed join the view allowlist"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-011
   system: hud
@@ -856,9 +856,9 @@ requirements:
 - id: TR-hud-012
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The result screen and log come from one snapshot built the frame after the outcome"
+  requirement: "The result screen and log come from one snapshot, taken once in the first frame step 3 (view step) after the outcome's tick"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-013
   system: hud
