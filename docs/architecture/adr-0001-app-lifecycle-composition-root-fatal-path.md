@@ -109,7 +109,7 @@ States and transitions follow the Game State GDD: `BOOT` goes to `IN_STAGE` when
 Boot order (`_ready`):
 
 1. Create `_app_latch`. State is `BOOT`.
-2. `catalogue.load(manifest)`. On `Failed`, call `_fatal("catalogue load failed: ...")`. Nothing else runs (no fallbacks, no save access). During `BOOT` the catalogue reports failure through its `LoadResult`, never through a stored callable.
+2. `Catalogue.load_manifest(manifest_path)` (ADR-0002; static, returns a `LoadResult`). On `ok == false`, call `_fatal("catalogue load failed: ...")`. Nothing else runs (no fallbacks, no save access). During `BOOT` the catalogue reports failure through its `LoadResult`, never through a stored callable.
 3. (Vertical Slice) inject saved progression. Reserved; not built at MVP.
 4. Pick `stage_id` (the first stage the catalogue lists at MVP) and `_rng_seed`. The seed is chosen once per app session and reused on retry, so a retry with the same commands replays the same sim. This policy is a working default; ADR-0004 owns the seeded and cosmetic RNG split and may refine it. State becomes `IN_STAGE`.
 5. Build the first battle (section 5).
@@ -220,7 +220,7 @@ Retry resets nothing in place. A retried battle opens in Build. A finger held ac
  Engine ─► main scene ─► AppRoot (Node; no autoload)
                            │ owns: _catalogue, _app_latch, _state, _retry_requested, _rng_seed
                            │
-      _ready: load ───────►│ Catalogue.load(manifest) ── Failed ──► fatal screen (absorbing)
+      _ready: load ───────►│ Catalogue.load_manifest(path) ── !ok ──► fatal screen (absorbing)
                            │
                            │ BattleBuilder.build(catalogue, stage_id, rng_seed, on_fatal)
                            ▼

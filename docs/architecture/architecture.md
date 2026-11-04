@@ -267,7 +267,7 @@ Rules for all of them (ADR-0006):
 ```
 Engine starts main scene ──► AppRoot._ready
   1. AppRoot FatalLatch ready; the catalogue-free fatal scene is loadable. AppRoot state: Boot
-  2. Catalogue.load(manifest)         Unloaded ─► Loading ─► Ready | Failed
+  2. Catalogue.load_manifest(path)   Unloaded ─► Loading ─► Ready | Failed
        Failed ─► fatal screen (no fallbacks, no save access)
   3. (VS) Save/Load boot: inject loaded progression into progression systems
   4. AppRoot holds Ready catalogue, picks stage_id and seed. AppRoot state: InStage
