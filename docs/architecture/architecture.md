@@ -193,7 +193,7 @@ Single thread. Nothing in the sim crosses a thread boundary. The one question is
 
 ```
  engine starts ─▶ AppRoot._ready
-   1. Catalogue.load(manifest, text_source)   validate all, collect all errors, fail whole
+   1. Catalogue.from_manifest(manifest, text_source, fail)   validate all, collect all errors, fail whole
         └─ failure ─▶ FatalScreen (no catalogue data) ; stop
    2. BattleBuilder.build(catalogue, stage_id, seed, fatal_handler)
         a. SimTime, HaltState
@@ -289,6 +289,7 @@ var source_kind: int                         # Combat.SourceKind
 var source_id: StringName
 
 class_name ReadContext extends RefCounted     # what a stat read is about
+var entity: int                               # record kind (tower, enemy, hero, burst ...); ADR-0004
 var def_id: StringName
 var level: int                                # 0 for records with no levels
 
@@ -308,13 +309,18 @@ var owner_tag: StringName
 func set_centre(p: Vector2) -> void
 func set_enabled(on: bool) -> void
 
-class_name StageRecord extends RefCounted     # structural fields, read directly
+class_name StageRecord extends RefCounted     # structural fields, read directly (full list in ADR-0004)
+var scene_ref: String
+var wave_ids: Array[StringName]
+var starting_gold: int
+var starting_lives: int
+var early_call_seconds_per_gold: float
 var path_points: PackedVector2Array
 var path_width: float
 var slot_positions: PackedVector2Array
 var hero_start: Vector2
 var pin_rect: Rect2
-var pin_exclusion: Array[Rect2]
+var pin_exclusion: Array[PinShape]         # two points, a radius and a hand, per the Data GDD
 
 class_name CatalogueError extends RefCounted
 var code: StringName
@@ -352,13 +358,14 @@ enum StatKey { COST, DAMAGE, RANGE, ATTACK_INTERVAL, SPLASH_RADIUS, SLOW_STRENGT
                BOUNTY, LIVES_COST, MAX_HP, MOVE_SPEED, LEASH_RADIUS, WALK_SPEED, RADIUS, REACH,
                COOLDOWN, TELEGRAPH_DURATION }
 
-static func load(manifest: String, source: TextSource, fail: Callable) -> Catalogue   # null on failure
+static func from_manifest(manifest: String, source: TextSource, fail: Callable) -> Catalogue   # null on failure; JSON files (ADR-0004)
 func read_int(ctx: ReadContext, key: StatKey) -> int        # sentinel 0 on failure
 func read_float(ctx: ReadContext, key: StatKey) -> float    # sentinel 0.0 on failure
 func read_bool(ctx: ReadContext, key: StatKey) -> bool      # sentinel false on failure
 func level_count(def_id: StringName) -> int                 # non-fatal
 func is_tower(id: StringName) -> bool                       # non-fatal
 func stage(id: StringName) -> StageRecord
+# also wave(), hero(), input_record(), tower_ids(), visual_key(), snapshot(): ADR-0004
 ```
 
 Invariants: records are read-only after load; callers never cache a read (the next use reflects a changed value). A bad key, a wrong-type key for the accessor, or a bad context calls the injected failure handler and returns the documented sentinel; the caller checks `halted()` before using it. A typed accessor turns a type mistake into a parse error or a handler call instead of a silent `Variant`. `TextSource` is injected so unit tests build catalogues with no file I/O. Guarantee: either every record is valid or the game does not start.
@@ -387,6 +394,7 @@ func build(slot_index: int, tower_id: StringName) -> TowerSim.Result
 func upgrade(slot_index: int) -> TowerSim.Result
 func pin(position: Vector2) -> HeroSim.PinResult
 func burst(aim_point: Vector2) -> HeroSim.BurstResult
+func dispose() -> void                               # breaks the FlowSim and EnemyWave reference cycle (ADR-0005)
 # test seams (ADR-0001, ADR-0002): used by tests and bots, never by the shell
 func systems() -> Array[RefCounted]                  # every system the builder made, in tick order
 func snapshot() -> Dictionary                         # plain copy of sim state for equality checks
@@ -424,6 +432,8 @@ FlowSim never names `EnemyWave`. It starts a wave through a `start_next_wave: Ca
 class_name Combat extends RefCounted
 
 enum SourceKind { TOWER, HERO, BURST }
+func register(enemy: EnemyState, max_hp: float) -> void   # EnemyWave calls at spawn (ADR-0007)
+func release(enemy: EnemyState) -> void
 func deliver(event: DamageEvent) -> float        # returns applied; 0 outside a tick or on a bad amount
 func apply_slow(enemy: EnemyState, strength: float, seconds: float) -> void   # rejects strength outside (0,1)
 func report_attack(source_kind: int, source_id: StringName, origin: Vector2, impact: Vector2, radius: float) -> void
