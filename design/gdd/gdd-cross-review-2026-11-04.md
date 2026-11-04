@@ -217,3 +217,47 @@ Battle HUD's reference to enemy-wave.md "Open Questions" was not checked; that s
 
 ### Required actions before re-running
 1. input-gesture-resolver.md: replace the Deferred row's "bot acceptance modes run only through the resolver" with "the equivalence test (Rule 11) passes through the resolver", and make the Overview say bots call Hero's and Tower's commands.
+
+---
+
+# Re-run 2 — 2026-11-04 — Focus: consistency
+
+GDDs Reviewed: 8 of 8 present
+Not read: none
+Focus: consistency only (design theory not run; the full run's design-theory findings, all warnings, stand)
+Change since re-run 1: input-gesture-resolver.md's Overview and first Deferred row now say bots call Hero's and Tower's commands directly, with one equivalence test through the resolver (Rule 11). The agent read each GDD's sections, now including Open Questions, and confirmed every quote by search. A search of all eight GDDs finds no remaining text that sends bots through the resolver.
+
+## Blockers
+None. The Input blocker is resolved.
+
+## New warnings
+- ⚠️ **Hero describes the old Input Rule 11.** hero-system.md says "This amends Input Rule 11, which had bots call `press`, `move` and `release`", but Input Rule 11 already says bots call the commands. → Reword it as history.
+- ⚠️ **Flow's link to Input.** game-state-stage-flow.md's Cross-References say "bots through one path" for Input Rules 7 and 11. → Say "bots through commands; one equivalence test".
+- ⚠️ **Open Questions pointers that resolve to nothing.**
+  - battle-hud.md's Cross-References cite enemy-wave.md's Open Questions for the next-wave line, but no such question remains. The leaks row does resolve.
+  - enemy-wave.md's UI Requirements still say "any next-wave line from the Wave records (Open Questions)", while Battle HUD Rule 5 says "This settles Enemy & Wave's question".
+  - enemy-wave.md cites input-gesture-resolver.md's "Open Question on slots", which no longer exists.
+  - → Drop the stale pointers.
+- ⚠️ **Input's Cross-References** name none of Flow, Hero, Tower, Battle HUD or Enemy & Wave, though its Dependencies list them.
+- ⚠️ **Retry state, inside Battle HUD.** Rule 14 says "nothing else survives one", while Rule 13 keeps three session flags on the root. → Rule 14 should say no gameplay state survives. This is in addition to the Flow Rule 1 warning.
+
+## Prior warnings
+All 18 from the full run and re-run 1 still stand, each verified against the text. Battle HUD criterion 33 still has copies for 3 of its 10 IDs ("The other IDs get copies in their story").
+
+## GDDs flagged for revision
+All eight carry warnings only; none is Blocking, so the systems index keeps each at In Review.
+
+| GDD | Main warnings |
+|-----|---------------|
+| input-gesture-resolver.md | Top-band row; rings per session; `r` range; "no GDD yet"; Cross-References omit siblings |
+| enemy-wave.md | L1's reason; bot-gate rows; no reverse Combat row; stale Open Questions pointers |
+| tower-system.md | Range ring owner; 30% and 3.5 figures; L11 and Rule 6 wording; phone threshold |
+| hero-system.md | Old Input Rule 11 wording; prompt nudge; `speed_factor`; cooldown total; intermission rule in seconds |
+| game-state-stage-flow.md | Rule 1 session flags; `in_tick()` in Dependencies; "of 6"; "bots through one path" |
+| battle-hud.md | Rule 14 against Rule 13; Open Questions pointer; criterion 33 copies |
+| combat-damage.md | Hero row lacks `speed_factor` |
+| data-config-pipeline.md | HUD row; "no GDD yet"; Cross-References |
+
+## Verdict: CONCERNS (consistency only — design theory not run)
+
+No blocking issue remains. About two dozen consistency warnings are stale or one-sided cross-references, each a sentence-level edit. The design-theory warnings from the full run are design questions for first playable. Architecture is not gated on this consistency-only run: `/create-architecture` is offered after a run of both passes.
