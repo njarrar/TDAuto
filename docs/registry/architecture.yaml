@@ -114,12 +114,13 @@ state_ownership:
     status: active
     owner_system: battle-wrapper
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
-    interface: "TickClock.advance(delta, running) -> int ticks owed; zeroed whenever Battle.clock_running() is false; capped at MAX_TICKS_PER_FRAME (4, provisional) with the excess dropped; stop() at teardown"
+    # was: cap dropped all excess and reopening started at 0 (before godot-specialist and TD-ADR reviews)
+    interface: "TickClock.advance(delta, running) -> int ticks owed; zero while Battle.clock_running() is false; first running frame starts at 0.5 tick plus at most one tick; cap MAX_TICKS_PER_FRAME (4, provisional) applies only when owed exceeds it, keeping the fraction; stop() at teardown; rendering capped by application/run/max_fps 60"
     write_access: battle-wrapper-only
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
@@ -256,11 +257,11 @@ interfaces:
     consumers:
       - battle
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
-    signal_signature: "Battle.tick(dt) from BattleWrapper._process only (tests and bots apart); dt must equal TickMath.dt; gate WAVE or INTERMISSION and not halted(); order Flow.tick, EnemyWave.advance, Combat.tick_status(roster), TowerSim.tick, HeroSim.tick, EnemyWave.reap, halted() break after each"
+    signal_signature: "Battle.tick(battle.tick_seconds()) from BattleWrapper.step(delta) in _process only (tests and bots apart, same argument); dt must equal TickMath.dt; gate WAVE or INTERMISSION and not halted(); order Flow.tick, EnemyWave.advance, Combat.tick_status(roster), TowerSim.tick, HeroSim.tick, EnemyWave.reap, halted() break after each"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
   - contract: tick_constant
     status: active
@@ -275,12 +276,12 @@ interfaces:
       - hero-sim
       - hud-logic
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
-    signal_signature: "TickMath.TICK_RATE (60) and TickMath.TICK_SECONDS in src/foundation/time/tick_math.gd; to_ticks(seconds) -> int rounds half away from zero, injected as a method Callable; dt injected as a plain float"
+    signal_signature: "TickMath.TICK_RATE (60) and TickMath.TICK_SECONDS in src/foundation/time/tick_math.gd; to_ticks(seconds) -> int is roundi(seconds / dt), half away from zero, injected as a method Callable; dt injected as a plain float"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
   - contract: in_tick_guard
     status: active
@@ -290,13 +291,13 @@ interfaces:
       - flow
       - tower-sim
       - hero-sim
-      - combat
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
-    signal_signature: "TickGuard.in_tick() -> bool injected as a method Callable; every command refuses with no change and ERR_COMMAND_IN_TICK when true; Combat.deliver applies 0 when false"
+    # was: Combat consumed it and deliver applied 0 outside a tick (dropped after TD-ADR review)
+    signal_signature: "TickGuard.in_tick() -> bool injected as a method Callable; commands are thin public entry points that refuse with no change and ERR_COMMAND_IN_TICK when true; internal transitions call private functions"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
@@ -442,25 +443,25 @@ api_decisions:
     notes: "ADR-0003 Accepted 2026-11-04; binding"
   - purpose: tick_driver
     status: active
-    api: "Own accumulator in a pure TickClock, advanced from BattleWrapper._process(delta); 60 Hz fixed tick; frame order real-time models, ticks, view refresh"
+    api: "Own accumulator in a pure TickClock, advanced from BattleWrapper._process(delta) through step(delta); 60 Hz fixed tick; frame order real-time models, ticks, view refresh; application/run/max_fps 60 in project settings"
     not: "_physics_process, Engine.physics_ticks_per_second, max_physics_steps_per_frame, Timer nodes, variable dt"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     reason: "The accumulator must be zeroed on pause and clamped by this project; one callback keeps shown bonus equal to paid bonus whatever spike S1 finds"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
   - purpose: sim_randomness
     status: active
-    api: "No sim RNG at MVP; later, one RandomNumberGenerator per consumer, made by the Builder and seeded rng_seed * 1_000_003 + SALT; cosmetic RandomNumberGenerator owned by the wrapper only"
+    api: "No sim RNG at MVP; later, one RandomNumberGenerator per consumer, made by the Builder and seeded splitmix64(rng_seed * 1_000_003 + SALT); cosmetic RandomNumberGenerator owned by the wrapper only"
     not: "global randi/randf/randomize/seed, Array.shuffle(), Array.pick_random(), one shared sim stream"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     reason: "Per-consumer streams keep baselines stable when a consumer is added; global draws break the seed contract"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
@@ -553,21 +554,22 @@ forbidden_patterns:
     notes: "ADR-0003 Accepted 2026-11-04; binding"
   - pattern: engine_time_in_gameplay
     status: active
-    description: "Gameplay code under src/foundation, src/core and src/feature never implements _process or _physics_process, creates a Timer, uses await, or reads Engine, Time or OS; only BattleWrapper reads delta"
+    description: "Gameplay code under src/foundation, src/core and src/feature never implements _process or _physics_process, creates a Timer, uses await, reads Engine, Time or OS, or calls Input.flush_buffered_events, Input.parse_input_event or Viewport.push_input; only BattleWrapper reads delta"
     why: "Sim time enters only through Battle.tick, so a battle is a function of its inputs"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
   - pattern: global_random_in_sim
     status: active
-    description: "No global random function, Array.shuffle() or Array.pick_random() in src/foundation, src/core or src/feature; RandomNumberGenerator.new() only in the Builder and the wrapper"
+    # was: scoped to src/foundation, src/core, src/feature only (TD-ADR finding 2)
+    description: "No global random function, Array.shuffle(), Array.pick_random() or RandomNumberGenerator.new() anywhere in src/ except the Builder and the wrapper; rng.randfn() banned in sim folders"
     why: "Global draws are not tied to rng_seed and break replay"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     notes: "ADR-0004 Proposed 2026-11-04; not binding until Accepted"
   - pattern: vector_methods_in_sim
     status: active
-    description: "Sim maths uses float scalars with + - * / sqrt min max abs floor round only; Vector2 is storage (constructor, .x, .y); no Vector2 or Rect2 method and no transcendental"
+    description: "In src/foundation, src/core and src/feature, sim maths uses float and int scalars with + - * / sqrt min max abs floor ceil round floori roundi int() clampf clampi is_finite is_nan only; Vector2 is storage (constructor, .x, .y); no Vector2 operators or methods, Rect2 methods, PackedVector2Array maths, Curve2D or Path2D sampling, or transcendentals"
     why: "Engine C++ methods and libm may differ by CPU; determinism is promised per architecture only"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
