@@ -2,7 +2,7 @@
 
 > **Created**: 2026-11-04
 > **Why**: All 14 ADRs are Proposed. The user chose on 2026-11-04 to keep every one of them Proposed until it passes its own engine checks. This page gathers those checks into two runs. Each check is copied from the ADR's "Verification Required" row or its "NOT SOURCEABLE (blocks Acceptance)" list. The ADR file is the authority, and this page is only an index into it.
-> **Accept with**: `/architecture-decision accept ADR-NNNN`, in dependency order: 0001, 0002, 0003, 0014, 0004, 0005, 0006, 0008, 0007, 0009, 0010, 0011, 0012, 0013 (from `.claude/scripts/adr-dep-graph.sh`). An ADR can be accepted only after every ADR it depends on is Accepted.
+> **Accept with**: `/architecture-decision accept ADR-NNNN`, in dependency order: 0001, 0002, 0003, 0004, 0005, 0008, 0006, 0007, 0009, 0010, 0011, 0014, 0012, 0013 (from `.claude/scripts/adr-dep-graph.sh`). An ADR can be accepted only after every ADR it depends on is Accepted.
 
 ## Run A: desktop and CI (Godot 4.7.2, headless)
 

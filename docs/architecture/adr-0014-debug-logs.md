@@ -54,14 +54,14 @@ NOT SOURCEABLE (each stays a gap; none is filled from memory):
 - NOT SOURCEABLE: whether `user://` is writable and findable on each target phone, and how a tester finds and sends `user://run_log.jsonl`; needs a phone run.
 - NOT SOURCEABLE: the full list of export feature tags (`OS.xml` links to the Feature Tags tutorial, which is not in the class reference).
 - NOT SOURCEABLE: that `JSON.stringify` with the default empty `indent` emits one line with no newline (`JSON.xml` does not state it); the `LogFormatter` test pins it.
-- NOT SOURCEABLE: the source of a game build hash and a launch ID.
+- Settled by decision (see "Build hash and launch ID"): the source of a game build hash and a launch ID.
 - NOT SOURCEABLE: whether a write on the main thread can stall a frame on a low-end phone, and by how much.
 
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0002 App Lifecycle and Composition (debug build flag, launch); ADR-0006 Input Adapter and Resolver Integration (gesture records) |
 | **Enables** | The first-playable human tests; the Pillar 4 phone test (gesture misses and mis-fires) |
 | **Blocks** | The HUD human-log story and the gesture-log harness story |
 | **Ordering Note** | Deferrable. It can be written during implementation (architecture.md, Priority). ADR-0002 (build gating of dev features) and ADR-0006 (event timing) feed it. `LineWriter` is declared in ADR-0001. |
@@ -157,6 +157,12 @@ Main thread only. A background writer thread is rejected for MVP (see Alternativ
 - Every line must carry `schema_version`, the launch ID and the build hash.
 - Log code must not read the sim seed or use sim randomness.
 - Tests must use a collecting `LineWriter` and a fixed clock `Callable`.
+
+### Build hash and launch ID (TR-hud-006)
+
+- **Build hash**: an export step in `tools/build/` writes the game's Git commit to `res://build_info.json` (`{"build": "<short hash>"}`). A run from the editor, where that file is absent, writes `"dev"`. The engine's own hash (`Engine.get_version_info()["hash"]`) is logged beside it as `engine`, so the two never get confused.
+- **Launch ID**: made once at boot by AppRoot from `Time.get_unix_time_from_system()` and `Time.get_ticks_usec()` (both cited above), as `"<unix seconds>-<usec>"`. It needs no randomness, so the battle seed stays untouched.
+- This settles TR-hud-006. The previous NOT SOURCEABLE line about the source is withdrawn: both sources are project decisions, not engine behaviour.
 
 ## Alternatives Considered
 

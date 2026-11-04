@@ -165,6 +165,10 @@ func sample() -> Dictionary         # draw_calls, frame_s, static_mem (debug)
 - `PerfProbe` **must** be absent from release builds.
 - A debug build **must** log `RenderingServer.get_current_rendering_method()` at boot.
 
+### Per-tick sim budget (TR-hud-013)
+
+This ADR owns the whole 16.6 ms frame, including the sim. ADR-0003 allows up to 6 ticks in one frame after a stall. Planned split for a normal frame (1 tick): sim at most 3 ms, which includes the ADR-0007 targeting worst case of about 2 ms; views and HUD at most 4 ms; the rest is left for the engine and the GPU. A catch-up frame of 6 ticks may exceed 16.6 ms. That is accepted, because it happens only after a stall the player has already seen, and the clamp bounds it. The phone session measures the 1-tick sim time with `Time.get_ticks_usec` around `Battle.tick()`. If it is above 3 ms, this ADR is revised before acceptance.
+
 ## Alternatives Considered
 
 ### Alternative 1: A node per drawable (Sprite2D or Node2D per enemy, tower, ring)

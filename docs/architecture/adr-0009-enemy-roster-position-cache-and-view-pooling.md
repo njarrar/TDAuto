@@ -163,6 +163,10 @@ As in architecture.md API Boundaries (`EnemyWave`, `EnemyState`), plus `PathTabl
 - `FieldView` must not allocate during a frame in the steady state; the pool, the dictionary and the free list are built at view build.
 - A removal must use `remove_at`, not `erase` on a value search, and must not break `spawn_id` order.
 
+### Movement guard (TR-wave-004)
+
+The move step follows `enemy-wave.md` (d_next, Guard). If `move_speed x speed_factor` is 0 or less, or not finite, the step logs one development error and sets `distance` to the path length, so the enemy leaks that tick and pays its `lives_cost` like any leak. A catalogue stage cannot reach this, because the validator (ADR-0004) and Combat (ADR-0007) keep both inputs above 0. Only a fixture built in code can. GDD acceptance criterion 18 is the test.
+
 ## Alternatives Considered
 
 ### Alternative 1: Sim object pool for `EnemyState`

@@ -6,8 +6,8 @@
 - Last Updated: 2026-11-04
 - Engine: Godot 4.7.2 (GDScript, Mobile renderer, 2D, portrait 540 x 960 field)
 - GDDs Covered: design/gdd/data-config-pipeline.md, input-gesture-resolver.md, game-state-stage-flow.md, combat-damage.md, enemy-wave.md, tower-system.md, hero-system.md, battle-hud.md (8 of 8 MVP systems; all In Review, with no blocking issue left in the cross-GDD review of 2026-11-04)
-- ADRs Referenced: none exist yet. 14 are proposed below (ADR-0001 to ADR-0014). Numbers are placeholders until `/architecture-decision` assigns them.
-- TR registry: `docs/architecture/tr-registry.yaml` holds no requirements, so every ID in this document is provisional. `/architecture-review` registers them and fixes the permanent IDs.
+- ADRs Referenced: ADR-0001 to ADR-0014, all written 2026-11-04 and all Proposed. Each lists engine checks that block its acceptance; see `production/qa/engine-verification-plan.md`.
+- TR registry: `/architecture-review` (2026-11-04) registered 74 permanent IDs in `docs/architecture/tr-registry.yaml`: the 70 below kept their numbers, and it added TR-input-008, TR-wave-010, TR-wave-011 and TR-hud-014. The registry and `requirements-traceability.md` are the authority now; the "(provisional)" tags in the baseline table are historical.
 - TD-ARCHITECTURE: CONCERNS on version 1 (2026-11-04), no blocker. All eight issues are addressed in version 2: a Composition tier, a ShellBuilder, commands on the Battle facade, one name per command, owners for `to_ticks`, the seed, the view pool, the gesture log and lifecycle, four unsourced claims withdrawn, recounted TR coverage, and ADR order, split and a performance budget. QQ-07 accepted with conditions (see Open Questions).
 - LP-FEASIBILITY: CONCERNS on version 1 (2026-11-04), no blocker. All ten issues are addressed in version 2: typed `EnemyState`, `HitTarget` and `SlotState`, typed catalogue reads, an injected `HaltState` that breaks the FlowSim and EnemyWave cycle, the `Phase` enum, full signatures and supporting types, a `BattleReadModel` base for fakes, logic moved out of nodes into plain classes, `Vector2` precision stated, and a re-entrancy default.
 - Version 2 has not been re-reviewed. `/architecture-review` is the next check.
@@ -686,7 +686,7 @@ Every GDD contributed requirements; none was dropped. Requirements are stated at
 
 ### Traceability Coverage Check
 
-Coverage: 0 covered by an accepted or proposed ADR, 70 gaps. Each gap is a **Required New ADR** below. Gap count per proposed ADR, counted from the last column of the table: ADR-0001: 2, ADR-0002: 8, ADR-0003: 8, ADR-0004: 7, ADR-0005: 7, ADR-0006: 7, ADR-0007: 6, ADR-0008: 3, ADR-0009: 3, ADR-0010: 5, ADR-0011: 4, ADR-0012: 4, ADR-0013: 4, ADR-0014: 2 (total 70). Version 1 said 66 and gave counts that added up to 75; both were wrong. The table had 69 rows, and version 2 adds TR-hud-013 for the frame and memory budget.
+Coverage at version 2 (before the ADRs existed): 0 covered, 70 gaps. Current coverage (architecture review, 2026-11-04): 71 of 74 covered by Proposed ADRs, 3 partial, 0 gaps; see `requirements-traceability.md`. Each gap is a **Required New ADR** below. Gap count per proposed ADR, counted from the last column of the table: ADR-0001: 2, ADR-0002: 8, ADR-0003: 8, ADR-0004: 7, ADR-0005: 7, ADR-0006: 7, ADR-0007: 6, ADR-0008: 3, ADR-0009: 3, ADR-0010: 5, ADR-0011: 4, ADR-0012: 4, ADR-0013: 4, ADR-0014: 2 (total 70). Version 1 said 66 and gave counts that added up to 75; both were wrong. The table had 69 rows, and version 2 adds TR-hud-013 for the frame and memory budget.
 
 ## Required ADRs
 

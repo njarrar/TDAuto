@@ -44,7 +44,7 @@ The Input & Gesture Resolver is a plain object that needs one engine-facing node
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary (the resolver is a plain sim-style object; the adapter is shell). ADR-0002 App Lifecycle and Composition (AppRoot calls `adapter.cancel()` on focus loss; ShellBuilder builds and frees the adapter; the pause mechanism) |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary (the resolver is a plain sim-style object; the adapter is shell). ADR-0002 App Lifecycle and Composition (AppRoot calls `adapter.cancel()` on focus loss; ShellBuilder builds and frees the adapter; the pause mechanism). ADR-0008 Stretch Mode, Safe Area and the Field (event positions in field units, letterbox presses) |
 | **Enables** | ADR-0010 Tower System and ADR-0011 Hero System (TowerInput and HeroInput register discs and listen to resolver signals); ADR-0012 (modal Controls and the top band) |
 | **Blocks** | Every Input & Gesture Resolver story; TowerInput, HeroInput and HUD input stories |
 | **Ordering Note** | ADR-0008 fixes the coordinate space this ADR forwards. The two must be accepted together: the adapter's "event position is field units" rule holds only under ADR-0008's stretch settings and its no-Camera2D rule |
