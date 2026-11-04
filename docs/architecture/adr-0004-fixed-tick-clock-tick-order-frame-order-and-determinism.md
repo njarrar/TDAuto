@@ -35,7 +35,7 @@ A battle must give the same result for the same stage, seed and command script o
 | **Domain** | Core |
 | **Layer** | Foundation |
 | **Knowledge Risk** | HIGH (input-before-`_process` order on 4.7 is unreferenced; float behaviour across CPUs is unreferenced) |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` v3 (Data Flow 1, 2, 6 and 10; API Boundaries B4, B5 and B9; QQ-01, QQ-05, QQ-11); official class reference at tag 4.7.2-stable: `doc/classes/Node.xml`, `doc/classes/MainLoop.xml`, `doc/classes/Engine.xml`, `doc/classes/ProjectSettings.xml`, `doc/classes/Input.xml`, `doc/classes/@GlobalScope.xml`, `doc/classes/float.xml`, `doc/classes/Vector2.xml`, `doc/classes/RandomNumberGenerator.xml`, `doc/classes/Time.xml` |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` v4 (Data Flow 1, 2, 6 and 10; API Boundaries B4, B5 and B9; QQ-01, QQ-05, QQ-11); official class reference at tag 4.7.2-stable: `doc/classes/Node.xml`, `doc/classes/MainLoop.xml`, `doc/classes/Engine.xml`, `doc/classes/ProjectSettings.xml`, `doc/classes/Input.xml`, `doc/classes/@GlobalScope.xml`, `doc/classes/float.xml`, `doc/classes/Vector2.xml`, `doc/classes/RandomNumberGenerator.xml`, `doc/classes/Time.xml` |
 | **Post-Cutoff APIs Used** | None |
 | **Verification Required** | The runs in NOT SOURCEABLE below; bot baselines per CPU architecture |
 
@@ -285,5 +285,5 @@ No code exists. New code follows this ADR from the first story.
 ## Related
 
 - ADR-0001 (depends on: Battle, Builder, fatal path, Retry), ADR-0003 (depends on: event order spike, lifecycle signal), ADR-0006 (signals inside the tick), ADR-0009 (Combat and roster APIs called in the tick), ADR-0010 (commands, HeroInput, bot equivalence), ADR-0011 (frame budget)
-- `docs/architecture/architecture.md` v3: Data Flow 1, 2, 6 and 10; API Boundaries B4, B5 and B9; QQ-01, QQ-05, QQ-11
+- `docs/architecture/architecture.md` v4: Data Flow 1, 2, 6 and 10; API Boundaries B4, B5 and B9; QQ-01, QQ-05, QQ-11
 - `design/gdd/game-state-stage-flow.md`, `design/gdd/combat-damage.md`, `design/gdd/enemy-wave.md`, `design/gdd/tower-system.md`, `design/gdd/hero-system.md`, `design/gdd/battle-hud.md`

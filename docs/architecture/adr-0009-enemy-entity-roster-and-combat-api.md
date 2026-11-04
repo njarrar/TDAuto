@@ -207,6 +207,10 @@ Order: make the `ReadContext`; read `max_hp` through the accessor; check `halted
 
 **Reap.** Collect dead roster entries into `_reap` in roster order. For each: read `bounty`, set `removed = true`, `remove_at` its index, emit `enemy_killed(bounty)`, check `halted()`. Then rebuild `_targets` and run the clear check.
 
+**Leak (TR-enemy-017).** In ascending `spawn_id` order: read `lives_cost` through the accessor, set `removed = true`, remove the enemy from the roster, count it in `got_through_by_type()`, and only then emit `enemy_leaked(lives_cost)`. Counting before the emit means a leak that makes Flow halt (a fatal leak) is already in the result (enemy-wave.md Rule 10).
+
+**Wave index (TR-enemy-016).** `wave_index()` is the 1-based position in `wave_ids` of the last wave started. It is 0 before the first start, is set when `start_next_wave` commits, and is never reset per wave or changed by a clear or an outcome, so it reads N through wave N and the Intermission after it. Flow reads it for the result; the HUD reads it for pips and result text (enemy-wave.md Rules 7 and 14).
+
 ### 8. Per-tick targeting budget (TR-combat-013)
 
 Cost is counted in **range checks**: one per entry visited by a helper. A development-build counter on Combat, behind a `const` flag, records checks per tick.
@@ -353,6 +357,8 @@ B6 and B7 of architecture.md stand, with these changes:
 | enemy-wave.md | TR-enemy-010: position from distance via cached cumulative lengths, multi-segment, clamped | `PathTable` (Decision 4) |
 | enemy-wave.md | TR-enemy-011: targetable only with centre inside 540x960, a defined or injected value | `in_field` from 64-bit scalars against injected `FIELD_W`, `FIELD_H` (Decision 4) |
 | enemy-wave.md | TR-enemy-013: one add-enemy step for schedule and splitters, atomic before the clear check | `_add_enemy` (Decision 7) |
+| enemy-wave.md | TR-enemy-016: `wave_index()` is the 1-based position in `wave_ids` of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text | Decision 7, Wave index |
+| enemy-wave.md | TR-enemy-017: `got_through_by_type()` counts a leak before `enemy_leaked` fires, so a fatal leak is in the result | Decision 7, Leak |
 | tower-system.md | TR-tower-007: targeting and damage only through Combat; splash victims only from `targets()` | Implementation Guidelines; `_resolve_hit` over `targets()` |
 | hero-system.md | TR-hero-007: `deliver` with HERO and BURST, `report_attack` first, `nearest_in`, `all_in_radius`, `is_dead`, `hp_left` over `targets()` | Same API; `_resolve_hit` order (Decision 9) |
 

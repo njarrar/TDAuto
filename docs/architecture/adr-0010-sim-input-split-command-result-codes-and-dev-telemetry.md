@@ -326,6 +326,7 @@ class_name GestureLog extends RefCounted         # record(gesture)
 | hero-system.md | TR-hero-012: a resolver-driven script and a direct-command script give tick-identical `HeroSim` state; a never-pinned run equals a `HeroSim`-absent run | Section 5 |
 | hero-system.md | TR-hero-015: `burst_button_centre()` is owned by the HUD, read once by `HeroInput` at registration, injectable by tests | Section 6 |
 | battle-hud.md | TR-hud-013: debug builds append JSON lines to `user://run_log.jsonl` through an injectable sink; a write failure is non-fatal; release builds never write | Section 7 |
+| battle-hud.md | TR-hud-018: each debug run-log record holds a launch ID, made once at boot, and the game build hash; the wrapper injects both into HudLogic and the logs (split from TR-hud-006) | Section 7, "Build hash and launch ID" |
 
 ## Performance Implications
 

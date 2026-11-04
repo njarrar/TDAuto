@@ -292,6 +292,7 @@ func sample() -> Dictionary          # draw_calls, frame_s, static_mem (debug on
 | tower-system.md | TR-tower-015: one `_draw` for all towers, primitive polygons, level inset, cooldown ring, Reduce Motion fallbacks | TowerView (Decisions 1, 3), Decision 11 |
 | battle-hud.md | TR-hud-001: HudLogic, HudTopBand, HudField, HudModals; built before HeroInput; absent headless; rebuilt on retry | Node structure and build order (Decision 1) |
 | battle-hud.md | TR-hud-015: about 8 (max 12) of 60 draw calls, at most 3 text draws; hit targets at least 72 units; text at least 21 units | Decisions 9 and 10 |
+| battle-hud.md | TR-hud-017: HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set), not every frame | Redraw trigger table (HudField row) |
 
 GDD sync: checked 4 referenced GDDs. No renames. The view names (PathView, TowerView, EnemyView, HeroView, CombatView) are new; the GDDs say "the Combat view" and "one `_draw()` node", which match.
 

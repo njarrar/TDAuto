@@ -35,7 +35,7 @@ TowerRiot has no autoloads, so one node must start the game, hold the catalogue,
 | **Domain** | Core (Scripting) |
 | **Layer** | Foundation (the Required ADRs table lists it there; the modules it governs sit in the Composition Root, which has no Layer value of its own) |
 | **Knowledge Risk** | HIGH (GDScript 4.5 and 4.7 changes are post-cutoff; Callable lifetime is unreferenced) |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` v3 (Engine Knowledge Gap Summary, Module Ownership, Data Flow 4, 5 and 7, API Boundaries B0, B4, B9, Open Questions); official class reference at tag 4.7.2-stable: `doc/classes/Node.xml`, `doc/classes/Object.xml`, `doc/classes/RefCounted.xml`, `doc/classes/Callable.xml`, `doc/classes/Signal.xml`, `doc/classes/WeakRef.xml`, `doc/classes/@GlobalScope.xml`, `doc/classes/OS.xml`, `doc/classes/Engine.xml`, `modules/gdscript/doc_classes/@GDScript.xml` |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `docs/architecture/architecture.md` v4 (Engine Knowledge Gap Summary, Module Ownership, Data Flow 4, 5 and 7, API Boundaries B0, B4, B9, Open Questions); official class reference at tag 4.7.2-stable: `doc/classes/Node.xml`, `doc/classes/Object.xml`, `doc/classes/RefCounted.xml`, `doc/classes/Callable.xml`, `doc/classes/Signal.xml`, `doc/classes/WeakRef.xml`, `doc/classes/@GlobalScope.xml`, `doc/classes/OS.xml`, `doc/classes/Engine.xml`, `modules/gdscript/doc_classes/@GDScript.xml` |
 | **Post-Cutoff APIs Used** | None directly. The 4.7 rule that an override of a typed-return method inherits that type and needs an explicit `return` applies to every test fake of a typed base |
 | **Verification Required** | The runs in NOT SOURCEABLE below; the weakref test in Validation Criteria under `godot --headless` on 4.7.2 |
 
@@ -255,6 +255,8 @@ func cancel_input() -> void                # guarded with is_valid()
 | game-state-stage-flow.md | TR-state-002: scene-free builder, explicit connections, headless, null on failure; thin wrapper | Decisions 3 and 6 |
 | game-state-stage-flow.md | TR-state-009: retry rebuilds between ticks from an app-root latch; weakref null | Decision 9; Validation Criteria |
 | game-state-stage-flow.md | TR-state-011: one idempotent fatal handler, first cause, overrides outcomes, halts, discards partial build, wrapper checks after each step | Decisions 3, 6 and 7 |
+| game-state-stage-flow.md | TR-state-015: the battle holds a strong typed field for every helper build creates (each system, the FatalLatch, one StatAccessor per battle) and the builder holds nothing, because a method Callable or signal connection does not keep a RefCounted target alive and `.call()` on a dead one aborts the caller (observed on the 4.7.2 editor; export and phone unverified) | Decision 4 |
+| game-state-stage-flow.md | TR-state-016: `cancel_input()` is a public Battle method guarded with `is_valid()`, set by the wrapper through `set_input_cancel`; Flow calls it on Won, Lost, Paused and Fatal and the app root before removing a battle on retry; it does nothing headless, and a second call finds the resolver Idle | Decision 10 |
 | enemy-wave.md | TR-enemy-005: injected `halted()` checked after every read and signal; never references Flow | Decisions 5 and 7 |
 | enemy-wave.md | TR-enemy-012: `start_next_wave()` misuse logs to an injected dev-error sink, not assert | Decision 8 |
 | tower-system.md | TR-tower-006: `halted()` checked after every read and signal; reads before mutation | Decision 5; Implementation Guidelines |
@@ -287,5 +289,5 @@ No code exists. New code follows this ADR from the first story.
 ## Related
 
 - ADR-0002 (catalogue format), ADR-0003 (adapter, lifecycle), ADR-0004 (Clock, tick), ADR-0006 (signal contracts, listener-count test), ADR-0007 (test harness)
-- `docs/architecture/architecture.md` v3: Module Ownership (Foundation, Composition Root); Data Flow 4, 5 and 7; API Boundaries B0, B4 and B9; QQ-08, QQ-17, QQ-19, QQ-20
+- `docs/architecture/architecture.md` v4: Module Ownership (Foundation, Composition Root); Data Flow 4, 5 and 7; API Boundaries B0, B4 and B9; QQ-08, QQ-17, QQ-19, QQ-20
 - `design/gdd/game-state-stage-flow.md`, `design/gdd/data-config-pipeline.md`, `design/gdd/battle-hud.md`, `design/gdd/input-gesture-resolver.md`, `design/gdd/enemy-wave.md`, `design/gdd/tower-system.md`, `design/gdd/hero-system.md`
