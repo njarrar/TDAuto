@@ -27,7 +27,7 @@ Battle systems talk through Godot signals, and the GDDs leave open how signals f
 | **Engine** | Godot 4.7.2 (GDScript) |
 | **Domain** | Core (scripting, signals) |
 | **Layer** | Foundation |
-| **Knowledge Risk** | MEDIUM. The signal APIs date from 4.0 and `breaking-changes.md` lists no 4.4 to 4.7 change to them, but no file in `docs/engine-reference/godot/` covers signals, so each behaviour here is unverified on 4.7.2 (probes E1 to E6). |
+| **Knowledge Risk** | MEDIUM. The signal APIs date from 4.0 and `breaking-changes.md` lists no 4.4 to 4.7 change to them, but no file in `docs/engine-reference/godot/` covers signals, so probes E1 to E6 check each behaviour here. All six are verified 4.7.2 headless and match (`docs/engine-reference/godot/probe-results.md`). |
 | **References Consulted** | `VERSION.md`; `breaking-changes.md` (4.4 to 4.7); `deprecated-apis.md` (string `connect()`); `current-best-practices.md` (4.5 rest parameters; 4.7 typed-return overrides). `architecture.md` v4; `tr-registry.yaml`; ADR-0001, ADR-0003, ADR-0004, ADR-0005 |
 | **Post-Cutoff APIs Used** | Rest parameters (`...args`, 4.5) in fakes only; the 4.7 typed-return override rule applies to any fake that overrides a typed method (return on every path). All else dates from 4.0: typed `signal` parameters, `Signal` methods, `get_signal_list`, `get_signal_connection_list`, `get_property_list`, `get_script_signal_list`, `ClassDB.class_get_signal_list`, `typeof()`, `make_read_only()`. |
 | **Verification Required** | Probes E1 to E6 (Validation Criteria) are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); all match. They still become CI tests (ADR-0007 Decision 7). |
@@ -341,6 +341,7 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 ## Amendments
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Probe E3 confirms that a `String` payload converts silently into a typed `StringName` parameter. Decision 8 already says recording fakes take untyped arguments and check `typeof()`; V6 now says so too. E1 to E6 are marked verified in Engine Compatibility and Validation Criteria.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). The Knowledge Risk line now agrees with Verification Required: probes E1 to E6 are verified 4.7.2 headless. Nothing else in this ADR changes.
 
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.

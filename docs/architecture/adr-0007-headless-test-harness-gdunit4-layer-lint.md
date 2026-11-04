@@ -9,7 +9,7 @@ Accepted
 2026-11-04
 
 ## Last Verified
-2026-11-04 (engine reference of 2026-10-17 and gdUnit4 6.2.0 source; nothing run)
+2026-11-04 (engine reference of 2026-10-17 and gdUnit4 6.2.0 source). Probes H4, H5, H7 (name and hash) and H8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`). H1, H2, H3, H6 and H9 still need gdUnit4 and have not run.
 
 ## Decision Makers
 - Accepted: 2026-11-04 by the user (njarrar), with the gdUnit4 6.2.2 upgrade, the dated ADR-0003 amendment (is_mobile) and exit 101 as a failure
@@ -36,7 +36,7 @@ ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 to ADR-0006 (all Accepted 2026-11-04); amends ADR-0003 (`setup()` gains `is_mobile`, confirmed by the user 2026-11-04 at acceptance) |
+| **Depends On** | ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006 (all Accepted 2026-11-04); amends ADR-0003 (`setup()` gains `is_mobile`, confirmed by the user 2026-11-04 at acceptance) |
 | **Enables** | ADR-0008 to ADR-0011 (their tests use these helpers and lints); `/create-control-manifest` (QQ-15 rules); `/test-setup` refresh (QQ-13) |
 | **Blocks** | Every story with automated test evidence; the CI and lint stories in Migration. No story file exists yet |
 | **Ordering Note** | The CI story (Migration 0 to 5) comes before the first Logic story. ADR-0003 spike S0a may run first (a prototype outside `src/`) |
@@ -401,6 +401,7 @@ Harness tests:
 ## Amendments
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). F2: `debug/gdscript/warnings/exclude_addons` does not exist in 4.7.2; F2 now keeps `debug/gdscript/warnings/directory_rules` at its default `{"res://addons": 0}`, which already skips addon warnings. Decision 9 gains notes N1 (`inference_on_variant` is an error by default: type a `weakref()` local as `WeakRef`, not `:=`) and N2 (a variable named `log` breaks the parse). H7: archive name and SHA512 confirmed; the CI story still copies the URL. H4, H5, H7 and H8 are marked verified.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5 and 9). Last Verified now names the probes verified 4.7.2 headless (H4, H5, H7, H8) and those that still need gdUnit4 (H1, H2, H3, H6, H9). Depends On lists ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006 by number, so `adr-dep-graph.sh` sees all six edges. Nothing else in this ADR changes.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.

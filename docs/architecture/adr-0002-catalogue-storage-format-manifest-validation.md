@@ -200,7 +200,7 @@ static func take(catalogue: Catalogue) -> Dictionary
 static func diff(before: Dictionary, after: Dictionary) -> Array[String]
 ```
 
-`is_tower(id)` and `level_count(def_id)` belong to the accessor (B1, ADR-0005), built on `type_of()` and `tower(id).levels.size()`. Names are proposed; QQ-16 may add a prefix (ADR-0007).
+`is_tower(id)` and `level_count(def_id)` belong to the accessor (B1, ADR-0005), built on `type_of()` and `tower(id).levels.size()`. Names are proposed; ADR-0007 chose no prefix (QQ-16 resolved).
 
 ### Implementation Guidelines
 1. Catalogue data must be JSON under the data root, read with `FileAccess` and parsed with a `JSON` instance. Records must never be `.tres` or `.res`, and data files must never go through `load()` or `ResourceLoader`.
@@ -370,3 +370,4 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 
 ## Amendments
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). V5 now checks `typeof()` of each index key, since `String` and `StringName` keys hit each other in a lookup and a `String` key survives a later `StringName` write. E1, E2 and E3 are marked verified in Engine Compatibility and Validation Criteria.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`). The accessor-helpers note no longer says QQ-16 may add a prefix: ADR-0007 Decision 10 chose no prefix (QQ-16 resolved). Nothing else in this ADR changes.

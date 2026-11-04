@@ -27,7 +27,7 @@ Every battle system needs one source of sim time, one fixed order inside a tick 
 | **Engine** | Godot 4.7.2 (GDScript, Mobile renderer, Godot Physics 2D) |
 | **Domain** | Core (main loop timing and determinism) |
 | **Layer** | Foundation |
-| **Knowledge Risk** | HIGH. The pinned reference says nothing about `_process` timing, frame caps, physics stepping, `RandomNumberGenerator` or `Vector2` precision. Only `_process(delta)`, `application/run/max_fps` and plain arithmetic are load-bearing. |
+| **Knowledge Risk** | HIGH. The pinned reference says nothing about `_process` timing, frame caps, physics stepping, `RandomNumberGenerator` or `Vector2` precision. Load-bearing: `_process(delta)`, `application/run/max_fps`, plain arithmetic, and the two pinned physics settings `physics/common/physics_ticks_per_second` 60 and `physics/common/max_physics_steps_per_frame` 8, since the engine caps `_process` delta at about their ratio (E3, Guideline 11). |
 | **References Consulted** | `docs/engine-reference/godot/` (`VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`, `modules/physics.md`, `modules/input.md`); `architecture.md` v4 (Composition Root, Data Flow 1 to 3, 6, 10, B0, B4 to B9, Required ADRs, QQ-01, 05, 08, 11); `tr-registry.yaml`; ADR-0001 to ADR-0003; the registry; GDDs under Related |
 | **Post-Cutoff APIs Used** | None. Used: `_process(delta)`, `RefCounted`, `roundi`, `floori`, `sqrt`, `Vector2` storage, project settings below, `RandomNumberGenerator` (reserved). `breaking-changes.md` lists no change to them in 4.4 to 4.7. Checked in the reference: Jolt became the 4.6 default for 3D only; 2D stays on Godot Physics 2D, and the sim uses no physics at all (Flow Rule 4). |
 | **Verification Required** | E1 to E8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); E3 was wrong and is corrected (Amendments, V11 table). S1 (ADR-0003) still runs but no longer gates TR-hud-005 (Decision 4). V13 on a phone. |
@@ -103,7 +103,7 @@ TR-state-003 to 007, 012, 014; TR-combat-009, 014; TR-enemy-002, 003, 007; TR-to
 
 Sims check `halted()` after every read, injected call and emit (ADR-0001 Guideline 9), so an outcome or fatal mid-tick skips the rest (TR-state-007). Flow's commit order: set state (closes the gate), `cancel_input()`, emit `phase_changed`. `Flow.pause()` comes from notifications outside `_process`; if it runs during a tick it reports a dev error and applies, and the tick finishes whole. `advance`'s argument follows B7; ADR-0009 may drop it.
 
-**QQ-08 tick-order part**: TD-ADR judged the order sound. Towers act before the hero, so the hero's damage share runs slightly low on shared kills; bounty is unaffected. Pending the user's acceptance.
+**QQ-08 tick-order part**: TD-ADR judged the order sound. Towers act before the hero, so the hero's damage share runs slightly low on shared kills; bounty is unaffected. Accepted by the user 2026-11-04.
 
 ### 6. Commands only between ticks (TR-state-004)
 - `TickGuard extends RefCounted` holds one `bool`; `Battle` holds it as `_tick_guard`. The Builder injects `TickGuard.in_tick` into Flow, TowerSim and HeroSim.
@@ -348,7 +348,7 @@ Headless unless marked; ADR-0007 hosts them. Recording fakes log into an `Array`
 | TD9 | Build order; wrapper sink | Decision 2 |
 | TD10 | BattleWrapper row; 2.5 timing | Decision 3; Migration 1 |
 | TD11 | Retry seed decision | Decision 8 |
-| QQ-08 | TD view | Decision 5, pending user |
+| QQ-08 | TD view | Decision 5, accepted by the user 2026-11-04 |
 
 ## Related
 - ADR-0001 (depends on), ADR-0002 (enabled), ADR-0003 (depends on); enables ADR-0006 to ADR-0011
@@ -358,3 +358,4 @@ Headless unless marked; ADR-0007 hosts them. Recording fakes log into an `Array`
 ## Amendments
 - **2026-11-04, with ADR-0006 (confirmed by the user 2026-11-04 at ADR-0006 acceptance).** Status stays Accepted. Decision 6 and Guideline 7 change: every public command holds the `TickGuard` for its body, shaped `if in_tick(): return refusal; enter(); var r := _body(...); exit(); return r`, with one return path, so a command called from any signal handler, inside a tick or inside another command, is refused and changes nothing. `ERR_COMMAND_IN_TICK` now means "inside a tick or another command" (ADR-0010 may rename it `BUSY`). The Builder injects `TickGuard.enter` and `TickGuard.exit` as method Callables into Flow, TowerSim and HeroSim beside `in_tick`. `enter()` reports a dev error if the guard is already entered. `Battle.tick` reports a dev error and resets the guard if it finds it already set. `Flow.pause()` and `Flow.resume()` call `enter()` and `exit()` only when `in_tick()` is false; a pause during a tick keeps Decision 5's behaviour. Nothing else in this ADR changes.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). E3 is corrected: the engine caps `_process` delta at about `max_physics_steps_per_frame / physics_ticks_per_second`. Decision 1 now says the physics settings are load-bearing, and Guideline 11 pins `physics/common/physics_ticks_per_second` 60 and `physics/common/max_physics_steps_per_frame` 8. `MAX_TICKS_PER_FRAME = 4` sits below the cap, so the clock and V1 stand. First-frame delta (1/60 or 0.0083) needs no change. Engine Compatibility and the V11 table now mark E1 to E8 verified.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). Decision 5 and the QQ-08 review row now say the tick-order part was accepted by the user 2026-11-04, as Decision Makers records. Knowledge Risk now names the two pinned physics settings (`physics/common/physics_ticks_per_second` 60, `physics/common/max_physics_steps_per_frame` 8) as load-bearing, as the E3 amendment made them. This ADR also supersedes ADR-0003's old S1 fail branch (a command queue); ADR-0003 is amended to match. Nothing else in this ADR changes.

@@ -36,7 +36,7 @@ The pure input resolver needs one engine-facing node that turns Godot touch and 
 | Field | Value |
 |-------|-------|
 | **Depends On** | ADR-0001 (Accepted): who builds and frees the adapter, the teardown order, `view_wiring`, the three `cancel()` callers. Cannot be Accepted before ADR-0001. |
-| **Enables** | ADR-0004 (input before ticks rests on S1), ADR-0008 (the five calls' caller and contract), ADR-0011 (viewport size and stretch), the Mobile Platform & Performance GDD (inherits stretch, safe area, minimum size) |
+| **Enables** | ADR-0004 (ticks from `_process`; S1 does not gate it, ADR-0004 Decision 4), ADR-0008 (the five calls' caller and contract), ADR-0011 (viewport size and stretch), the Mobile Platform & Performance GDD (inherits stretch, safe area, minimum size) |
 | **Blocks** | No story exists yet. After `/create-epics`, stories that build the adapter, a modal screen, the display settings, the insets or the pause path wait for acceptance, and each waits only on the spike checks it names (Guideline 15). |
 | **Ordering Note** | S0a runs first, within two sessions. S0b runs at the first phone build; if it slips, its rows read NOT ASSESSED and only mobile stories wait. |
 
@@ -71,7 +71,7 @@ A throwaway scene under `prototypes/input_spike/` (outside the code root). It lo
 
 | Check | What to do | Pass | If it fails |
 |---|---|---|---|
-| **S1 Event order** | Log a monotonic sequence number in `_input`, `_unhandled_input`, `_process`, `_physics_process`; force several physics steps per frame (`physics_ticks_per_second` 240, `max_fps` 30); 200 taps, 50 drags | Every input callback of frame N runs before `_process` of N and never between two physics steps of one frame | ADR-0004 queues commands and drains them at the start of its tick driver |
+| **S1 Event order** | Log a monotonic sequence number in `_input`, `_unhandled_input`, `_process`, `_physics_process`; force several physics steps per frame (`physics_ticks_per_second` 240, `max_fps` 30); 200 taps, 50 drags | Every input callback of frame N runs before `_process` of N and never between two physics steps of one frame | Record the result (ADR-0004 V14). ADR-0004 ticks from `_process` and does not adopt a command queue (ADR-0004 Decision 4); S1 no longer gates TR-hud-005 |
 | **S2 Emulation** | 50 taps; log class and `device` of each pointer event | Android: one real `InputEventScreenTouch` and one `InputEventMouseButton` with `device == DEVICE_ID_EMULATION` per touch, the emulated one first, only for the first finger. Desktop: no touch events. The adapter forwards one press per physical press | Fallback F2: one family per platform (`OS.has_feature("mobile")`: touch only, else mouse only) |
 | **S3 Control consumption** | Full-rect STOP Control; press it by touch and mouse. Then press open field, drag over it, release on it | (a) The press never reaches `_unhandled_input`. (b) The open-field press's move and release reach `_input`. (c) Controls get the emulated mouse events | (a): the press gate is then the only guard; record it. (b): reopen this ADR. (c): TapScreen also reads `InputEventScreenTouch` with the same keying |
 | **S4 Cancel** | Drag, then pull the shade, swipe a system gesture, take an incoming call or alarm, add a palm touch | Each ends the drag by `is_canceled()` or a lifecycle notification; none emits `tap` or `drag_ended`. "Not observed" is an allowed result for each case | Rename if the API differs; the lifecycle path still covers the case |
@@ -297,7 +297,7 @@ Names are proposed here; `MOUSE_POINTER`, `setup()`, `set_presses_blocked()`, `F
 - `Input.use_accumulated_input` stays true: motion events merge, and the resolver handles a release beyond slop, so no outcome changes.
 
 ## Risks
-- **S1 fails**: the shown bonus could differ from the paid bonus (TR-hud-005). ADR-0004 queues commands.
+- **S1 fails**: record the result (ADR-0004 V14). The shown bonus still equals the paid bonus (TR-hud-005): ADR-0004 ticks from `_process` and does not adopt the S1 queue (ADR-0004 Decision 4), so S1 no longer gates TR-hud-005. Only input inside the wrapper's `_process` reopens ADR-0004 Decision 4.
 - **S2 fails**: fallback F2; a touch laptop's mouse is then ignored in development.
 - **S3 (a) fails**: the gate covers it; record so later HUD work does not rely on Control occlusion for touch.
 - **A system gesture steals a touch with no cancel and no notification**: the pointer strands until its next press; a miss, never a mis-fire.
@@ -393,7 +393,7 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 | TD product | Choices need the user | Decision 5 |
 | G6 | `canceled` field | `is_canceled()` on both classes |
 | G7 | Safe area timing | S7 logs frame 1 and 3 s |
-| G14 | S1 physics half | Kept (ADR-0004 may tick in `_physics_process`, QQ-01), with a sequence number and forced steps |
+| G14 | S1 physics half | Kept, with a sequence number and forced steps. ADR-0004 ticks from `_process` (QQ-01) and does not adopt the S1 queue; S1 still runs and its result is recorded (ADR-0004 V14) |
 | G15 | Bar colour | Dropped |
 | G16 | TapScreen accessibility | Negative consequences |
 | G17 | Recursive mouse filter | Per-node rule and lint; recursive optional after S9 |
@@ -410,3 +410,4 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 ## Amendments
 - **2026-11-04, with ADR-0007 (confirmed by the user 2026-11-04 at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Android edge-to-edge is the export preset option `screen/edge_to_edge` in `export_presets.cfg`, not a `ProjectSettings` key: Decision 1 moves it to an export preset note, S0b checks it, and S7 and S9 follow. Decision 1, S0a, S9 and A11 record that 7 of the 13 Decision 1 keys equal engine defaults and are dropped on save, so checks read effective values. S9 names `mouse_behavior_recursive`. S0a's parse check and settings dump are marked verified 4.7.2 headless.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Conflict 1). The S1 contract now matches ADR-0004. ADR-0004 ticks from `BattleWrapper._process`, never `_physics_process`, and does not adopt the S1 command queue (ADR-0004 Decision 4 and Alternative 4). S1 no longer gates TR-hud-005; it still runs, and its result is recorded (ADR-0004 V14). Changed: the Enables row, the S1 row's fail branch in the S0 table, the S1 risk and review row G14.

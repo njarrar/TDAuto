@@ -134,8 +134,8 @@ AppRoot (Node, main scene; state BOOT | IN_STAGE | FATAL)
   ▼
 Battle (RefCounted) ─ holds ─► Flow, Combat, EnemyWave, TowerSim, HeroSim,
   │                            battle FatalLatch, InputResolver,
-  │                            _halt_gate, _tick_math, _dev_error_sink,
-  │                            _stat_accessor, _wiring
+  │                            halt_gate, stat_accessor,
+  │                            _tick_math, _dev_error_sink, _wiring
   │
   │  injected Callables (point one way only; every target held by Battle):
   │    sims ──► HaltGate ──► Flow, battle FatalLatch
@@ -288,7 +288,7 @@ Names are proposed by this ADR. `Battle.input_resolver`, the private `Battle` me
 - Reduce Motion has one read point today and one swap point at Alpha.
 
 ### Negative
-- Six small classes join the root and Foundation (`HaltGate`, `Wiring`, `DevErrorSink`, `PresentationSettings`, `FatalScreen`, `AppRoot`), on top of those architecture.md already named, and `Battle` gains five private members.
+- Six small classes join the root and Foundation (`HaltGate`, `Wiring`, `DevErrorSink`, `PresentationSettings`, `FatalScreen`, `AppRoot`), on top of those architecture.md already named, and `Battle` gains three private members (`_tick_math`, `_dev_error_sink`, `_wiring`) and two public read-only ones (`halt_gate`, `stat_accessor`).
 - Teardown has more ordered steps. A direct `.connect()` that skips a `Wiring` record would leave a connection undone; Implementation Guideline 3, its lint and test V2 guard it.
 - A fatal shows one frame late, because AppRoot acts in its next `_process`. The sim halts at once, so no state changes in that frame.
 - One `StatAccessor` per battle costs one small allocation per retry.
@@ -397,3 +397,4 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 - **2026-11-04, with ADR-0005** (Status stays Accepted; confirmed by the user 2026-11-04 when ADR-0005 was accepted). The battle's `StatAccessor` moves from the private member `_stat_accessor` to the public read-only member `stat_accessor`, beside `input_resolver` (Decision 2, Key Interfaces). The Builder injects it into EnemyWave, TowerSim and HeroSim as an object, not a method Callable (Decision 3); the wrapper passes `battle.stat_accessor` to HudLogic. `_halt_gate` likewise becomes the public read-only member `halt_gate`, so the wrapper can pass `battle.halt_gate.halted` to HudLogic as a method Callable; B9's rule against injecting `Battle.halted()` stands. Still one accessor per battle, made in build step (b). The Architecture Diagram's `_halt_gate` and `_stat_accessor` and Consequences' "five private members" now read `halt_gate`, `stat_accessor` and three; they are left as written.
 - **2026-11-04, with ADR-0006 (confirmed by the user 2026-11-04 at ADR-0006 acceptance).** Status stays Accepted. `Wiring` gains `func pairs() -> Array[Dictionary]`, a read-only copy of `{signal, callable}` per recorded pair, so ADR-0006's listener-count tests read both records (Key Interfaces). `connect_recorded()` also checks the `Error` that `connect()` returns and sends a failure to the dev-error sink without recording the pair (ADR-0006 Decision 1). Nothing else in this ADR changes.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). QQ-17 is answered: method Callables and signal connections are weak (a freed target's connection is removed; no cycle); `bind()` args and lambda captures are strong. This confirms the design: Battle or AppRoot holds every Callable target (Guideline 5). Engine Compatibility, Risks, V1, V6 and Migration say so.
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`). The ADR-0005 amendment left two spots as written; they now match it. The Architecture Diagram shows the public `halt_gate` and `stat_accessor` and the three private members `_tick_math`, `_dev_error_sink`, `_wiring`. Consequences says `Battle` gains three private members and two public read-only ones. Nothing else in this ADR changes.

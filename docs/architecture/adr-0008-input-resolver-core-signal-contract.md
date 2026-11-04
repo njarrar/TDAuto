@@ -27,10 +27,10 @@ The Input GDD defines a pure gesture resolver, and ADR-0003 and ADR-0006 fix its
 | **Engine** | Godot 4.7.2 (GDScript) |
 | **Domain** | Input (pure core; no engine input API) and Core (signals) |
 | **Layer** | Foundation (`InputResolver`, `GestureTrace`); the `GestureLog` harness is Presentation |
-| **Knowledge Risk** | MEDIUM. Only 4.0-era features: `RefCounted`, typed `signal`, `emit()`, `enum`, `is_finite`, `push_error`, `Vector2` storage. `breaking-changes.md` lists no 4.4 to 4.7 change to them, but no reference file covers signals or float storage, so R1 to R6 are unverified on 4.7.2. `modules/input.md` covers no touch API; none is used (ADR-0003 owns events). |
+| **Knowledge Risk** | MEDIUM. Only 4.0-era features: `RefCounted`, typed `signal`, `emit()`, `enum`, `is_finite`, `push_error`, `Vector2` storage. `breaking-changes.md` lists no 4.4 to 4.7 change to them, but no reference file covers signals or float storage, so probes R1 to R6 check them. All six are verified 4.7.2 headless and match (`docs/engine-reference/godot/probe-results.md`). `modules/input.md` covers no touch API; none is used (ADR-0003 owns events). |
 | **References Consulted** | `VERSION.md`; `modules/input.md`; `breaking-changes.md` (4.7 typed-return overrides); `deprecated-apis.md`; `current-best-practices.md` (rest parameters, lambda capture). `architecture.md` v4 (B2, Data Flow 1, 3, 9, Required ADRs); `tr-registry.yaml`; ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0007 |
 | **Post-Cutoff APIs Used** | None in `src/`. Fakes use 4.5 rest parameters and follow the 4.7 typed-override rule. |
-| **Verification Required** | Probes R1 to R6 before the first resolver story closes. |
+| **Verification Required** | Probes R1 to R6 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); all match. They still become CI tests (ADR-0007 Decision 7). |
 
 ## ADR Dependencies
 
@@ -301,14 +301,14 @@ Unit tests in `tests/unit/input_gesture_resolver/` (names proposed), shared fake
 - **V10 lints**: L-INPUT-6 and L-INPUT-7 fail on planted samples.
 - **V11 stuck drain**: set `_draining` true with `_emitting` 0; `cancel()` reports one `push_error`, empties the queue and leaves Idle; the next press works.
 - **V12 no command from cleanup edges** (integration): with fakes on `drag_cancelled` and `became_idle` that would command, `cancel()` from Dragging inside a tick, outside a tick, and at teardown issues no command; the real owners' handlers log none.
-- **Engine probes** (`tests/unit/engine/resolver_probes_test.gd`, proposed). Answers are unverified (memory); each probe is still required, with results recorded in `docs/engine-reference/godot/` with date and version.
-  - **R1** a call made inside a handler returns before `emit()` calls the next listener. Unverified (memory): yes.
-  - **R2a** a runtime error in one handler: `emit()` still calls later listeners and returns. Unverified (memory): yes, in debug builds.
-  - **R2b** a runtime error in the emitter's own function mid-loop aborts that function only, and its caller goes on. Unverified (memory): yes.
-  - **R3** `Vector2(306.0, 480.0).x == 306.0`; `is_nan(Vector2(NAN, 0.0).x)`, `is_inf(Vector2(INF, 0.0).x)`. Unverified (memory): all true.
-  - **R4** `is_finite()` false for NAN, INF, -INF; true for 0.0. Unverified (memory): yes.
-  - **R5** an `int` signal parameter reports `TYPE_INT` in `get_script_signal_list()`. Unverified (memory): yes.
-  - **R6** `2 as InputResolver.Accepts` passes into a typed `Accepts` parameter with no error. Unverified (memory): yes, so Decision 2's check is required.
+- **Engine probes** (`tests/unit/engine/resolver_probes_test.gd`, proposed). Every answer below is verified 4.7.2 headless, see probe-results.md; each probe still becomes a CI test, with results recorded in `docs/engine-reference/godot/` with date and version.
+  - **R1** a call made inside a handler returns before `emit()` calls the next listener. Verified 4.7.2 headless: yes.
+  - **R2a** a runtime error in one handler: `emit()` still calls later listeners and returns. Verified 4.7.2 headless: yes, in a debug build.
+  - **R2b** a runtime error in the emitter's own function mid-loop aborts that function only, and its caller goes on. Verified 4.7.2 headless: yes.
+  - **R3** `Vector2(306.0, 480.0).x == 306.0`; `is_nan(Vector2(NAN, 0.0).x)`, `is_inf(Vector2(INF, 0.0).x)`. Verified 4.7.2 headless: all true (probe R3a; R3b also checks the slop edge at 36 units).
+  - **R4** `is_finite()` false for NAN, INF, -INF; true for 0.0. Verified 4.7.2 headless: yes.
+  - **R5** an `int` signal parameter reports `TYPE_INT` in `get_script_signal_list()`. Verified 4.7.2 headless: yes.
+  - **R6** `2 as InputResolver.Accepts` passes into a typed `Accepts` parameter with no error. Verified 4.7.2 headless: yes (so do `99` and an untyped `Variant` 7), so Decision 2's check is required.
 
 ## Reviews
 
@@ -339,3 +339,6 @@ godot-specialist: **CONCERNS** (none blocking). TD-ADR: **CONCERNS**. All findin
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0007 (Accepted). Narrows ADR-0006's INPUT role for `drag_cancelled` and `became_idle`, and amends ADR-0006 and ADR-0007 (confirmed 2026-11-04). Enables ADR-0010.
 - GDDs: `design/gdd/input-gesture-resolver.md` (primary), `tower-system.md`, `hero-system.md`, `battle-hud.md`. Sync items: Migration Plan 3 and 4.
+
+## Amendments
+- **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). Probes R1 to R6 ran on 4.7.2 headless and all match (`docs/engine-reference/godot/probe-results.md`). Engine Compatibility (Knowledge Risk, Verification Required) and the Engine probes list under Validation Criteria now mark them verified. The R3 line now names the probe file's R3a (storage, NaN, INF) and R3b (the slop edge). The probes still become CI tests (ADR-0007 Decision 7). Nothing else in this ADR changes.
