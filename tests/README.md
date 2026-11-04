@@ -24,13 +24,10 @@ production/qa/
 
 ## Installing GdUnit4
 
-GdUnit4 is **not installed yet** (`addons/gdUnit4/` does not exist), so
-`commands.test` cannot run until it is.
-
-1. Open Godot → Asset Store (AssetLib before Godot 4.7) → search "GdUnit4" → install it
-2. Enable the plugin: Project → Project Settings → Plugins → GdUnit4 ✓
-3. Restart the editor
-4. Verify: `res://addons/gdUnit4/bin/GdUnitCmdTool.gd` exists (capital U)
+GdUnit4 6.2.0 is vendored in `addons/gdUnit4/` and committed, so CI and a
+fresh clone need no install step. To use it in the editor, enable the plugin:
+Project > Project Settings > Plugins > GdUnit4. The runner is
+`res://addons/gdUnit4/bin/GdUnitCmdTool.gd` (capital U).
 
 ## Running Tests
 
