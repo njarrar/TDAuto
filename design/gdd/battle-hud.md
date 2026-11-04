@@ -1,9 +1,9 @@
 # Battle HUD & Build UI
 
-> **Status**: Designed (pending independent review)
+> **Status**: In Review (first design review 2026-11-04 NEEDS REVISION; four blockers and three user decisions applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
@@ -41,18 +41,18 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Build arc.**
 
-6. **Tap a slot, get three discs.** `slot_tapped` from TowerInput registers one backdrop (TAP 250, a sink covering the field) and three discs (TAP 300), which compete from the next press. Order is always triangle, hexagon, square, left to right, on every slot and both hands, for motor memory. A panel above each disc holds its word and cost on two lines: Single, Splash, Slow. The new tower firing at once demonstrates the role. A disc press within 200 ms of opening is ignored, since a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy a tower that cannot be sold. Start/Call is registered but disabled while an arc is open, because at priority 350 it would otherwise beat the backdrop; an arc open across a phase change keeps it so.
+6. **Tap a slot, get three discs.** `slot_tapped` from TowerInput registers one backdrop (TAP 250, a sink covering the field) and three discs (TAP 300), which compete from the next press. Order is always triangle, hexagon, square, left to right, on every slot and both hands, for motor memory. A 60 × 30 panel above each disc holds its cost on one line, at the 14 dp floor (arc_panel). The role words, Single, Splash and Slow, show in disc order in the prompt row while an arc is open, until the player's first Won this session, and the row keeps the next-wave line after that (user decision, 2026-11-04: two 14 dp lines could not fit a 40 × 29 dp panel, and a one-line word-and-cost panel overlapped the next disc). The new tower firing at once demonstrates the role. A disc press within 200 ms of opening is ignored, since a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy a tower that cannot be sold. Start/Call is registered but disabled while an arc is open, because at priority 350 it would otherwise beat the backdrop; an arc open across a phase change keeps it so.
 7. **Tap a disc: `build`.** The disc always calls `build`, and the result decides: `OK` closes the arc and unregisters it at once, with a 120 ms collapse as art only. `NO_GOLD` leaves it open with a nudge. `HALTED` closes it. Anything else closes it and logs a development error. Costs are read through the accessor on opening and on `gold_changed` while open, at level 1 only, so nothing can ask past a level count. An unaffordable disc is dimmed and struck through, updated live.
 8. **Closing.** `pressed` with a best tap that is not one of the discs closes the arc and unregisters it, and the later `tap(backdrop)` is ignored. `drag_started` closes it. A finger rolling off a disc leaves it open. A phase change among Build, Wave and Intermission leaves it open. Paused, an outcome and Fatal close it.
 
 **Upgrade chip.**
 
-9. **The chip is its own target, owned by TowerInput.** It must sit above the thumb to be seen, so a tap on what the player sees must work. TowerInput registers a TAP disc at priority 300, radius 40, at (x, y − 76) of the tower while the window is open, and treats `tap(chip)` as a second `tap(tower)` (Tower Rule 8). The HUD draws from `chip_state()`, which gives the slot, the elapsed time and the level: the cost, the level-2 glyph, and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock. Below the affordable cost it is dimmed and struck through. A tap on a level-2 tower gives `tower_inspected(slot_index)`, which shows its range ring for 1.5 s and opens no chip.
+9. **The chip is its own target, owned by TowerInput.** It must sit above the thumb to be seen, so a tap on what the player sees must work. TowerInput registers a TAP disc at priority 300, radius 40, at (x, y − 76) of the tower while the window is open, and treats `tap(chip)` as a second `tap(tower)` (Tower Rule 8). The HUD draws from `chip_state()`, which gives the slot, the elapsed time and the level: the cost, the level-2 glyph, and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock. Below the affordable cost it is dimmed and struck through. A tap on a level-2 tower gives `tower_inspected(slot_index)`: it opens no chip, and Tower's view shows its range ring for 1.5 s.
 
 **Start/Call.**
 
 10. **One button, two jobs, hidden in Wave.** Build: "Start". Intermission: "Call +7" (bare "Call" when the bonus is 0), and under it the seconds left and a small burst glyph showing the same state as the button: full ring, wedge or dotted. Once armed, it has no pulse, warning or advice. It shows the numbers, and the bots show no cost the HUD could honestly claim. The bonus comes through Tower's formula. Each frame advances real-time models, then ticks, then refreshes views, and commands run before ticks, so what is shown is what is paid, subject to the ADR's check on that order. A press inside the hero's grab disc is the hero's: when `pressed` names Start/Call as `best_tap` and the hero as `best_drag`, the HUD ignores that gesture's tap, so a tap meant for the hero cannot call a wave, and a drag from there re-pins. It is decided at press and holds for the gesture. Only that overlap is dead; the rest of the button works, even while the hero walks past (user decision, 2026-11-02, replacing a disable of the whole button while the hero was under 104). Stage's `pin_exclusion` keeps a pinned hero's centre 60 from the button's, so the button's centre is never in the overlap. Build is unaffected, because the hero waits at `hero_start`, 164 away.
-11. **Arming.** A button goes Hidden, Arming, Armed, over 300 ms of real time (Flow, Game Feel). It registers on appearing, not on arming, or an early press would land on what lies beneath. A tap from a press during Arming is dead, even if released once Armed (a drag from the hero beneath is still a drag), and a press begun before it appeared cannot win under Input Rule 2. The clock is `advance(ms)` from the wrapper's frame time, clamped to 100 per frame, so a hitch cannot arm an unseen button, and HudLogic ignores it while Paused. A return from Paused is not a new appearance. Retry uses the same model, starting when its text shows.
+11. **Arming.** A button goes Hidden, Arming, Armed, over 300 ms of real time (Flow, Game Feel). It registers on appearing, not on arming, or an early press would land on what lies beneath. A tap from a press during Arming is dead, even if released once Armed (a drag from the hero beneath is still a drag), and a press begun before it appeared cannot win under Input Rule 2. The clock is HudLogic's `advance(ms)`: the wrapper's frame time in whole milliseconds, clamped to 100 per call, so a hitch cannot arm an unseen button, and ignored while Paused. Arming completes when the sum reaches 300 or more, which is 300 ms of clamped frame time; below 10 fps it takes longer in real time, which is accepted. Every HUD timer runs on this clock: the 200 ms disc guard, the 300 ms arming, the 400 and 1,000 ms result delays and the 120 and 200 ms motions. The chip's 1.5 s window and bar run on Tower's `ChipWindow` clock (Tower Rule 8), which the HUD only displays. A return from Paused is not a new appearance. Retry uses the same model, starting when its text shows.
 
 **Burst button.**
 
@@ -60,7 +60,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Prompts.**
 
-13. **One prompt line, first match, for this battle only, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. Because conditions are read per battle, nothing has to survive a rebuild. The prompt sits in the top band, in the next-wave line's row, so it never covers the path or an enemy at any inset (Enemy & Wave Rule 4). It hides while a build arc is open, since at a large top inset slot 0's top arc panel reaches y 164, into its row, and it returns on the frame the arc closes. Prompt 3 shows only in Wave, when that line is hidden anyway. Prompts 1 and 2 take the row from the line until the hero is pinned and a tower built, so a first Build shows the next wave only after those two acts, which is accepted, since wave 1 cannot be lost (design review fix, 2026-11-02, replacing a panel at `I_top + 104` that covered the top path row from an inset of 69).
+13. **One prompt line, first match, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. The prompt sits in the top band, in the next-wave line's row, so it never covers the path or an enemy at any inset (Enemy & Wave Rule 4). While a build arc is open the row shows the arc's role words instead (Rule 6), until the first Won, and the prompt returns on the frame the arc closes. Prompt 3 shows only in Wave, when that line is hidden anyway. Prompts 1 and 2 take the row from the line until their act is done, so a first Build shows the next wave only after those two acts, which is accepted, since wave 1 cannot be lost. **They retire** (user decision, 2026-11-04): prompt 1 never shows once the hero has been pinned in an earlier battle this session, prompt 2 never once a tower has been built in one, and neither shows after the first Won. The app root keeps three session flags, `pinned_once`, `built_once` and `won_once`, which survive retry since the root does (Flow Rule 1); they reset when the app restarts, since there is no save at MVP. So a towers-only player or a veteran keeps the next-wave line from the second battle on.
     1. Hero unpinned: "Drag the hero"
     2. No tower built, in Build or Intermission: "Tap a slot to build"
     3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started`
@@ -103,6 +103,14 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
+**Who draws what.** The HUD draws what Tower's and Hero's UI Requirements list; their Visual/Audio tables are drawn by their own views.
+
+| Drawn by | Elements | Reads |
+|---|---|---|
+| HUD (HudTopBand, HudField, modals) | Top band, next-wave line, prompts and role words, arc polygons and cost panels, chip, Start/Call, the burst button's look and digit, the Ready-press ring, ground rings, result, Paused | Rule 17 of Tower; Hero's `burst_state()`, `cooldown_left()`, `pin_state()`, `aim_state()` and `aim_ring_radius()` |
+| Tower's view | Tower polygons, level insets, state rings, every range ring, including the 1.5 s ring after `tower_inspected` | Tower |
+| Hero's view | Kite, leash, ghost, reticle, reach ring, kill preview from `preview_kills()`, telegraph, spokes, Ready ticks | Hero |
+
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units, 0 on desktop. 1.5 units is 1 dp at a 360 dp width.
 
 | Element | Position |
@@ -122,17 +130,18 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 
 **Content rules, added to the content test.** All bounds are proposed.
 
-| Check | Bound | Starter |
+| ID | Check and bound | Starter |
 |---|---|---|
-| L1 (Enemy & Wave), tightened | Slot x 138 to 402, y at least 304, so every arc disc stays on the field and no flip code is needed | Pass, 170 to 370 and 320 |
-| Arc disc to the burst line, either hand | At least 84 | 155 |
-| Start/Call to any slot's hit disc | At least 16 clear | 17.3 |
-| Start/Call to `hero_start` | At least 48 | 60 |
-| Start/Call to the path's edge | Rect clear of it | 4 |
-| Next-wave line | At most 3 types at true size | 3 |
-| Waves in a stage, starting lives | At most 6, and at most 10, the pips and dashes that fit. Larger waits for a later stage's layout | 6, 10 |
-| Arc panels against the band | Clear at inset 0; a large inset is the Mobile GDD's, since the starter's top panel reaches y 164, 10 into the band at the largest top inset | Pass at inset 0 |
-| Prompt panel inside the band | Bottom at most `I_top + 72` at every inset, so L6 keeps it off the path | `I_top + 70` |
+| `hud_slot` | L1 (Enemy & Wave), tightened: slot x 138 to 402, y at least 318, so every arc disc and cost panel stays on the field and below the band at the largest top inset, and no flip code is needed | Pass, 170 to 370 and 320 |
+| `hud_arc_burst` | Arc disc to the burst line, either hand: at least 84 | 155 |
+| `hud_call_slot` | Start/Call to any slot's hit disc: at least 16 clear | 17.3 |
+| `hud_call_start` | Start/Call to `hero_start`: at least 48 | 60 |
+| `hud_call_burst` | Start/Call's hit disc to either hand's burst hit disc at the largest bottom inset: at least 6 clear, so no press reaches both | 7.2 (38.7 at inset 0) |
+| `hud_call_path` | Start/Call to the path's edge: rect clear of it | 4 |
+| `hud_next_types` | Next-wave line: at most 3 types at true size | 3 |
+| `hud_waves_lives` | Waves in a stage at most 6, and starting lives at most 10, the pips and dashes that fit. Larger waits for a later stage's layout | 6, 10 |
+| `hud_arc_band` | Middle cost panel's top at least 174, the band's lowest edge, at every inset (arc_panel) | 176 |
+| `hud_prompt_band` | Prompt panel bottom at most `I_top + 72` at every inset, so L6 keeps it off the path | `I_top + 70` |
 
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.
@@ -172,7 +181,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 | Pips, Start/Call, overlays | Flow reads, `phase`, `wave_index()`, `wave_ids` size | Signal | Flow, Enemy & Wave |
 | Countdown, bonus | `intermission_left` through Tower's formula | Frame, comparing whole ticks | Flow, Tower |
 | Digit, wedge, ticks | `cooldown_left()`, `burst_state()` | Frame, comparing whole ticks | Hero |
-| Arc and chip costs, range rings | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
+| Arc and chip costs | Accessor by `def_id` and level | On opening, and on `gold_changed` while open | Data, Tower |
 | Next-wave line | Wave records directly | On phase change | Enemy & Wave |
 | Result | Flow result, Combat counters, `got_through_by_type()` | Once at the outcome | Flow, Combat, Enemy & Wave |
 | Prompts | `pin_state()`, `slot_state()`, `targets()`, burst counters | Frame | Hero, Tower, Enemy & Wave |
@@ -181,7 +190,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 |---|---|---|---|
 | Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` | Input (API); HUD (meaning) |
 | Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
-| Hero System | reads | State and timers; HeroInput registers the button | Hero |
+| Hero System | reads | State and timers, `aim_state()`, `aim_ring_radius()`; HeroInput registers the button | Hero |
 | Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase` | Flow |
 
 Headless wiring tests are unaffected, since the HUD is absent, and `phase` and `lives_changed` join Flow's view allowlist.
@@ -199,8 +208,10 @@ The **arc_disc** formula is defined as:
 | `R` | float, units | 76 | constant | Presentation; chords come to 76, so discs do not overlap |
 | `a_k` | angle | −60°, 0°, 60° | constant | Fan angle per disc |
 
-**Output Range:** inside x 72 to 468, and y 228 to `slot y − 38` under tightened L1.
+**Output Range:** inside x 72 to 468, and y 242 to `slot y − 38` under `hud_slot`.
 **Example:** slot (270, 320): (204.2, 282), (270, 244), (335.8, 282).
+
+The **arc_panel** rule is defined as: each disc's 60 × 30 cost panel is centred at (`slot x`, `slot y − 129`) for the hexagon and (`slot x ∓ 67.8`, `slot y − 91`) for the triangle and square, so each sits 2 above its disc's hit disc and the side panels 2 further out. A side panel's inner edge is then 37.8 from the hexagon disc's centre, clear of its radius 36 and of its polygon, and 8 below the hexagon's panel; no panel is a hit target. At slot (270, 320): (270, 191), (202.2, 229), (337.8, 229). The hexagon panel's top is `slot y − 144`, so `hud_slot`'s 318 puts it at 174 or below the band's edge; side panels span x `slot x − 97.8` to `slot x + 97.8`, inside the field for x 138 to 402.
 
 The **display_seconds** formula is defined as:
 
@@ -210,9 +221,9 @@ The **display_seconds** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `ticks` | int | 0 and up | calculated (Flow, Hero) | Whole ticks left |
-| `ticks_per_second` | int | 60 proposed | constant | From the fixed tick |
+| `ticks_per_second` | int | 1 and up; 60 at `dt` 1/60 | calculated | `round(1 / dt)` from Flow's fixed tick, never a separate constant |
 
-**Output Range:** 0 only at 0, so a digit never shows 0 while time remains.
+**Output Range:** 0 only at 0, so a digit never shows 0 while time remains. `ticks` below 0 is treated as 0.
 **Example:** 600 → 10, 541 → 10, 540 → 9, 1 → 1.
 
 The **burst_y** formula is defined as:
@@ -236,7 +247,7 @@ The **chip_bar** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `elapsed` | float, ms | 0 and up | calculated (Tower's `chip_state()`) | Real time since the chip opened |
 
-**Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value.
+**Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value: 1500 is Tower's `chip_window` (registry), and `elapsed` comes from Tower's clock.
 **Example:** 750 ms: 0.5.
 
 ## Edge Cases
@@ -263,7 +274,9 @@ The **chip_bar** formula is defined as:
 - **If the app loses focus with an arc open**: Paused closes it, and the resume tap reaches nothing beneath.
 - **If a player taps Play again after a Won**: the same rebuild, with the same seed.
 - **If the log file cannot be written**: a development error, and play goes on. It is never fatal.
-- **If handedness is left**: only the burst button and its digit mirror. Start/Call stays, 7.2 clear at the worst.
+- **If handedness is left**: only the burst button and its digit mirror. Start/Call stays, 7.2 clear of the burst's hit disc at the largest bottom inset and 38.7 at inset 0 (`hud_call_burst`), so no press reaches both; a press in the gap reaches the sink.
+- **If an arc opens after the first Won**: no role words; the row keeps the next-wave line or a prompt.
+- **If the app restarts**: the session flags reset, so prompts 1 and 2 show again until their acts or a Won.
 
 ## Dependencies
 
@@ -302,7 +315,7 @@ Primitives only, and nothing has been rendered. Text sits on panel. Tower and He
 | Gold | 16 dp tabular digits |
 | Next-wave line | Neutral glyphs at true size, 16, 22 and 30, with the fast's notch, because at a smaller size normal and heavy merge. Counts 14 dp |
 | Start/Call | Panel rect, 2 px neutral outline, two 14 dp lines. Arming: alpha 0.5, reaching full at 300 ms. Burst glyph 16 px neutral |
-| Arc | The disc is a hit area only and is not drawn. A tower-size polygon with panel fill and a 3 px cyan contour. Panel above, 60 × 44, with the word and cost |
+| Arc | The disc is a hit area only and is not drawn. A tower-size polygon with panel fill and a 3 px cyan contour. Panel above, 60 × 30, cost only (arc_panel); the role words sit in the prompt row until the first Won |
 | Chip | 76 × 44 panel, 16 dp cost, 20 px cyan level-2 polygon, neutral bar |
 | Unaffordable | Alpha 0.55, cost struck through |
 | Prompt | 14 dp, one line, on panel |
@@ -352,27 +365,27 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 1. (Rule 3; Data, Enemy & Wave rows) **GIVEN** a spy changing cost, **WHEN** the arc reopens, **THEN** the new cost shows; a new instance holds nothing.
 2. (Rule 4) **GIVEN** each phase, **THEN** HudLogic's visible set is exact, with the burst button in all.
 3. (Rule 5) **GIVEN** split groups, **THEN** one total per type, in fixed order.
-4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled. A disc press at 199 ms is ignored, and at 200 ms it counts.
+4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled; cost panels per arc_panel; the prompt row shows "Single", "Splash", "Slow" with `won_once` false, and the next-wave line with it true. On the `advance` clock, a disc press after 199 ms is ignored, and after 200 ms it counts.
 5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges; `HALTED` closes; others close and log an error. One tap, one `build`.
 6. (Rule 7) Level 1 read on opening and `gold_changed`; dimming flips both ways; a newly affordable disc builds.
 7. (Rule 8; Input row) A press outside closes and unregisters; a later `tap(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
-8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.
+8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: no chip, and the HUD draws no ring (Tower's view does).
 9. (Rule 10) "Start"; "Call +7"; bonus 0 "Call"; hidden in Wave; glyph matches burst state. With the hero 60 from its centre, a press inside both discs released in place calls nothing, and moved past `tap_slop` re-pins; a press at the centre calls. With the hero walking across, a press outside the hero's disc calls. In Build at `hero_start`: calls.
 10. (Rule 11; Flow row) A press during Arming, released once Armed, does nothing; the next press commands once.
 11. (Hidden) Unregistered; its phase begins: registered and dimmed.
-12. (Arming) 299 no, 300 Armed; `advance(5000)` counts 100; phase end Hidden; Paused holds, and return does not restart it. Retry likewise.
+12. (Arming) `advance(100)` twice and `advance(99)`: still Arming; one more `advance(1)`: Armed. Three `advance(100)`: Armed. `advance(5000)` counts 100, so it alone does not arm. Phase end: Hidden. Paused: `advance` is ignored and the sum holds; the return does not restart it. Retry's button follows the same steps.
 13. (Armed) A counted tap: one command; phase end Hidden.
 14. (Arc states) Closed: no targets. Open: all registered. An arc across Wave's end: Start/Call registers disabled, and enables on close.
 15. (Rule 12) Build, unpinned, Ready, Telegraphing and Cooling each map to their look; x 456, left 84.
-16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome. While prompt 1 or 2 shows in Build or Intermission, the next-wave line is hidden, and it shows again on the frame the prompt hides. The prompt panel's bottom is at most `I_top + 72` at inset 0 and at 102. At inset 102 with prompt 2 due, opening slot 0's arc hides the prompt, and closing it shows the prompt again on that frame.
+16. (Rule 13) Each prompt on its fixture; first match wins; pinned with no tower in Wave gets prompt 3; prompt 3 stays through a spawn gap and hides on `burst_started`; no prompt on an outcome. While prompt 1 or 2 shows in Build or Intermission, the next-wave line is hidden, and it shows again on the frame the prompt hides. With prompt 2 due and `won_once` false, opening an arc shows the role words, and closing it shows the prompt again on that frame. **GIVEN** `pinned_once` true in a new battle, **THEN** prompt 1 never shows; `built_once` true, prompt 2 never; `won_once` true, neither, and an arc keeps the next-wave line. A retry keeps the flags; a new app root starts them false.
 17. (Prompt states) Each act advances; None is final after the first burst.
 18. (Rule 14) Three rings, then none; a dismissal draws none; a rebuild resets.
-19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; text at 400 and 1,000 ms; damage 0 reads 0.
+19. (Rule 15; Combat row) One snapshot, taken the frame after the outcome, feeds screen and log, including the fatal leak; exact strings and order; on the `advance` clock from the outcome frame, Lost's text is hidden at 399 and shown at 400, and Won's at 999 and 1,000; damage 0 reads 0.
 20. (Rule 16) Each next-try line in order; a fixture where count and lives disagree; ties heavy, normal, fast; a built role gives no line.
 21. (Rules 2, 17) A Control fires only on a release whose press it saw; a press across the lifecycle signal does nothing. Paused resumes on release.
 22. (Rule 18) Retry twice: one latch; the handler frees nothing; Fatal first.
 23. (Rule 19) One record per attempt and per call, all fields, the call's written at the next clear; burst state not through Tower; a sink failure is non-fatal.
-24. (arc_disc) Slot (270, 320): the three example points.
+24. (arc_disc, arc_panel) Slot (270, 320): the three disc points and the three panel centres. Slot (138, 318): the hexagon panel's top is 174 and the left panel's left edge 40.2; slot (402, 318): the right panel's right edge 499.8.
 25. (display_seconds) 600→10, 541→10, 540→9, 1→1, 0→0.
 26. (burst_y) 0→888, 72→816, 200→816.
 27. (chip_bar) 0→1, 750→0.5, 1,500→0, 2,000→0.
@@ -383,7 +396,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 30. (Rule 1) Headless wiring builds no HUD piece.
 31. (Paid) With real Tower and Flow, the shown bonus equals the paid one.
 32. (Retry) Two taps, one rebuild, a clean HUD.
-33. (Content) Real records pass; each check fails on its own fixture, watched failing once.
+33. (Content) Real records pass with no ID reported. Each check's ID appears in its failure message, and a copy of the real stage with one field changed reports exactly its set: slot 0 at y 317 gives {`hud_slot`, `hud_arc_band`}, since its hexagon panel's top falls to 173; slot 3 at (170, 702), 15.3 clear of Start/Call, gives {`hud_call_slot`}; a seventh wave position gives {`hud_waves_lives`}. The other IDs get copies in their story.
 
 **Deferred criteria.** Done for this system means every criterion runnable today passes and each of these has its owner.
 
