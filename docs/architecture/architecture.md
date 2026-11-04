@@ -300,7 +300,8 @@ Result screen "Retry" pressed
   ─► sets idempotent retry latch on AppRoot (does NOT free the caller)
 AppRoot next frame:
   1. If Fatal: show fatal screen, stop
-  2. Stop Clock;  old_battle.cancel_input()   (the same guarded method Flow uses; TR-state-016)
+  2. Stop Clock;  old_battle.cancel_input()   (the same guarded method Flow uses; TR-state-016),
+     then the wrapper clears it with set_input_cancel(Callable()) before the resolver is released
   3. Free the wrapper and its nodes (adapter, HUD, views). Drop every reference to the Battle and the
      resolver: they are RefCounted, so they cannot be freed, only released. A weakref to the old
      Battle, every system, the accessor and the resolver must then read null (TR-state-009,

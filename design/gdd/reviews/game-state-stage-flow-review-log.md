@@ -82,3 +82,41 @@ Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d1444
 Applied in autonomous mode: all 4 blocking items (Rule 9 timing and the worked example; AC1 and AC12 Build counts; Rule 14 and 15a split with sink counts in AC7 and AC8; Rule 15 cancel safety on clearing plus new AC19) and recommended items: AC9 Won and Fatal cases, AC13 events and cause, AC18 value, new AC20 (wave_cleared from inside a tick) and AC21 (Fatal on phase(Lost)), Retry row cases, Formulas range and injected dt, Rule 15 emit order and listeners, resume idempotence, bots and Paused, Rule 16 and 18 ADR-0001 notes, Tuning Knobs section, prototype reference as context only.
 Not done: AC17's full matrix, the per-platform notification list and the clamp value (ADR-0001, ADR-0003, ADR-0004), negative lives_cost (Data & Config), the 3.5 min gate (user).
 Re-review pending: the hashes above are of the reviewed text, not this revision.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 8 | Recommended: 21
+Summary: Third pass. The rules held and no settled decision was reopened; the game designer found no blocker. What remained were eight text fixes, two of them introduced by the second revision (the fake's wave_index and the doubled "C"): a stale Rule 4 line after Data's floor change, the extra-leak edge case, nested emit order, clear-before-release in teardown, two criteria depending on connection order, and one reading a released fake. The creative director would approve on those conditions with a spot-check of the changed lines, not a fourth full review.
+Prior verdict resolved: Yes (all 4 prior blocking items)
+Findings:
+- [BLOCKING] Rule 4: "matching the Data & Config interval floor" stale after the floor became 1/30 s.
+- [BLOCKING] Edge Cases: extra same-tick leaks called "ignored"; Enemy & Wave stops its loop, and one that arrived would be a Rule 15a breach.
+- [BLOCKING] Rule 15: nested emit; define stale payloads, with phase() authoritative.
+- [BLOCKING] Rule 16 and architecture Data Flow 5: clear the cancel before release.
+- [BLOCKING] Acceptance Criteria: "C" is both a recording system and the cancel counter.
+- [BLOCKING] Acceptance Criteria AC2: the fake's wave_index contradicted the expected raised index.
+- [BLOCKING] AC18, AC21: recorder connection order and phase() == FATAL.
+- [BLOCKING] AC19: a released fake cannot be read; external counter and assert_error.
+- [RECOMMENDED] Start arms 0.3 s when Build opens after a retry; the retry seed.
+- [RECOMMENDED] Fatal clears the remembered phase; in_build() after Fatal from Paused-from-Build; a second focus loss while Paused; ticks alongside seconds_left; presentation timers cancelled on retry or Fatal; a bot pin in Paused-from-Build tested.
+- [RECOMMENDED] AC9 callback into E; AC11 Paused origin; sink counts cumulative or reset; AC13 vacuous checks, sink count after Fatal, distinct causes; AC12 countdown value; Rule 17 finger before Paused, Retry twice, Rule 5 commands between ticks untested; Manual beat as 0.4 s within a frame; AC6 and AC17 as tables; damage-by-source result; Deferred row gaps.
+- [RECOMMENDED] phase as an alias of phase_changed; instantiate and Callable-lifetime claims unverified (QQ-17); the weakref proof as an expectation; ADR-0003 for a finger across a pause.
+- [RECOMMENDED] Routed: ADR-0001 (instantiate, Callable lifetime, free timing, weakref sampling); Enemy & Wave (confirm the fatal-leak skip is written there); Battle HUD (Start arming after retry, seed wording); backlog (dead input after a loss, Play again as a replay, frozen last frame, timers on focus loss, a doomed stage).
+- [RECOMMENDED] Disagreements: systems-designer's tie and extra-leak blockers answered by Enemy & Wave's fatal-leak skip; godot's clear-before-release partly answered by architecture Data Flow 4 and its two-cancel-paths blocker by Input Rule 7.
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d79fe3bf982a1d15a806cc0725421521a6a735d5
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/hero-system.md c33a93e052ee88976c0bb5baab4ce8d475530a84
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied in autonomous mode: all eight conditions (Rule 4 floor wording; the extra-leak edge case and a pointer in Rule 14; Rule 15 stale-payload definition; Rule 16 and architecture Data Flow 5 clear the cancel before release; the cancel counter renamed X; the fake's start raises wave_index; AC18 and AC21 recorder order and phase() == FATAL; AC19 external counter and assert_error) and recommended: Start arms when Build opens after a retry (Game Feel), retry and Play again use the same seed (Rule 16), phase as the architecture's phase_changed (Rule 15).
+Not done: the other recommended and routed items.
+The creative director judged a spot-check of the changed lines enough to approve; that choice is left to the user, as for the Hero GDD's lighter exit.
