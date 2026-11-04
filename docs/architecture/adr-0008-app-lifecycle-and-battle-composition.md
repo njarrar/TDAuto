@@ -103,7 +103,7 @@ var _quit_requested: bool = false
 
 `_ready` runs in this order, and the order is the fatal-scene guarantee (section 7):
 1. Build the `FatalScreen` (CanvasLayer 30, hidden, built in code, section 7).
-2. Create the `FatalRelay` and the `RealClock`; set `_launch_id = int(Time.get_unix_time_from_system())` (a float; L10). It is a log label, not gameplay. Assign `_quit = get_tree().quit` here, not as a member initialiser (the tree is not ready at member initialisation).
+2. Create the `FatalRelay` and the `RealClock`; set `_launch_id = int(Time.get_unix_time_from_system())` (a float; L10). It is a log label, not gameplay. It is a time, not a random value, so a later launch gets a higher ID and the log can order launches (cross-review M8); Battle HUD Rule 19 says the same. Assign `_quit = get_tree().quit` here, not as a member initialiser (the tree is not ready at member initialisation).
 3. `CatalogueLoader.load_manifest(manifest_path, _relay.report_boot)`. A `null` return is the boot Fatal: no wrapper exists, so the root writes the Fatal record (cause `BOOT`) and shows the screen.
 4. Otherwise `_start_attempt()`.
 
@@ -385,3 +385,4 @@ Other edits that follow from this ADR:
 - `docs/architecture/architecture.md`: Module Ownership rule 7, Data Flow 3.1, 3.2, 3.4, 3.5, 3.6, API Boundaries 4.2 and 4.3; Gate Findings GF6, GF8; Open Questions M1, M2, A2, A10.
 - `design/gdd/game-state-stage-flow.md` Rules 1, 2, 3, 6, 15, 16, 17, 18; `design/gdd/gdd-cross-review-2026-11-02j.md` M1, M2.
 - Corrected 2026-11-03 (user sign-off): wording aligned with ADR-0005 and ADR-0007, found by the control manifest review; no decision changed.
+- Corrected 2026-11-04 (user sign-off): Battle HUD Rule 19 called the launch ID a random string; it now matches this ADR's int launch time, and section 3 says why a time is kept. No decision changed.
