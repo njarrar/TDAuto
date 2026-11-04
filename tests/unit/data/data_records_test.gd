@@ -99,7 +99,7 @@ func test_snapshot_detector_names_a_changed_nested_value() -> void:
 func test_snapshot_detects_a_one_ulp_float_change() -> void:
 	var cat: Catalogue = _cat()
 	var before: String = cat.snapshot()
-	cat.burst(&"burst_a").damage = nextafter(130.0, 200.0)
+	cat.burst(&"burst_a").damage = 130.0 + 2.842170943040401e-14  # the next float after 130.0
 	assert_bool(before == cat.snapshot()).is_false()
 
 

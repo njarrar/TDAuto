@@ -95,7 +95,7 @@ in brackets.
 | STATE-1 | `static var` appears | ADR-0001 `mutable_static_var` |
 | STATE-2 | In the sim scope, a member is typed `Battle` | ADR-0001 `sim_back_reference_to_battle` |
 | STATE-3 | `func reset(` in the sim scope (`drop_backlog` is not matched) | ADR-0001 `in_place_reset` |
-| STATE-4 | `.hp`, `.max_hp`, `.strength` or `.ticks_left` is assigned (`=`, `+=`, `-=`, `*=`, `/=`) outside `src/core/combat/` | ADR-0009 `hp_change_outside_deliver` |
+| STATE-4 | `.hp`, `.max_hp`, `.strength` or `.ticks_left` is assigned (`=`, `+=`, `-=`, `*=`, `/=`) outside `src/core/combat/` (records under `src/foundation/data/records/` build their own authored `max_hp` from data, ADR-0002) | ADR-0009 `hp_change_outside_deliver` |
 | STATE-5 | `.add_enemy(` outside `src/feature/enemy_wave/` | ADR-0009 Decision 7 |
 | STATE-6 | `roster()`, `targets()` or `targets.call()` is followed directly by a mutating call (`append`, `erase`, `sort`, `sort_custom`, `clear`, `remove_at`, `insert`, `push_*`, `pop_*`, `resize`, `fill`, `reverse`, `shuffle`, `assign`) | ADR-0009 `mutate_roster_view` (partial) |
 | STATE-7 | In the files of `Targetable`, `Enemy`, `Health`, `Status`, `PathTrack`, a member is typed `ReadContext`, `EnemyWave`, `Combat`, `Battle`, `Callable`, `Targetable`, `Enemy`, `Object`, `Node` or `RefCounted` (`Health` and `Status` members typed on `Targetable`'s own fields are the owner's) | ADR-0009 `combat_piece_back_reference`; ADR-0005 `entity_holds_own_read_context` |

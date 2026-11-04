@@ -79,6 +79,8 @@ func start_next_wave() -> void:
 ## tests. Returns false if a read halted or attach failed; nothing persists then.
 func add_enemy(def_id: StringName, start_distance: float) -> bool:
 	var id: int = _next_spawn_id
+	if _path == null:
+		return false
 	_next_spawn_id += 1
 	var e: Enemy = Enemy.new(id, def_id)
 	var ctx: ReadContext = ReadContext.make(def_id, 0, e)

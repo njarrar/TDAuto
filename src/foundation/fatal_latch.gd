@@ -7,11 +7,11 @@ var _cause: String = ""
 
 
 ## Records the first fatal cause. Later calls change nothing.
-func fatal(cause: String) -> void:
+func fatal(p_cause: String) -> void:
 	if _is_fatal:
 		return
 	_is_fatal = true
-	_cause = cause
+	_cause = p_cause
 
 
 ## True once fatal() has been called.

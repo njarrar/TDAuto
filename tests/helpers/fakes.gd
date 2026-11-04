@@ -4,9 +4,6 @@ extends RefCounted
 ## Each is an inner class used as fake.method, exactly as the Battle Builder injects it:
 ## Callable(fake.halted) is never built; pass fake.halted. to_ticks is never faked: tests
 ## use a real SimTime.
-##
-## UNVERIFIED dependency: Targets uses Targetable (src/core/combat, ADR-0009). This file
-## does not parse until that class exists.
 
 
 ## Stands in for the halted() query.

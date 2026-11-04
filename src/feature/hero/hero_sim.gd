@@ -9,9 +9,6 @@ enum BurstResult { OK = 0, HALTED = 1, BUILD_PHASE = 2, NOT_PINNED = 3, NOT_READ
 enum PinState { UNPINNED, WALKING, PINNED }
 enum BurstState { READY, TELEGRAPHING, COOLING }
 
-## Field size in field units (Enemy and Wave Rule 4).
-const FIELD_W: float = 540.0
-const FIELD_H: float = 960.0
 ## Tolerance in walk_ticks so float error adds no tick (Hero Formulas).
 const WALK_EPS: float = 0.0001
 
@@ -65,12 +62,12 @@ var _kills_on_hit_3: PackedInt32Array = PackedInt32Array()
 var _best_victims: PackedInt32Array = PackedInt32Array()
 
 
-func _init(stage: StageRecord, hero_id: StringName, burst_id: StringName, left_handed: bool,
+func _init(stage: StageRecord, p_hero_id: StringName, p_burst_id: StringName, left_handed: bool,
 		accessor: StatAccessor, halted: Callable, between_ticks: Callable, in_build: Callable,
 		targets: Callable, to_ticks: Callable, dt: float, combat: Combat, fatal: Callable) -> void:
 	_stage = stage
-	_hero_id = hero_id
-	_burst_id = burst_id
+	_hero_id = p_hero_id
+	_burst_id = p_burst_id
 	_accessor = accessor
 	_halted = halted
 	_between_ticks = between_ticks
@@ -81,8 +78,8 @@ func _init(stage: StageRecord, hero_id: StringName, burst_id: StringName, left_h
 	_combat = combat
 	_fatal = fatal
 	_geometry = PinGeometry.new(stage, left_handed)
-	_hero_ctx = ReadContext.make(hero_id, 0)
-	_burst_ctx = ReadContext.make(burst_id, 0)
+	_hero_ctx = ReadContext.make(p_hero_id, 0)
+	_burst_ctx = ReadContext.make(p_burst_id, 0)
 	_pos_x = stage.hero_start[0]
 	_pos_y = stage.hero_start[1]
 	_pin_x = _pos_x
@@ -149,7 +146,7 @@ func burst(aim_point: Vector2) -> BurstResult:
 	var y: float = aim_point.y
 	if not is_finite(x) or not is_finite(y):
 		return BurstResult.BAD_POSITION
-	if x < 0.0 or x > FIELD_W or y < 0.0 or y > FIELD_H:
+	if x < 0.0 or x > FieldBounds.WIDTH or y < 0.0 or y > FieldBounds.HEIGHT:
 		return BurstResult.OFF_FIELD
 	var reach: float = _accessor.stat_float(_burst_ctx, StatKeys.REACH)
 	if bool(_halted.call()):
