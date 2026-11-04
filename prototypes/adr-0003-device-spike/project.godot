@@ -1,7 +1,9 @@
 ; PROTOTYPE - NOT FOR PRODUCTION. ADR-0003 device spike.
 ; Its own project: the repo-root project.godot is separate. The display and
 ; input settings below are the ones ADR-0003 proposes for the main project, so
-; running the spike also tests them (spike items SP0, SP5, SP7).
+; running the spike also tests them (spike items SP0, SP5, SP7, SP8).
+; window/size/mode.mobile=3 asks for fullscreen on phones only; the start-up
+; report logs the window mode actually used (SP0, SP8).
 config_version=5
 
 [application]
@@ -17,6 +19,7 @@ window/size/viewport_width=540
 window/size/viewport_height=960
 window/size/window_width_override=450
 window/size/window_height_override=800
+window/size/mode.mobile=3
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
 window/handheld/orientation=1

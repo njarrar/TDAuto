@@ -2,7 +2,7 @@
 # Question: on Godot 4.7.2, with the display and input settings ADR-0003 proposes,
 # in what order do input events, Controls, _unhandled_input, _physics_process and
 # _process run; which lifecycle notifications fire per platform; and what do the
-# safe area, screen size and stretch report? See README.md for spike items SP0 to SP12.
+# safe area, screen size and stretch report? See README.md for spike items SP0 to SP13.
 #
 # Scene built in code:
 #   SpikeRoot (this script)      logs notifications (NOTE-ROOT), window signals (WIN-SIG),
@@ -12,7 +12,8 @@
 #       AdapterStandIn (Node)    logs _input (IN), _unhandled_input (UNH), NOTE-DEEP
 #     Labels                     status line and the on-screen log (mouse_filter IGNORE)
 #     STOP band, PASS band       Controls that log their _gui_input (CTRL-STOP, CTRL-PASS)
-#     Buttons                    Mark, Clear, Copy, Aspect, Hover, Accept
+#     Buttons                    Mark, Clear, Copy, Aspect, Mode, Hover, Accept
+# It also logs the GUI focus owner whenever it changes (SP13).
 # No autoloads.
 extends Node
 
@@ -37,6 +38,9 @@ var _pass_panel: SpikePanel = null
 var _aspect_button: Button = null
 var _hover_button: Button = null
 var _accept_button: Button = null
+var _mode_button: Button = null
+var _last_window_size: Vector2i = Vector2i.ZERO
+var _last_focus_text: String = "none"
 var _mark_count: int = 0
 var _poll_counter: int = 0
 var _last_display_key: String = ""
@@ -55,6 +59,7 @@ func _ready() -> void:
 		else:
 			_log.entry("INFO", "Window has no signal %s" % sig)
 	_last_display_key = _display_key()
+	_last_window_size = DisplayServer.window_get_size()
 	_log.flush_now()
 
 
@@ -68,6 +73,7 @@ func _process(delta: float) -> void:
 	if _poll_counter >= POLL_EVERY_FRAMES:
 		_poll_counter = 0
 		_poll_display()
+	_poll_focus()
 	if _log.screen_dirty:
 		_log_label.text = _log.screen_text()
 		_log.screen_dirty = false
@@ -122,8 +128,9 @@ func _build_scene() -> void:
 	_add_button("Clear", 1, _on_clear)
 	_add_button("Copy", 2, _on_copy)
 	_aspect_button = _add_button("keep", 3, _on_aspect)
-	_hover_button = _add_button("Hover off", 4, _on_hover)
-	_accept_button = _add_button("Accept off", 5, _on_accept)
+	_mode_button = _add_button("Mode", 4, _on_mode)
+	_hover_button = _add_button("Hover off", 5, _on_hover)
+	_accept_button = _add_button("Accept off", 6, _on_accept)
 
 
 func _make_label(pos: Vector2, box: Vector2, font_size: int) -> Label:
@@ -161,10 +168,10 @@ func _make_panel(tag: String, rect: Rect2, color: Color, filter: Control.MouseFi
 func _add_button(text: String, slot: int, handler: Callable) -> Button:
 	var b: Button = Button.new()
 	b.text = text
-	b.position = Vector2(6.0 + 88.0 * slot, BUTTON_Y)
-	b.size = Vector2(84.0, 60.0)
+	b.position = Vector2(4.0 + 76.0 * slot, BUTTON_Y)
+	b.size = Vector2(72.0, 60.0)
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size", 15)
+	b.add_theme_font_size_override("font_size", 13)
 	b.pressed.connect(handler)
 	add_child(b)
 	return b
@@ -201,6 +208,16 @@ func _on_aspect() -> void:
 	_log.entry("DISPLAY", "aspect set to %s: %s" % [_aspect_button.text, _display_snapshot()])
 
 
+# Switches the window between windowed and fullscreen, so SP8 gets safe-area
+# readings in both modes on a phone.
+func _on_mode() -> void:
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_log.entry("DISPLAY", "window mode set: %s" % _display_snapshot())
+
+
 func _on_hover() -> void:
 	_log.hide_hover_on_screen = not _log.hide_hover_on_screen
 	_hover_button.text = "Hover off" if _log.hide_hover_on_screen else "Hover on"
@@ -222,7 +239,10 @@ func _on_window_signal(sig: String) -> void:
 
 
 func _on_viewport_size_changed() -> void:
-	_log.entry("DISPLAY", "Viewport.size_changed: %s" % _display_snapshot())
+	var now: Vector2i = DisplayServer.window_get_size()
+	_log.entry("DISPLAY", "Viewport.size_changed window %s -> %s unchanged=%s: %s" % [
+		str(_last_window_size), str(now), str(now == _last_window_size), _display_snapshot()])
+	_last_window_size = now
 	_field_view.insets = _field_insets()
 	_last_display_key = _display_key()
 
@@ -234,6 +254,15 @@ func _poll_display() -> void:
 	_last_display_key = key
 	_log.entry("DISPLAY", "changed (seen by polling): %s" % _display_snapshot())
 	_field_view.insets = _field_insets()
+
+
+func _poll_focus() -> void:
+	var owner_control: Control = get_viewport().gui_get_focus_owner()
+	var text: String = "none" if owner_control == null else str(owner_control.name)
+	if text == _last_focus_text:
+		return
+	_last_focus_text = text
+	_log.entry("FOCUS", "gui focus owner=%s" % text)
 
 
 func _display_key() -> String:
@@ -252,6 +281,7 @@ func _display_snapshot() -> String:
 	parts.append("usable=%s" % str(DisplayServer.screen_get_usable_rect()))
 	parts.append("window=%s" % str(DisplayServer.window_get_size()))
 	parts.append("window_pos=%s" % str(DisplayServer.window_get_position()))
+	parts.append("window_mode=%d" % int(DisplayServer.window_get_mode()))
 	parts.append("safe=%s" % str(DisplayServer.get_display_safe_area()))
 	if DisplayServer.has_method("get_display_cutouts"):
 		parts.append("cutouts=%s" % str(DisplayServer.call("get_display_cutouts")))
@@ -309,8 +339,9 @@ func _field_width_dp() -> float:
 
 func _write_start_report() -> void:
 	var v: Dictionary = Engine.get_version_info()
-	_log.entry("INFO", "log format: seq f<process frame> pf<physics frame> t<usec> after=<last marker> TAG text")
-	_log.entry("INFO", "engine=%s os=%s model=%s" % [str(v.get("string", "?")), OS.get_name(), OS.get_model_name()])
+	_log.entry("INFO", "log format: seq f<process frame> pf<physics frame> t<usec> u<unix seconds> after=<last marker> TAG text")
+	_log.entry("INFO", "engine=%s os=%s os_version=%s model=%s" % [
+		str(v.get("string", "?")), OS.get_name(), OS.get_version(), OS.get_model_name()])
 	_log.entry("INFO", "user_dir=%s log=%s" % [OS.get_user_data_dir(), ProjectSettings.globalize_path(SpikeLog.LOG_PATH)])
 	for key: String in [
 		"display/window/size/viewport_width",
@@ -319,6 +350,7 @@ func _write_start_report() -> void:
 		"display/window/stretch/aspect",
 		"display/window/stretch/scale_mode",
 		"display/window/handheld/orientation",
+		"display/window/size/mode",
 		"input_devices/pointing/emulate_touch_from_mouse",
 		"input_devices/pointing/emulate_mouse_from_touch",
 		"input_devices/buffering/agile_event_flushing",

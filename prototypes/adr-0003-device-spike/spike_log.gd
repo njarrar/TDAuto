@@ -1,5 +1,7 @@
 # PROTOTYPE - NOT FOR PRODUCTION. ADR-0003 device spike.
-# Collects log lines and groups them by frame. A group ends at each PROC marker
+# Collects log lines and groups them by frame. Each line carries the engine
+# clock (t, microseconds) and the wall clock (u, Unix seconds), so the order
+# across a suspension is certain (SP10). A group ends at each PROC marker
 # (the root node's _process). A group that holds only frame markers is dropped,
 # so quiet frames leave no lines. Committed lines go to the screen view, to
 # user://spike_log.txt and to stdout (print), so Xcode and adb logcat show them too.
@@ -52,8 +54,9 @@ func open_file() -> void:
 func entry(tag: String, text: String, on_screen: bool = true) -> void:
 	_seq += 1
 	var frame: int = Engine.get_process_frames()
-	var file_line: String = "%06d f%d pf%d t%d after=%s %s %s" % [
-		_seq, frame, Engine.get_physics_frames(), Time.get_ticks_usec(), last_marker, tag, text]
+	var file_line: String = "%06d f%d pf%d t%d u%.3f after=%s %s %s" % [
+		_seq, frame, Engine.get_physics_frames(), Time.get_ticks_usec(),
+		Time.get_unix_time_from_system(), last_marker, tag, text]
 	_staged.append(file_line)
 	if on_screen:
 		_staged_screen.append("f%d %s %s" % [frame, tag, text])
@@ -67,8 +70,9 @@ func entry(tag: String, text: String, on_screen: bool = true) -> void:
 func marker(kind: String, text: String) -> void:
 	_seq += 1
 	var frame: int = Engine.get_process_frames()
-	var file_line: String = "%06d f%d pf%d t%d %s %s" % [
-		_seq, frame, Engine.get_physics_frames(), Time.get_ticks_usec(), kind, text]
+	var file_line: String = "%06d f%d pf%d t%d u%.3f %s %s" % [
+		_seq, frame, Engine.get_physics_frames(), Time.get_ticks_usec(),
+		Time.get_unix_time_from_system(), kind, text]
 	_staged.append(file_line)
 	_staged_screen.append("f%d %s %s" % [frame, kind, text])
 	last_marker = kind
@@ -94,6 +98,11 @@ func flush_now() -> void:
 	_write_context()
 	_commit()
 	_last_group_committed = true
+
+
+## Sequence number of the last line added (entries and markers).
+func seq() -> int:
+	return _seq
 
 
 ## All committed lines of the on-screen view, oldest first.
