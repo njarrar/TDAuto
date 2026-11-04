@@ -533,6 +533,8 @@ func clear_press() -> void
 ```
 Display (ADR-0003 Decision 1): `project.godot` sets every display, window and pointing key explicitly: `canvas_items` + `keep` at 540x960, portrait, `emulate_touch_from_mouse=false`, `emulate_mouse_from_touch=true`, `quit_on_go_back=false`. Taller phones letterbox. The minimum size guard needs at least 360 x 640 dp effective scale; it logs and never blocks. Insets are read once per battle, on mobile only; desktop insets are 0. The Mobile Platform GDD (Vertical Slice) inherits all of this rather than blocking it (TD-ARCHITECTURE A3).
 
+Product defaults the user confirmed on 2026-11-04 (ADR-0003 Decision 5): (1) letterbox at MVP, reviewed before Vertical Slice; (2) a notification-shade pull pauses; (3) on desktop the click that refocuses the window resumes (if that feels wrong, `TapScreen` ignores the first press after a desktop focus-in); (4) insets are not re-read, and a mid-battle resize on mobile logs a dev error; (5) Android back pauses instead of quitting mid-battle.
+
 Behaviour behind these contracts (event order, `is_canceled()`, emulation, notifications, safe-area units, setting names) is **NEEDS VERIFICATION** until ADR-0003's spike runs. S0a (desktop) and S0b (device) record PASS or FAIL per check in ADR-0003's "Spike results" section and in `docs/engine-reference/godot/modules/input.md`. A story that rests on an unverified check waits for that check or its fallback (ADR-0003 Guideline 15).
 
 ### B4. Battle and Builder (ADR-0001, ADR-0004)

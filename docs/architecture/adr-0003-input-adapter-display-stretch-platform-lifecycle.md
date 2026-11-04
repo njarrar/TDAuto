@@ -7,7 +7,7 @@ Accepted
 2026-11-03
 
 ## Last Verified
-2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 Proposed; revised after TD-ADR and godot-specialist reviews). No spike run yet: every item marked **[Sn]** is unverified until that check passes.
+2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 Proposed at writing (Accepted 2026-11-04); revised after TD-ADR and godot-specialist reviews). No spike run yet: every item marked **[Sn]** is unverified until that check passes.
 
 ## Decision Makers
 - Accepted: 2026-11-04 by the user (njarrar); the five product defaults in Decision 5 are confirmed

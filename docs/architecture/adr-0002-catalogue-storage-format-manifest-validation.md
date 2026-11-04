@@ -7,7 +7,7 @@ Accepted
 2026-11-03
 
 ## Last Verified
-2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 as Proposed; revised after TD-ADR and godot-specialist reviews)
+2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 as Proposed at writing (Accepted 2026-11-04); revised after TD-ADR and godot-specialist reviews)
 
 ## Decision Makers
 - Accepted: 2026-11-04 by the user (njarrar)
