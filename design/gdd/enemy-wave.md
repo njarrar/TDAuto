@@ -1,9 +1,9 @@
 # Enemy & Wave
 
-> **Status**: In Review (lean design review 2026-11-03 APPROVED, then the cross-GDD review added the `wave_index()` definition; re-check pending in `/review-all-gdds consistency`. Six recommended items remain in the review log)
+> **Status**: Approved 2026-11-04 (lean design review 2026-11-03 APPROVED; the `wave_index()` definition added after the cross-GDD review passed the consistency re-check, and the user approved it. Six recommended items remain in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 3 (Every Stage Reads Differently); Pillar 2 (waves are tuned assuming the hero)
 

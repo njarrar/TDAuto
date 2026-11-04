@@ -1,7 +1,7 @@
 # ADR-0002: Catalogue Storage Format, Manifest and Validation
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-03
@@ -10,6 +10,7 @@ Proposed
 2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 as Proposed; revised after TD-ADR and godot-specialist reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar)
 - Author: `/architecture-decision`, run in autonomous mode (decisions logged in `production/session-logs/decision-log.md`)
 - Engine specialist (godot-specialist): CONCERNS, advisory only. See Reviews.
 - Technical director (TD-ADR): CONCERNS. See Reviews.
@@ -34,7 +35,7 @@ The Data & Config catalogue needs a file format that can catch a missing field, 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Proposed): AppRoot loads the catalogue once in `_ready()`, keeps a failed `LoadResult` for the code-built `FatalScreen`, and the Builder sends a null resolver to fatal. Not to be built before ADR-0001 is Accepted. |
+| **Depends On** | ADR-0001 (Accepted): AppRoot loads the catalogue once in `_ready()`, keeps a failed `LoadResult` for the code-built `FatalScreen`, and the Builder sends a null resolver to fatal. Not to be built before ADR-0001 is Accepted. |
 | **Enables** | ADR-0004 (must expose its tick length as a constant; Decision 3), ADR-0005 (accessor over these records), ADR-0007 (hosts the content test, snapshot test, schema test and two lint rules), ADR-0009 (reads typed Stage geometry) |
 | **Blocks** | The Data & Config epic and every story that reads a record, loads the catalogue or adds a content rule. No epic or story exists yet, so none is blocked by path today. |
 | **Ordering Note** | Write after ADR-0001, before ADR-0005. The interval floor check waits for ADR-0004's tick constant. X1 first runs at the Technical Setup gate; X2 needs a device. |

@@ -1,7 +1,7 @@
 # ADR-0003: Input Adapter, Display Stretch and Platform Lifecycle
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-03
@@ -10,10 +10,11 @@ Proposed
 2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2, `docs/architecture/architecture.md` v3 and ADR-0001 Proposed; revised after TD-ADR and godot-specialist reviews). No spike run yet: every item marked **[Sn]** is unverified until that check passes.
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar); the five product defaults in Decision 5 are confirmed
 - Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`)
 - godot-specialist: CONCERNS, 2026-11-03. Resolved below (Reviews).
 - Technical director (TD-ADR): CONCERNS, 2026-11-03. Resolved below (Reviews).
-- Acceptance: the user, after confirming the product choices in Decision 5 and recording S0a results.
+- Acceptance: the user, 2026-11-04, with the product choices in Decision 5 confirmed. S0a had not run at acceptance: every **[Sn]** item stays unverified, and per Guideline 15 any story that rests on one waits for that check.
 
 ## Summary
 The pure input resolver needs one engine-facing node that turns Godot touch and mouse events into its five calls in 540x960 field units, never strands a gesture, keeps modal screens from leaking taps to the field, and pauses the battle when the app goes away; little of the engine behaviour this rests on is in the pinned reference. This ADR decides an explicit `canvas_items` + `keep` letterbox at a 540x960 viewport, an `InputAdapter` that reads presses in `_unhandled_input` and tracked endings in `_input`, a modal press gate, emulated pointer events dropped at the adapter, a mouse-only `TapScreen` for modals, a set of lifecycle notifications plus the Android back request, safe-area insets read once per battle on mobile, and a two-part spike (S0a desktop, S0b device) with pass/fail checks.
@@ -34,7 +35,7 @@ The pure input resolver needs one engine-facing node that turns Godot touch and 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Proposed): who builds and frees the adapter, the teardown order, `view_wiring`, the three `cancel()` callers. Cannot be Accepted before ADR-0001. |
+| **Depends On** | ADR-0001 (Accepted): who builds and frees the adapter, the teardown order, `view_wiring`, the three `cancel()` callers. Cannot be Accepted before ADR-0001. |
 | **Enables** | ADR-0004 (input before ticks rests on S1), ADR-0008 (the five calls' caller and contract), ADR-0011 (viewport size and stretch), the Mobile Platform & Performance GDD (inherits stretch, safe area, minimum size) |
 | **Blocks** | No story exists yet. After `/create-epics`, stories that build the adapter, a modal screen, the display settings, the insets or the pause path wait for acceptance, and each waits only on the spike checks it names (Guideline 15). |
 | **Ordering Note** | S0a runs first, within two sessions. S0b runs at the first phone build; if it slips, its rows read NOT ASSESSED and only mobile stories wait. |
@@ -105,7 +106,7 @@ pointing/emulate_mouse_from_touch=true
 buffering/agile_event_flushing=false
 ```
 
-Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so the window reaches the cutout and `SafeAreaMath` sees it. `orientation=1` is portrait; `mode` 0 is windowed on desktop and `mode.mobile` 3 is fullscreen (feature override; both unverified, S9). `quit_on_go_back=false` is a product choice pending the user (Decision 5).
+Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so the window reaches the cutout and `SafeAreaMath` sees it. `orientation=1` is portrait; `mode` 0 is windowed on desktop and `mode.mobile` 3 is fullscreen (feature override; both unverified, S9). `quit_on_go_back=false` is a product choice the user confirmed (Decision 5).
 
 - **`canvas_items` + `keep`**: the viewport scales by `s = min(window_w / 540, window_h / 960)` and centres. Tall phones letterbox top and bottom, squat screens left and right. Field units equal viewport units with no offset **[S6]**.
 - **No Camera2D** in the battle; the field root keeps the identity transform.
@@ -140,7 +141,7 @@ Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so t
 **2.5 Lifecycle (TR-input-004, TR-state-010) [S5].**
 - `_notification(what)`: `NOTIFICATION_APPLICATION_FOCUS_OUT`, `NOTIFICATION_APPLICATION_PAUSED` or `NOTIFICATION_WM_WINDOW_FOCUS_OUT` is "away". The first away notification of an episode calls `resolver.cancel()`, clears `_down`, then emits `lifecycle_paused()`. Later ones in the episode do nothing.
 - `NOTIFICATION_APPLICATION_FOCUS_IN`, `_RESUMED` or `NOTIFICATION_WM_WINDOW_FOCUS_IN` ends the episode. None resumes the battle; only the Paused screen's tap does (Game State Rule 17).
-- `NOTIFICATION_WM_GO_BACK_REQUEST` (Android back) always cancels and emits `lifecycle_paused()`, outside the episode latch, since no focus-in follows it. Pending the user (Decision 5). Gesture navigation often takes edge swipes before the app sees them (S4, S5; `edge_reject_margin`).
+- `NOTIFICATION_WM_GO_BACK_REQUEST` (Android back) always cancels and emits `lifecycle_paused()`, outside the episode latch, since no focus-in follows it. Confirmed by the user (Decision 5). Gesture navigation often takes edge swipes before the app sees them (S4, S5; `edge_reject_margin`).
 - The set is a union because which notifications fire where is unverified; `Flow.pause()` is idempotent and a terminal phase ignores it.
 - **Resize**: `get_viewport().size_changed` calls `resolver.cancel()` and clears `_down`, without a pause **[S6]**. On mobile it also reports to the dev-error sink, because insets are not re-read (Decision 3).
 - Order on focus loss: adapter `cancel()`, then `lifecycle_paused()`; `Flow.pause()` enters Paused, calls `cancel_input()` (a no-op now) and emits `phase_changed(PAUSED)`; the wrapper shows Paused, closes the gate, calls `clear_press()`; the Clock zeroes its accumulator (ADR-0004).
@@ -163,7 +164,7 @@ Plus the 4.5+ Android edge-to-edge key set to `true` (name unverified, S9), so t
 - The wrapper calls `clear_press()` on show and on `lifecycle_paused` (HUD Rule 2). Paused resumes on `tapped`; its press was taken by the screen and gated at the adapter, so it reaches nothing beneath (TR-state-010).
 - **Every non-interactive Control** in the wrapper has `mouse_filter = MOUSE_FILTER_IGNORE`, set on each node and checked by a lint. The 4.5 recursive property may replace that once S9 names it. The wrapper root is a `Node2D`, never a full-rect Control.
 
-### 5. Product choices (proposed defaults, pending user confirmation)
+### 5. Product choices (confirmed by the user 2026-11-04)
 1. Letterbox at MVP, reviewed before Vertical Slice.
 2. A notification-shade pull pauses.
 3. On desktop the click that refocuses the window resumes. If it feels wrong, TapScreen ignores the first press after a desktop focus-in.
@@ -374,7 +375,7 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 |---|---|---|
 | B1 | TapScreen fires twice per phone tap | Mouse family only, keyed per source, ignores canceled, clears after firing; A10b; device check. TD fix chosen over G's (Alt 8) |
 | B2 | Partial TRs had no owner | Sync items A1 to A3 |
-| B3 | Android back quits mid-battle | `quit_on_go_back=false`; back request pauses; pending user; S5 back swipe |
+| B3 | Android back quits mid-battle | `quit_on_go_back=false`; back request pauses; user confirmed; S5 back swipe |
 | B4 | Window mode, edge-to-edge, cutouts | Pinned in Decision 1; S7 runs with them, logs cutouts and immersive |
 | B5 | Editor drops default values | Settings dump and A11 check effective values; comment removed; `stretch/scale=1.0` |
 | TD3 | ALWAYS skips the DISABLED guard | 2.3 Teardown safety; Guideline 12 quoted in Constraints |
@@ -398,7 +399,7 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 | G19 | More cancel cases | S4: call, alarm, palm; "not observed" allowed |
 
 ## Related
-- ADR-0001 (Proposed): depends on it; consistent with its callers, teardown, `view_wiring` and bans.
+- ADR-0001 (Accepted): depends on it; consistent with its callers, teardown, `view_wiring` and bans.
 - Enables ADR-0004, ADR-0008, ADR-0011 (not written).
 - `architecture.md` v3: Gap Summary, Data Flow 1 and 6, B2, B3, QQ-02, QQ-06, QQ-12, QQ-20; `tr-registry.yaml` (the 11 TRs above).
 - GDDs: `input-gesture-resolver.md` (Rules 1, 7, 10, 12; Formulas; adapter contract), `battle-hud.md` (Rules 2, 17, 18; Layout; `burst_y`), `game-state-stage-flow.md` (Rule 17).

@@ -1,7 +1,7 @@
 # ADR-0001: App Lifecycle, Composition Root and Fatal Path
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-03
@@ -10,6 +10,7 @@ Proposed
 2026-11-03 (against `docs/engine-reference/godot/` for Godot 4.7.2 and `docs/architecture/architecture.md` v3; revised after TD-ADR and godot-specialist reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar); also records the user's sign-off on QQ-08's composition-root part (scene-free builder)
 - Author: `/architecture-decision`, run in autonomous mode (decisions logged in `production/session-logs/decision-log.md`)
 - Engine specialist (godot-specialist): CONCERNS, all findings resolved below (see Reviews)
 - Technical director (TD-ADR): CONCERNS, all findings resolved below (see Reviews)
