@@ -119,7 +119,7 @@ Boot order (`_ready`):
 1. Create `_app_latch`. State is `BOOT`.
 2. `Catalogue.load_manifest(manifest_path)` (ADR-0002; static, returns a `LoadResult`). On `ok == false`, call `_fatal("catalogue load failed: ...")`. Nothing else runs (no fallbacks, no save access). During `BOOT` the catalogue reports failure through its `LoadResult`, never through a stored callable.
 3. (Vertical Slice) inject saved progression. Reserved; not built at MVP.
-4. Pick `stage_id` (the first stage the catalogue lists at MVP) and `_rng_seed`. The seed is chosen once per app session and reused on retry, so a retry with the same commands replays the same sim. This policy is a working default; ADR-0004 owns the seeded and cosmetic RNG split and may refine it. State becomes `IN_STAGE`.
+4. Pick `stage_id` (the first stage the catalogue lists at MVP) and `_rng_seed`. The seed is chosen once per app session and reused on retry, so a retry with the same commands replays the same sim. ADR-0004 Decision 7 refines it: the seed is `int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF` (1 if 0), logged in development builds, and the sim's only generator is `SimRng`; cosmetic randomness never reads it. State becomes `IN_STAGE`.
 5. Build the first battle (section 5).
 
 `AppRoot` accepts an optional `configure(options: Dictionary)` call before `add_child`, with `manifest`, `stage_id`, `rng_seed`, `wrapper_scene_path` and `fatal_scene_path` keys, so an integration test can boot it with a fixture catalogue. Unset keys take production defaults.

@@ -180,6 +180,8 @@ The **to_ticks** formula is defined as:
 
 This is the one conversion for authored time (Flow Rule 4). `ceil` is not used: floating point pushes exact products just over a whole number, so 3 × 0.1 s at 1/60 gives 19 rather than 18, and 409 of 6,240 tested spawn times came out a tick late. With `round`, none of 7,000 tested times was off by more than half a tick, and no two members of a group shared one, which holds for any interval above `dt`. At exactly `dt` with a half-tick offset, float noise can put two on one tick, so the content test requires strictly increasing ticks.
 
+Implementation (ADR-0004 Decision 6): `sign(x) * floor(abs(x) + 0.5)` with `x = seconds * ticks_per_second`, which gives the same tick as `round(seconds / dt)` on every value tested and makes binary-exact halves exact.
+
 The **spawn_tick** formula is defined as:
 
 `spawn_tick(i) = to_ticks(start_delay + i × spawn_interval)`

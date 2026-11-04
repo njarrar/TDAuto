@@ -29,7 +29,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Time.**
 
-4. **One way in.** Simulation time enters only through `battle.tick(dt)`. Gameplay systems use no `_process`, engine timers, `await`, wall clock or physics areas, only countdowns and distance checks. Humans and bots run the same fixed tick (60 per second proposed, matching the Data & Config interval floor); the wrapper accumulates real time and clamps a long frame. Prototype numbers came from variable time for humans and 1/30 for bots, so they do not transfer and bots must be re-baselined. Authored durations become whole ticks through one conversion, `to_ticks` (Enemy & Wave GDD), since a repeated float countdown drifts: 5.0 s took 301 ticks.
+4. **One way in.** Simulation time enters only through `battle.tick(dt)`. Gameplay systems use no `_process`, engine timers, `await`, wall clock or physics areas, only countdowns and distance checks. Humans and bots run the same fixed tick (60 per second, ADR-0004, matching the Data & Config interval floor); the wrapper accumulates real time and clamps a long frame. Prototype numbers came from variable time for humans and 1/30 for bots, so they do not transfer and bots must be re-baselined. Authored durations become whole ticks through one conversion, `to_ticks` (Enemy & Wave GDD), since a repeated float countdown drifts: 5.0 s took 301 ticks.
 5. **Fixed order, commands between ticks.** Systems tick in a fixed order, each owning GDD agreeing its place. Player and bot commands apply only between ticks, never during one. Randomness uses the injected seed: the same stage, seed and command script give an identical result.
 
 **Stage phases.**
@@ -163,7 +163,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If a stage scene is broken**: Fatal at stage start; the catalogue stays Ready, though there is no way out at MVP but relaunching.
 - **If a press began before Paused**: it never resumes, and stays dead until lifted.
 - **If the handler fires during `build`**: the partial battle is discarded unticked, and Fatal shows.
-- **If a long frame hits (app hitch)**: the wrapper clamps the ticks owed, so the game slows rather than jumping. The clamp value belongs to the ADR.
+- **If a long frame hits (app hitch)**: the wrapper clamps the ticks owed, so the game slows rather than jumping. The clamp is 3 ticks per frame (ADR-0004; V6 sets 2 to 4), and a frame over 0.5 s runs none.
 
 ## Dependencies
 
@@ -256,7 +256,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Listener test | Enemy & Wave, Tower stories | The system count is non-zero, and removing one connection fails naming it; watched failing once, with the output kept |
 | Micro-battle | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 | Boot (Rules 1, 18) | Game State stories | A failed load and a broken scene both reach the fatal screen |
-| Clamp and tick order (Rules 4, 5) | App Lifecycle ADR | Ticks are capped, and the order matches the GDDs |
+| Clamp and tick order (Rules 4, 5) | ADR-0004 | Ticks are capped, and the order matches the GDDs |
 | Bonus and live actions (Rules 9, 10) | Tower stories | A bonus is paid per real call only, regardless of burst state; actions work in all three phases; the burst is refused in Build (Hero) |
 | Always-call bot gate (Rule 9) | Hero stories | A towers-only, always-call bot must not beat a driven hero; re-baselined on the fixed tick |
 | Button arming | Battle HUD stories | A press begun before Start/Call or Retry arms does nothing |

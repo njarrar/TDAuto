@@ -164,7 +164,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 |---|---|---|---|---|
 | **AppRoot** (main scene, no autoload) | App states Boot, InStage, Fatal (Game State GDD). The Ready catalogue for the session. The app-level FatalLatch. The retry latch. Reduce Motion location (QQ-09). | Starts the catalogue load; builds battles and drops them | Catalogue, FatalLatch | `Node`, `PackedScene`, `Object.free()` vs `queue_free()` timing for the wrapper on retry (**MEDIUM, NEEDS VERIFICATION**), `weakref()` (LOW) |
 | **Builder** (`build(catalogue, stage_id, rng_seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4; Callable reference semantics **NEEDS VERIFICATION**, QQ-17) |
-| **BattleWrapper** (scene) | The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
+| **BattleWrapper** (scene) | The `BattleClock` (pure accumulator, clamp, stall rule, backlog dropped on entering and leaving `PAUSED`) and the frame order (ADR-0004 Decision 5). Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW, frame timing NEEDS VERIFICATION, ADR-0004 V1 to V3); no `_physics_process` (ADR-0004) |
 | **Fatal screen** (scene) | Catalogue-free, guaranteed to load. Shown by AppRoot. | None | AppRoot FatalLatch cause (development builds show it) | `PackedScene` (LOW) |
 
 ### Dependency diagram (MVP)
@@ -208,12 +208,16 @@ Engine delivers input events (between frames expected; ADR-0003 SP1). InputAdapt
                                                     │ start_wave, call_early  (run NOW, between ticks)
 BattleWrapper._process(delta):
   0. adapter.flush(): queued calls reach the resolver; gesture signals and commands run now (ADR-0003)
-  1. Advance real-time models:  HudLogic.advance(ms), ChipWindow.advance(ms), HeroInput.update()
-  2. Clock: accumulator += delta; ticks_owed = min(floor(acc / dt), MAX_TICKS_PER_FRAME)
-  3. for each owed tick:  battle.tick(dt)
+  1. Advance real-time models:  HudLogic.advance(ms), TowerInput.advance(ms) (feeds ChipWindow)
+  2. Clock: n = BattleClock.advance(delta)   (ADR-0004: 60 Hz, accumulator phased at 0.5 dt,
+     MAX_TICKS_PER_FRAME = 3 provisional, carry capped at 1.5 dt, a frame over 0.5 s runs 0 ticks,
+     accumulator reset on entering and leaving PAUSED)
+  3. n times:  battle.tick(battle.sim_time.dt)
        Battle.tick itself returns at once unless Flow.phase() is WAVE or INTERMISSION
        and halted() is false. The gate lives in the sim, so it holds headless too.
-  4. Refresh views from read-only queries (roster, slot_state, hero queries, HUD view-models)
+  4. HeroInput.update() (hit-disc centre, aim point and digit from post-tick state, so they match
+     the drawn frame; ADR-0004 Decision 5), then refresh views from read-only queries
+     (roster, slot_state, hero queries, HUD view-models)
 ```
 
 | Data | Producer | Consumer | Kind |
@@ -222,14 +226,14 @@ BattleWrapper._process(delta):
 | Five resolver calls | InputAdapter | InputResolver | Queued during event delivery; synchronous calls from `flush()` at frame step 0 (ADR-0003) |
 | Gesture signals | InputResolver | HeroInput, TowerInput, HudLogic | Signal (synchronous) |
 | Commands | HeroInput, TowerInput, HudLogic, bots | HeroSim, TowerSim, Flow | Synchronous call, **only between ticks**, returns a result enum |
-| `tick(dt)` | Clock (BattleWrapper) | Battle | Synchronous call; gated inside Battle |
+| `tick(dt)` | BattleClock (BattleWrapper) | Battle | Synchronous call; gated inside Battle; `dt` must equal `battle.sim_time.dt` (ADR-0004) |
 | View reads | Views | Sim modules | Read-only query |
 
-Rule: commands run from `adapter.flush()` at frame step 0, before the frame's ticks, so the bonus the HUD shows equals the bonus paid (TR-hud-005). The queue makes the order independent of when the engine delivers events; ADR-0003 SP1 measures that timing (latency only) and SP11 the release-before-focus-loss case; ADR-0004 owns the frame order. `MAX_TICKS_PER_FRAME` is an explicit output of ADR-0004.
+Rule: commands run from `adapter.flush()` at frame step 0, before the frame's ticks, so the bonus the HUD shows equals the bonus paid (TR-hud-005). The queue makes the order independent of when the engine delivers events; ADR-0003 SP1 measures that timing (latency only) and SP11 the release-before-focus-loss case; ADR-0004 owns the frame order (Decision 5). `MAX_TICKS_PER_FRAME` is 3, provisional until ADR-0004 V6 (after acceptance) measures the whole tick on the device and sets it in the range 2 to 4. `BattleWrapper._process` is the only per-frame code in the battle subtree.
 
 ### 2. Simulation tick path
 
-`battle.tick(dt)` runs these steps in this order, every tick, Intermission included (Build runs no ticks). The order is stated once, here and in ADR-0004; the four GDDs that restate it (Game State Rule 5, Combat Rule 11, Enemy & Wave Rule 12, Tower Rule 9) cite it.
+`battle.tick(dt)` runs these steps in this order, every tick, Intermission included (Build runs no ticks). The order is stated once, here and in ADR-0004 Decision 4 (Proposed); the four GDDs that restate it (Game State Rule 5, Combat Rule 11, Enemy & Wave Rule 12, Tower Rule 9) cite it.
 
 ```
 1. Flow.tick               (intermission countdown, wave start/clear checks)
@@ -336,12 +340,12 @@ Development builds only. A gesture-log harness listens to resolver signals; a ru
 
 ### 10. Frame budget (proposal, unmeasured)
 
-`project.yaml` sets 60 fps (16.6 ms), 60 draw calls and 256 MB, with a 30 fps floor on low-end Android. This split is a starting proposal for ADR-0004 and ADR-0011 to confirm on a device at the first phone build (QQ-11).
+`project.yaml` sets 60 fps (16.6 ms), 60 draw calls and 256 MB, with a 30 fps floor on low-end Android. This split is a starting proposal; ADR-0004 Decision 10 confirms it with `MAX_TICKS_PER_FRAME = 3`, so one worst-case tick must fit 1.33 ms, and ADR-0011 owns draw calls. Both are confirmed on a device at the first phone build (QQ-11, ADR-0004 V6).
 
 | Slice | Budget at 60 fps | Notes |
 |---|---|---|
 | Input, resolver, commands | 0.5 ms | Event count is small (one finger) |
-| Simulation ticks | 4.0 ms total | Normal frame: one tick. At the catch-up clamp, `MAX_TICKS_PER_FRAME` ticks must fit here, so ADR-0004 sets the clamp from the measured per-tick cost. Combat's worst case (about 400 range checks per tick) is estimated under 2 ms per tick, unmeasured |
+| Simulation ticks | 4.0 ms total | Normal frame: one tick. At the catch-up clamp, `MAX_TICKS_PER_FRAME` (3, working default) ticks must fit here, 1.33 ms each; ADR-0004 V6 sets the final clamp (2 to 4) from the measured whole-tick p99. Combat's worst case (about 400 range checks per tick) is estimated under 2 ms per tick, unmeasured |
 | Views and HUD (`_draw`, view-model refresh) | 3.0 ms | HUD about 8 of 60 draw calls (max 12), at most 3 text draws |
 | Engine, rendering submit, OS | 7.0 ms | Mobile renderer, 2D only |
 | Headroom | 2.1 ms | GC-free GDScript still has allocation spikes; keep it |
@@ -371,7 +375,10 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | `FieldBounds` | `RefCounted` (constants only) | `src/foundation/field_bounds.gd` | `WIDTH := 540.0`, `HEIGHT := 960.0`; injected into EnemyWave by the Builder | ADR-0009 (ADR-0003 uses it for the field size and does not take ownership) |
 | `DamageEvent` | `RefCounted` | `src/core/combat/damage_event.gd` | `target: Targetable`, `amount: float`, `source_kind: Combat.SourceKind`, `source_id: StringName` | ADR-0009 |
 | `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, per-source damage copied from Combat | ADR-0006 |
-| `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005) | ADR-0001 |
+| `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005), `input_record: InputRecord` (ADR-0003), `sim_time: SimTime`, `sim_rng: SimRng` (ADR-0004) | ADR-0001, ADR-0004 |
+| `SimTime` | `RefCounted` | `src/foundation/sim_time.gd` | `const TICKS_PER_SECOND := 60`; `ticks_per_second: int`, `dt: float` (read-only); `to_ticks(seconds) -> int` = sign(x) * floor(abs(x) + 0.5), x = seconds * ticks_per_second | ADR-0004 |
+| `SimRng` | `RefCounted` | `src/foundation/sim_rng.gd` | xorshift32 from `rng_seed & 0xFFFFFFFF`; `next_u32()`, `next_below(n)`, `draw_count()`; no MVP consumer | ADR-0004 |
+| `BattleClock` | `RefCounted` | `src/root/battle_clock.gd` | `MAX_TICKS_PER_FRAME := 3`, `STALL_SECONDS := 0.5`; `advance(delta) -> int`, `drop_backlog()`; owned by BattleWrapper, absent headless | ADR-0004 |
 
 IDs are `StringName` throughout as the working default. QQ-04 decides whether that holds for `tower_id` in signals.
 
@@ -457,6 +464,10 @@ func tick(dt: float) -> void      # the ONLY way simulation time advances.
                                   # Returns at once unless flow.phase() is WAVE or INTERMISSION
                                   # and halted() is false.
 func halted() -> bool             # flow outcome WON, LOST or FATAL, or fatal_latch set
+func ticks_run() -> int           # ticks that passed the gate (ADR-0004)
+func between_ticks() -> bool      # false only while tick() runs (ADR-0004)
+var sim_time: SimTime             # read-only; tick(dt) requires dt == sim_time.dt (ADR-0004)
+var sim_rng: SimRng               # read-only; injected only where a GDD states a random rule (ADR-0004)
 var input_record: InputRecord     # read-only; set by the Builder; the wrapper reads it in attach() (ADR-0003)
 
 class_name BattleBuilder extends RefCounted
@@ -572,7 +583,8 @@ Invariants: commands run only between ticks. State is checked before geometry. A
 | `left_handed: bool` | HeroSim, HeroInput, HudLogic | From the Input record, fixed per battle (Hero Rule 2, TR-hero-004). |
 | `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
 | `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
-| `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow | Rounds half away from zero; `dt` fixed at build. |
+| `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow | `battle.sim_time.to_ticks`: sign(x) * floor(abs(x) + 0.5) with x = seconds * 60; non-finite gives 0; `dt` = 1/60 fixed at build (ADR-0004 Decision 6). |
+| `dt: float` | Flow, EnemyWave, HeroSim (and Combat through `to_ticks` only) | `battle.sim_time.dt`, the value 1/60 (ADR-0004). |
 
 All are method Callables on objects the Builder owns (B4 rule).
 
@@ -668,7 +680,7 @@ Covers (5): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015.
 
 ### Decisions made in this document that need no separate ADR
 
-These follow directly from the GDDs and the gate reviews, and the ADRs above cite them: no autoloads; simulation classes extend `RefCounted`; presentation never feeds the sim; commands run between ticks; the tick gate lives inside `Battle.tick`; `Targetable` is a Core base class; result enums put `OK = 0` first; progression systems own their save schema; code root `src/` with one folder per layer.
+These follow directly from the GDDs and the gate reviews, and the ADRs above cite them: no autoloads; simulation classes extend `RefCounted`; presentation never feeds the sim; commands run between ticks and the tick gate lives inside `Battle.tick` (both ratified in ADR-0004); `Targetable` is a Core base class; result enums put `OK = 0` first; progression systems own their save schema; code root `src/` with one folder per layer.
 
 ## Architecture Principles
 
@@ -683,21 +695,21 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 
 | ID | Question | Priority | Resolved by |
 |---|---|---|---|
-| QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 |
+| QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 (Proposed): `_process` accumulator, 60 Hz, clamp 3 (V6 sets 2 to 4), stall over 0.5 s runs no ticks |
 | QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. Proposed in ADR-0003: `canvas_items`, `keep`, portrait, fullscreen on phones, 360 dp guard (log only), taller phones letterbox (off-field entry not revealed at MVP; pending user confirmation C3, C4). | High | ADR-0003 (Proposed) |
 | QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
-| QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 (float policy); ADR-0009 makes every sim position a float scalar pair and verifies `Vector2` precision (V1) |
+| QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 (float policy); ADR-0009 makes every sim position a float scalar pair and verifies `Vector2` precision (V1); float policy and `tests/baselines/<arch>/` in ADR-0004 Decision 9 (Proposed) |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return; a release synthesised before a focus loss. Spike items SP1, SP2, SP3, SP10, SP11; kit in `prototypes/adr-0003-device-spike/`. | High | ADR-0003 (spike) |
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
-| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009 |
+| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009; ADR-0004 Decision 4 states the one tick order (Proposed) |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
-| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004, ADR-0011, performance-analyst |
+| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004 (frame split, per-tick 1.33 ms, V6), ADR-0011 (draw calls), performance-analyst |
 | QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. | Medium | Mobile Platform GDD |
 | QQ-13 | `tests/README.md` is stale: gdUnit4 is now in `addons/` and the class cache is tracked in git. Whether the CI test command needs a prior `--import` step on a fresh clone. | Low | ADR-0007, `/test-setup` |
 | QQ-14 | Stage tooling: a converter or editor for point-list stages before about 20 stages exist. | Low | tools-programmer, after MVP |
 | QQ-15 | GDScript 4.7 pitfalls have no rule yet: a typed-method override needs an explicit `return`; packed-array element writes skip setters; lambdas capture locals by value; signal parameter types are not checked at `emit()`. Turn them into Required and Forbidden rules. | Medium | ADR-0007, `/create-control-manifest` |
-| QQ-16 | Every `class_name` is global. Short names (`Flow`, `Combat`, `Battle`, `Catalogue`, `Clock`) risk collisions with engine or addon classes. Prefix them or lint for collisions. | Low | ADR-0007 |
+| QQ-16 | Every `class_name` is global. Short names (`Flow`, `Combat`, `Battle`, `Catalogue`, `Clock`, now `BattleClock`) risk collisions with engine or addon classes. Prefix them or lint for collisions. | Low | ADR-0007 |
 | QQ-17 | Does a method `Callable` hold a strong reference to its object on 4.7? The retry weakref test depends on the answer. | Medium | ADR-0001 |
 | QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 |
