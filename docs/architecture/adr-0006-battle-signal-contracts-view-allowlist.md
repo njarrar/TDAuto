@@ -75,7 +75,7 @@ Every battle signal has one role, stored in the signal table (Decision 8).
 |---|---|---|---|---|
 | **WIRING** | `enemy_leaked`, `enemy_killed`, `wave_cleared`, `waves_completed`, `wave_called_early`, `latched` | Exactly one gameplay listener, in the Builder's record; views may add more through `view_wiring` | **No**: the test fails | The gameplay listener changes its own state and emits its own signals; view listeners follow the VIEW rules |
 | **VIEW** (allowlisted) | `phase_changed`, `lives_changed`, `gold_changed`, `tower_built`, `tower_upgraded`, `hero_pinned`, `burst_started`, `attack_fired`, `damage_applied` | View-only listeners through `view_wiring`. No sim listens | Yes; headless they have **none** | Copy the payload, mark dirty, call read-only queries. Never a command; never a mutating method or field write on a sim member (`flow`, `combat`, `enemy_wave`, `tower_sim`, `hero_sim`, `fatal_latch`, `stat_accessor`, `halt_gate`); never the accessor; never keep a payload object or list |
-| **INPUT** (allowlisted) | Resolver: `pressed`, `tapped`, `ground_tapped`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `became_idle` | Input owners (HeroInput, TowerInput, HudLogic) through `view_wiring` | Yes; headless none | Owners may issue commands; the guard (Decision 7) refuses any that `cancel_input()` would trigger inside a tick |
+| **INPUT** (allowlisted) | Resolver: `pressed`, `tapped`, `ground_tapped`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`, `became_idle` | Input owners (HeroInput, TowerInput, HudLogic) through `view_wiring` | Yes; headless none | Owners may issue commands; the guard (Decision 7) refuses any that `cancel_input()` would trigger inside a tick. ADR-0008 narrows this: no command from `drag_cancelled` or `became_idle` (amendment) |
 
 - **View-only listeners are every node under the BattleWrapper**, the wrapper's own handlers included (for example its `phase_changed(PAUSED)` handler), ChipWindow, the TapScreens, RunLog, GestureLog, and later Audio, plus test recording fakes. Input owners are view-only too, except that they may command from INPUT and presentation signal handlers.
 - **Resolver registry**: any handler of an input owner may call `register`, `unregister`, `set_enabled` and `set_centre` (B2 makes them legal in handlers). No listener ever calls `cancel()` or `cancel_pointer()`; those belong to the adapter, `cancel_input()` and AppRoot.
@@ -337,6 +337,9 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 | G12 test listeners skew counts | Decision 8: fresh battle, no monitors |
 | G13 teardown from a handler | Risks |
 | D7 (coordinator) keep the guard | Decision 7; ADR-0004 amended; handler lint dropped |
+
+## Amendments
+- **2026-11-04, with ADR-0008** (pending the user's confirmation at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
 
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.

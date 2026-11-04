@@ -118,7 +118,7 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | `fakes/fake_halt_gate.gd` | `halted()`, `set_halted(b)`, `halt_after(calls)` |
 | `fakes/recording_fatal.gd` | `fatal(cause)`, `causes()` |
 | `fakes/recording_dev_error_sink.gd` | `extends DevErrorSink`; `report(msg)` records, never calls `push_error` |
-| `fakes/recording_resolver.gd` | The five resolver calls, logged (ADR-0003) |
+| `fakes/recording_resolver.gd` | The five resolver calls, logged (ADR-0003), and the four registry calls (ADR-0008 amendment) |
 | `fakes/command_spy.gd` | Step and command fakes that log and can command from a handler (ADR-0004 V2, V4; ADR-0006 V5) |
 | `battle/battle_members.gd` | `emitters(battle)` by `get_property_list()` (ADR-0006 Decision 8 step 1) |
 | `battle/battle_state.gd` | `take(battle)`: plain values from every read-only query, resolver registry excluded; `digest(battle)`: `var_to_bytes` of `take()` (ADR-0004 V7) |
@@ -169,6 +169,8 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-INPUT-3 | 0003 G4 | T3 | `src/` | `device == 0`, `device != 0` |
 | L-INPUT-4 | 0003 G8 | T3 | `src/`, `.tscn` as text | `Camera2D`; `type="Camera2D"` |
 | L-INPUT-5 | 0003 G12 | T3 | `src/` | `get_display_safe_area(` outside the wrapper |
+| L-INPUT-6 | 0008 G3, G12 (amendment) | C3 | `src/` | On a resolver receiver, `press(`, `move(`, `release(`, `cancel_pointer(` outside the adapter; `cancel(` outside the adapter, Flow's `cancel_input` target and AppRoot teardown; `InputResolver.new(` outside the resolver file |
+| L-INPUT-7 | 0008 G13 (amendment) | T3 | `src/` but `foundation/input/`, `presentation/dev/` | `last_trace(`, `GestureTrace`, resolver `state(` |
 | L-PROJ-1 | 0003 A11; 0004 G11, V11e | S1 | settings | A key of ADR-0003 Decision 1 or ADR-0004 Guideline 11 off its value |
 | L-TIME-1 | 0004 G2 | T2 | `SIM` | `_process`, `_physics_process`, `Timer`, `await`, `Engine.`, `Time.`, `OS.`, `Input.flush_buffered_events`, `Input.parse_input_event`, `push_input(` |
 | L-TIME-2 | 0004 G1, G2 | T2 | `src/` | `battle.tick(` outside the wrapper; `.tick(` with a number literal |
@@ -393,6 +395,9 @@ Harness tests:
 | T6 | Camera2D in scenes | `.tscn` text scan |
 | T9 | Sync items | Related |
 | TD | gdUnit4 version; exit 101; PresentationSettings; TR-combat-012; trims | 6.2.2 Migration 0; 101 fails with report; `src/presentation/`; Full; trims made |
+
+## Amendments
+- **2026-11-04, with ADR-0008** (pending the user's confirmation at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.
