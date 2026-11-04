@@ -109,7 +109,7 @@ There is no separate economy record: gold values sit on the records that spend o
 
 No Formulas section: this system stores values and defines no tunable numeric rule; the validation bounds above are invariants, and owning GDDs define the rules.
 
-→ Becomes an ADR: storage format (recommended: typed Godot Resources, JSON as fallback if downloadable content or modding is ever wanted, since Resources can carry scripts), read-only enforcement, accessor signature and key format, file locations. **The ADR must choose a format that can detect a missing field, a fractional integer and an unknown property.** Typed resources may silently supply a default for a missing field, which would make Rule 8 meaningless, so if the format cannot detect these itself, the ADR must add a check that does. This GDD assumes only typed records keyed by stable ID behind one read-only lookup. Export behaviour is unverified until a real Android export runs.
+→ Decided in ADR-0004 (2026-11-04, Proposed): storage format is JSON files named by a JSON manifest, checked against a schema table in code and built into read-only typed records. Typed Resources were the first recommendation; they were rejected because the validator must see raw data to detect a missing field, a fractional integer and an unknown property. Also in that ADR: read-only enforcement, accessor signature and key format, file locations. **The ADR must choose a format that can detect a missing field, a fractional integer and an unknown property.** Typed resources may silently supply a default for a missing field, which would make Rule 8 meaningless, so if the format cannot detect these itself, the ADR must add a check that does. This GDD assumes only typed records keyed by stable ID behind one read-only lookup. Export behaviour is unverified until a real Android export runs.
 
 ### States and Transitions
 
@@ -256,7 +256,7 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| Storage format and read-only enforcement (recommended: typed Resources), confirmed by a real Android export | technical-director, `/architecture-decision` | Technical Setup gate |
+| Storage format and read-only enforcement (decided: JSON, ADR-0004), confirmed by a real Android and iOS export | technical-director, `/architecture-decision` | Technical Setup gate |
 | Locomotion, armour and resist, splitter spawn reference, `introduces`. Answered for MVP by the Enemy & Wave GDD: none are needed yet | Vertical Slice GDDs | Vertical Slice |
 | Preview data: `attack_type`, `display_name`, stage order | Stage Progression GDD | Vertical Slice |
 | Snapshot mechanics, integer representation | technical-director | Storage-format ADR |
