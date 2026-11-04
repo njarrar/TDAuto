@@ -38,11 +38,17 @@ Proposed
 > and Risks updated); V2 (g) passed, so `_contexts` may be typed (Decision 7).
 > No before-acceptance verification item remains open.
 >
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for
+> now, and the future device is an iPhone. V4's device run is after acceptance,
+> on the iPhone. This ADR has no open before-acceptance item except ADR-0001
+> and ADR-0005 being Accepted.
+>
 > After acceptance: V4 (whole-tick cost on the device). It needs a full sim on
 > the device, so it runs at the first phone build, as ADR-0004 V6. Until then
 > ADR-0004's `MAX_TICKS_PER_FRAME = 3` is provisional. Reopen trigger: a p99
 > tick above 1.33 ms changes that constant in place (2 to 4); above 2.0 ms it
-> is escalated to `technical-director` with Decision 9's levers.
+> is escalated to `technical-director` with Decision 9's levers. A phone result
+> that contradicts this ADR reopens it before the next story in its area closes.
 >
 > Accepting it also records the
 > technical director's acceptance of two QQ-08 items: the ProjectileSpawner cut
@@ -87,7 +93,7 @@ Verification items. NOT SOURCEABLE: each behaviour below is not covered by `docs
   - Result (2026-11-04, macOS arm64, headless): (a) the analyzer rejects it and it is an error at run time; (b) to (e) pass; (f) not observable from GDScript; (g) passes, so `_contexts` may be typed `Dictionary[int, ReadContext]` (Decision 7); see docs/engine-reference/godot/verification-results.md.
 - **V3. Non-finite floats.** `is_finite(NAN)`, `is_finite(INF)` and `is_finite(-INF)` are false; `NAN > 0.0`, `NAN < 1.0` and `NAN >= 0.0` are false. Every guard calls `is_finite` first, so the comparisons are only a second line. Expected (unsourced): IEEE semantics. Method: a standalone headless script outside `src/`. Run before acceptance; result recorded in `docs/engine-reference/godot/`. Combat Acceptance 2 and 7 and the `attach` cases repeat the checks as unit tests later. Owner: gameplay-programmer.
   - Result (2026-11-04, macOS arm64, headless): all false (IEEE); see docs/engine-reference/godot/verification-results.md.
-- **V4. Whole-tick cost (QQ-11, TR-combat-013).** Measure one whole `battle.tick` at the worst case (48 alive enemies, five towers, the hero and a burst release), not only the helpers: the cost is expected to be dominated by property lookups, `is_dead` calls, accessor reads and the per-hit allocations (`DamageEvent.make`, one `all_in_radius` result per splash or burst). Record the helpers' share (about 340 range checks) separately against the GDD's 2.0 ms ceiling. Method: headless micro-benchmark on desktop first (a baseline only, not a pass), then the device run on a low-end Android device (Adreno 5xx class) at the first phone build. Owner: performance-analyst with ADR-0004, which sets `MAX_TICKS_PER_FRAME` from the measured whole-tick cost (Decision 9).
+- **V4. Whole-tick cost (QQ-11, TR-combat-013).** Measure one whole `battle.tick` at the worst case (48 alive enemies, five towers, the hero and a burst release), not only the helpers: the cost is expected to be dominated by property lookups, `is_dead` calls, accessor reads and the per-hit allocations (`DamageEvent.make`, one `all_in_radius` result per splash or burst). Record the helpers' share (about 340 range checks) separately against the GDD's 2.0 ms ceiling. Method: headless micro-benchmark on desktop first (a baseline only, not a pass), then the device run on a low-end Android device (Adreno 5xx class) at the first phone build (after acceptance; Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists: the same run on the iPhone). Owner: performance-analyst with ADR-0004, which sets `MAX_TICKS_PER_FRAME` from the measured whole-tick cost (Decision 9).
 - **V5. One-way ownership frees.** Dropping the last strong reference to an `Enemy` frees it, its `Health`, its `Status` and its `ReadContext` (weakrefs all null), both on reap inside a running battle (after the test drops its own references) and on retry. Depends on ADR-0001 V1 (method Callables and signal connections do not hold their target strongly). Method: a throwaway project under `prototypes/` with stub `Enemy`, `Health`, `Status` and `ReadContext` classes, run headless, extending ADR-0001's weakref proof. Run before acceptance; result recorded in `docs/engine-reference/godot/`. Owner: gameplay-programmer; the ADR-0007 test harness later keeps it as a regression test.
   - Result (2026-11-04, macOS arm64, headless): Enemy, Health, Status and ReadContext freed on reap; 0 of 8 objects left on retry; see docs/engine-reference/godot/verification-results.md.
 - **V6. Cyclic script references between `class_name` scripts.** `DamageEvent` types a field `Combat.SourceKind` while `Combat` takes a `DamageEvent` parameter; `Targetable` types fields `Health` and `Status`; `Enemy` extends `Targetable`. Do these parse and run on 4.7.2 with no cyclic-reference error? Expected (unsourced): yes; the engine check could not confirm it. Fallback if not: move `SourceKind` into its own constants script (`class_name CombatTypes extends RefCounted` holding only `enum SourceKind`), referenced by both. Also record whether assigning a bare `int` to a `Combat.SourceKind`-typed variable warns, so callers always pass the enum member. Method: a throwaway project under `prototypes/` with stub versions of the five scripts, parsed and run headless. Run before acceptance; result recorded in `docs/engine-reference/godot/`. Owner: gameplay-programmer.

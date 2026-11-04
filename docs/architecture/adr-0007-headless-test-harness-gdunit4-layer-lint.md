@@ -40,6 +40,11 @@ Proposed
 > says tests drop recording lambdas before weakref asserts (ADR-0001 V1 lambda-release), and
 > `adr-0007-lint-rules.md` gains INIT-1 (ADR-0009 V7: the engine does not enforce `super(...)`).
 >
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for now, and the
+> future device is an iPhone. No V item needs a phone; all stay before acceptance, on the Mac.
+> The V7 keystore leg is Android-only (see V7). The phone parts of the manual evidence list
+> (Decision 12) are after acceptance, on the iPhone.
+>
 > **Two-part activation.** Acceptance switches on everything except the ADR-0006-dependent parts.
 > Decision 6 (listener-count harness) and the lint rules marked *pending ADR-0006* in
 > `adr-0007-lint-rules.md` (WIRE-5 to WIRE-12) switch on when ADR-0006 is Accepted; rules marked
@@ -49,7 +54,8 @@ Proposed
 > **After acceptance** (stories): the first harness story builds `tools/lint/`, the shared helpers,
 > the `[gdunit4]` project settings and the seeded-file proofs (Validation 3, 4). Reopen trigger: if
 > a seeded file cannot make a rule fail, or the lint needs more than ten file exceptions by the end
-> of MVP, this ADR is amended before the next story closes.
+> of MVP, this ADR is amended before the next story closes. A phone result that contradicts this
+> ADR reopens it before the next story in its area closes.
 
 ## Date
 
@@ -94,7 +100,7 @@ Owner of every item: godot-specialist writes the script or steps, the user runs 
 - **V5. CI action**: four scratch-branch pushes, one mutation each (fail, orphan, parse error, no suites): import step, logged exit, job colour, JUnit path and `tests=`. *Branch*: if it does not import or does not fail on 100, 101, 105, replace it with explicit steps; the zero-test step stays either way.
 - **V6. Lint engine facts**: PCRE2 lookbehind with `show_error`; `DirAccess` headless; `ClassDB.class_exists` false for every name found by **scanning `class_name <Name>` in `docs/architecture/adr-*.md`** at run time (so ADR-0008's `GestureRecord`, `GestureLog` and ADR-0009's rollback `CombatTypes` are included) and true for `Node`, `Input`, `Engine`; the `[connection signal=` token; no `prototypes/` path under `.godot/` once `prototypes/.gdignore` exists. *Branch*: a colliding class is renamed and its ADR amended before acceptance.
   - Result (2026-11-04, macOS arm64, headless): headless parts pass: regex lookbehind, `DirAccess` headless, `ClassDB.class_exists` false for all 36 class names in the ADRs and true for Node, Input, Engine, and the `[connection signal=` token in a scene saved by `ResourceSaver`. No collision. The editor save and the `.godot/` scan are still open; see docs/engine-reference/godot/verification-results.md.
-- **V7. Export preset file**: include and exclude filter keys; whether `tests/*` excludes `res://tests/`; whether keystore passwords land in `export_presets.cfg` (expected: in `.godot/export_credentials.cfg`). *Branch*: if they do, the file stays ignored, PROJ-6 and PROJ-7 run locally only, and ADR-0002 Validation 10 is amended.
+- **V7. Export preset file**: include and exclude filter keys; whether `tests/*` excludes `res://tests/`; whether keystore passwords land in `export_presets.cfg` (expected: in `.godot/export_credentials.cfg`). The keystore leg is Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists: on the Mac, read whether an iOS preset's signing fields (team ID, provisioning profile) land in `export_presets.cfg`; no device needed, so it stays before acceptance. *Branch*: if they do, the file stays ignored, PROJ-6 and PROJ-7 run locally only, and ADR-0002 Validation 10 is amended.
 
 Not relied on: gdUnit4's scene-runner input simulation (gdUnit4 warns input events are not transported headless), `assert_signal`, `monitor_signals`, any warning-as-error project setting, the text of engine errors.
 
@@ -225,7 +231,7 @@ The lint rows are in the companion catalogue. These deferred rules are left to o
 | ADR-0001 | `print_debug` carries no error report; `assert` only for non-release checks (unless C5) | **Code review** |
 | ADR-0001, ADR-0005 | Typed-return override needs `return` (4.7) | The parser: exit 105, parse check |
 | ADR-0002 | No record field written outside `src/foundation/data/`; IDs, not object references | **Code review** plus the read-only snapshot test |
-| ADR-0002 | Data read with `FileAccess`/`JSON`, never `ResourceLoader` | **Code review** plus the Android export check (W2) |
+| ADR-0002 | Data read with `FileAccess`/`JSON`, never `ResourceLoader` | **Code review** plus the iOS export check on the iPhone (W2; the Android export leg is Android-only, deferred) |
 | ADR-0003 | Non-modal battle Controls `MOUSE_FILTER_IGNORE`, all `FOCUS_NONE` | **SCENE-1** below; not a lint, because Controls built in code and inherited defaults are invisible in `.tscn` text |
 | ADR-0003 | Modal screens read events in `_gui_input` | **Code review**; SCENE-1 proves other Controls ignore input |
 | ADR-0003 | Canceled touch is `cancel_pointer`, never `release` | Adapter unit tests (ADR-0003 Validation) |
@@ -269,9 +275,9 @@ Each item is recorded by the story or run named, in `production/qa/evidence/<sto
 | M1 | InputAdapter and Control event order: a drag across a modal-free HUD ends in one `drag_ended` or `drag_cancelled`; a modal tap never reaches the resolver; letterbox taps reach nothing; a canceled touch never fires a tap | ADR-0003 | ADR-0003 spike; first adapter and HUD stories |
 | M2 | Lifecycle: focus loss pauses on desktop and phone; a held finger never completes a gesture; after focus loss mid-walk or mid-telegraph the hero continues from the same point | ADR-0003, ADR-0004 Validation 8 | First pause story |
 | M3 | `free()` against `queue_free()` timing on retry with a Control under the pointer | ADR-0001 V2 | First retry story |
-| M4 | Safe-area values on a phone | ADR-0003 | ADR-0003 spike; first phone build |
-| M5 | Catalogue load from an Android export (W2); release build with one invalid record shows the generic fatal screen; load-time log; tuning loop | ADR-0002; Data & Config Acceptance 13 to 15 | First phone build |
-| M6 | Fatal screen in development and release builds; load and instantiate failures (V3); `push_error` in a release export (V4) | ADR-0001 | Fatal-screen story; first Android export |
+| M4 | Safe-area values on a phone (iPhone: iOS safe area and home indicator) | ADR-0003 | ADR-0003 spike iPhone run; first phone build |
+| M5 | Catalogue load from an iOS export on the iPhone (W2; Android export: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists); release build with one invalid record shows the generic fatal screen; load-time log; tuning loop | ADR-0002; Data & Config Acceptance 13 to 15 | First phone build |
+| M6 | Fatal screen in development and release builds; load and instantiate failures (V3); `push_error` in a release export (V4) | ADR-0001 | Fatal-screen story; first iOS export on the iPhone (Xcode console; Android export and `adb logcat`: Android-only, deferred) |
 | M7 | Draw-call and frame-time budgets; whole-tick cost | ADR-0004 V6, ADR-0011, QQ-11 | First phone build |
 | M8 | Displayed equals paid: tap Call as the digit changes, 20 times | ADR-0004 Validation 9 | First Call-early story |
 | M9 | Cross-architecture digest (informational) | ADR-0004 V5 | First phone build |

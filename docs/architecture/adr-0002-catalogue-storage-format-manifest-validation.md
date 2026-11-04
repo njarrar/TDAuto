@@ -10,19 +10,24 @@ Proposed
 > place of the GDD's recommended typed Resources; it was made in autonomous
 > mode). Confirmed by the user, 2026-11-04, as recommended. (2) W1 and W3 have a recorded result in
 > `docs/engine-reference/godot/`, each run as a standalone headless script
-> under `prototypes/` (not as a story), and W2 from an Android export of a
-> throwaway project that reads one JSON file the same way (no game code
-> needed); (3) ADR-0001 is Accepted.
+> under `prototypes/` (not as a story); (3) ADR-0001 is Accepted.
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for
+> now, and the future device is an iPhone, so W2 moved after acceptance.
 > Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor
 > binary; `docs/engine-reference/godot/verification-results.md`): W1 and W3
-> are RECORDED. Still open before acceptance: W2 (Android export). Edits from
+> are RECORDED. No before-acceptance verification item remains open (W2 moved after
+> acceptance). This ADR now has no open before-acceptance item except
+> ADR-0001 being Accepted. Edits from
 > the W1 result: the `bom_present` CI check is dropped (Decision 3 code list,
 > Decision 8, diagram, Risks, Migration Plan), because `get_file_as_string`
 > strips a file's BOM; the `duplicate_key` scan stays, because the parser keeps
 > the last value silently; the Decision 5 `make_read_only()` guard is confirmed
 > usable.
-> After acceptance: W4 (device load time) is measured at the first phone build
-> of the real catalogue. Reopen trigger: a median above 1000 ms starts a
+> After acceptance: W2 from an iOS export on the iPhone of a throwaway project
+> that reads one JSON file the same way (no game code needed). W4 (device load
+> time) is measured at the first phone build of the real catalogue, on the
+> iPhone. A phone result that contradicts this ADR reopens it before the next
+> story in its area closes. Reopen trigger: a median above 1000 ms starts a
 > load-time task under this ADR; it does not reject the format.
 > On acceptance, update: `architecture.md` B0 and the Foundation Catalogue row
 > (names, base class, no `ResourceLoader`, no `duplicate_deep()`), and the Data
@@ -56,14 +61,14 @@ The Data & Config catalogue needs a storage format that catches a missing field,
 | **Post-Cutoff APIs Used** | None. `FileAccess.get_file_as_string`, `FileAccess.get_open_error`, `JSON.parse`, `JSON.data`, `JSON.get_error_line`, `JSON.get_error_message`, `JSON.stringify` all predate 4.3. The 4.4 change to `FileAccess.store_*` returning `bool` does not apply (the catalogue only reads). `duplicate_deep()` (4.5) is not used. The 4.7 typed-return override rule applies only if a record class overrides an engine virtual; none does. |
 | **Verification Required** | W1 to W4 below. NOT SOURCEABLE in `docs/engine-reference/godot/**`: how 4.7's `JSON` parser types numbers and treats `NaN`/`Infinity` tokens, duplicate keys and a UTF-8 BOM; whether `.json` under `res://` is imported as a `JSON` resource and whether the raw text ships in an export; `JSON.stringify`'s key sorting at every level and its float precision; whether a method named `load` raises a shadowing warning; load time on the target device. The engine check agrees with the expected results from pre-4.4 knowledge only; that is not a source. |
 
-Verification items (wired to acceptance: this ADR stays `Proposed` until each has a recorded result):
+Verification items (wired to acceptance: this ADR stays `Proposed` until each before-acceptance item has a recorded result; W2 and W4 are after acceptance, see Status):
 
 - **W1. JSON parsing.** Expected (unsourced): `JSON.parse` returns every number as `float`, including `3`. Check: the type of `3`, `3.0` and `160`; whether `NaN`, `Infinity` and `-Infinity` parse or fail; with a duplicate key in one object, which value survives or whether it fails; whether a leading UTF-8 BOM is a parse error. Method: a headless unit test per case. The validator below works whatever the number answer is; the duplicate-key and BOM answers decide whether the CI scans in Decision 8 stay.
   - Result (2026-11-04, macOS arm64, headless): all numbers parse as `float`; `NaN`, `Infinity` and `-Infinity` are parse errors; a duplicate key keeps the last value silently, so the `duplicate_key` scan stays; a BOM inside a string is a parse error, but `get_file_as_string` strips a file's BOM and the file loads, so the `bom_present` check is dropped; `make_read_only()` turns an in-place write into an error and keeps the value, so the Decision 5 guard is usable; see docs/engine-reference/godot/verification-results.md.
-- **W2. Android export of the data files.** Expected (unsourced): Godot 4 imports `.json` under `res://` as a `JSON` resource, and the export ships the imported form, not the raw text, unless `*.json` is in the non-resource export filter. Check: with the filter, does `FileAccess.get_file_as_string("res://assets/data/<file>.json")` return the text on an Android export? Without it? Record whether the filter is required. Method: the first Android export, with a dev build that logs `catalogue Ready: <records> records from <files> files`, plus a release build with one broken record (GDD Acceptance 13). Owner: Technical Setup. If the raw text cannot be read in either case, use the Risks fallback (non-imported extension).
+- **W2. Phone export of the data files (after acceptance, iOS export on the iPhone).** Expected (unsourced): Godot 4 imports `.json` under `res://` as a `JSON` resource, and the export ships the imported form, not the raw text, unless `*.json` is in the non-resource export filter. Check: with the filter, does `FileAccess.get_file_as_string("res://assets/data/<file>.json")` return the text on an iOS export? Without it? Record whether the filter is required. Method: the first iOS export on the iPhone, with a dev build that logs `catalogue Ready: <records> records from <files> files`, plus a release build with one broken record (GDD Acceptance 13). Owner: Technical Setup. If the raw text cannot be read in either case, use the Risks fallback (non-imported extension). Android export leg: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists (iOS export instead of Android export).
 - **W3. Canonical stringify.** Does `JSON.stringify(data, "", true, true)` sort keys at every nesting level and print floats at full precision in 4.7, so equal snapshots give equal strings and a one-ulp change gives a different one? Method: headless unit test; it is also the snapshot detector's self-test (GDD Acceptance 11). `to_dict()` returns JSON-native types only (Decision 7), so packed-array and `StringName` stringify behaviour does not matter.
   - Result (2026-11-04, macOS arm64, headless): keys sorted at every level; equal snapshots give equal strings; floats round-trip at full precision and a one-ulp change gives a different string. No custom serializer; see docs/engine-reference/godot/verification-results.md.
-- **W4. Load time.** Median Loading-to-Ready over 5 cold launches on one named Adreno 5xx-class device, against the proposed 1000 ms (TR-data-015, QQ-11). Advisory: a miss starts a load-time task; it does not reject the format.
+- **W4. Load time.** Median Loading-to-Ready over 5 cold launches on one named Adreno 5xx-class device, against the proposed 1000 ms (TR-data-015, QQ-11). Advisory: a miss starts a load-time task; it does not reject the format. After acceptance. Adreno device leg: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists (the same 5 cold launches on the iPhone).
 
 ## ADR Dependencies
 

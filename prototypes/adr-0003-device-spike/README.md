@@ -1,5 +1,12 @@
 # ADR-0003 device spike
 
+> **Next device run: iPhone (2026-11-04).** Phone testing is set aside for now,
+> and the only phone for the future is an iPhone. When the phone run happens,
+> follow the **iPhone** section under "How to run it" and read the log in the
+> Xcode console. The phone run is after ADR-0003 acceptance; only the desktop
+> run is needed before it. The **Android phone** section stays for later, when
+> an Android device is available.
+
 PROTOTYPE - NOT FOR PRODUCTION. A small standalone Godot 4.7 project. Nothing in
 `src/` may load or copy from it.
 

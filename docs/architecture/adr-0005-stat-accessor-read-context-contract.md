@@ -7,6 +7,13 @@ Proposed
 > Who may move this to `Accepted`: the user, or `technical-director` on the
 > user's explicit confirmation. No other agent, and no skill on its own.
 > Acceptance preconditions: ADR-0001 and ADR-0002 are Accepted.
+>
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for
+> now, and the future device is an iPhone. The one device item, the per-tick
+> read cost (Verification Required 2), is after acceptance, on the iPhone. A
+> phone result that contradicts this ADR reopens it before the next story in
+> its area closes. This ADR has no open before-acceptance item except ADR-0001
+> and ADR-0002 being Accepted.
 
 ## Date
 
@@ -34,7 +41,7 @@ Every value a modifier could ever touch must be read through one accessor at use
 | **Knowledge Risk** | LOW (no engine API; plain GDScript objects and dictionaries) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md` (4.7 GDScript rows), `current-best-practices.md` (GDScript section) |
 | **Post-Cutoff APIs Used** | None. One 4.7 language rule applies: an override of a typed-return method inherits the type and needs an explicit `return` (`breaking-changes.md`, 4.6 to 4.7, GDScript). It affects every test spy that subclasses `StatAccessor`. |
-| **Verification Required** | (1) Confirm on the installed 4.7.2 editor that a spy override of `stat_int(...) -> int` with a typed `return` on every path parses, and that omitting a `return` on a path is an error (the 4.7 rule is one line in `breaking-changes.md`; its exact scope is not sourced). Method: the first `SpyStatAccessor` story. (2) Per-tick read cost against the proposed ceiling in Performance, on the first device build (QQ-11). (3) Inherited: ADR-0001 V1 (a method Callable such as `relay.fatal` holds an object ID, not a strong reference). |
+| **Verification Required** | (1) Confirm on the installed 4.7.2 editor that a spy override of `stat_int(...) -> int` with a typed `return` on every path parses, and that omitting a `return` on a path is an error (the 4.7 rule is one line in `breaking-changes.md`; its exact scope is not sourced). Method: the first `SpyStatAccessor` story. (2) Per-tick read cost against the proposed ceiling in Performance, on the first device build (QQ-11); after acceptance, on the iPhone. (3) Inherited: ADR-0001 V1 (a method Callable such as `relay.fatal` holds an object ID, not a strong reference). |
 
 ## ADR Dependencies
 
@@ -345,7 +352,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Performance Implications
 
-- **CPU**: The MVP read path is a method call, then about four `StatKeys` table lookups (exists, type, applies-to, role tag), a record lookup by `def_id`, a record-type check, a search of the tower's tags for a role key, a level-range check, and a field read by `StringName`. All are hash lookups or short scans; a good read allocates nothing. A wave of about 40 enemies and 10 towers does on the order of 100 reads per tick, plus a few HUD reads per frame. **Proposed ceiling: all stat reads in one tick take at most 0.5 ms on the Adreno 5xx-class device**, measured with ADR-0004's budget split on the first device build (QQ-11). If it is missed, the accessor precomputes a flat table per `(def_id, level)` at construction.
+- **CPU**: The MVP read path is a method call, then about four `StatKeys` table lookups (exists, type, applies-to, role tag), a record lookup by `def_id`, a record-type check, a search of the tower's tags for a role key, a level-range check, and a field read by `StringName`. All are hash lookups or short scans; a good read allocates nothing. A wave of about 40 enemies and 10 towers does on the order of 100 reads per tick, plus a few HUD reads per frame. **Proposed ceiling: all stat reads in one tick take at most 0.5 ms on the Adreno 5xx-class device** (Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists: the same measure on the iPhone), measured with ADR-0004's budget split on the first device build (QQ-11). If it is missed, the accessor precomputes a flat table per `(def_id, level)` at construction.
 - **Memory**: One accessor per battle and one small context per enemy, tower slot, hero, burst and HUD preview.
 - **Load Time**: None; the accessor is built in `build`.
 - **Network**: None.

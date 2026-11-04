@@ -183,14 +183,19 @@ error and the engine gave none (see ADR-0009 V7).
 
 ## Still open
 
-Before-acceptance verification items this run did not answer.
+Verification items this run did not answer. Phone checks (user instruction,
+2026-11-04): phone testing is set aside for now, and the future device is an
+iPhone. Each item is tagged "before acceptance, Mac", "after acceptance,
+iPhone" or "after acceptance, Android-only deferred" (waits for an Android
+device; the iPhone run covers the iOS equivalent where one exists).
 
-- **ADR-0001**: V2 teardown timing (integration test plus a manual editor run with a Control under the pointer); V3 load and instantiate failure (editor and Android export); V4 release error output (Android export, `adb logcat`). Also V1 lambda-release needs a second look.
-- **ADR-0002**: W2 Android export of the data files.
-- **ADR-0004**: V1, V2, V3, V7 (ADR-0003 device spike: SP1, SP10, SP11, SP14); V4 phone leg (SP15) and the release-export unwind leg; V9 SP14 stall compare with smoothing on and off.
+- **ADR-0001**: V2 teardown timing (integration test plus a manual editor run with a Control under the pointer): before acceptance, Mac. V3 editor leg: before acceptance, Mac. V1 lambda-release second look: before acceptance, Mac (tests only). V3 export leg (iOS export): after acceptance, iPhone. V4 release error output (iOS release export, Xcode console): after acceptance, iPhone. V3 and V4 Android export and `adb logcat`: after acceptance, Android-only deferred.
+- **ADR-0002**: W2 export of the data files (iOS export): after acceptance, iPhone. W2 Android export: after acceptance, Android-only deferred.
+- **ADR-0004**: desktop legs of V1, V2 and V7 (ADR-0003 spike SP1, SP14, SP10, SP11): before acceptance, Mac. V4 release-export unwind leg (Mac release export): before acceptance, Mac. V9 SP14 stall compare with smoothing on and off: before acceptance, Mac. Phone legs of V1, V2 and V7, V3 cadence (SP14) and the V4 phone leg (SP15): after acceptance, iPhone. V7 Android lifecycle leg: after acceptance, Android-only deferred.
 - **ADR-0006**: none of V1 to V6. (Other preconditions, such as `/architecture-review`, are not verification items.)
-- **ADR-0007**: V1 gdUnit4 exit ladder (Mac and Linux); V2 error capture; V4 import on a fresh clone; V5 CI action (scratch branch); V6 editor save of a scene and no `prototypes/` path under the main project's `.godot/`; V7 export preset file.
-- **ADR-0008**: none before acceptance. The V7 debug-export and phone legs and the V8 phone leg come at the first phone build; the V1e release leg is ADR-0004 V4's.
-- **ADR-0009**: none before acceptance (V2f is recorded as not observable; V4 is after acceptance).
-- **ADR-0010**: V2 release half (from ADR-0001 V4); V3 desktop windowed run (write one line, find the file at the recorded path).
-- **ADR-0011**: V1 to V5 (render-budget prototype, desktop and phone).
+- **ADR-0007**: V1 gdUnit4 exit ladder (Mac and Linux); V2 error capture; V4 import on a fresh clone; V5 CI action (scratch branch); V6 editor save of a scene and no `prototypes/` path under the main project's `.godot/`; V7 export preset file (filter keys, iOS preset signing fields): all before acceptance, Mac. V7 Android keystore leg: after acceptance, Android-only deferred.
+- **ADR-0008**: none before acceptance. V7 debug-export and phone legs and V8 phone leg: after acceptance, iPhone. The V1e release leg is ADR-0004 V4's (before acceptance, Mac).
+- **ADR-0009**: none before acceptance (V2f is recorded as not observable). V4 whole-tick cost: after acceptance, iPhone; the Adreno device run: after acceptance, Android-only deferred.
+- **ADR-0010**: V3 desktop windowed run (write one line, find the file at the recorded path): before acceptance, Mac. V2 release half (from ADR-0001 V4): after acceptance, iPhone. V3 phone run (file from the app container via Xcode): after acceptance, iPhone. V3 `adb exec-out run-as` leg: after acceptance, Android-only deferred.
+- **ADR-0011**: V1 to V5 desktop legs (render-budget prototype): before acceptance, Mac. V1 to V4 phone legs (Xcode Metal frame capture for V1): after acceptance, iPhone. Android GPU Inspector leg: after acceptance, Android-only deferred.
+- **ADR-0003** (spike results live in `prototypes/adr-0003-device-spike/README.md`): SP0 to SP13 desktop legs: before acceptance, Mac. Phone legs: after acceptance, iPhone. SP4 predictive back, SP8 Android export dialog, SP9 Android density, SP10 Android backgrounding and back gesture (C1), SP12 split screen: after acceptance, Android-only deferred.

@@ -21,7 +21,7 @@ Proposed
 > 2. V1 to V8 have recorded results in `docs/engine-reference/godot/current-best-practices.md`
 >    with the engine version. V2 and V3 count once ADR-0009 V1 and V3 are recorded; V1 shares one
 >    script with ADR-0006 V4 and V5. A result that takes a branch revises this ADR first. V7 and V8
->    need a desktop result; their phone results come at the first phone build.
+>    need a desktop result; their phone results come after acceptance, on the iPhone.
 > 3. The cascade edits (section a) are applied, or the user overturns them one by one.
 >    The user overturned none (2026-11-04).
 > 4. MET: The user has confirmed or overturned each of the seven choices in Decision 11.
@@ -34,12 +34,18 @@ Proposed
 > expected result: in a debug run only the callee stops and the caller continues, so
 > `_draining` is not left set and `recover_if_stuck()` may never trigger in debug; it is kept
 > for release (the Stuck flag note in Decision 7 says so). Still open, not holding acceptance:
-> the V7 debug-export and phone legs and the V8 phone leg (first phone build); the release
-> unwind leg is ADR-0004 V4's.
+> the V7 debug-export and phone legs and the V8 phone leg (after acceptance, on the iPhone);
+> the release unwind leg is ADR-0004 V4's.
+>
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for now, and the
+> future device is an iPhone, so every phone leg is after acceptance. No before-acceptance
+> verification item is open; this ADR now waits only on ADR-0003 and ADR-0006 being Accepted
+> (item 1), with item 3 as recorded above.
 >
 > **After acceptance:** the Input GDD's 37 Logic criteria become the resolver's unit tests. Reopen
 > trigger: any Validation Criterion that cannot pass as written, or a phone-test log (Pillar 4 gate
 > P1) showing a mis-fire the resolver caused, amends this ADR before the next input story closes.
+> A phone result that contradicts this ADR reopens it before the next story in its area closes.
 
 ## Date
 
@@ -86,7 +92,7 @@ Owner: godot-specialist writes the scripts; the user runs them headless on 4.7.2
 - **V6. Inner classes and fakes.** An inner `class Target extends RefCounted` as the element type of `Array[Target]`; `remove_at` keeps order (ADR-0009 V2(e)); `create()` calling `InputResolver.new(a, b, c)`; a test `FakeResolver extends InputResolver` built with `FakeResolver.new(15.0, 28.0)`, `_init` forwarding `super(a, b)`, typed overrides with explicit `return`. `FakeResolver.create()` returns a plain `InputResolver` (statics are not virtual), so tests never call it. Branch: untyped `Array`; or ADR-0007 fakes wrap the resolver and owners type it `Object`.
   - Result (2026-11-04, macOS arm64, headless): all pass: inner-class `Array[Target]`, `remove_at` keeps order, `super(a, b)` forwards, a typed override with explicit `return` works through the base type, `FakeResolver.create()` returns a plain InputResolver; an override with no `return` does not load. No branch; see docs/engine-reference/godot/verification-results.md.
 - **V7. Development facts.** `OS.is_debug_build()` true in an editor run and a debug export (release: ADR-0001 V4); `OS.get_model_name()` non-empty. Branch: a tester-typed device label.
-  - Result (2026-11-04, macOS arm64, headless): `is_debug_build()` true in the editor run; `get_model_name()` = "Mac16,10". Debug-export and phone legs at the first phone build; see docs/engine-reference/godot/verification-results.md.
+  - Result (2026-11-04, macOS arm64, headless): `is_debug_build()` true in the editor run; `get_model_name()` = "Mac16,10". Debug-export and phone legs after acceptance, on the iPhone (iOS debug export); see docs/engine-reference/godot/verification-results.md.
 - **V8. File append.** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_*` returns `bool`. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
   - Result (2026-11-04, macOS arm64, headless): `WRITE` truncates; `READ_WRITE` fails on a missing file; `READ_WRITE` plus `seek_end()` appends; `flush()` writes through; every `store_*` returns `bool`. No branch; see docs/engine-reference/godot/verification-results.md.
 

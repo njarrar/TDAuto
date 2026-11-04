@@ -16,9 +16,11 @@ Proposed
 > that confirmation exists. An agent that believes an ADR is ready says so and
 > escalates; it does not edit this field.
 
-This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted, and ADR-0007 too, because Decision 9's battle runner and the recording log come from it; (2) the before-acceptance verification items (V1, V2, V3 desktop, V4) have recorded results in `docs/engine-reference/godot/current-best-practices.md`; (3) MET: the user confirms the autonomous choices in Decision 12 (confirmed by the user, 2026-11-04, as recommended, choices 1 to 16). The after-acceptance items (V3 Android, Validation Criteria) do not hold acceptance.
+This ADR stays Proposed until: (1) ADR-0004, ADR-0008 and ADR-0009 are Accepted, and ADR-0007 too, because Decision 9's battle runner and the recording log come from it; (2) the before-acceptance verification items (V1, the V2 debug half, V3 desktop, V4) have recorded results in `docs/engine-reference/godot/current-best-practices.md`; (3) MET: the user confirms the autonomous choices in Decision 12 (confirmed by the user, 2026-11-04, as recommended, choices 1 to 16). The after-acceptance items (the V2 release half, V3 phone, Validation Criteria) do not hold acceptance.
 
-Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary; `docs/engine-reference/godot/verification-results.md`, standing in for `current-best-practices.md` for this run): V1, the V2 debug half and V4 are RECORDED and take no branch; the V3 desktop path is recorded from the headless run. Still open before acceptance: the V2 release half (ADR-0001 V4) and the V3 desktop windowed run (write one line, find the file). Edit from this run: the `InertHeroSim` rule (Decision 9) now names lint INIT-1, because ADR-0009 V7 showed the engine does not enforce `super(...)`.
+Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary; `docs/engine-reference/godot/verification-results.md`, standing in for `current-best-practices.md` for this run): V1, the V2 debug half and V4 are RECORDED and take no branch; the V3 desktop path is recorded from the headless run. Still open before acceptance: the V3 desktop windowed run on the Mac (write one line, find the file).
+
+Phone checks (user instruction, 2026-11-04): phone testing is set aside for now, and the future device is an iPhone. The V2 release half follows ADR-0001 V4, which moved after acceptance (iOS release export on the iPhone, Xcode console). V3 phone runs on the iPhone after acceptance. A phone result that contradicts this ADR reopens it before the next story in its area closes. Edit from this run: the `InertHeroSim` rule (Decision 9) now names lint INIT-1, because ADR-0009 V7 showed the engine does not enforce `super(...)`.
 
 **Reopen trigger.** If a bot needs a mutation path the eight commands lack, or the equivalence test needs a test-only branch in production code, this ADR is amended before the next Tower or Hero story closes. Owner: technical-director.
 
@@ -58,7 +60,7 @@ Owner: godot-specialist writes the scripts; the user runs them on 4.7.2; results
 
 - **V1. File append (reuses ADR-0008 V8; one headless run closes both).** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_string` returns `bool`; `FileAccess.get_open_error()` after a failed open. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
   - Result (2026-11-04, macOS arm64, headless): as ADR-0008 V8, plus `FileAccess.get_open_error()` = 7 (ERR_FILE_NOT_FOUND) after a failed open; see docs/engine-reference/godot/verification-results.md.
-- **V2. Debug flag (reuses ADR-0008 V7).** `OS.is_debug_build()` is true in an editor run (headless script). The release half is ADR-0001 V4's spike result, recorded here. Branch, decided now: if a release export reports true, `DevLogs` creation moves behind a custom export feature tag `dev_logs` tested with `OS.has_feature("dev_logs")`, set only in debug presets.
+- **V2. Debug flag (reuses ADR-0008 V7).** `OS.is_debug_build()` is true in an editor run (headless script). The release half is ADR-0001 V4's spike result, recorded here; after acceptance, on the iPhone. Branch, decided now: if a release export reports true, `DevLogs` creation moves behind a custom export feature tag `dev_logs` tested with `OS.has_feature("dev_logs")`, set only in debug presets.
   - Result (2026-11-04, macOS arm64, headless): debug half: true in the editor run. The release half waits on ADR-0001 V4; see docs/engine-reference/godot/verification-results.md.
 - **V3 (desktop). Where `user://` lands.** NOT SOURCEABLE in the pinned reference: a standalone debug run (`godot --path prototypes/adr-0010-checks`) writes one line and prints `OS.get_user_data_dir()`; the user finds the file on the desktop OS used for MVP, with `application/config/use_custom_user_dir` at its default. Owner: the user.
   - Result (2026-11-04, macOS arm64, headless): the headless run recorded `OS.get_user_data_dir()` on macOS as `/Users/<user>/Library/Application Support/Godot/app_userdata/<project>`. The windowed write-and-find step is still to run; see docs/engine-reference/godot/verification-results.md.
@@ -67,7 +69,7 @@ Owner: godot-specialist writes the scripts; the user runs them on 4.7.2; results
 
 **After acceptance:**
 
-- **V3 (Android).** Same script on the first phone build; whether `adb exec-out run-as <pkg>` works on Godot's debug APK (debuggable flag unconfirmed). Owner: the user. Branch: Mobile Platform work adds a dev "share log" action; desktop MVP is unaffected.
+- **V3 (Android).** Same script on the first phone build; whether `adb exec-out run-as <pkg>` works on Godot's debug APK (debuggable flag unconfirmed). Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists: on the iPhone, run the same script from an iOS debug export and find the file in the app container that Xcode's Devices window downloads. Owner: the user. Branch: Mobile Platform work adds a dev "share log" action; desktop MVP is unaffected.
 - Validation Criteria 1 to 9, in the Tower, Hero and HUD stories.
 
 Not relied on: `Dictionary` order, sibling `_process` order, engine timers.

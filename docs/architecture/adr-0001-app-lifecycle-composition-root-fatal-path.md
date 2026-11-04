@@ -8,20 +8,25 @@ Proposed
 > user's explicit confirmation. No other agent, and no skill on its own.
 > Acceptance preconditions are split, because stories that cite a `Proposed`
 > ADR are blocked and so cannot run checks that need them:
-> - **Before acceptance:** V1, V2 and V3, each run as a standalone headless
->   script or throwaway project under `prototypes/` (not as a story), with the
->   result recorded in `docs/engine-reference/godot/`. V4 from an Android
->   export of the ADR-0003 device spike project, which needs no game code.
+>   Phone checks (user instruction, 2026-11-04): phone testing is set aside
+>   for now, and the future device is an iPhone. Every phone leg is after
+>   acceptance; desktop and headless checks stay before it.
+> - **Before acceptance:** V1, V2 and the V3 editor leg, each run as a standalone
+>   headless script or throwaway project under `prototypes/` (not as a story),
+>   with the result recorded in `docs/engine-reference/godot/`. Run on the Mac.
 > - **Verification progress, 2026-11-04** (macOS arm64, headless, Godot 4.7.2
 >   editor binary; `docs/engine-reference/godot/verification-results.md`): V1 is
 >   RECORDED and confirms the design (method Callables and connections hold an
 >   ID only; lambdas and `bind()` hold strongly; a lambda cycle leaks), so the
 >   no-lambda rule and the back-callables stand and the Rollback plan is not
 >   needed (Decision 5 and Risks note this). One V1 record, lambda-release,
->   needs a second look (tests only). Still open before acceptance: V2, V3 and
->   V4.
+>   needs a second look (tests only). Still open before acceptance: V2 and
+>   the V3 editor leg (Mac).
 > - **After acceptance:** V5, checked by the first AppRoot story and by the CI
->   `[autoload]` check. Reopen trigger: if V1 to V3 are re-run inside the real
+>   `[autoload]` check. The V3 export leg and V4, from an iOS export of the
+>   ADR-0003 device spike project on the iPhone (no game code needed); V4 reads
+>   the Xcode console. A phone result that contradicts this ADR reopens it
+>   before the next story in its area closes. Reopen trigger: if V1 to V3 are re-run inside the real
 >   code and disagree with the spike result, this ADR is amended before the
 >   next story closes (the Rollback plan names the change).
 
@@ -53,13 +58,13 @@ The game needs one place that owns the app's lifetime, the loaded catalogue and 
 | **Post-Cutoff APIs Used** | None by name. Two 4.7 changes bear on the decision: an override of a typed-return method inherits the return type and needs an explicit `return` (4.7); lambdas capture locals by value (all Godot 4). `@abstract` (4.5) is optional and not required here. |
 | **Verification Required** | V1 to V5 below. NOT SOURCEABLE in `docs/engine-reference/godot/**`: the reference-count behaviour of a method `Callable`; whether a lambda binds `self` strongly; `queue_free()` and `remove_child()` timing; whether `push_error` output survives a release export; `ResourceLoader.load()` and `PackedScene.instantiate()` failure behaviour. The engine check (godot-specialist) agrees with the expected results from pre-4.4 knowledge only; that is not a source. |
 
-Verification items (the gap is wired to acceptance: this ADR stays `Proposed` until each has a recorded result):
+Verification items (the gap is wired to acceptance: this ADR stays `Proposed` until each before-acceptance item has a recorded result; the Status note splits them):
 
 - **V1. Callable reference semantics.** Does `obj.method` on a `RefCounted` object keep the object alive, or hold only its object ID? Does a signal connection keep its target alive? Does a lambda or `bind()` that captures a `RefCounted` hold a strong reference, and does a lambda written inside a method bind `self` strongly even when it captures no locals? Expected (unsourced): method Callables and connections hold an ID only; lambdas and `bind()` hold strong references. The Builder's own wiring relies on the first answer, because `halted`, `in_build` and `cancel_input` point back at `Battle` and `FatalRelay` and Flow point at each other. Method: a headless test that builds objects wired this way, drops every other reference and reads `weakref(...).get_ref()`. Owner: godot-specialist writes it as a standalone headless script outside `src/` (`prototypes/adr-checks/check_callables.gd`) and the user runs it before acceptance; the kept test (Validation 3b) is written by the ADR-0007 harness story, which builds the `battle_probe.alive()` helper first. This closes QQ-17.
   - Result (2026-11-04, macOS arm64, headless): method Callables and connections hold an object ID only (targets and emitters freed, method-Callable cycles freed); lambdas and `bind()` hold strongly; a lambda that never uses `self` does not keep `self` alive, one that reads a member does; a lambda cycle leaks. The design holds; no `Battle.dispose()` is needed. lambda-release (captured object not freed after the lambda is dropped) needs a second look: the check may still hold a reference. It matters for tests only, since lambdas are banned in `src/`; see docs/engine-reference/godot/verification-results.md.
 - **V2. Teardown timing.** After `wrapper.detach()`, `remove_child(wrapper)` and `wrapper.queue_free()`, do `_process`, `_input` and `_unhandled_input` stop firing on the wrapper and its children at once, and are the old battle, each sim and the resolver released (weakrefs null) one frame later? Method: integration test over two frames, plus one manual run on the editor with a Control under the pointer.
-- **V3. Load and instantiate failure.** What do `ResourceLoader.load()` and `PackedScene.instantiate()` return, and what is logged, for a missing scene path, a scene with a broken script and a scene with a missing sub-resource, in the editor and in an Android export? Method: deliberately broken scenes in a throwaway project, run in the editor and from an export.
-- **V4. Release error output.** Does `push_error` print or log in a release export, and does `OS.is_debug_build()` read false there? Method: first Android export run reading `adb logcat`.
+- **V3. Load and instantiate failure.** What do `ResourceLoader.load()` and `PackedScene.instantiate()` return, and what is logged, for a missing scene path, a scene with a broken script and a scene with a missing sub-resource, in the editor and in a phone export? Method: deliberately broken scenes in a throwaway project, run in the editor and from an export. Editor leg: before acceptance, on the Mac. Export leg: after acceptance, from an iOS export on the iPhone. Android export leg: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists.
+- **V4. Release error output.** Does `push_error` print or log in a release export, and does `OS.is_debug_build()` read false there? Method: first iOS export run on the iPhone (release build) reading the Xcode console. After acceptance. Android leg (`adb logcat`): Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists (Xcode console instead of logcat).
 - **V5. Main scene key.** `application/run/main_scene` is the key that names the main scene, and `project.godot` has no `[autoload]` section. Method: read the file after the first story sets it; fail CI if an `[autoload]` section appears (see Validation Criteria).
 
 Lifecycle notification names (`NOTIFICATION_APPLICATION_PAUSED`, `..._FOCUS_OUT`, `NOTIFICATION_WM_WINDOW_FOCUS_OUT`) and which fire on which platform are NOT decided here. ADR-0003 owns them (spike first).
@@ -448,7 +453,7 @@ Automated, headless (gdUnit4 under `tests/unit/root/` and `tests/integration/roo
 11. Wrapper load failure while `IN_STAGE` sets both latches and Flow reads FATAL.
 12. Lint (ADR-0007): no `Callable(` string form, no string `connect(`, no lambda or `.bind(` used as a connected or injected callable, no mutable `static var`, under `src/`.
 
-Manual evidence in `production/qa/evidence/` (cannot run headless): V2 teardown with a Control under the pointer; V3 and V4 from the first Android export; fatal screen screenshot (dev and release builds).
+Manual evidence in `production/qa/evidence/` (cannot run headless): V2 teardown with a Control under the pointer; V3 export leg and V4 from the first iOS export on the iPhone (Android export: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists); fatal screen screenshot (dev and release builds).
 
 The decision is wrong if: the weakref test cannot pass without a `dispose()` in every sim, or the Builder needs a gameplay branch, or a retry shows state from the old battle.
 

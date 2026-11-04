@@ -19,7 +19,7 @@ Proposed
 > Acceptance preconditions: (1) ADR-0009 and ADR-0010 are Accepted; (2) V1 to V6
 > below have recorded results in `docs/engine-reference/godot/modules/rendering.md`
 > (each runs in the standalone prototype `prototypes/adr-0011-render-budget/`,
-> not as a story; V1, V2 and V4 also need a run on the user's phone); (3) MET:
+> not as a story; the phone runs of V1 to V4 are after acceptance, on the iPhone); (3) MET:
 > the user confirms or overturns each choice in Decision 11 (confirmed by the
 > user, 2026-11-04, as recommended); (4) art-director and
 > technical-artist sign off the art bible §8 edits (cascade a6), and the user,
@@ -36,11 +36,17 @@ Proposed
 > binary; `prototypes/adr-checks/`): V6 is RECORDED in
 > `docs/engine-reference/godot/verification-results.md` (not yet copied to
 > `modules/rendering.md`); the `PackedInt32Array` const parses, no branch.
-> Still open before acceptance: V1 to V5 (`prototypes/adr-0011-render-budget/`,
-> desktop and phone).
+> Still open before acceptance: V1 to V5 (`prototypes/adr-0011-render-budget/`),
+> desktop legs on the Mac.
 >
-> After acceptance: A1 (the real game's worst-case frame on the phone, shared
-> with ADR-0004 V6 and ADR-0007 M7). Reopen trigger: Decision 9.
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for
+> now, and the future device is an iPhone. The phone legs of V1 to V4 moved
+> after acceptance and run on the iPhone.
+>
+> After acceptance: the phone legs of V1 to V4 (iPhone), and A1 (the real
+> game's worst-case frame on the phone, shared with ADR-0004 V6 and ADR-0007
+> M7). Reopen trigger: Decision 9. A phone result that contradicts this ADR
+> reopens it before the next story in its area closes.
 
 ## Date
 
@@ -74,9 +80,9 @@ The battle field and HUD must draw inside 60 draw calls and step 4's 3.0 ms on a
 
 NOT SOURCEABLE in `docs/engine-reference/godot/**`: how the Mobile renderer batches `_draw` commands across and within CanvasItems; whether `Performance` or `RenderingServer` draw counters include 2D canvas batches; `draw_polyline` joint shape at width 72; the cost and look of `antialiased = true` on 4.7 lines; the cost of a CanvasItem material. Art bible §8's batching paragraph is pre-4.4 knowledge and is not a source either. "Expected" below is not a result.
 
-**Before acceptance** (standalone Godot 4.7.2 project `prototypes/adr-0011-render-budget/`, Mobile renderer, 540x960 `canvas_items` / `keep` as ADR-0003 sets; owner: godot-specialist writes it, the user runs it on desktop and on their phone; results go to `modules/rendering.md`; the phone run can share the ADR-0003 device spike session):
+**Before acceptance** (standalone Godot 4.7.2 project `prototypes/adr-0011-render-budget/`, Mobile renderer, 540x960 `canvas_items` / `keep` as ADR-0003 sets; owner: godot-specialist writes it, the user runs it on desktop; results go to `modules/rendering.md`. The phone legs are after acceptance, on the iPhone, and can share the ADR-0003 iPhone spike session):
 
-- **V1. How to count draw calls.** Candidates: `Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)`, `RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)`, `Viewport.get_render_info(Viewport.RENDER_INFO_TYPE_CANVAS, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)` (all NEEDS VERIFICATION), the editor's Monitors tab, and an external frame capture (RenderDoc on desktop, Android GPU Inspector or the vendor profiler on the phone). Method: a scene with an empty field, then 1, 10 and 48 filled discs in one `_draw`, then the same 48 in 48 nodes; compare each counter with the capture. Record which source counts canvas batches. *Branch*: if no in-engine counter counts 2D, the dev overlay (Decision 10) shows frame time only, and draw calls are checked by capture at A1 and at each milestone.
+- **V1. How to count draw calls.** Candidates: `Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)`, `RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)`, `Viewport.get_render_info(Viewport.RENDER_INFO_TYPE_CANVAS, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)` (all NEEDS VERIFICATION), the editor's Monitors tab, and an external frame capture (RenderDoc on desktop, Android GPU Inspector or the vendor profiler on the phone; the Android tools are Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists: Xcode's Metal frame capture on the iPhone). Method: a scene with an empty field, then 1, 10 and 48 filled discs in one `_draw`, then the same 48 in 48 nodes; compare each counter with the capture. Record which source counts canvas batches. *Branch*: if no in-engine counter counts 2D, the dev overlay (Decision 10) shows frame time only, and draw calls are checked by capture at A1 and at each milestone.
 - **V2. Batching of `_draw` primitives.** The synthetic worst case of Decision 9 (seven drawers, 48 enemies of three styles with keylines, 16 flashes, 64 tracer segments through `draw_multiline_colors`, five towers with rings, the hero with its glow texture, HUD text at three sizes, and 48 `max_hp` accessor reads per frame as CombatViewModel makes them). Record total draw calls (V1's method), each node's share (toggle `visible`), and the p99 of step 4 plus render on the phone. Run it twice: commands in Decision 6's order (primitives, then textures, then text grouped by size) and interleaved, to record what the order is worth; and record whether the three font sizes share one glyph atlas. Expected (unsourced): untextured primitives in one node with no material batch into a few calls. *Branch*: if each primitive is its own call (48 enemies alone pass 48), EnemyView and CombatView build one triangle array per frame and submit it with a single `RenderingServer.canvas_item_add_triangle_array` (or `draw_mesh` of a reused `ArrayMesh`), which this prototype tests in the same run. That revision changes Decision 2, Alternative 5 and RID lifetime on retry, so it goes back through TD-ADR and godot-specialist before acceptance.
 - **V3. Path corners.** The starter `path_points` at width 72 then 68, drawn three ways: `draw_polyline`, a `Line2D` with sharp joints, and Decision 5's baked quads. Zoomed screenshots of each 90 degree corner on desktop and phone. Expected: the baked quads give exact square corners; the record says what the other two do (the engine check already reports that `draw_polyline` at width 72 has no joint modes and notches corners). *Branch*: none for the bake (it uses no joint algorithm); if quads drawn with `draw_primitive` leave seams at the shared edge, the strip is submitted as one triangle array per colour.
 - **V4. Line thickness on 4.7.** The reference does not say whether the lost feather was only on the `antialiased = true` path; if so, AA-off lines did not change and `LINE_BIAS` 1.0 thickens every stroke (engine check E1). Method: a 2 px ring, a 2 px dashed leash and a 1 px slot outline at bias 0.0 and 1.0, AA false and true, on 4.7.2 and a 4.6 build (or against art bible §3's stated widths measured in a screenshot), desktop and phone; record screenshots and the AA cost; also whether a full `draw_arc` (0 to TAU) shows a seam at `ring_points`' counts. The art-director picks the bias. *Branch*: a different bias, 0.0 included, or AA on, changes one constant (Decision 6).

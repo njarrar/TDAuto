@@ -39,11 +39,18 @@ Proposed
 > so the ADR text is unchanged. No verification item remains open; items 1 (ADR-0001 and
 > ADR-0004 Accepted) and 3 (`/architecture-review`) still hold acceptance.
 >
+> Phone checks (user instruction, 2026-11-04): phone testing is set aside for now, and the
+> future device is an iPhone. No item here needs a phone; ADR-0004 V6 (whole tick on a
+> device, views connected) is after acceptance, on the iPhone. This ADR has no open
+> before-acceptance item except ADR-0001 and ADR-0004 being Accepted and
+> `/architecture-review`.
+>
 > **After acceptance:** the listener-count tests (Decision 8) are written by the ADR-0007
 > harness story and by the first story that builds `BattleWrapper`. Reopen trigger: if
 > the headless test, the wrapper test or the with-and-without-listeners run (Validation
 > 2 to 4) shows the contract cannot be met as written, this ADR is amended before the
-> next story closes.
+> next story closes. A phone result that contradicts this ADR reopens it before the next
+> story in its area closes.
 
 ## Date
 
