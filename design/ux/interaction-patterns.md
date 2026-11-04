@@ -1,6 +1,6 @@
 # Interaction Pattern Library
 
-> **Status**: In Design (all sections written; review owed)
+> **Status**: In Design (revised after `/ux-review` NEEDS REVISION, 2026-11-04; re-review owed)
 > **Author**: njarrar + ux-designer (authored in session by `/ux-design patterns`, autonomous mode)
 > **Last Updated**: 2026-11-04
 > **Platform Target**: iOS and Android, portrait, one thumb, touch only; desktop build for testing with mouse as touch
@@ -11,11 +11,11 @@
 
 ## Overview
 
-This library names every interaction pattern TowerRiot already uses, so UX specs, stories and reviews can cite one ID instead of restating the rule. It adds no mechanic. Each entry points at the GDD, ADR or art bible rule that owns it, and that source wins if the two ever differ. Where two sources disagree, or a source misses a floor in `design/accessibility-requirements.md`, the entry follows the accessibility floor and the gap is logged in Open Questions as an `OI-` item. This library edits no GDD.
+This library names every interaction pattern TowerRiot uses, so specs, stories and reviews cite one ID instead of restating a rule. It adds no mechanic and edits no GDD. Each entry names its source, which wins if the two differ. Where sources disagree, or one misses a floor in `design/accessibility-requirements.md`, the entry follows the floor and logs an `OI-` item.
 
-**Input.** Touch only; on desktop the mouse stands in for one finger (ADR-0003 2.2). No gamepad, keyboard or screen reader path exists in battle.
+**Input.** Touch only; on desktop the mouse is one finger (ADR-0003 2.2). No gamepad, keyboard or screen reader path in battle.
 
-**How to read the numbers.** Positions and sizes are field units on the 540 x 960 reference field. At the smallest supported screen (360 dp wide or 640 dp tall) 1.5 units is 1 dp, so 72 units is 48 dp. Larger screens only make things bigger (Input `field_scale`).
+**Numbers.** Field units on the 540 x 960 field. At the smallest screen (360 x 640 dp) 1.5 units is 1 dp, so 72 units is 48 dp.
 
 **Rules every pattern obeys.**
 
@@ -27,46 +27,68 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 | Shape before colour | No state is told by hue alone; each has a shape, fill, outline, dot or strike backup | AR Colour audit |
 | Answer on the press or the next frame | Press feedback shows on the first frame after `pressed`; a purchase lands on the first frame | Input Game Feel, HUD Game Feel |
 | Silence is a valid answer | A miss shows nothing, except a ground tap (IP-14) | Input Game Feel |
-| No sound carries meaning | Audio is none at MVP; any later sound repeats a visual | AR-A-01 |
-| Reduce Motion has a fallback for every motion | See IP-26 | AR-V-10 |
 
-**Timing vocabulary** (art bible §7, HUD UI Requirements): 120 ms for presses, state changes, the arc and arming steps; 200 ms for panel slides and the lost-life dash; 300 ms to arm an irreversible button; ease-out on entry, ease-in on exit; clocks are linear. Never animated: the leash, panel opacity, counter digits.
+### Animation Standards
+
+Art bible §7 and HUD UI Requirements set the timings: ease-out on entry, ease-in on exit, clocks linear. Never animated: the leash, panel opacity, counter digits. AR-V-10 overrides the template's "fades reduced by 50%": under Reduce Motion fades keep their full length, and motion is cut or frozen as below.
+
+| Motion | Timing | Used by | Reduce Motion |
+|---|---|---|---|
+| Press and state change | 120 ms | IP-03, IP-18 | Fade kept; any scale or nudge cut |
+| Arc open and collapse | 120 ms | IP-09 | Collapse instant |
+| Arming (outline only) | 300 ms, linear | IP-15, IP-21 | Kept; it is a clock |
+| Panel slide, 12 units | 200 ms | HUD panels | Cut; the fade stays |
+| Lost-life dash | 200 ms fade | IP-20 | Kept |
+| Ground ring | 150 ms fade-in | IP-14 | Kept |
+| Build and upgrade overlay | Scale 1.15 to 1, 120 ms | IP-09, IP-10 | Fade only |
+| Ready pop | Scale 1.15 to 1, 120 ms, once | IP-18 | Cut |
+| Refusal nudge | 2 px, 120 ms | IP-24 | Cut; static cue instead |
+| Burst wind-up, snap | Shape transforms | IP-13 | Static ring from T+0.1 s; spokes stay |
+| Burst field dip | 0.4 s, 3% darker | IP-13 | Skipped |
+| Danger pulse | 2 Hz, 25% alpha swing | Lane exit | Frozen at full; chevrons stay |
+| Hero breathing | 0.5 Hz, 4% scale | Hero | Off |
+| Clocks: chip bar, cooldown wedge | Linear | IP-25 | Kept |
+| Enemy jitter, bob, lean | On | Enemies | Kept; they are telegraphs |
+
+### Sound Standards
+
+None at MVP. From Alpha every sound repeats a visual that already carries the fact, and no sound carries meaning alone (AR-A-01). Music, SFX and UI volumes (AR-A-02), mono (AR-A-03), the silent switch and other apps' audio (AR-A-04), no cue above 4 kHz alone (AR-A-05). A ground tap stays silent.
 
 ---
 
 ## Pattern Catalog
 
-| ID | Pattern | Category | Used in | Status |
-|---|---|---|---|---|
-| IP-01 | Tap | Input | Every tap target | Designed |
-| IP-02 | Drag | Input | Hero pin, burst aim | Designed |
-| IP-03 | Press response | Input / Feedback | Hero, burst button, open arc and chip | Designed |
-| IP-04 | Class winners frozen at press | Input | Every target | Designed |
-| IP-05 | Tap sink | Input | Burst button, arc backdrop | Designed |
-| IP-06 | One pointer, palm replacement | Input | Whole battle | Designed |
-| IP-07 | Rejected press zones | Input | Field edges, insets, letterbox | Designed |
-| IP-08 | Host cancel | Input | Pause, resize, back, outcomes, retry | Designed |
-| IP-09 | Build arc | Field picker | Empty build slot | Designed |
-| IP-10 | Tap then confirm (upgrade chip) | Field confirm | Tower below its last level | Designed |
-| IP-11 | Inspect tap | Field feedback | Tower at its last level | Designed |
-| IP-12 | Pin drag | Field drag | Hero | Designed |
-| IP-13 | Aim drag with offset reticle | Field drag | Burst button | Designed |
-| IP-14 | Ground rejection ring | Feedback | Empty field | Designed |
-| IP-15 | Armed button | HUD control | Start/Call, Retry, Play again | Designed |
-| IP-16 | Hero first in an overlap | Input / HUD | Start/Call, burst button | Designed |
-| IP-17 | Cost and unaffordable state | Data display | Arc panels, chip | Designed, one floor fix |
-| IP-18 | Stateful burst button | HUD control | Burst button | Designed |
-| IP-19 | Verb prompt line | Onboarding | Battle, until each verb is done | Designed |
-| IP-20 | Read-only top band | Data display | Lives, pips, gold, next-wave line | Designed |
-| IP-21 | TapScreen modal | Modal | Paused, Lost, Won | Designed |
-| IP-22 | Tap to resume | Modal | Paused | Designed |
-| IP-23 | One-tap retry | Modal | Lost, Won | Designed |
-| IP-24 | Refusal cue | Feedback | Unaffordable disc and chip, locked burst | Designed in part (static cue open) |
-| IP-25 | Visible clock | Data display | Chip bar, cooldown wedge, countdown | Designed |
-| IP-26 | Reduce Motion fallback | Cross-cutting | Every animated element | Designed (flag at MVP) |
-| IP-27 | Handedness mirror | Cross-cutting | Burst button and digit | Designed (flag at MVP) |
-| IP-28 | Two-tap mode | Input (alternative) | Hero pin, burst aim | Planned, Alpha |
-| IP-29 | Pause control | HUD control | Every live phase | Planned, Vertical Slice |
+| ID | Pattern | Status |
+|---|---|---|
+| IP-01 | Tap | Designed |
+| IP-02 | Drag | Designed |
+| IP-03 | Press response | Designed |
+| IP-04 | Class winners frozen at press | Designed |
+| IP-05 | Tap sink | Designed |
+| IP-06 | One pointer, palm replacement | Designed |
+| IP-07 | Rejected press zones | Designed |
+| IP-08 | Host cancel | Designed |
+| IP-09 | Build arc | Designed |
+| IP-10 | Tap then confirm (upgrade chip) | Designed |
+| IP-11 | Inspect tap | Designed |
+| IP-12 | Pin drag | Designed |
+| IP-13 | Aim drag with offset reticle | Designed |
+| IP-14 | Ground rejection ring | Designed |
+| IP-15 | Armed button | Designed |
+| IP-16 | Hero first in an overlap | Designed |
+| IP-17 | Cost and unaffordable state | Designed, one floor fix |
+| IP-18 | Stateful burst button | Designed |
+| IP-19 | Verb prompt line | Designed |
+| IP-20 | Read-only top band | Designed |
+| IP-21 | TapScreen modal | Designed |
+| IP-22 | Tap to resume | Designed |
+| IP-23 | One-tap retry | Designed |
+| IP-24 | Refusal cue | Designed in part (static cue open) |
+| IP-25 | Visible clock | Designed |
+| IP-26 | Reduce Motion fallback | Designed (flag at MVP) |
+| IP-27 | Handedness mirror | Designed (flag at MVP) |
+| IP-28 | Two-tap mode | Planned, Alpha |
+| IP-29 | Pause control | Planned, Vertical Slice |
 
 ---
 
@@ -87,6 +109,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any discrete choice on a field target or button.
 **When NOT to Use**: moving the hero or aiming (IP-02); anything needing a hold or repeat.
 **Sources**: Input Rules 3, 5; Formulas `is_drag`; ADR-0008 Decisions 3, 5.
+**Accessibility**: AR-M-01, AR-M-09: no time limit; AR-M-02: radius 36 or more. A roll-off is a miss, never a mis-fire.
+**Implementation Notes**: The resolver classes it (ADR-0008); owners never hit-test. Slops come from the Input record.
 
 #### IP-02 Drag
 
@@ -101,6 +125,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: the two continuous verbs, pin and aim.
 **When NOT to Use**: any new verb. A new drag needs a Per-Feature Matrix row (AR-C-07) and a two-tap path (IP-28).
 **Sources**: Input Rules 3, 6, 12; Game Feel "Sticky drag".
+**Accessibility**: AR-M-05 steady-hand slop; AR-M-06: every drag has a two-tap path at Alpha (IP-28).
+**Implementation Notes**: The owner clamps the raw position. Sticky is set once in the resolver (Input Rule 6).
 
 #### IP-03 Press response
 
@@ -115,6 +141,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: a target whose gesture will be a drag, so the reply cannot wait for slop.
 **When NOT to Use**: plain tap targets; they answer on the classed tap.
 **Sources**: Input Rule 2, Game Feel; Hero UI Requirements; ADR-0008 Decision 6.
+**Accessibility**: A first-frame reply tells a slow thumb it landed; the ring at 64 shows past the fingertip.
+**Implementation Notes**: Views draw from `pressed` and clean up on `became_idle()`; never command from it (ADR-0008 D6).
 
 #### IP-04 Class winners frozen at press
 
@@ -128,6 +156,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: every new target: register a disc with a class and priority.
 **When NOT to Use**: Controls on modal screens (IP-21), which take presses before the resolver.
 **Sources**: Input Rules 2, 4, suggested registrations; ADR-0008 Decisions 2, 9.
+**Accessibility**: AR-M-01: no fall-through, so a slip never fires a second target. AR-M-04 hit scale must keep the winners.
+**Implementation Notes**: Register a disc with class and priority; winners live on the press record, never re-queried.
 
 #### IP-05 Tap sink
 
@@ -140,6 +170,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: where a stray tap must be absorbed, or where acting on the thing beneath would be a mis-fire.
 **When NOT to Use**: as a way to block drags; a sink is TAP only (ADR-0008 Decision 2).
 **Sources**: Input Rule 2 table, edge cases; HUD Rules 6, 8, 14.
+**Accessibility**: Absorbs a resting thumb's lift (AR-M-01). A dismissal draws no ring.
+**Implementation Notes**: A TAP disc with a no-op owner; it never raises slop or holds the pointer (ADR-0008 D2).
 
 #### IP-06 One pointer, palm replacement
 
@@ -153,6 +185,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: always; no pattern may need a second finger (AR-M-01).
 **When NOT to Use**: n/a.
 **Sources**: Input Rule 1; edge cases; Open Questions (palm risk).
+**Accessibility**: AR-M-01: a palm or second finger never blocks or cancels the thumb.
+**Implementation Notes**: The resolver tracks one pointer id and runs the replacement test on each new press.
 
 #### IP-07 Rejected press zones
 
@@ -165,6 +199,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: placing any target near an edge; check the target's centre clears the zone.
 **When NOT to Use**: n/a.
 **Sources**: Input Rule 12; ADR-0003 Decision 3; AR-M-10.
+**Accessibility**: AR-M-10: an OS back swipe cannot fire an action. The margin is unverified on devices.
+**Implementation Notes**: The adapter filters before the resolver (ADR-0003 D3); the content test checks target centres.
 
 #### IP-08 Host cancel
 
@@ -177,6 +213,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any event that takes the battle away from the player.
 **When NOT to Use**: as a player gesture; there is none.
 **Sources**: Input Rule 7; ADR-0003 Decision 2.5; Flow Rules 10, 15, 17.
+**Accessibility**: A cancel never fires an action the player did not finish (AR-M-01).
+**Implementation Notes**: The host calls the resolver's cancel; owners revert on `drag_cancelled` (ADR-0003 2.5).
 
 ### Field patterns
 
@@ -187,13 +225,20 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **Specification**:
 - Fan at radius `R` 76 above the slot, angles -60°, 0°, 60°: triangle (Single), hexagon (Splash), square (Slow), always in that order, both hands. Each disc: hit radius 36, a tower-size polygon with panel fill and a 3 px cyan contour; a 60 x 44 panel above holds the word and the cost.
 - Opening registers the backdrop sink (IP-05) and the discs, which compete from the next press. Start/Call is disabled while open.
-- A disc press within 200 ms of opening is ignored, so a double tap dismisses.
-- Disc tap calls `build`: OK closes at once (120 ms collapse as art only); NO_GOLD stays open with a refusal (IP-24); HALTED closes.
-- Closes on a press naming anything but a disc, on `drag_started`, on Paused, an outcome or Fatal. Stays open on roll-off and on a phase change.
-- While open: one range ring per distinct level-1 range.
+- While open: one range ring per distinct level-1 range. Stays open on roll-off and on a phase change.
+
+| State | Entered by | A disc tap | Shows |
+|---|---|---|---|
+| Guard | Slot tap; lasts 200 ms from opening | Ignored, so a double tap dismisses | Discs, panels, rings |
+| Open | Guard ends | Calls `build` | Same |
+| Refused | `build` returns NO_GOLD | Stays open; any disc still calls `build` | Refusal (IP-24) |
+| Closed | OK, HALTED, a press naming anything but a disc, `drag_started`, Paused, an outcome, Fatal | None; the next slot tap opens a new arc | 120 ms collapse, art only |
+
 **When to Use**: choosing one of a few options tied to a field position.
 **When NOT to Use**: below the slot (the thumb covers it) or as a screen-space menu.
 **Sources**: HUD Rules 6 to 8, Formula `arc_disc`; Tower Rule 7; art bible §7; AR-M-11.
+**Accessibility**: AR-M-02 discs, 4 units apart (AR-M-11); shape and word, not hue; costs per IP-17.
+**Implementation Notes**: The HUD owns the arc and places discs by `arc_disc`; `build` is the Tower call.
 
 #### IP-10 Tap then confirm (upgrade chip)
 
@@ -201,13 +246,21 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **Description**: The first tap shows the price; a second tap inside a short window pays it.
 **Specification**:
 - Tap opens a 76 x 44 chip at (x, y - 76) of the tower for 1.5 s: cost (16 dp), the level-2 polygon (20 px cyan), and a draining bar (IP-25). Current and next range rings show.
-- A tap on the same tower, or on the chip's own disc (TAP 300, radius 40), commits when 200 ms <= elapsed < 1,500 ms at release. Taps under 200 ms are ignored.
-- NO_GOLD keeps the chip open and dimmed, the window not restarted (IP-24). Any other result closes it.
-- A press on another tap target or none closes it; a press on another tower opens that tower's chip. A drag from the hero over the tower never commits.
-- After expiry, a tap opens a fresh chip and never commits. Only one chip at a time. Paused, Won, Lost and Fatal close it.
+- Commit taps: the same tower, or the chip's own disc (TAP 300, radius 40), timed at release. One chip at a time. A drag from the hero over the tower never commits.
+
+| State | When | What a commit tap does |
+|---|---|---|
+| Guard | Under 200 ms at release | Ignored |
+| Open | 200 ms to under 1,500 ms at release | Upgrades; any result but NO_GOLD closes the chip |
+| Refused | After NO_GOLD | Chip stays open and dimmed, window not restarted, refusal (IP-24); a later tap in the window may still commit |
+| Expired | 1,500 ms | Chip closes; the next tap on the tower opens a fresh chip and never commits |
+| Closed | A press on another tap target or none; Paused, Won, Lost, Fatal. A press on another tower opens that tower's chip | Nothing until the next tap on a tower |
+
 **When to Use**: an irreversible spend on a field object.
 **When NOT to Use**: the build itself (IP-09 is already two taps); anything at its last level (IP-11).
 **Sources**: Tower Rule 8 and its event table; HUD Rule 9, Formula `chip_bar`; Input Rule 8; art bible §7; AR-M-07.
+**Accessibility**: AR-M-07: the window is a timed input, x1 to x3 at Alpha, with the bar draining (IP-25).
+**Implementation Notes**: `ChipWindow.advance(ms)` on real time from the wrapper (ADR-0004 step 1; TR-tower-010).
 
 #### IP-11 Inspect tap
 
@@ -217,6 +270,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: a tap on a field object with no action left.
 **When NOT to Use**: as a stat panel; tower stats are not shown (HUD Rule 4).
 **Sources**: Tower Rule 8, UI Requirements; HUD Rule 9.
+**Accessibility**: A tap is never silent. The ring is 3.05:1 on the path, with no margin.
+**Implementation Notes**: Tower emits `tower_inspected`; the view draws the ring for 1.5 s.
 
 #### IP-12 Pin drag
 
@@ -231,6 +286,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: placing the hero.
 **When NOT to Use**: a tap on the hero (does nothing but show the leash, IP-28 aside).
 **Sources**: Hero Rules 1 to 4, 14, 15, Visual table; Input Rule 4; art bible §3.
+**Accessibility**: 75 dp grab disc; the ghost clamps, never refuses; leash 3.8:1; two-tap pin at Alpha (AR-M-06).
+**Implementation Notes**: Hero owns the clamp and pin (Hero Rules 1 to 4). The leash never animates.
 
 #### IP-13 Aim drag with offset reticle
 
@@ -239,12 +296,21 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **Specification**:
 - Arms only if the burst is Ready, the hero is pinned and the phase is not Build. Otherwise the whole press is dead (IP-24 for Locked; digit for Cooling). Sampled at `pressed`.
 - Aim point: finger plus (0, -100), clamped to the field, then to `reach` (160) from the hero. No flip. Re-clamped each frame while the hero walks.
-- Live aim: 3 px reticle with four ticks, solid radius preview (70), dotted reach ring, and a kill mark on each enemy the burst would kill. At the reach clamp ±20° of the reach arc turns solid.
-- Cancel hysteresis: every aim starts cancelling; it goes live once the finger is over 64 from the button centre, and returns to cancelling at 48 or less. Cancelling: reticle alpha 0.3, preview and kill marks hidden. Release while cancelling does nothing.
-- Release while live fires; no cancel after release. A drag cancel (IP-08) fires nothing.
+- Live aim: 3 px reticle with four ticks, solid radius preview (70), dotted reach ring, a kill mark on each enemy the burst would kill.
+
+| State | Entered by | Shows | On release |
+|---|---|---|---|
+| Dead | Not Ready, hero unpinned, or Build, sampled at `pressed` | Digit (Cooling) or refusal (Locked, IP-24) | Nothing |
+| Cancelling | Every aim starts here; returns when the finger is 48 or less from the button centre | Reticle alpha 0.3, no ticks; preview and kill marks hidden | Nothing |
+| Live | Finger over 64 from the button centre | Reticle, preview, reach ring, kill marks | Fires; no cancel after release |
+| Clamped | Live, aim point at `reach` | ±20° of the reach arc solid, alpha 0.7 | Fires |
+| Cancelled | Host cancel (IP-08) | Aim cleared | Nothing fires |
+
 **When to Use**: a targeted ability with a cooldown.
 **When NOT to Use**: a tap on the button; it reaches the sink and does nothing (IP-05).
 **Sources**: Hero Rules 11 to 13, Visual table, UI Requirements; Input Visual table; art bible §3, §7.
+**Accessibility**: Two-tap aim at Alpha (AR-M-06). The offset keeps the mark clear of the thumb. The Cancelling reticle, about 2.4:1, is an accepted exception (OI-17).
+**Implementation Notes**: `HeroInput.update()` re-clamps each frame. The 64/48 hysteresis lives in the owner, not the resolver.
 
 #### IP-14 Ground rejection ring
 
@@ -254,15 +320,18 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: only for `ground_tapped`.
 **When NOT to Use**: other misses (roll-off, second finger, drag from a tower); those stay silent.
 **Sources**: Input Rule 5, Game Feel; HUD Rule 14; art bible §7.
+**Accessibility**: 2.5:1, an accepted exception; silent; three per battle at most.
+**Implementation Notes**: The view listens to `ground_tapped`; the count resets on retry.
 
 ### HUD patterns
 
 #### IP-15 Armed button
 
-**Category**: HUD control · **Used in**: Start/Call; Retry and Play again use the same model
+**Category**: HUD control · **Used in**: Start/Call; Retry and Play again get the same 300 ms through TapScreen `arm_ms` (IP-21)
 **Description**: An irreversible button that may appear under a thumb waits 300 ms before a press counts.
 **Specification**:
-- States: Hidden (not registered), Arming (registered, alpha 0.5 rising to full over 300 ms, a tap from a press made now is dead even if released once Armed), Armed (a new press counts).
+- States: Hidden (not registered), Arming (registered; only the 2 px outline dims, alpha 0.5 rising to full over 300 ms; a press made now is dead even if released once Armed), Armed (a new press counts).
+- The labels stay at 4.5:1 or above while Arming, and the panel stays at 85%, since panel opacity never animates (AR-V-04, art bible §7). This departs from the HUD Visual table (OI-05).
 - Registers on appearing, not on arming, so an early press cannot land on what lies beneath.
 - Clock from frame time, clamped to 100 ms per frame, frozen while Paused; a return from Paused is not a new appearance.
 - Once armed: no pulse, no warning, no advice.
@@ -270,6 +339,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any button whose action cannot be undone and that appears without the player asking.
 **When NOT to Use**: Paused (no timer; IP-22).
 **Sources**: HUD Rules 10, 11, States table; Flow Game Feel. See OI-05, OI-10.
+**Accessibility**: AR-V-04: labels at 4.5:1 or above in every state; only the outline dims (OI-05, AR change 15).
+**Implementation Notes**: `HudLogic.advance(ms)` from the wrapper, clamped to 100 ms per frame (ADR-0004).
 
 #### IP-16 Hero first in an overlap
 
@@ -282,6 +353,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any irreversible tap target the hero can walk across.
 **When NOT to Use**: towers and slots; a tap there still builds or upgrades with the hero beneath.
 **Sources**: HUD Rule 10; Hero Rules 2, 15, edge cases.
+**Accessibility**: A wrong grab is cheap; a wrong call or burst is not (AR-M-01).
+**Implementation Notes**: The HUD checks the `pressed` winners; Stage `pin_exclusion` keeps 60 around each centre.
 
 #### IP-17 Cost and unaffordable state
 
@@ -295,6 +368,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any gold spend.
 **When NOT to Use**: as a stat readout; no tower stats are shown.
 **Sources**: HUD Rules 7, 9, Visual table; Tower UI Requirements; AR-V-04, AR-V-05.
+**Accessibility**: AR-V-05: text alpha 0.6 or above (4.83:1); the strike, not hue, says unaffordable.
+**Implementation Notes**: Read cost and gold at draw time; never cache them at open.
 
 #### IP-18 Stateful burst button
 
@@ -308,6 +383,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: the one hero ability at MVP.
 **When NOT to Use**: as a pattern for tap buttons; disc buttons are reserved for hero actions (art bible §3).
 **Sources**: HUD Rule 12, Layout, Formula `burst_y`; Hero UI Requirements, Visual table; art bible §7.
+**Accessibility**: Fill, wedge, digit and dotted line tell the states, not hue; 64 dp; mirrors (IP-27).
+**Implementation Notes**: `burst_y` places it; state comes from Hero signals; the Ready pop is cut under Reduce Motion.
 
 #### IP-19 Verb prompt line
 
@@ -320,6 +397,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: teaching a verb, never where or when.
 **When NOT to Use**: advice, warnings or strategy.
 **Sources**: HUD Rules 13, 16; Hero UI Requirements; AR-C-03.
+**Accessibility**: AR-C-03: hides on the act, never on a timer; 14 dp at 11.2:1; must fit at 125% (AR-V-03).
+**Implementation Notes**: The HUD picks the first match each frame; the burst line latches until `burst_started`.
 
 #### IP-20 Read-only top band
 
@@ -331,6 +410,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: values the player glances at but never acts on.
 **When NOT to Use**: anything tappable (see OI-06 for the pause control).
 **Sources**: HUD Rules 1, 4, 5, Layout, Visual table; ADR-0003 Decision 4; art bible §7.
+**Accessibility**: Read-only, so no stray tap lands; lost dashes stay countable.
+**Implementation Notes**: `mouse_filter = IGNORE` on every Control (ADR-0003 D4).
 
 ### Modal patterns
 
@@ -342,9 +423,12 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 - `TapScreen`: full rect, takes every pointer event, no focus. Fires `tapped` only on the release of a press it saw; a cancelled release does not fire. Clears held presses after firing, on show and on the lifecycle signal.
 - While it shows, the adapter's press gate is closed. A drag begun before it showed still ends once.
 - A finger down when it appears, or across a focus loss, cannot fire it.
+- Optional arming delay `arm_ms` (default 0), counted from when the owning screen starts it. A press counts only if it began after arming; one begun earlier is ignored even if released after. The screen that builds the TapScreen owns the value: the wrapper's result screen sets 300 for Retry and Play again; Paused keeps 0. Proposed; needs an ADR-0003 amendment (OI-10).
 **When to Use**: any screen that stops play.
 **When NOT to Use**: in-battle choices (arc, chip); they are field discs.
 **Sources**: HUD Rule 2; ADR-0003 Decisions 2.4, 4.
+**Accessibility**: AR-P-02: an accessible name if a plain Control can carry one; no keyboard path.
+**Implementation Notes**: `TapScreen` per ADR-0003 D4, plus `arm_ms` once the amendment lands (OI-10).
 
 #### IP-22 Tap to resume
 
@@ -358,6 +442,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: the only pause at MVP.
 **When NOT to Use**: as a menu; there is no quit or settings at MVP.
 **Sources**: HUD Rule 17; Flow Rule 17; ADR-0003 Decisions 2.5, 5. See OI-06 for the manual pause.
+**Accessibility**: AR-C-02: static, no timer, no motion; one tap anywhere resumes.
+**Implementation Notes**: A TapScreen with `arm_ms` 0, entered by Flow Rule 17.
 
 #### IP-23 One-tap retry
 
@@ -366,12 +452,14 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **Specification**:
 - The modal mounts at the outcome, so input is dead at once. Text shows after 400 ms (Lost) or 1,000 ms (Won).
 - Fixed order, 16 dp, same weight: headline, next-try line or lives, "Got through", damage by Towers, Hero, Burst.
-- Retry (Lost) or Play again (Won), 128 x 72, is the only filled shape. It arms as IP-15 from when its text shows. No confirm.
+- Retry (Lost) or Play again (Won), 128 x 72, is the only filled shape. No confirm. The result screen builds its TapScreen with `arm_ms` 300 and starts it when the text shows, so Retry arms 700 ms (Lost) or 1,300 ms (Won) after the outcome (IP-21, OI-10).
 - Lost panel x 48 to 492, y 200 to 752. Won panel is compact (y 752 to 944) so the finished board stays in view.
 - Retry sets an idempotent latch; a second tap does nothing.
 **When to Use**: every stage end at MVP.
 **When NOT to Use**: Vertical Slice replaces it with Stage Progression's report.
 **Sources**: HUD Rules 15, 16, 18, Layout; Flow Rule 16, Game Feel; AR-C-06.
+**Accessibility**: AR-C-06: plain, blame-free text; the button is 85 x 48 dp; armed, not confirmed.
+**Implementation Notes**: The result screen sets `arm_ms` 300 from text show (OI-10); the retry latch sits in Flow.
 
 ### Feedback and cross-cutting patterns
 
@@ -386,6 +474,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any tap that reaches its owner and is turned down.
 **When NOT to Use**: misses that reach no owner; those stay silent (IP-14 aside).
 **Sources**: Tower UI Requirements; Hero UI Requirements; HUD Rule 7; AR-V-11.
+**Accessibility**: AR-V-11: a static cue under Reduce Motion, picked in the arc-and-chip spec.
+**Implementation Notes**: Owners report NO_GOLD or Locked; the HUD draws nudge or cue from `PresentationSettings`.
 
 #### IP-25 Visible clock
 
@@ -397,18 +487,20 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: any window or cooldown.
 **When NOT to Use**: protective delays (200 ms guards, 300 ms arming); they are not windows (AR Motor table).
 **Sources**: HUD Rules 9, 10, 12, Formulas; art bible §7; AR-M-07, AR-M-08.
+**Accessibility**: Multipliers stretch the clocks (AR-M-07, AR-M-08); clocks stay under Reduce Motion.
+**Implementation Notes**: `display_seconds` and `chip_bar`; real-time clocks freeze while Paused.
 
 #### IP-26 Reduce Motion fallback
 
 **Category**: Cross-cutting · **Used in**: every animated element
 **Description**: The `reduce_motion` flag swaps each motion for a still form that keeps the same fact. AR-V-10 is the one list.
 **Specification**:
-- Cut: panel slides, burst field dip, wind-up, snap and Ready pop (a static ring from T+0.1 s, 4 px at release; spokes stay), the refusal nudge (IP-24 static cue instead), build overlay scale (fade only), arc collapse (instant), hero idle breathing.
-- Frozen: the danger pulse at full; the chevron shape stays.
-- Kept: fades, the chip bar, the cooldown sweep and enemy motion traits, since they carry information.
-**When to Use**: every new animation needs a row here and in AR-V-10.
+- The Reduce Motion column of Animation Standards is the rule: cut, frozen or kept, row by row.
+**When to Use**: every new animation needs a row in Animation Standards and in AR-V-10.
 **When NOT to Use**: n/a.
 **Sources**: AR-V-10; HUD UI Requirements; Hero Visual table; art bible §7. See OI-04, OI-08.
+**Accessibility**: AR-V-10 is the one list; the AR-V-08 flash limits still apply.
+**Implementation Notes**: Read `reduce_motion` once from `PresentationSettings` (ADR-0001), never from the Input record.
 
 #### IP-27 Handedness mirror
 
@@ -418,6 +510,8 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: only the dominant-hand control.
 **When NOT to Use**: general HUD layout; full repositioning is out of scope.
 **Sources**: HUD Edge Cases, Layout; Hero Rule 2, UI Requirements; AR-M-03.
+**Accessibility**: AR-M-03: first-launch choice at Vertical Slice, a setting at Alpha.
+**Implementation Notes**: `left_handed` is read once into `PresentationSettings`; the layout swaps x only.
 
 ### Planned patterns (committed, not built)
 
@@ -425,10 +519,12 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 
 **Category**: Input (alternative) · **Used in**: hero pin, burst aim · **Tier**: Alpha
 **Description**: A setting that turns both drags into two taps, so no action needs a drag (AR-M-06).
-**Specification (as committed in AR-M-06, nothing added)**: tap the hero, then tap the field, to pin there. Tap the Ready burst button, then tap the field, to aim and fire there, with a visible armed state; tap the button again to cancel. Needs its own Pillar 4 phone test with the zero mis-fire bar.
+**Specification (AR-M-06, nothing added)**: tap the hero, then the field, to pin. Tap the Ready burst button (visible armed state), then the field, to aim and fire; tap the button again to cancel.
 **When to Use**: only as the opt-in setting.
 **When NOT to Use**: the default mode, where a tap on the hero or burst button does nothing.
 **Sources**: AR-M-06; Input Open Questions. See OI-07, OI-12.
+**Accessibility**: AR-M-06, with the zero mis-fire bar; the Input GDD's P1 is the test gate.
+**Implementation Notes**: Owners change; resolver signals do not. Blocked on OI-12.
 
 #### IP-29 Pause control
 
@@ -438,18 +534,20 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 **When to Use**: from the first phone build.
 **When NOT to Use**: MVP on desktop, where focus loss pauses.
 **Sources**: AR-C-01. See OI-06.
+**Accessibility**: AR-C-01; AR-M-02 48 dp; outside the bottom 30%.
+**Implementation Notes**: Placement open (OI-06); opens IP-22.
 
 ---
 
 ## Gaps & Patterns Needed
 
-**No UX specs exist yet.** Phase 1 of this skill reads the Component Inventory and Interaction Map of each spec in `design/ux/`; there were none, so every pattern above comes from the GDDs, ADR-0003, ADR-0008, the art bible and the AR document. When the HUD spec (`design/ux/hud.md`), the arc-and-chip spec and the pin-and-aim spec are written, each should cite these IDs, and any pattern they add comes back here.
+**No UX specs exist yet**, so every pattern comes from the GDDs, ADRs, art bible and AR document. The HUD, arc-and-chip and pin-and-aim specs cite these IDs, and any pattern they add comes back here.
 
 | Gap | Needed by | Owner | Notes |
 |---|---|---|---|
 | Static refusal cue (completes IP-24) | MVP | Arc-and-chip UX spec | AR-V-11; Tower UX flag |
-| Chip details: armed look after the 200 ms guard, expired or closed chip, a chip that would leave the field, maximum-level cue (IP-11) | MVP | Arc-and-chip UX spec | Tower UX flag |
-| Aim details: reticle far from the thumb when clamped, preview overhanging the reach ring, ring clipping at 540 wide, re-grabbing a hero pinned high | MVP | Pin-and-aim UX spec | Hero UX flag |
+| Chip details: armed look after the guard, a chip that would leave the field, maximum-level cue (IP-11) | MVP | Arc-and-chip UX spec | Tower UX flag |
+| Aim details: clamped reticle far from the thumb, preview past the reach ring, ring clipping, re-grabbing a hero pinned high | MVP | Pin-and-aim UX spec | Hero UX flag |
 | Pause control placement (IP-29) | Vertical Slice | HUD spec with Menu & Screen Flow | AR-C-01; OI-06 |
 | Menu controls: primary and secondary button, toggle, slider, list, focus order with accessible names | Vertical Slice | Menu & Screen Flow | AR-P-01, AR-M-02 |
 | First-launch screens: hand choice, photosensitivity notice | Vertical Slice | Menu & Screen Flow | AR-M-03, AR-V-09 |
@@ -458,16 +556,20 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 | Settings rows: Larger text, hit scale, steady hand, two-tap, timing multipliers, game speed, volumes, with "applies next battle" | Alpha | Settings & Accessibility | AR-V-03, AR-M-04 to AR-M-08, AR-C-08, AR-C-10 |
 | Two-tap mode details (IP-28) | Alpha | Hero, Input, Settings | OI-12 |
 
-**Consolidation candidate.** IP-15 and IP-21 both stop an early press from firing. Once OI-10 is settled, one rule ("a press counts only if it began while the target was armed and seen") could cover both.
+### Standard controls
+
+| Control | Status |
+|---|---|
+| Button, modal | Used: IP-15, IP-18, IP-21 to IP-23 |
+| Toggle, slider, list, grid, scroll, tab bar | Not used at MVP; deferred to the Vertical Slice menus (AR-P-01, AR-M-02) |
+| Dropdown, toast, input field | Out of scope: no text entry, and nothing auto-dismisses (AR-C-03) |
+| Tooltip, any hover state | Forbidden: touch has no hover. Help is IP-19 and "How to play" (AR-C-04) |
+
+**Consolidation candidate.** IP-15 and IP-21 `arm_ms` share one rule: a press counts only if it began after the target armed.
 
 **Not a pattern.** The Fatal screen takes no input at MVP (Flow Rule 18).
 
-**Cross-reference check (Phase 5, 2026-11-04).**
-- GDD UI requirements: Input, HUD, Tower, Hero and Flow are each covered. Combat, Enemy & Wave and Data own no interaction.
-- New patterns to add: none beyond this file.
-- Navigation mismatches: none; no screen specs exist to compare.
-- Accessibility: every entry cites its AR floor; five floors are not met by the sources today (OI-01 to OI-05), and one more is unmeasured (OI-17).
-- Empty states: prompt (None after the first burst), damage rows (read 0), gold (shows 0). Later screens need their own.
+**Cross-reference check (2026-11-04).** Input, HUD, Tower, Hero and Flow UI requirements are covered; Combat, Enemy & Wave and Data own no interaction. Five floors are not met by the sources (OI-01 to OI-05); OI-17 is an accepted exception. Empty states: prompt (none after the first burst), damage rows and gold read 0.
 
 ---
 
@@ -475,35 +577,36 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 
 ### Conflicts and open items
 
-Each item names the sources that disagree. This library follows the accessibility floor or the newer, more specific rule, as stated, and edits no source.
+Each item names the sources that disagree and what this library follows. It edits no source.
 
 | ID | Sources that disagree | Gap | Library follows | Owner |
 |---|---|---|---|---|
 | OI-01 | HUD Visual table "Unaffordable" (alpha 0.55) vs AR-V-05 | Cost text at 0.55 is 4.26:1, under 4.5:1 | Text at 0.6 or above (IP-17) | Battle HUD GDD (AR change 1) |
 | OI-02 | Tower Visual table "Range ring" (next level at alpha 0.25) vs AR-V-06 | 1.65:1 on the path, under 3:1; told apart by alpha only | Nothing new; IP-10 cites the ring without a value | Tower GDD (AR change 2) |
 | OI-03 | Art bible §6 slot marks vs AR-V-07 | 1 px outline at 0.3 is 2.1:1; corner mark has no alpha | Nothing new | art-director (AR change 3) |
-| OI-04 | Tower UI Requirements, Hero UI Requirements and HUD (nudge skipped under Reduce Motion, nothing in its place) vs AR-V-11 | A refused tap reads as a missed tap | IP-24 requires a static cue, not yet picked | Arc-and-chip UX spec; Tower, Hero, HUD GDDs (AR change 4) |
-| OI-05 | HUD Visual table "Start/Call" (Arming at alpha 0.5, rising to full over 300 ms) vs AR-V-04 and art bible §7 | Labels at 0.5 fall below 4.5:1 (0.55 is already 4.26:1), and AR-V-04 says dimmed states count. Art bible §7 also says panel opacity never animates, and the Start/Call panel fades in | Nothing new; IP-15 records the HUD value and this item | Battle HUD GDD, art-director |
-| OI-06 | HUD Rule 4, Flow Rule 17 and Input UI Requirements ("no pause button") vs AR-C-01 | iOS has no back button; a phone build needs a pause control. The top band ignores input (IP-20) and the bottom 30% is reserved, so no place is free | IP-22 at MVP; IP-29 planned | HUD spec, Flow GDD (AR change 6) |
-| OI-07 | Input burst sink, concept Pillar 4 and Hero Rules 11 and 15 ("a tap on the burst button does nothing") vs AR-M-06 | True only in the default mode once two-tap mode exists | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
-| OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits arc collapse, build overlay scale, refusal and hero breathing | AR-V-10 (IP-26) | Battle HUD GDD (AR change 5) |
-| OI-09 | Tower Rule 7 ("one the player cannot afford is dimmed and does nothing") vs HUD Rule 7 (the disc always calls `build`; NO_GOLD stays open with a nudge) and Tower UI Requirements (a refused tap nudges) | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Tower GDD |
-| OI-10 | HUD Rules 2 and 11 and Flow Game Feel (Retry arms after 300 ms and ignores presses begun earlier) vs ADR-0003 Decision 4 (`TapScreen` fires on the release of any press it saw; no arming state) | The ADR's interface has no arming gate, and no document names who holds it for a `TapScreen` region | IP-15 and IP-23 as the HUD states; gate owner open | technical-director, Battle HUD stories |
-| OI-11 | HUD Rule 6 and AC 4 (arc guard on press time: a disc press within 200 ms is ignored) vs Tower Rule 8 (chip guard on release time: commits when 200 <= elapsed < 1,500 ms at release) | Two 200 ms guards on different clocks. A press at 150 ms released at 250 ms upgrades on a chip and is ignored on an arc | Each as written (IP-09, IP-10) | Battle HUD and Tower GDDs |
-| OI-12 | AR-M-06 (owners change, resolver signals do not) vs Input Rules 4 and 5 | The hero has no TAP disc today, so a tap on it emits nothing. A second tap "on the field" reaches a tower, slot or arc disc if one is beneath, or `ground_tapped` if none; no signal means "tap at any point" | IP-28 restates AR-M-06 only | Input, Hero GDDs; Settings & Accessibility (Alpha) |
-| OI-13 | `.claude/docs/technical-preferences.md` Platform Notes ("skill button > tower > build slot > walkable ground") vs Input priority table | Legacy note puts tower above slot, omits Start/Call, arc and sink | Input priority (IP-04) | Project config owner (`/setup-engine`) |
-| OI-14 | HUD panel sizes (arc 60 x 44, Start/Call 88 x 72, chip 76 x 44, prompt 300 x 34) vs AR-V-03 | Sized for 100% text only | Nothing new | Battle HUD GDD (AR change 7, Alpha) |
+| OI-04 | Tower, Hero and HUD UI Requirements (nudge skipped under Reduce Motion, no stand-in) vs AR-V-11 | A refused tap reads as a missed tap | IP-24 requires a static cue, not yet picked | Arc-and-chip UX spec; Tower, Hero, HUD GDDs (AR change 4) |
+| OI-05 | HUD Visual table "Start/Call" (Arming at alpha 0.5, rising to full over 300 ms) vs AR-V-04 and art bible §7 | Labels at 0.5 are 3.75:1, under 4.5:1; art bible §7 says panel opacity never animates | The floor: labels stay at 4.5:1 or above while Arming and only the outline dims (IP-15) | Battle HUD GDD (AR change 15), art-director |
+| OI-06 | HUD Rule 4, Flow Rule 17 and Input UI Requirements ("no pause button") vs AR-C-01 | iOS has no back button. The top band ignores input (IP-20) and the bottom 30% is reserved, so no place is free | IP-22 at MVP; IP-29 planned | HUD spec, Flow GDD (AR change 6) |
+| OI-07 | Input burst sink, concept Pillar 4, Hero Rules 11 and 15 vs AR-M-06 | "A tap on the burst button does nothing" holds only in the default mode | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
+| OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits four rows | AR-V-10 (IP-26) | Battle HUD GDD (AR change 5) |
+| OI-09 | Tower Rule 7 ("dimmed and does nothing") vs HUD Rule 7 (the disc calls `build`; NO_GOLD nudges) and Tower UI Requirements | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Tower GDD |
+| OI-10 | HUD Rules 2 and 11, Flow Game Feel (Retry arms after 300 ms) vs ADR-0003 Decision 4 (`TapScreen` has no arming state) | No arming gate, and no owner for it | IP-21: TapScreen takes optional `arm_ms` (default 0) and ignores presses begun before arming; the result screen sets 300 (IP-23). **Proposed; needs an ADR-0003 amendment** | technical-director (ADR-0003), Battle HUD stories |
+| OI-11 | HUD Rule 6 and AC 4 (arc guard on press time) vs Tower Rule 8 (chip guard on release time) | Two 200 ms guards on different clocks. A press at 150 ms released at 250 ms upgrades on a chip and is ignored on an arc | Each as written (IP-09, IP-10). **Open**: one clock should be picked | Battle HUD and Tower GDDs |
+| OI-12 | AR-M-06 (owners change, resolver signals do not) vs Input Rules 4 and 5 | The hero has no TAP disc, so a tap on it emits nothing; a second tap reaches whatever lies beneath. No signal means "tap at any point" | IP-28 restates AR-M-06 only | Input, Hero GDDs; Settings & Accessibility (Alpha) |
+| OI-13 | `.claude/docs/technical-preferences.md` Platform Notes ("skill button > tower > build slot > walkable ground") vs Input priority table | Legacy order is wrong and incomplete | Input priority (IP-04) | Project config owner (`/setup-engine`) |
+| OI-14 | HUD panel sizes vs AR-V-03 | Sized for 100% text only | Nothing new | Battle HUD GDD (AR change 7, Alpha) |
 | OI-15 | HUD content rules and Enemy & Wave L3 (checked at hit scale x1) vs AR-M-04 | Start/Call is 7.2 from the left burst disc and 17.3 from a slot; x1.25 breaks both | Nothing new | Battle HUD, Enemy & Wave GDDs (AR change 8, Alpha) |
-| OI-16 | Hero UI Requirements ("before a first pin, the nudge also repeats the prompt") vs HUD Rule 13 and AR-V-10 | The prompt line already shows then; what "repeat" looks like, and whether it survives Reduce Motion, is unstated | Nothing new | Hero GDD, pin-and-aim UX spec |
-| OI-17 | Hero Visual "Cancelling" (reticle alpha 0.3) vs AR-V-04 | The AR contrast table has no ratio for it, though it tells the player a release will cancel | Nothing new | ux-designer, test plan |
-| OI-18 | AR document header and Open Questions ("`design/ux/interaction-patterns.md` does not exist yet") | Was stale | n/a | Resolved 2026-11-04 by `/ux-review`: the AR header and Open Questions now name this library |
+| OI-16 | Hero UI Requirements ("before a first pin, the nudge also repeats the prompt") vs HUD Rule 13 and AR-V-10 | The prompt already shows; "repeat" is unstated, under Reduce Motion too | Nothing new | Hero GDD, pin-and-aim UX spec |
+| OI-17 | Hero Visual "Cancelling" (reticle alpha 0.3) vs AR-V-04 | Now computed at about 2.4:1, under 3:1 | Accepted exception, as in the AR doc: the hidden preview and kill marks are the non-alpha backup | Resolved 2026-11-04 |
+| OI-18 | AR header said this library did not exist | Was stale | n/a | Resolved 2026-11-04 |
+| OI-19 | Concept Pillar 4 ("Drag priority: burst > hero") vs IP-04, IP-16, the Input table and Hero Rule 15 (hero 200 over burst 100) | The concept line is reversed | The GDDs are right (IP-04, IP-16) | Concept owner: fix the concept line |
 
 ### Other open questions
 
 | Question | Owner | Resolve by |
 |---|---|---|
-| No player journey map exists (`design/player-journey.md`). Author it from `.claude/docs/templates/player-journey.md` so onboarding and help patterns (IP-19, AR-C-04) rest on known player context | ux-designer | Before Vertical Slice UX specs |
-| Do IP-01 to IP-13 hold on a phone? All evidence is one developer on a mouse; the Pillar 4 test is the gate | producer | First phone build |
+| No player journey map exists (`design/player-journey.md`); IP-19 and AR-C-04 need it | ux-designer | Before Vertical Slice UX specs |
+| Do IP-01 to IP-13 hold on a phone? All evidence is one developer on a mouse. The gate is the Input GDD's P1 (two or more non-developer testers) | producer | First phone build |
 | Adjacent arc discs are 4 units apart, and a wrong disc cannot be undone. First fallback: a larger `R` (AR-M-11) | Pillar 4 phone test | First phone build |
 | Should only the chip's own disc commit, which would remove the same-tower commit and the 200 ms guard? | Pillar 4 phone test | First phone build |
 | Is the prompt at the top seen while the eyes are on the lane? | First-run test | First playable |
@@ -515,4 +618,4 @@ Each item names the sources that disagree. This library follows the accessibilit
 |---|---|
 | ux-designer (this skill's primary agent) | **Review owed.** This session could not start agents; the library was drafted in session in autonomous mode |
 | ui-programmer (feasibility of the component rules) | **Review owed** for the same reason |
-| `/ux-review design/ux/interaction-patterns.md` | Not run. Required before `/team-ui` |
+| `/ux-review design/ux/interaction-patterns.md` | NEEDS REVISION 2026-11-04; fixed in this revision. Re-run before `/team-ui` |
