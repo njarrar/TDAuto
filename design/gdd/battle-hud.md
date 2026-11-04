@@ -282,7 +282,7 @@ The **chip_bar** formula is defined as:
 | Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
 | Data & Config Pipeline | Costs and stats through the accessor, Burst `cooldown` included; level count; Stage and Wave directly |
 
-**Soft:** Combat (counters for the result). The fixed `dt` the wedge uses is the tick constant (ADR-0004), passed in by the wrapper.
+**Soft:** Combat (counters for the result). The wedge converts Burst `cooldown` with the `to_ticks` the builder injects, whose fixed `dt` is the tick constant (ADR-0004).
 
 **Downstream (these have no GDD yet):**
 

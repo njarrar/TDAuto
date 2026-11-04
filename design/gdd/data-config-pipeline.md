@@ -105,7 +105,7 @@ There is no separate economy record: gold values sit on the records that spend o
 
 **Not owned.** Event contracts (`enemy_killed`, `enemy_leaked`, `waves_complete`), DamageEvent, gold and lives state, modifier resolution, save schemas, and the justification of balance values. This system stores data and has no behaviour to emit signals from. Each emitter declares its own signals and the composition root wires them. Combat's DamageEvent and future modifiers must use two different field names for "who dealt this" and "who granted this" rather than overloading `source`.
 
-**Deliberately not built for MVP.** Spreadsheet or JSON import pipelines, an autoload database, hot reload, schema versioning, inheritance between records, remote config, custom editor tools. Prototype constants are starter fixtures only: they were fitted to a bot and are not balance values (CD-PLAYTEST).
+**Deliberately not built for MVP.** Spreadsheet import or any conversion step before the JSON files, an autoload database, hot reload, schema versioning, inheritance between records, remote config, custom editor tools. Prototype constants are starter fixtures only: they were fitted to a bot and are not balance values (CD-PLAYTEST).
 
 No Formulas section: this system stores values and defines no tunable numeric rule; the validation bounds above are invariants, and owning GDDs define the rules.
 

@@ -127,3 +127,6 @@ Cross-GDD review blocker (design/gdd/gdd-cross-review-2026-11-03.md, scenario 4)
 
 ## Approval — 2026-11-04
 The `/review-all-gdds consistency` re-check (design/gdd/gdd-cross-review-2026-11-03.md, section "Consistency Re-check: 2026-11-03") found the `wave_index()` change clean: scenario 4 closed, no new blocker. N4 (tables do not list the HUD and Flow as readers of `wave_index()`) is a warning, not a blocker. The user approved the GDD. Status: Approved.
+
+## Revision — 2026-11-04 — ADR sync
+Wording and tables only, no balance value or status change. Interactions and Dependencies rows for the HUD and Flow now name the `wave_index()` and `got_through_by_type()` reads (cross-GDD re-check N4). The Open Questions row on where Reduce Motion lives is answered: a field on the Input record (ADR-0002), passed to views through `PresentationSettings` (ADR-0001).

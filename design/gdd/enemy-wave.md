@@ -160,7 +160,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 | Combat & Damage | calls | Creates Health and Status; reads `speed_factor` and `is_dead`. Counts down Status through `tick_status`, from the roster passed by the battle's tick | Combat (state); this system (roster, reap) |
 | Tower System | emits, serves | `enemy_killed(bounty: int)` to gold; `targets()`; `slot_positions` | This system (signals, list); Tower (gold, targeting) |
 | Hero System | serves | `targets()` for attack and burst | This system (list); Hero (targeting) |
-| Battle HUD and views | serves | Views read `roster()` and the path each frame; the HUD may read Wave records directly | This system (data); views (drawing) |
+| Battle HUD and views | serves | Views read `roster()` and the path each frame; the HUD reads `wave_index()` for the pips in every phase and for the result, `got_through_by_type()` for the result, and may read Wave records directly | This system (data); views (drawing) |
 | Bots and tests | call | Reach it through the builder and commands | Harness |
 
 ## Formulas
@@ -323,7 +323,7 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Data & Config Pipeline | Enemy through the accessor; Wave and Stage directly; `path_points`, `slot_positions` and `path_width` added to Stage |
 | Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
-| Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
+| Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4, `wave_index()` read for the result |
 
 **Downstream (hard, with their own GDDs):**
 
@@ -331,7 +331,7 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Tower System | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Hero System | `targets()`; `time_to_exit` and intermission rules against burst cooldown |
-| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records for any next-wave line |
+| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records for any next-wave line; `wave_index()` and `got_through_by_type()` for the pips and the result |
 
 **Downstream (soft; no GDD yet, so each interface is provisional until that GDD confirms it):**
 
@@ -512,7 +512,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
 | Stretch mode and the minimum supported width in dp: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. L6's zero margin at the largest inset is unverified on devices | technical-director | Input ADR |
-| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check; and where the Reduce Motion setting lives | technical-director | App Lifecycle ADR |
+| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check; and where the Reduce Motion setting lives (answered: `reduce_motion` is a field on the Input record, Data GDD and ADR-0002, passed to views through `PresentationSettings`, ADR-0001) | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
 | Wave 6 pays 174 of 510 bounty gold. At most 496 is held at its start, 54 short of the cheapest full board and 254 of the dearest, so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |

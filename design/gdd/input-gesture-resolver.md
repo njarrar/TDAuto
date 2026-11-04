@@ -241,7 +241,7 @@ The table below assumes a width-limited phone (height at least 960/540 of the wi
 - **If `radius` is 0, negative or non-finite, or `centre` is non-finite, at `register`**: returns `NONE` with `push_error` and registers nothing. No MVP radius is below 36, so this guards fixtures only.
 - **If `set_centre` gets a non-finite position**: `push_error`, and the old centre stays.
 - **If a move arrives at exactly `press_pos`**: distance 0 is below any legal slop; stays Pressed.
-- **If a press lands outside the field (mouse off-window, or a disc straddling an edge)**: the hit test runs unmodified; a disc is hit from its off-screen half, and a press hitting nothing emits `ground_tap` with an off-screen position the HUD may ignore. Whether off-window mouse presses reach the resolver at all is the adapter's (ADR).
+- **If a press lands outside the field (mouse off-window, or a disc straddling an edge)**: the adapter drops every press outside the 540 × 960 field before the resolver sees it (ADR-0003), so a disc straddling an edge is hit only from its on-field half. The resolver's hit test itself is unmodified, so a fixture that calls `press` off-field still gets the plain rules: a disc hit, or `ground_tap` with that position.
 - **If a drag ends outside the field**: `drag_ended` carries the unclamped position; the owner clamps the pin or aim into the field. Touch hardware usually reports this as an OS cancel instead.
 - **If two targets of one class share priority and centre**: the earlier id wins. A double-registered target is an owner bug the resolver does not deduplicate.
 - **If a TAP and a DRAG target share a priority number**: no interaction; priorities compare only within a class.
