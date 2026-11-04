@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 3
+version: 4
 last_updated: "2026-11-04"
 
 requirements:
@@ -72,9 +72,9 @@ requirements:
 - id: TR-data-005
   system: data
   gdd: design/gdd/data-config-pipeline.md
-  requirement: "The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references)"
+  requirement: "The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references), and checks the Input record's cross-field tap_slop > drag_slop at load"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-data-006
   system: data
@@ -219,16 +219,16 @@ requirements:
 - id: TR-input-011
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Slops come by injection through static validate() and a create() factory returning null on bad input; non-finite positions are dropped with push_error"
+  requirement: "Slops come by injection through static validate() and a create() factory returning null on bad input, and a null create() in the wrapper calls the failure handler; non-finite positions are dropped with push_error"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-input-012
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Game State builds the resolver and adapter per battle from the Input record and injects the one resolver into Hero, Tower and HUD wrappers"
+  requirement: "The battle wrapper builds the resolver and adapter per battle from the Input record and injects the one resolver into the Hero, Tower and HUD input objects; hit radii (36 to 56) are constants on those objects, not catalogue fields"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-input-013
   system: input
@@ -247,7 +247,7 @@ requirements:
 - id: TR-input-015
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, and listening to tower_upgraded and chip_state() at tower prompts, for the Pillar 4 phone test"
+  requirement: "Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, listening to tower_upgraded, chip_state() at tower prompts and burst_started (only it counts as a burst), for the Pillar 4 phone test"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
@@ -268,9 +268,9 @@ requirements:
 - id: TR-state-002
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "A scene-free builder build(catalogue, stage_id, seed, fatal_handler) wires every battle system by explicit signal connections and runs headless; a thin wrapper adds tick loop, adapter and views"
+  requirement: "A scene-free builder build(catalogue, stage_id, seed, fatal_handler) wires every battle system by explicit signal connections and runs headless, calling the handler and returning null when the stage cannot be built; a thin wrapper adds tick loop, resolver, adapter and views"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-003
   system: state
@@ -296,16 +296,16 @@ requirements:
 - id: TR-state-006
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost) with a result readable after the outcome; last wave started is Enemy & Wave's wave_index()"
+  requirement: "Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost, and Fatal as an absorbing state) with a result readable after the outcome; in_build() is true in Build and in Paused from Build; last wave started is Enemy & Wave's wave_index()"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
 - id: TR-state-007
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Committing an outcome sets state, stops the clock, calls input.cancel(), then emits phase; remaining systems skip the rest of that tick"
+  requirement: "Every transition commits state, then acts, then emits in a fixed order, and stops emitting if Fatal latched during an emit; phase fires on every state change; Won, Lost, Paused and Fatal stop the clock and cancel input before they emit; remaining systems skip the rest of that tick"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-008
   system: state
@@ -331,9 +331,9 @@ requirements:
 - id: TR-state-011
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "One idempotent fatal handler keeps the first cause, latches, halts the tick and discards a partial build; the fatal screen is guaranteed to load"
+  requirement: "One idempotent fatal handler keeps the first cause, overrides Won, Lost and Paused, latches, halts the tick and discards a partial build; the wrapper checks the latch after each assembly step; load failure, bad accessor call, a stage scene that fails to load and a null resolver create all reach it; the fatal screen is guaranteed to load"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-state-012
   system: state
@@ -354,6 +354,20 @@ requirements:
   gdd: design/gdd/game-state-stage-flow.md
   requirement: "Wrapper-side presentation timers (Lost delay, Won beat, button arming) run on the frame clock outside the simulation"
   created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-015
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "The battle holds a strong typed field for every helper build creates (each system, the FatalLatch, one StatAccessor per battle) and the builder holds nothing, because a method Callable or signal connection does not keep a RefCounted target alive and .call() on a dead one aborts the caller (observed on the 4.7.2 editor; export and phone unverified)"
+  created: 2026-11-04
+  revised: ""
+  status: active
+- id: TR-state-016
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "cancel_input() is a public Battle method guarded with is_valid(), set by the wrapper through set_input_cancel; Flow calls it on Won, Lost, Paused and Fatal and the app root before removing a battle on retry; it does nothing headless, and a second call finds the resolver Idle"
+  created: 2026-11-04
   revised: ""
   status: active
 - id: TR-combat-001
@@ -566,6 +580,13 @@ requirements:
   created: 2026-11-04
   revised: ""
   status: active
+- id: TR-enemy-017
+  system: enemy
+  gdd: design/gdd/enemy-wave.md
+  requirement: "got_through_by_type() counts a leak before enemy_leaked fires, so a fatal leak is in the result"
+  created: 2026-11-04
+  revised: ""
+  status: active
 - id: TR-tower-001
   system: tower
   gdd: design/gdd/tower-system.md
@@ -625,9 +646,9 @@ requirements:
 - id: TR-tower-009
   system: tower
   gdd: design/gdd/tower-system.md
-  requirement: "The early-call bonus is pure integer tick math, to_ticks(seconds_left) div to_ticks(rate)"
+  requirement: "The early-call bonus is one pure integer function early_call_bonus(seconds_left), to_ticks(seconds_left) div to_ticks(rate), shared by the payout and the HUD's Call +N; seconds_left includes the tick the next wave starts on"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-tower-010
   system: tower
@@ -758,9 +779,9 @@ requirements:
 - id: TR-hero-013
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "Pause stops the sim clock so walk and telegraph resume exactly; aims get drag_cancelled; Build runs no ticks, Intermission does"
+  requirement: "Pause stops the sim clock so walk and telegraph resume exactly; aims get drag_cancelled; Build runs no ticks, so a pin in Build places the hero at once through in_build(); Intermission ticks"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hero-014
   system: hero
@@ -779,23 +800,23 @@ requirements:
 - id: TR-hud-001
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD is HudLogic (plain), HudTopBand (display-only Controls) and HudField (one _draw, targets as resolver discs), absent headless and rebuilt on retry"
+  requirement: "The HUD is HudLogic (plain, the only part that decides, registers every HUD disc and issues every command), HudTopBand (display-only Controls), HudField (one _draw, no targets) and HudModals (result and Paused Controls), built before HeroInput, absent headless and rebuilt on retry"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-002
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Result and Paused screens are full-screen modal Controls that consume every event before the Input adapter sees it"
+  requirement: "Result and Paused screens are full-screen modal Controls, built once and toggled visible, that consume every event before the Input adapter sees it; a modal is only hidden inside its own handler, never freed"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-003
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "A Control fires only on a release whose press it saw while Armed, and clears that press on lifecycle or focus-loss signals"
+  requirement: "HudLogic's modal press model repeats the adapter's rules: a press inside edge_reject_margin or an inset does not count, a tap counts only on the same pointer's release within tap_slop while Armed, a later press replaces an unmoved one, and lifecycle or focus-loss signals clear it"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-004
   system: hud
@@ -842,23 +863,23 @@ requirements:
 - id: TR-hud-010
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), tower_inspected); the burst wedge is cooldown_left() / to_ticks(Burst cooldown) read through the accessor with the Burst ID the builder injects; phase and lives_changed join the view allowlist"
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase and lives_changed join the view allowlist"
   created: 2026-11-03
   revised: "2026-11-04"
   status: active
 - id: TR-hud-011
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Costs are read through the accessor on arc open and gold_changed; a read that finds halted() is abandoned for the Fatal screen"
+  requirement: "Costs are read through the accessor on arc open and gold_changed; a read or snapshot that finds phase() Fatal is abandoned for the Fatal screen (halted() is not the test, since it is also true on Won and Lost)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-012
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The result screen and log come from one snapshot built the frame after the outcome"
+  requirement: "The result screen and log come from one snapshot built on the first advance(ms) after the outcome, never inside the tick's signal stack; no snapshot is built if phase() is Fatal"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-013
   system: hud
@@ -884,7 +905,14 @@ requirements:
 - id: TR-hud-016
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Content tests enforce HUD layout rules (slot bounds, clearances, at most 3 next-wave types, 6 waves, 10 lives)"
+  requirement: "Content tests enforce HUD layout rules (slot bounds, clearances including the burst line at least edge_reject_margin + 48 from a side edge, at most 3 next-wave types, a next-try line per enemy type, an early-call bonus of at most 2 digits, 6 waves, 10 lives)"
   created: 2026-11-03
+  revised: "2026-11-04"
+  status: active
+- id: TR-hud-017
+  system: hud
+  gdd: design/gdd/battle-hud.md
+  requirement: "HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set), not every frame"
+  created: 2026-11-04
   revised: ""
   status: active

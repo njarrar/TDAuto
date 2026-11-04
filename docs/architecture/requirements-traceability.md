@@ -3,21 +3,25 @@ Last Updated: 2026-11-04
 Engine: Godot 4.7.2 (GDScript, Mobile renderer)
 
 ## Coverage Summary
-- Total requirements: 121
+- Total requirements: 125
 - Covered: 0 (0%)
 - Partial: 0
-- Gaps: 121
+- Gaps: 125
 
 No ADR exists yet (`docs/architecture/adr-*.md` matches nothing), so every
 requirement is a gap. "Planned" names the proposed ADR in
-`docs/architecture/architecture.md` (v2, ADR-0001 to ADR-0011) that will cover
+`docs/architecture/architecture.md` (v3, ADR-0001 to ADR-0011) that will cover
 it; the numbers are provisional until `/architecture-decision` assigns them.
 The 2026-11-03 version of this index used review labels P01 to P15; the
 architecture document maps them.
 
-Changes since 2026-11-03: TR-enemy-016 added (`wave_index()` definition);
-TR-hud-010, TR-input-015, TR-hero-004 and TR-state-006 reworded after the
-cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
+Changes in this run (2026-11-04, second review): TR-state-015, TR-state-016,
+TR-enemy-017 and TR-hud-017 added; TR-data-005, TR-input-011, TR-input-012,
+TR-input-015, TR-state-002, TR-state-006, TR-state-007, TR-state-011,
+TR-tower-009, TR-hero-013, TR-hud-001, TR-hud-002, TR-hud-003, TR-hud-010,
+TR-hud-011, TR-hud-012 and TR-hud-016 reworded after the Flow and Battle HUD
+revisions (commit 9c81113) and Hero's Rule 2 amendment. No requirement was
+deprecated. Earlier the same day: TR-enemy-016 added.
 
 ## Full Matrix
 | Requirement ID | GDD | System | Layer | Requirement | ADR Coverage | Status |
@@ -26,7 +30,7 @@ cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
 | TR-data-002 | data-config-pipeline.md | Data & Config | Foundation | The storage format, or a check on top of it, detects a missing field, a fractional integer and an unknown property | — (planned: ADR-0002) | ❌ GAP |
 | TR-data-003 | data-config-pipeline.md | Data & Config | Foundation | The catalogue loads from an explicit manifest of data files, never a directory scan, and loads correctly from an Android export | — (planned: ADR-0002) | ❌ GAP |
 | TR-data-004 | data-config-pipeline.md | Data & Config | Foundation | Loading is once and all-or-nothing (Unloaded, Loading, Ready/Failed), started by the app root before the first gameplay scene, with no reload | — (planned: ADR-0001) | ❌ GAP |
-| TR-data-005 | data-config-pipeline.md | Data & Config | Foundation | The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references) | — (planned: ADR-0002) | ❌ GAP |
+| TR-data-005 (revised 2026-11-04) | data-config-pipeline.md | Data & Config | Foundation | The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references), and checks the Input record's cross-field tap_slop > drag_slop at load | — (planned: ADR-0002) | ❌ GAP |
 | TR-data-006 | data-config-pipeline.md | Data & Config | Foundation | No fallbacks in any build; a load failure shows a catalogue-free fatal screen that never opens saves, and dev runs name each error | — (planned: ADR-0001) | ❌ GAP |
 | TR-data-007 | data-config-pipeline.md | Data & Config | Foundation | Definitions are read-only after load and mutable state lives on runtime instances holding def_id; a deep-snapshot test proves the catalogue is unchanged after a battle | — (planned: ADR-0002) | ❌ GAP |
 | TR-data-008 | data-config-pipeline.md | Data & Config | Foundation | Every modifiable value is read through one stat accessor (read_context, stat_key) at use time, never cached, so Stat & Modifier Resolution can replace its internals with no call-site change | — (planned: ADR-0005) | ❌ GAP |
@@ -47,26 +51,28 @@ cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
 | TR-input-008 | input-gesture-resolver.md | Input & Gesture | Foundation | A four-state machine (Idle, Pressed, Dragging, Dead) with one active pointer freezes TAP and DRAG winners at press and classifies by per-press slop | — (planned: ADR-0008) | ❌ GAP |
 | TR-input-009 | input-gesture-resolver.md | Input & Gesture | Foundation | Signal API pressed, tap, ground_tap, drag_started, drag_moved, drag_ended, drag_cancelled, idle; every exit to Idle emits idle() last | — (planned: ADR-0008) | ❌ GAP |
 | TR-input-010 | input-gesture-resolver.md | Input & Gesture | Foundation | State commits before emit; gesture calls made inside a handler queue FIFO and drain synchronously in the outermost call | — (planned: ADR-0008) | ❌ GAP |
-| TR-input-011 | input-gesture-resolver.md | Input & Gesture | Foundation | Slops come by injection through static validate() and a create() factory returning null on bad input; non-finite positions are dropped with push_error | — (planned: ADR-0008) | ❌ GAP |
-| TR-input-012 | input-gesture-resolver.md | Input & Gesture | Foundation | Game State builds the resolver and adapter per battle from the Input record and injects the one resolver into Hero, Tower and HUD wrappers | — (planned: ADR-0001) | ❌ GAP |
+| TR-input-011 (revised 2026-11-04) | input-gesture-resolver.md | Input & Gesture | Foundation | Slops come by injection through static validate() and a create() factory returning null on bad input, and a null create() in the wrapper calls the failure handler; non-finite positions are dropped with push_error | — (planned: ADR-0008) | ❌ GAP |
+| TR-input-012 (revised 2026-11-04) | input-gesture-resolver.md | Input & Gesture | Foundation | The battle wrapper builds the resolver and adapter per battle from the Input record and injects the one resolver into the Hero, Tower and HUD input objects; hit radii (36 to 56) are constants on those objects, not catalogue fields | — (planned: ADR-0001) | ❌ GAP |
 | TR-input-013 | input-gesture-resolver.md | Input & Gesture | Presentation | Burst button, build arc and world targets are resolver discs, not Controls; HUD Controls consume their events before the adapter, so routing order is fixed | — (planned: ADR-0003) | ❌ GAP |
 | TR-input-014 | input-gesture-resolver.md | Input & Gesture | Foundation | Identical call lists give identical signal logs; tests use a recording fake, not assert_signal; bots call commands directly plus one resolver equivalence test | — (planned: ADR-0007) | ❌ GAP |
-| TR-input-015 (revised 2026-11-04) | input-gesture-resolver.md | Input & Gesture | Feature | Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, and listening to tower_upgraded and chip_state() at tower prompts, for the Pillar 4 phone test | — (planned: ADR-0008) | ❌ GAP |
+| TR-input-015 (revised 2026-11-04) | input-gesture-resolver.md | Input & Gesture | Feature | Dev builds carry a gesture-log harness recording device, insets, timing, travel, winners and classification, listening to tower_upgraded, chip_state() at tower prompts and burst_started (only it counts as a burst), for the Pillar 4 phone test | — (planned: ADR-0008) | ❌ GAP |
 | TR-input-016 | input-gesture-resolver.md | Input & Gesture | Foundation | Minimum width 360 dp by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize | — (planned: ADR-0003) | ❌ GAP |
 | TR-state-001 | game-state-stage-flow.md | Game State & Flow | Foundation | A minimal main-scene app root with no autoload triggers the catalogue load, holds the Ready catalogue, owns the fatal screen, and alone survives a retry | — (planned: ADR-0001) | ❌ GAP |
-| TR-state-002 | game-state-stage-flow.md | Game State & Flow | Foundation | A scene-free builder build(catalogue, stage_id, seed, fatal_handler) wires every battle system by explicit signal connections and runs headless; a thin wrapper adds tick loop, adapter and views | — (planned: ADR-0001) | ❌ GAP |
+| TR-state-002 (revised 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Foundation | A scene-free builder build(catalogue, stage_id, seed, fatal_handler) wires every battle system by explicit signal connections and runs headless, calling the handler and returning null when the stage cannot be built; a thin wrapper adds tick loop, resolver, adapter and views | — (planned: ADR-0001) | ❌ GAP |
 | TR-state-003 | game-state-stage-flow.md | Game State & Flow | Foundation | Simulation time enters only through battle.tick(dt) at a fixed rate; no _process, Timers, await, wall clock or physics areas in gameplay; the wrapper clamps owed ticks | — (planned: ADR-0004) | ❌ GAP |
 | TR-state-004 | game-state-stage-flow.md | Game State & Flow | Foundation | Systems tick in one fixed documented order and player and bot commands apply only between ticks | — (planned: ADR-0004) | ❌ GAP |
 | TR-state-005 | game-state-stage-flow.md | Game State & Flow | Foundation | All randomness comes from an injected seed so stage, seed and command script give an identical result | — (planned: ADR-0004) | ❌ GAP |
-| TR-state-006 (revised 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Core | Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost) with a result readable after the outcome; last wave started is Enemy & Wave's wave_index() | — (planned: ADR-0004) | ❌ GAP |
-| TR-state-007 | game-state-stage-flow.md | Game State & Flow | Core | Committing an outcome sets state, stops the clock, calls input.cancel(), then emits phase; remaining systems skip the rest of that tick | — (planned: ADR-0004) | ❌ GAP |
+| TR-state-006 (revised 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Core | Flow and lives are a pure stage state machine (Build, Wave, Intermission, Paused, Won, Lost, and Fatal as an absorbing state) with a result readable after the outcome; in_build() is true in Build and in Paused from Build; last wave started is Enemy & Wave's wave_index() | — (planned: ADR-0004) | ❌ GAP |
+| TR-state-007 (revised 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Core | Every transition commits state, then acts, then emits in a fixed order, and stops emitting if Fatal latched during an emit; phase fires on every state change; Won, Lost, Paused and Fatal stop the clock and cancel input before they emit; remaining systems skip the rest of that tick | — (planned: ADR-0004) | ❌ GAP |
 | TR-state-008 | game-state-stage-flow.md | Game State & Flow | Core | Flow listens to synchronous wave_cleared, waves_complete and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early | — (planned: ADR-0006) | ❌ GAP |
 | TR-state-009 | game-state-stage-flow.md | Game State & Flow | Foundation | Retry destroys the whole battle and builds a new one between ticks, driven by a latch on the app root; a weakref to the old battle must be null | — (planned: ADR-0001) | ❌ GAP |
 | TR-state-010 | game-state-stage-flow.md | Game State & Flow | Foundation | Focus loss or backgrounding enters Paused: ticks stop, input cancels, the accumulator is zeroed, and a resume tap reaches nothing beneath | — (planned: ADR-0003) | ❌ GAP |
-| TR-state-011 | game-state-stage-flow.md | Game State & Flow | Foundation | One idempotent fatal handler keeps the first cause, latches, halts the tick and discards a partial build; the fatal screen is guaranteed to load | — (planned: ADR-0001) | ❌ GAP |
+| TR-state-011 (revised 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Foundation | One idempotent fatal handler keeps the first cause, overrides Won, Lost and Paused, latches, halts the tick and discards a partial build; the wrapper checks the latch after each assembly step; load failure, bad accessor call, a stage scene that fails to load and a null resolver create all reach it; the fatal screen is guaranteed to load | — (planned: ADR-0001) | ❌ GAP |
 | TR-state-012 | game-state-stage-flow.md | Game State & Flow | Core | Authored durations become whole ticks through one to_ticks conversion; countdowns are integer tick counters | — (planned: ADR-0004) | ❌ GAP |
 | TR-state-013 | game-state-stage-flow.md | Game State & Flow | Foundation | Tests can enumerate a battle's systems, inject recording fakes, snapshot a battle, and fail when any battle signal has no listener (views on an allowlist) | — (planned: ADR-0007) | ❌ GAP |
 | TR-state-014 | game-state-stage-flow.md | Game State & Flow | Presentation | Wrapper-side presentation timers (Lost delay, Won beat, button arming) run on the frame clock outside the simulation | — (planned: ADR-0004) | ❌ GAP |
+| TR-state-015 (new 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Foundation | The battle holds a strong typed field for every helper build creates (each system, the FatalLatch, one StatAccessor per battle) and the builder holds nothing, because a method Callable or signal connection does not keep a RefCounted target alive and .call() on a dead one aborts the caller (observed on the 4.7.2 editor; export and phone unverified) | — (planned: ADR-0001) | ❌ GAP |
+| TR-state-016 (new 2026-11-04) | game-state-stage-flow.md | Game State & Flow | Foundation | cancel_input() is a public Battle method guarded with is_valid(), set by the wrapper through set_input_cancel; Flow calls it on Won, Lost, Paused and Fatal and the app root before removing a battle on retry; it does nothing headless, and a second call finds the resolver Idle | — (planned: ADR-0001) | ❌ GAP |
 | TR-combat-001 | combat-damage.md | Combat & Damage | Core | Combat is three pieces: a DamageEvent value (target, amount, source_kind, source_id), one Health and one Status per enemy; no ProjectileSpawner | — (planned: ADR-0009) | ❌ GAP |
 | TR-combat-002 | combat-damage.md | Combat & Damage | Core | The enemy object exposes spawn_id, cached distance and position, and removed, and stays a valid reference after removal, so it cannot be a freed Node | — (planned: ADR-0009) | ❌ GAP |
 | TR-combat-003 | combat-damage.md | Combat & Damage | Core | Every HP change goes through deliver(event) inside a tick, applying min(amount, hp) after guards in fixed order with named push_error codes | — (planned: ADR-0009) | ❌ GAP |
@@ -96,7 +102,8 @@ cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
 | TR-enemy-013 | enemy-wave.md | Enemy & Wave | Core | One add-enemy step handles schedule spawns and future splitter children, joining atomically before the clear check | — (planned: ADR-0009) | ❌ GAP |
 | TR-enemy-014 | enemy-wave.md | Enemy & Wave | Foundation | A headless content test checks layout rules L1-L14 and wave rules on in-memory records; unit tests use fakes and no scene or files | — (planned: ADR-0007) | ❌ GAP |
 | TR-enemy-015 | enemy-wave.md | Enemy & Wave | Presentation | Views read roster() and the path each frame; fixed three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured | — (planned: ADR-0011) | ❌ GAP |
-| TR-enemy-016 (new 2026-11-04) | enemy-wave.md | Enemy & Wave | Core | wave_index() is the 1-based position in wave_ids of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text | — (planned: ADR-0009) | ❌ GAP |
+| TR-enemy-016 | enemy-wave.md | Enemy & Wave | Core | wave_index() is the 1-based position in wave_ids of the last wave started, 0 before any start and never reset per wave; Flow reads it for the result and the HUD for pips and result text | — (planned: ADR-0009) | ❌ GAP |
+| TR-enemy-017 (new 2026-11-04) | enemy-wave.md | Enemy & Wave | Core | got_through_by_type() counts a leak before enemy_leaked fires, so a fatal leak is in the result | — (planned: ADR-0009) | ❌ GAP |
 | TR-tower-001 | tower-system.md | Tower | Core | TowerSim (builder-made, headless) holds gold, slots, towers and the tick; TowerInput (wrapper-made, absent headless) changes state only through upgrade | — (planned: ADR-0010) | ❌ GAP |
 | TR-tower-002 | tower-system.md | Tower | Core | build(slot_index, tower_id) and upgrade(slot_index) are the only mutation API, run between ticks and return a typed result enum in fixed check order | — (planned: ADR-0010) | ❌ GAP |
 | TR-tower-003 | tower-system.md | Tower | Foundation | Tower IDs and levels are validated with is_tower and level_count before any accessor read; cost and stats are read at use time | — (planned: ADR-0005) | ❌ GAP |
@@ -105,7 +112,7 @@ cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
 | TR-tower-006 | tower-system.md | Tower | Core | The injected halted() is checked after every read and signal; all stats are read before any mutation so a bad read halts with nothing half done | — (planned: ADR-0001) | ❌ GAP |
 | TR-tower-007 | tower-system.md | Tower | Core | Targeting and damage go only through Combat's API; splash victims come only from targets() | — (planned: ADR-0009) | ❌ GAP |
 | TR-tower-008 | tower-system.md | Tower | Core | Gold is one non-negative integer owned by TowerSim, fed by starting_gold, enemy_killed(bounty) and wave_called_early; gold freezes once halted | — (planned: ADR-0010) | ❌ GAP |
-| TR-tower-009 | tower-system.md | Tower | Core | The early-call bonus is pure integer tick math, to_ticks(seconds_left) div to_ticks(rate) | — (planned: ADR-0010) | ❌ GAP |
+| TR-tower-009 (revised 2026-11-04) | tower-system.md | Tower | Core | The early-call bonus is one pure integer function early_call_bonus(seconds_left), to_ticks(seconds_left) div to_ticks(rate), shared by the payout and the HUD's Call +N; seconds_left includes the tick the next wave starts on | — (planned: ADR-0010) | ❌ GAP |
 | TR-tower-010 | tower-system.md | Tower | Feature | The upgrade chip window runs on real time while the sim clock is stopped, via a pure ChipWindow.advance(ms) fed by the wrapper | — (planned: ADR-0004) | ❌ GAP |
 | TR-tower-011 | tower-system.md | Tower | Feature | TowerInput registers slots and the chip disc with the resolver, disables built slots, closes the chip on phase, and ignores taps while halted | — (planned: ADR-0008) | ❌ GAP |
 | TR-tower-012 | tower-system.md | Tower | Core | Signals have typed signatures (tower_id type undecided); gameplay may not depend on them and results match with or without listeners | — (planned: ADR-0006) | ❌ GAP |
@@ -124,32 +131,33 @@ cross-GDD blocker fixes (commit 1687498). No requirement was deprecated.
 | TR-hero-010 | hero-system.md | Hero | Presentation | HeroInput registers hero DRAG, button DRAG and sink TAP discs, updates the walking hero's hit centre each frame, and hit-tests cancel hysteresis | — (planned: ADR-0008) | ❌ GAP |
 | TR-hero-011 | hero-system.md | Hero | Presentation | HeroInput's aim state machine and cooldown_digit() advance through an explicit update(), not engine frames | — (planned: ADR-0004) | ❌ GAP |
 | TR-hero-012 | hero-system.md | Hero | Core | A resolver-driven script and a direct-command script give tick-identical HeroSim state; a never-pinned run equals a HeroSim-absent run | — (planned: ADR-0010) | ❌ GAP |
-| TR-hero-013 | hero-system.md | Hero | Core | Pause stops the sim clock so walk and telegraph resume exactly; aims get drag_cancelled; Build runs no ticks, Intermission does | — (planned: ADR-0004) | ❌ GAP |
+| TR-hero-013 (revised 2026-11-04) | hero-system.md | Hero | Core | Pause stops the sim clock so walk and telegraph resume exactly; aims get drag_cancelled; Build runs no ticks, so a pin in Build places the hero at once through in_build(); Intermission ticks | — (planned: ADR-0004) | ❌ GAP |
 | TR-hero-014 | hero-system.md | Hero | Foundation | Content tests enforce hero and burst rules (leash, telegraph, intermission, reach, hero_start, pin_exclusion, one Hero record), each proven on a broken fixture | — (planned: ADR-0002) | ❌ GAP |
 | TR-hero-015 | hero-system.md | Hero | Presentation | burst_button_centre() is owned by the HUD, read once by HeroInput at registration, and injectable by tests | — (planned: ADR-0010) | ❌ GAP |
-| TR-hud-001 | battle-hud.md | Battle HUD | Presentation | The HUD is HudLogic (plain), HudTopBand (display-only Controls) and HudField (one _draw, targets as resolver discs), absent headless and rebuilt on retry | — (planned: ADR-0011) | ❌ GAP |
-| TR-hud-002 | battle-hud.md | Battle HUD | Presentation | Result and Paused screens are full-screen modal Controls that consume every event before the Input adapter sees it | — (planned: ADR-0003) | ❌ GAP |
-| TR-hud-003 | battle-hud.md | Battle HUD | Presentation | A Control fires only on a release whose press it saw while Armed, and clears that press on lifecycle or focus-loss signals | — (planned: ADR-0003) | ❌ GAP |
+| TR-hud-001 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | The HUD is HudLogic (plain, the only part that decides, registers every HUD disc and issues every command), HudTopBand (display-only Controls), HudField (one _draw, no targets) and HudModals (result and Paused Controls), built before HeroInput, absent headless and rebuilt on retry | — (planned: ADR-0011) | ❌ GAP |
+| TR-hud-002 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | Result and Paused screens are full-screen modal Controls, built once and toggled visible, that consume every event before the Input adapter sees it; a modal is only hidden inside its own handler, never freed | — (planned: ADR-0003) | ❌ GAP |
+| TR-hud-003 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | HudLogic's modal press model repeats the adapter's rules: a press inside edge_reject_margin or an inset does not count, a tap counts only on the same pointer's release within tap_slop while Armed, a later press replaces an unmoved one, and lifecycle or focus-loss signals clear it | — (planned: ADR-0003) | ❌ GAP |
 | TR-hud-004 | battle-hud.md | Battle HUD | Presentation | The HUD holds presentation state only and no reset path; full sim state is identical with or without the HUD | — (planned: ADR-0006) | ❌ GAP |
 | TR-hud-005 | battle-hud.md | Battle HUD | Core | Each frame runs input commands, then real-time models, then ticks, then views, so the displayed bonus equals the paid bonus | — (planned: ADR-0004) | ❌ GAP |
 | TR-hud-006 | battle-hud.md | Battle HUD | Foundation | Retry sets an idempotent latch on the app root and never frees its caller; the root's next frame checks Fatal, stops, cancels, frees and rebuilds | — (planned: ADR-0001) | ❌ GAP |
 | TR-hud-007 | battle-hud.md | Battle HUD | Presentation | Armed buttons go Hidden, Arming, Armed on a real-time advance(ms) clock clamped to 100 ms and frozen while Paused | — (planned: ADR-0004) | ❌ GAP |
 | TR-hud-008 | battle-hud.md | Battle HUD | Presentation | The build arc registers and unregisters resolver targets on open and close, disables Start/Call while open, and closes on outcome, Paused or Fatal | — (planned: ADR-0008) | ❌ GAP |
 | TR-hud-009 | battle-hud.md | Battle HUD | Presentation | The resolver's pressed payload exposes both best_tap and best_drag so the HUD can ignore a Start/Call tap that also hits the hero | — (planned: ADR-0008) | ❌ GAP |
-| TR-hud-010 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), tower_inspected); the burst wedge is cooldown_left() / to_ticks(Burst cooldown) read through the accessor with the Burst ID the builder injects; phase and lives_changed join the view allowlist | — (planned: ADR-0006) | ❌ GAP |
-| TR-hud-011 | battle-hud.md | Battle HUD | Presentation | Costs are read through the accessor on arc open and gold_changed; a read that finds halted() is abandoned for the Fatal screen | — (planned: ADR-0005) | ❌ GAP |
-| TR-hud-012 | battle-hud.md | Battle HUD | Presentation | The result screen and log come from one snapshot built the frame after the outcome | — (planned: ADR-0006) | ❌ GAP |
+| TR-hud-010 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase and lives_changed join the view allowlist | — (planned: ADR-0006) | ❌ GAP |
+| TR-hud-011 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | Costs are read through the accessor on arc open and gold_changed; a read or snapshot that finds phase() Fatal is abandoned for the Fatal screen (halted() is not the test, since it is also true on Won and Lost) | — (planned: ADR-0005) | ❌ GAP |
+| TR-hud-012 (revised 2026-11-04) | battle-hud.md | Battle HUD | Presentation | The result screen and log come from one snapshot built on the first advance(ms) after the outcome, never inside the tick's signal stack; no snapshot is built if phase() is Fatal | — (planned: ADR-0006) | ❌ GAP |
 | TR-hud-013 | battle-hud.md | Battle HUD | Foundation | Debug builds append JSON lines to user://run_log.jsonl through an injectable sink; a write failure is non-fatal and release builds never write | — (planned: ADR-0010) | ❌ GAP |
 | TR-hud-014 | battle-hud.md | Battle HUD | Presentation | Layout is in 540x960 field units with safe-area insets converted to field units; burst_y = clamp(888 - I_bottom, 816, 888) | — (planned: ADR-0003) | ❌ GAP |
 | TR-hud-015 | battle-hud.md | Battle HUD | Presentation | HUD budget about 8 (max 12) of 60 draw calls and at most 3 text draws; hit targets at least 72 units (48 dp), text at least 21 units | — (planned: ADR-0011) | ❌ GAP |
-| TR-hud-016 | battle-hud.md | Battle HUD | Foundation | Content tests enforce HUD layout rules (slot bounds, clearances, at most 3 next-wave types, 6 waves, 10 lives) | — (planned: ADR-0002) | ❌ GAP |
+| TR-hud-016 (revised 2026-11-04) | battle-hud.md | Battle HUD | Foundation | Content tests enforce HUD layout rules (slot bounds, clearances including the burst line at least edge_reject_margin + 48 from a side edge, at most 3 next-wave types, a next-try line per enemy type, an early-call bonus of at most 2 digits, 6 waves, 10 lives) | — (planned: ADR-0002) | ❌ GAP |
+| TR-hud-017 (new 2026-11-04) | battle-hud.md | Battle HUD | Presentation | HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set), not every frame | — (planned: ADR-0011) | ❌ GAP |
 
 ## Known Gaps
 #### ADR-0001 (proposed). App Lifecycle, Composition Root and Fatal Path (Foundation, engine risk HIGH)
 
 Suggested: `/architecture-decision "App Lifecycle, Composition Root and Fatal Path"`. Decides: no autoloads, AppRoot states (Boot, InStage, Fatal), scene-free builder, injected callables (method Callables only, no capturing lambdas or bind), per-battle FatalLatch, push_error vs assert, dev-error sink, retry by dropping references and the weakref proof, free() vs queue_free() timing, Reduce Motion location.
 
-Requirements (15): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, TR-state-001, TR-state-002, TR-state-009, TR-state-011, TR-enemy-005, TR-enemy-012, TR-tower-006, TR-tower-013, TR-hero-004, TR-hud-006
+Requirements (17): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, TR-state-001, TR-state-002, TR-state-009, TR-state-011, TR-enemy-005, TR-enemy-012, TR-tower-006, TR-tower-013, TR-hero-004, TR-hud-006, TR-state-015, TR-state-016
 
 #### ADR-0002 (proposed). Catalogue Storage Format, Manifest and Validation (Foundation, engine risk HIGH)
 
@@ -197,7 +205,7 @@ Requirements (11): TR-input-001, TR-input-007, TR-input-008, TR-input-009, TR-in
 
 Suggested: `/architecture-decision "Enemy Entity, Roster and Combat API"`. Decides: Targetable base class, Health and Status attachment, roster ownership and typed lists, path lookup, deliver guards, targeting helpers, per-tick budget.
 
-Requirements (17): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-combat-005, TR-combat-006, TR-combat-007, TR-combat-008, TR-combat-013, TR-enemy-008, TR-enemy-009, TR-enemy-010, TR-enemy-011, TR-enemy-013, TR-enemy-016, TR-tower-007, TR-hero-007
+Requirements (18): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-combat-005, TR-combat-006, TR-combat-007, TR-combat-008, TR-combat-013, TR-enemy-008, TR-enemy-009, TR-enemy-010, TR-enemy-011, TR-enemy-013, TR-enemy-016, TR-tower-007, TR-hero-007, TR-enemy-017
 
 #### ADR-0010 (proposed). Sim/Input Split, Command Result Codes and Dev Telemetry (Core, engine risk LOW)
 
@@ -209,7 +217,7 @@ Requirements (10): TR-tower-001, TR-tower-002, TR-tower-008, TR-tower-009, TR-he
 
 Suggested: `/architecture-decision "Battle Field Rendering and Draw-Call Budget"`. Decides: single _draw nodes, pools, draw order, path polygon, HUD draw budget, hit-flash shader question.
 
-Requirements (5): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015
+Requirements (6): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015, TR-hud-017
 
 ## Superseded Requirements
 None. No ADR has been written, so no GDD has changed after an ADR.
