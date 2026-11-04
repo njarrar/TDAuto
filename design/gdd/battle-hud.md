@@ -69,7 +69,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Ground ring.**
 
-14. **Three per battle.** `ground_tap` draws a dim ring for the first three in a battle, and none after. It resets on retry, since nothing else survives one. A dismissal is `tap(backdrop)`, so it draws none.
+14. **Three per battle.** `ground_tap` draws a dim ring for the first three in a battle, and none after. It resets on retry, since no gameplay or per-battle state survives one. A dismissal is `tap(backdrop)`, so it draws none.
 
 **Result.**
 
@@ -146,7 +146,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 **Handed to owning GDDs.**
 - **Enemy & Wave:** exposes `wave_index()` and a view-only `got_through_by_type()`, since `enemy_leaked(lives_cost)` carries no type.
 - **Flow:** exposes reads of lives, phase, `intermission_left` and the result; the root takes the retry latch.
-- **Hero:** exposes the cooldown's total for the wedge; prompt text moves here.
+- **Hero:** prompt text moves here. The wedge's total is the Burst's `cooldown`, read through the accessor, so Hero needs no new read.
 - **Tower:** Rule 8 gains the chip's target, `chip_state()` and `tower_inspected`.
 - **Technical director:** stretch mode. 540 × 960 is 9:16 and a 360 × 800 dp phone is taller, so insets must be converted to field space. MVP is on desktop at 540 × 960, so every inset here is 0 until the Mobile Platform GDD.
 
@@ -352,7 +352,7 @@ This whole document is UI. Tower's and Hero's UI Requirements stand, and are dra
 | Arc, chip, costs, commands | `design/gdd/tower-system.md` | Rules 5 to 8, 17; UI Requirements | Rule dependency; amended |
 | Prompt, button, Locked, ticks | `design/gdd/hero-system.md` | Rules 1, 11 to 16; UI Requirements | Rule dependency; amended |
 | Priorities, registry, ring count, Controls | `design/gdd/input-gesture-resolver.md` | Priority table; Rule 2; UI Requirements | Rule dependency; amended |
-| Slots, L1, L3, L7, wave records, next-wave line, leaks | `design/gdd/enemy-wave.md` | Layout; Open Questions | Value dependency; amended |
+| Slots, L1, L3, L7, wave records, next-wave line, leaks | `design/gdd/enemy-wave.md` | Layout; Rules 5, 14; the first-leak Open Question | Value dependency; amended |
 | Counters shown | `design/gdd/combat-damage.md` | Rule 5; Deferred; UI Requirements | Rule dependency; amended |
 | Costs, accessor, level count, preview context | `design/gdd/data-config-pipeline.md` | Rule 10 | Rule dependency |
 | Band, panels, type, colour, lives, chip | `design/art/art-bible.md` | §2, §3, §4, §7, §8 | Value dependency; amended |

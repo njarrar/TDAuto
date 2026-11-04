@@ -88,7 +88,7 @@ No helper modifies its list or holds a reference past the call.
 | System | Direction | Interface | Owner |
 |---|---|---|---|
 | Tower System | calls | `deliver`, `apply_slow`, `report_attack`, targeting helpers | Combat (API); Tower (when, whom, values) |
-| Hero System | calls | `deliver` for attacks and burst, targeting helper | Combat (API); Hero (when, whom, values) |
+| Hero System | calls | `deliver` for attacks and burst, `report_attack`, targeting helpers, `hp_left` and `speed_factor` for the preview | Combat (API); Hero (when, whom, values) |
 | Enemy & Wave | calls | Creates Health and Status at spawn; reads `speed_factor`, `is_dead` | Combat (state); Enemy & Wave (roster, reap) |
 | Game State & Stage Flow | builds, reads | Builds it, ticks Status in order with Enemy & Wave's roster, reads counters for the result | Flow (order, result) |
 | Combat view, then Visual Feedback & VFX | listens | `attack_fired`, `damage_applied` | Views |
@@ -178,7 +178,7 @@ A slow of duration `d` is stored as `to_ticks(d)` whole ticks (Enemy & Wave Form
 | System | Interface |
 |---|---|
 | Tower System | `deliver`, `apply_slow`, `report_attack`, helpers |
-| Hero System | `deliver`, helpers |
+| Hero System | `deliver`, `report_attack`, helpers, `hp_left`, `speed_factor` |
 | Enemy & Wave | Health, Status, `speed_factor`, reap, `spawn_id` |
 | Game State & Stage Flow | Tick order, counters for the result |
 | Battle HUD | The counters, for the result (Battle HUD Rule 15) |

@@ -33,7 +33,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 | # | Rule | Starter stage |
 |---|---|---|
-| L1 | Slot x within 138 to 402, y at least 304: its hit disc and build arc stay in the field and below the band, with no flip code (Battle HUD) | x margin 32; y 320, margin 16 |
+| L1 | Slot x within 138 to 402, y at least 304: its hit disc and build-arc discs stay in the field and below the band, with no flip code. The arc's cost panels need y at least 318, which Battle HUD's `hud_slot` checks | x margin 32; y 320, margin 16 (2 against `hud_slot`) |
 | L2 | Slot to path centreline at least `path_width / 2 + 40`: a 56 px slot at any tilt stays off the path | 76 needed, 80; so a `path_width` above 80 fails these slots |
 | L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, confirmed by Battle HUD), at least 92: hit discs never touch | 144 |
 | L4 | Slot to slot at least 72 | 160 |
@@ -349,7 +349,7 @@ The **gold_upper_bound** formula is defined as:
 | System | Interface |
 |---|---|
 | Data & Config Pipeline | Enemy through the accessor; Wave and Stage directly; `path_points`, `slot_positions` and `path_width` added to Stage |
-| Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
+| Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order. Combat in turn uses this GDD's `to_ticks` for slow time |
 | Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
 | Input & Gesture Resolver | Slot and burst hit radii (36, 48) behind Rule 3 and L1 to L3; positions outside the field for presses in masked bars |
 
@@ -404,7 +404,7 @@ Pacing should breathe: a string to read, then a packet that makes the player loo
 
 ## UI Requirements
 
-None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, and any next-wave line from the Wave records (Open Questions). Slots and the path are field drawings, listed above.
+None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, and the next-wave line from the Wave records (Battle HUD Rule 5). Slots and the path are field drawings, listed above.
 
 ## Cross-References
 
@@ -413,7 +413,7 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 | Wave and Stage records, accessor, content test | `design/gdd/data-config-pipeline.md` | Core Rules; Rules 1, 9, 10 | Amended here |
 | Instant hits, slow, tick order, targeting helpers, `spawn_id` | `design/gdd/combat-damage.md` | Rules 4, 7, 8, 10, 11; Handed to owning GDDs | Rule dependency; `to_ticks` amends its slow storage |
 | Wave signals, lives, intermission, halt, pause | `design/gdd/game-state-stage-flow.md` | Rules 4, 7, 8, 13, 14, 15, 15a, 17, 18 | Rule dependency; `to_ticks` and payload amend it |
-| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | Open Question on slots | Answers it here |
+| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | Registration table; `radius` | Value dependency |
 | Starter HP, gold per wave, L10 range, no selling, the leak cost bound | `design/gdd/tower-system.md` | Core Rules 4; Simulated results; Formulas | Value dependency; amended this GDD's HP |
 | Intermission against burst cycle, burst radius, re-pin walk, simulated results | `design/gdd/hero-system.md` | Rules 6, 7, 9, 17; Simulated results | Value dependency; the moved stage's re-run is above |
 | Top band, burst button, field units, next-wave line | `design/gdd/battle-hud.md` | Layout; Formulas | Value dependency |
@@ -447,7 +447,7 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 **CI: Integration**
 19. (Rules 1 to 3, content test) **GIVEN** the real stage as records, **WHEN** the content test runs, **THEN** L1 to L9 and L12 to L14 pass, and so do the wave rules for first spawn, largest gap, `time_to_exit`, the first position's `lives_at_risk`, every wave's `lives_at_risk`, the stage's total, the `lives_cost` cap, the 30 s intermission cap, `spawn_interval` at least `dt` in groups of 2 or more, and `starting_lives` at least 2 with at least 2 waves. L10, L11, the intermission floor and `peak_alive_ub` join when their data exists (Deferred criteria). Each rule has a stable ID used in its failure message: `L1` to `L14`, `first_spawn`, `max_gap`, `time_to_exit_min`, `time_to_exit_max`, `first_lives`, `wave_lives`, `stage_lives`, `lives_cost_cap`, `intermission_cap`, `interval_floor`, `min_lives_waves`, `intermission_min` and `peak_alive`.
-20. (content test) **GIVEN** the copies below, each the real stage and its Enemy records with one field changed, **WHEN** the content test runs on each at `dt` 1/60, **THEN** the set of Enemy & Wave IDs it reports (the IDs criterion 19 lists) equals the copy's set exactly. Battle HUD's `hud_*` IDs, which the same test also runs, are left out of these sets; Battle HUD criterion 33 checks them with its own copies. Every rule 19 runs today has a copy, one per clause where a rule has several. The unbroken stage reports the empty set (19). So a validator that reports every ID, the wrong one, or misses a second rule a change also breaks, fails. Slots and path points are numbered from 0; "path …" lists the changed points, the rest as authored. Rows ending "passes" expect the empty set, so a validator stricter than the rule fails too. Each set was checked with `tools/balance-sim/stage_rules.py`, which implements these rules on the records and prints a match per copy.
+20. (content test) **GIVEN** the copies below, each the real stage and its Enemy records with one field changed, **WHEN** the content test runs on each at `dt` 1/60, **THEN** the set of Enemy & Wave IDs it reports (the IDs criterion 19 lists) equals the copy's set exactly. Battle HUD's `hud_*` IDs, which the same test also runs, are left out of these sets; Battle HUD criterion 33 checks them with its own copies, three so far, the rest added in its stories. Every rule 19 runs today has a copy, one per clause where a rule has several. The unbroken stage reports the empty set (19). So a validator that reports every ID, the wrong one, or misses a second rule a change also breaks, fails. Slots and path points are numbered from 0; "path …" lists the changed points, the rest as authored. Rows ending "passes" expect the empty set, so a validator stricter than the rule fails too. Each set was checked with `tools/balance-sim/stage_rules.py`, which implements these rules on the records and prints a match per copy.
 
 | Copy | Changed field = value | Exact ID set |
 |---|---|---|
@@ -493,12 +493,12 @@ A recording fake logs the four signals, and each THEN is the entire log. Factori
 
 | Criterion | Owner | Passes when |
 |---|---|---|
-| Towers-only | Hero stories | The best of the seven builds in Hero System, Simulated results, played towers-only with no calls, ends with 3 lives or fewer, a loss included (MVP). Waves are never tuned to stay beatable without the hero |
+| Towers-only | Hero stories | Hero System's Towers-only row decides (on the mixed builds, towers-only without calls ends with 3 lives or fewer). Waves are never tuned to stay beatable without the hero |
 | Driven margin | Hero stories | A driven hero ends at least 4 lives above that |
-| Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Combat. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
+| Pillar 2 bots | Hero stories | Thresholds live in Hero System's Deferred rows. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
 | Skip heavies | Hero stories | For k of 1 to 4, the skip-k bot is the mid-skill bot with a bot-only filter that removes the first k heavies to spawn from the `targets()` its towers, hero and burst see, so those k leak (2k lives; 4 is the most a run survives at 10 lives). The row passes when every skip-k bot, on each of the four mixed builds, ends more than 1 life below mid-skill. A failure means letting heavies through saves more lives elsewhere than it costs, so heavy `lives_cost` and bounty reopen here (Open Questions) |
-| Mono-role | Tower stories | Every mono-role build ends below the best mixed build |
-| Always-call | Tower stories | Towers-only always-call turns no loss into a win, gains at most 2 lives per build, and does not beat a driven hero. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" would leave no bonus at all |
+| Mono-role | Hero stories | Hero System's Mono-role row decides |
+| Always-call | Hero stories | Hero System's "Always-call, bots" row decides, the one statement of it |
 | Burst fit | Hero stories | In waves 2 to 6, at least 4 of `targets()` fit in one burst radius at some tick |
 | Two fronts | Hero stories | In waves 3, 5 and 6, at some tick a `fast` and a non-`fast` in `targets()` are over 2 × `leash_radius` apart, straight-line. A string of one type does not count, since wave 1's alone spans over 180 |
 | No input | This system's stories | With only Start pressed, the run reaches wave 2 with exactly `starting_lives` minus wave 1's `lives_at_risk` (2 at starter values), and the log holds one `enemy_leaked` per wave 1 member |

@@ -23,7 +23,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Roots.**
 
-1. **App root.** The main scene is a minimal root with no gameplay references and no autoload. It triggers the catalogue load, holds the Ready catalogue for the whole session and owns the fatal screen. Because it exists before the load, a catalogue failure has somewhere to go. The only things that survive a retry are this root and the catalogue.
+1. **App root.** The main scene is a minimal root with no gameplay references and no autoload. It triggers the catalogue load, holds the Ready catalogue for the whole session and owns the fatal screen. Because it exists before the load, a catalogue failure has somewhere to go. The only things that survive a retry are this root, the catalogue and the root's presentation state: Battle HUD's session flags `pinned_once`, `built_once` and `won_once` and its Retry-to-Start timer (Battle HUD Rules 13 and 19), which the HUD writes and no gameplay system reads. No gameplay state survives.
 2. **Battle builder.** A plain builder, `build(catalogue, stage_id, seed, fatal_handler)`, constructs one battle and connects its systems in one function of explicit signal connections, so the parser catches a misspelt name. It needs no scene, so bots and tests call it directly. This amends the technical director's note, which named the battle scene script: a scene-owned root cannot run headless. A thin scene wrapper adds the tick loop, the input adapter and the views, and holds no gameplay logic.
 3. **No god object.** The stage flow and lives live in a pure object. The builder only wires, and a branch on a gameplay value inside it or the wrapper is a defect. Not owned here: gold, the enemy roster, wave contents and durations, spawn timing, stars, saves, gesture rules, screen layout, or what happens inside any system's tick.
 
@@ -187,7 +187,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 | Enemy & Wave | Emits the wave signals; owns durations |
 | Tower System | Early-call bonus; kills to gold; direct build command |
 | Hero System | Built and ticked here |
-| Combat & Damage | Per-source counters readable after the outcome |
+| Combat & Damage | Per-source counters readable after the outcome; `in_tick()`, which `deliver` checks (Combat Rule 2) |
 | Battle HUD & Build UI | Draws phases, lives, countdown, result; sends commands |
 | Stage Progression & Stars (VS) | Reads the result (soft at MVP) |
 | Save/Load, Menu & Screen Flow (VS) | Join the app machine (soft at MVP) |
@@ -221,7 +221,7 @@ All durations are proposed, untested and presentation only, so the wrapper runs 
 
 ## UI Requirements
 
-None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of 6"; Won and Lost both show damage by source.
+None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of" the stage's wave count (Battle HUD Rule 15); Won and Lost both show damage by source.
 
 The Start/Call button is irreversible, so it must stay clear of the burst corner and of build slots. Art bible §7 now allows it in the bottom band in Build and Intermission only, when the lower lane is empty. It registers as an Input target, since it sits in the field rather than the top band.
 
@@ -230,7 +230,7 @@ The Start/Call button is irreversible, so it must stay clear of the burst corner
 | This Document References | Target | Specific Element | Nature |
 |---|---|---|---|
 | Load, failure handler, Stage record, interval floor | `design/gdd/data-config-pipeline.md` | Rules 5, 8, 9, 10, 12; field domains | Rule dependency |
-| Adapter contract, `cancel()`, bots through one path | `design/gdd/input-gesture-resolver.md` | Rules 7, 11; Dependencies | Rule dependency |
+| Adapter contract, `cancel()`, bots through commands with one equivalence test | `design/gdd/input-gesture-resolver.md` | Rules 7, 11; Dependencies | Rule dependency |
 | Composition root | `design/gdd/systems-index.md` | Core Layer TD note | Amended here |
 | Between-waves loop, MVP win/lose, retry | `design/gdd/game-concept.md` | Core Loop, Flow State, MVP | Rule dependency |
 | Mood per state, panel placement | `design/art/art-bible.md` | §2, §7 | Ownership handoff |

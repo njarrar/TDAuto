@@ -132,7 +132,7 @@ There is no reload transition: a data change applies on the next run.
 | Tower System | Tower levels through the accessor | This system |
 | Hero System | Hero and Burst through the accessor | This system |
 | Input & Gesture Resolver | The Input record, read directly | This system; Input GDD owns its meaning |
-| Battle HUD | Costs for the cost chip through the accessor | This system |
+| Battle HUD | Costs and stats through the accessor; `level_count`; Stage and Wave records directly | This system |
 | Stat & Modifier Resolution (VS) | Drops in behind the accessor with no call-site changes | Stat GDD owns the resolver; this system owns the key vocabulary |
 | Save/Load (VS) | Stable IDs; retired-ID list from Vertical Slice | Save/Load owns migration |
 
@@ -172,7 +172,7 @@ There is no reload transition: a data change applies on the next run.
 
 **Upstream:** none. This is a Foundation system. It relies only on the engine's file access.
 
-**Downstream (hard unless noted; none has a GDD yet, so every interface is provisional until that GDD confirms it):**
+**Downstream (hard unless noted; each has a GDD that lists this one):**
 
 | System | Data interface |
 |---|---|
@@ -182,7 +182,7 @@ There is no reload transition: a data change applies on the next run.
 | Tower System | Tower levels via the accessor |
 | Hero System | Hero and Burst via the accessor |
 | Input & Gesture Resolver | The Input record |
-| Battle HUD & Build UI | Costs via the accessor |
+| Battle HUD & Build UI | Costs and stats via the accessor; `level_count`; Stage and Wave directly |
 | Stat & Modifier Resolution (VS) | Key vocabulary; replaces the accessor's internals |
 | Skill Tree, Hero Weapons, Synergies (VS) | New record types reserved in Core Rules |
 | Save/Load (VS) | Stable IDs and retired-ID list |
@@ -210,6 +210,11 @@ None beyond the generic fatal screen, owned by Game State & Stage Flow. This sys
 | Prototype values are not balance | `prototypes/hero-pin-concept/REPORT.md` | CD-PLAYTEST carry-forward 5 | Ownership handoff |
 | Composition root, injection | `design/gdd/systems-index.md` | TD notes, Dependency Map | Rule dependency |
 | `visual_key` meaning | `design/art/art-bible.md` | §3, §8 | Ownership handoff |
+| Enemy, Wave and Stage fields, content-test rules | `design/gdd/enemy-wave.md` | Rules 2, 8; Layout and wave rules | Rule dependency |
+| Tower fields, `is_tower`, `level_count` | `design/gdd/tower-system.md` | Rules 2, 5, 17 | Rule dependency |
+| Hero and Burst fields, `pin_exclusion` | `design/gdd/hero-system.md` | Rules 2, 14; Starter values | Rule dependency |
+| Input record | `design/gdd/input-gesture-resolver.md` | Rule 9 | Rule dependency |
+| Catalogue load, failure handler, injection | `design/gdd/game-state-stage-flow.md` | Rules 1, 2, 18 | Rule dependency |
 
 ## Acceptance Criteria
 

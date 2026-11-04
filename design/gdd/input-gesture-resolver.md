@@ -124,7 +124,7 @@ Registration calls (`register`, `unregister`, `set_centre`, `set_enabled`) are l
 | Data & Config Pipeline | reads | One Input record (`drag_slop`, `tap_slop`, `edge_reject_margin`), added under the extension rule with its domain rows and validator | Data & Config (catalogue); this system (field) |
 | Hero System | registers, listens | Its wrapper-built HeroInput registers hero (DRAG 200), burst button (DRAG 100) and its sink (TAP 400); updates the hero's centre each frame while walking; listens to `pressed` for the leash and `drag_*` for pin and burst; owns the finger-to-aim-point offset function. Burst meaning: drag-only; a drag released while cancelling cancels (Hero's zone has hysteresis: it stops over 64 from the button and resumes at 48), a drag released otherwise fires there, and a press released in place does nothing. The button and its sink stay enabled while cooling and Hero ignores them, so a touch there fires nothing and, because the sink outranks every tap target, reaches no tap target beneath, while a press also inside the hero's disc drags the hero, which outranks the button (Hero Rule 15, user decision 2026-11-02); Hero samples cooling at `pressed`, so a press stays dead even if cooling ends during it | Hero System |
 | Tower System | registers, listens | Its wrapper-built TowerInput registers towers and slots (both TAP 200); disables a slot once built; listens to `tap` for the chip and the second-tap commit, to `pressed` to close an open chip | Tower System |
-| Battle HUD & Build UI | registers, listens | Registers build-arc discs (TAP 300) and one arc backdrop (TAP 250 sink, covering the field) while an arc is open, so a press outside the discs only dismisses; listens to `pressed` to close the arc unless `best_tap` is one of its discs, since closing would otherwise unregister the disc before its `tap` builds; ignores `tap(backdrop)`; listens to `ground_tap` for the rejection ring and counts the first few per session itself; its top-band Controls consume their own events before the adapter | Battle HUD |
+| Battle HUD & Build UI | registers, listens | Registers build-arc discs (TAP 300) and one arc backdrop (TAP 250 sink, covering the field) while an arc is open, so a press outside the discs only dismisses; listens to `pressed` to close the arc unless `best_tap` is one of its discs, since closing would otherwise unregister the disc before its `tap` builds; ignores `tap(backdrop)`; listens to `ground_tap` for the rejection ring and counts the first three per battle itself (Battle HUD Rule 14); its top band ignores input, and its result and Paused screens are Controls that consume their own events before the adapter | Battle HUD |
 | Settings & Accessibility (Alpha) | will call | Runtime slop setter and hit-area scale, reserved in prose only | Settings GDD adds them |
 | Bot acceptance modes | none | Call Hero's and Tower's commands; one equivalence test passes through the resolver | Hero System stories |
 
@@ -145,7 +145,7 @@ and a target is a **candidate** at press when `enabled AND inside(c, r, p)`. A t
 |----------|------|-------|--------|-------------|
 | `p` | Vector2, field units | inside the field | calculated | Press position |
 | `c` | Vector2, field units | inside the field | registered by owner | Target centre |
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP for discs (hero 56, burst 48, chip 40, slots and towers 36), plus the field-wide backdrop sink | registered by owner | Target hit radius |
 | `enabled` | bool | true or false | set by owner | Target participates in hit tests |
 
 **Output Range:** true or false, inclusive of the boundary. With at most about 15 MVP discs the cost is irrelevant, and squared distances keep the boundary exact for the integer positions tests use (adapter-converted positions are fractional and sit on no boundary). Non-finite inputs never reach it (Rule 9).
@@ -192,7 +192,7 @@ The **target_ok** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP for discs (hero 56, burst 48, chip 40, slots and towers 36), plus the field-wide backdrop sink | registered by owner | Target hit radius |
 | `field_scale` | float | 0.667–1.481 | calculated | From field_scale |
 
 **Output Range:** true at every supported width for a radius of at least 36.
@@ -264,7 +264,7 @@ The **target_ok** formula is defined as:
 
 **Upstream (hard):** Data & Config Pipeline, for the Input record. It relies on the engine only through the adapter node, which the ADR specifies.
 
-**Downstream (hard unless noted; none has a GDD yet, so every interface is provisional until that GDD confirms it):**
+**Downstream (hard unless noted; each has a GDD that lists this one):**
 
 | System | Interface | Hard / soft |
 |---|---|---|
@@ -326,6 +326,11 @@ None owned. This system has no screen, panel or widget; it supplies gestures to 
 | Reticle offset, ground-tap ring, cost chip, build arc, panel band | `design/art/art-bible.md` | §7 | Ownership handoff |
 | Input record, added under the extension rule by this GDD | `design/gdd/data-config-pipeline.md` | Extension rule; Interactions (Input row); Dependencies | Rule dependency |
 | Injection by the composition root | `design/gdd/data-config-pipeline.md` | Rule 12 | Pattern reuse |
+| Builds the resolver per battle, `cancel()` on outcome, pause and retry | `design/gdd/game-state-stage-flow.md` | Rules 15 to 17 | Rule dependency |
+| Hero and button targets, priorities, equivalence test | `design/gdd/hero-system.md` | Rules 13 to 15; criterion 28 | Rule dependency |
+| Slot and tower targets, chip disc, bounce guard | `design/gdd/tower-system.md` | Rule 8; Interactions | Rule dependency |
+| Arc, backdrop, Start/Call, ground ring, Controls | `design/gdd/battle-hud.md` | Rules 2, 6, 10, 14 | Rule dependency |
+| Slot and burst-line clearances | `design/gdd/enemy-wave.md` | L1 to L3, L7 | Value dependency |
 | Press priority as prototyped; mouse-only evidence | `prototypes/hero-pin-concept/main.gd`, `REPORT.md` | `_press`/`_release`; Pillar 4 untested on a phone | Evidence |
 
 ## Acceptance Criteria

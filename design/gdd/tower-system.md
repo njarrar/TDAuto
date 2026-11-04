@@ -147,11 +147,11 @@ Paired placement by placement, upgrading in pairs does better on 22 of the 90, t
 | `burst_spike` | At least 2 at every splash level (Hero stories) | 5.78 |
 | `early_call_seconds_per_gold` | One tick at least (Data, boot-fatal), so the formula never divides by 0 | 1.8 |
 
-Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest slot, and `peak_alive_ub` passes outright at 34. L11 and `burst_spike` wait for the Hero record.
+Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest slot, and `peak_alive_ub` passes outright at 34. L11 and `burst_spike` read the Hero record (196 ≥ 175 and 5.78 at starter values) and join the content test in the Hero stories.
 
 **Handed to owning GDDs.**
 - **Hero:** done. It sets the burst's values and owns the bot table.
-- **Battle HUD:** done. It draws the arc, chip, cost, dimming and the range ring (Battle HUD GDD).
+- **Battle HUD:** done. It draws the arc, chip, cost and dimming (Battle HUD GDD). This system's view draws every range ring, including the 1.5 s ring after `tower_inspected`.
 - **Enemy & Wave:** its starter HP is amended here, and its "550" gold example is now the all-single minimum.
 
 **Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
@@ -259,11 +259,11 @@ The **burst_spike** formula is defined as:
 **Output Range:** above 0. Below 2, one splash shot looks like half a burst. It ignores HP limits, kills and overlapping groups, so it is only a floor.
 **Example:** burst 130 at radius 70, level-2 splash 30 at radius 75, normal×6 @0.6: `s` 36, `V_s` 3, `V_b` 4, so 520 / 90 = 5.78, the lowest of the starter groups.
 
-**The gate Combat Rule 6 asked for has three parts, and none is the one it named.** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
+**The splash-against-burst gate has three parts (Combat Rule 6, amended to match).** One burst against splash's total over the same cooldown cannot be the test. Towers must carry the steady damage, so a level-2 splash tower on a dense packet offers more than a burst per cooldown at these values, and any fixture that lost that race would lose the wave too. What protects the spike is that it lands at once, and that splash does not take its work away:
 
 1. `burst_spike` of at least 2, for every splash level on every group of 5 or more, in the content test.
-2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated, burst only: 30% against 25%, a pass.
-3. In bots, the median burst hitting 3 or more enemies kills at least 2, measured on the mid-skill bot. `burst_spike` can pass on victim count alone, so this measures the outcome. Simulated: 3.5 to 4, a pass.
+2. In bots, `dealt_burst`'s share in the 2, 2 and 1 build is at least 75% of its share in the single-only build. Simulated, burst only: 27% against 25%, a pass (Hero System, Simulated results).
+3. In bots, the median burst hitting 3 or more enemies kills at least 2, measured on the mid-skill bot. `burst_spike` can pass on victim count alone, so this measures the outcome. Simulated: 4, a pass (Hero System, Simulated results).
 
 Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b` together, so bots rather than this formula measure it.
 
@@ -354,7 +354,7 @@ Battle HUD draws these; this system supplies the data.
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
 - Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion.
-- A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
+- A tap on a level-2 tower opens no chip; this system's view shows its range ring for 1.5 s, so the tap is not silent.
 
 📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path.
 
@@ -417,7 +417,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Never-cache (Data Rule 10) | This system's stories | A spy changing cost or damage between uses shows the next use reflecting it |
 | TowerInput wiring | Tower UI story | With a fake resolver, taps reach `ChipWindow`, a built slot is disabled, `slot_tapped` fires, and `phase` closes the chip |
 | Arc, damage by source | Battle HUD stories | A disc builds once; an unaffordable one does nothing; counters are shown; screenshots retained |
-| Phone test (Input P1) | Producer + qa-lead | On the first phone build, 3 testers each make 20 builds and 20 upgrades: no unintended upgrade, and at most 1 wrong disc per 20 builds. If a reflexive double tap commits an upgrade, the first fallback is a 300 ms guard, then a larger chip disc |
+| Phone test (Input P1) | Producer + qa-lead | On the first phone build, 3 testers each make 20 builds and 20 upgrades: no unintended upgrade and no wrong disc, since Input's P1 gate counts a wrong disc as a mis-fire and allows none. If a reflexive double tap commits an upgrade, the first fallback is a 300 ms guard, then a larger chip disc |
 
 **Manual** (retained in `production/qa/evidence/`, with lead sign-off): screenshots of the chip open, dimmed after `NO_GOLD` and just expired, and of the arc with every disc affordable and with one dimmed; a level-2 upgrade changes shape within one wave; two towers are ranked by level with no digit; triangle, hexagon, square and an empty slot are told apart at full and quarter scale in greyscale.
 

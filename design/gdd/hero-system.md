@@ -28,7 +28,7 @@ The hero is the one thing the player steers. A drag from the hero sets its pin, 
 | HeroSim | Battle builder, also headless | Pin, position, attack and burst timers, the two commands, counters, the tick entry |
 | HeroInput | Wrapper, absent headless | Input registration, pin clamping, the aim state, previews |
 
-HeroInput changes the battle only through the two commands. This amends Input Rule 11, which had bots call `press`, `move` and `release`: the resolver is not in the headless build. One test keeps the intent: the same script through the resolver and HeroInput, and through direct commands, gives identical state.
+HeroInput changes the battle only through the two commands. Input Rule 11 says the same, since the resolver is not in the headless build (it first had bots call `press`, `move` and `release`). One test keeps the intent: the same script through the resolver and HeroInput, and through direct commands, gives identical state.
 
 **The pin.**
 
@@ -128,7 +128,7 @@ The pinned-once column stands at (270, 480). Searching for the best single pin o
 |---|---|---|
 | `leash_radius` | At least `path_width` | 72 ≤ 90 |
 | Fastest enemy's `move_speed` × `max(1, to_ticks(telegraph_duration))` × `dt` | At most half the `radius` | 27.5 ≤ 35 |
-| `intermission_duration` of every position but the last | At least `cooldown + telegraph_duration` (Enemy & Wave) | 15 ≥ 10.25 |
+| `intermission_duration` of every position but the last | Enemy & Wave's `intermission_min`, in ticks: `to_ticks(intermission_duration)` at least `to_ticks(cooldown) + max(1, to_ticks(telegraph_duration))` | 900 ≥ 615 |
 | `burst_spike` (Tower) | At least 2 | 5.78 |
 | L11 (Enemy & Wave) | Some disc of `radius` holds at least 2.5 × `radius` of path, so a bend exists to burst | 196 ≥ 175 |
 | `reach` | At least `radius`, at most 540 | 160 |
@@ -171,7 +171,7 @@ Aiming is HeroInput's state, never the sim's: Idle, Cancelling or Live, per Rule
 |---|---|---|---|
 | Data & Config | reads | Hero and Burst through the accessor at use time; `hero_start`, `pin_rect`, `pin_exclusion` directly from Stage; the left-hand flag | Data (values); this system (meaning, balance) |
 | Input & Gesture Resolver | registers, listens | HeroInput registers hero (DRAG, priority 200, radius 56), button (DRAG, priority 100, radius 48) and sink (TAP, priority 400, radius 48); hears `pressed`, `drag_*`; updates the hero's centre | Input (API); HeroInput (meaning) |
-| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left` for the preview | Combat (API); this system (when, whom, values) |
+| Combat & Damage | calls | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left` and `speed_factor` for the preview | Combat (API); this system (when, whom, values) |
 | Enemy & Wave | reads | `targets()`; rules on `time_to_exit`, intermission and fast speed | Enemy & Wave |
 | Game State & Stage Flow | built, injected | Builder makes HeroSim and ticks it in order; injects `halted()` and `in_build()` | Flow (order) |
 | Tower System | none directly | Balanced against through bots; `burst_spike`, gates | Bots |
@@ -296,7 +296,7 @@ The **hero_share_bound** formula is defined as:
 | System | Interface |
 |---|---|
 | Input & Gesture Resolver | Registry, `pressed`, `drag_*`, `drag_cancelled`, `idle` (HeroInput only) |
-| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left`, tick slot |
+| Combat & Damage | `deliver`, `nearest_in`, `all_in_radius`, `report_attack`, `hp_left`, `speed_factor`, tick slot |
 | Enemy & Wave | `targets()`, wave rules |
 | Data & Config Pipeline | Hero and Burst through the accessor; `hero_start`, `pin_rect`, `pin_exclusion` |
 | Game State & Stage Flow | Build, tick order, `halted()`, `in_build()` |
@@ -350,8 +350,8 @@ The pin commits on release: the ground ring lands first, and the hero follows, s
 
 Battle HUD draws these, and this system supplies the state.
 
-- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. Before a first pin, the nudge also repeats the prompt.
-- Prompt until the first pin: "Drag the hero", one line on panel, the first of three the Battle HUD owns (Rule 13 there). None needs an Onboarding system.
+- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. While prompt 1 still shows, the nudge also repeats it.
+- Prompt until the first pin, unless retired by an earlier battle this session (Battle HUD Rule 13): "Drag the hero", one line on panel, the first of three the Battle HUD owns (Rule 13 there). None needs an Onboarding system.
 - Ready press: a thin ring at `aim_ring_radius()`, which is always the line that changes the state: 64 while Cancelling, the line to cross to go Live, then redrawn at 48 once Live, the line to cross back to cancel (user, 2026-11-03). It shows beyond the fingertip, with a cancelling reticle while Cancelling, as the drag affordance.
 - Cooling press: the digit above the thumb, on panel.
 - Left hand mirrors the button and digit only, and never the kite or the aim offset.
