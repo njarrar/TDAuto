@@ -32,6 +32,13 @@ Proposed
 > behaviours it relies on are not sourced in the pinned reference and the art and
 > geometry rules are design content.
 >
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor
+> binary; `prototypes/adr-checks/`): V6 is RECORDED in
+> `docs/engine-reference/godot/verification-results.md` (not yet copied to
+> `modules/rendering.md`); the `PackedInt32Array` const parses, no branch.
+> Still open before acceptance: V1 to V5 (`prototypes/adr-0011-render-budget/`,
+> desktop and phone).
+>
 > After acceptance: A1 (the real game's worst-case frame on the phone, shared
 > with ADR-0004 V6 and ADR-0007 M7). Reopen trigger: Decision 9.
 
@@ -75,6 +82,7 @@ NOT SOURCEABLE in `docs/engine-reference/godot/**`: how the Mobile renderer batc
 - **V4. Line thickness on 4.7.** The reference does not say whether the lost feather was only on the `antialiased = true` path; if so, AA-off lines did not change and `LINE_BIAS` 1.0 thickens every stroke (engine check E1). Method: a 2 px ring, a 2 px dashed leash and a 1 px slot outline at bias 0.0 and 1.0, AA false and true, on 4.7.2 and a 4.6 build (or against art bible §3's stated widths measured in a screenshot), desktop and phone; record screenshots and the AA cost; also whether a full `draw_arc` (0 to TAU) shows a seam at `ring_points`' counts. The art-director picks the bias. *Branch*: a different bias, 0.0 included, or AA on, changes one constant (Decision 6).
 - **V5. Material cost (informational).** The 16 flash discs drawn plain, then with one shared `ShaderMaterial` on a separate node. Record draw-call and frame-time difference. It cannot change Decision 7; it is the number a Vertical Slice reopen of QQ-10 needs.
 - **V6. Packed-array constants.** `const TEXT_SIZES: PackedInt32Array = [21, 24, 36]   # V6; fallback Array[int]` parses and reads on 4.7.2, headless. *Branch*: `const TEXT_SIZES: Array[int] = [21, 24, 36]`. Owner: godot-specialist.
+  - Result (2026-11-04, macOS arm64, headless): `const TEXT_SIZES: PackedInt32Array = [21, 24, 36]` parses and reads [21, 24, 36]; the fallback is not needed; see docs/engine-reference/godot/verification-results.md.
 
 **After acceptance:**
 

@@ -31,6 +31,14 @@ Proposed
 > 4. MET: The user has confirmed or overturned each item in Decision 9.
 >    Confirmed by the user, 2026-11-04, as recommended (items 1 to 3).
 >
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary; run
+> from `prototypes/adr-checks/`, which replaces `prototypes/adr-0006-signal-check/`): V1 to V6
+> are RECORDED in `docs/engine-reference/godot/verification-results.md` (that file stands in
+> for `current-best-practices.md` for this run). No branch was taken: emits are depth-first
+> and synchronous, connections use snapshots, enum params and the Flow/StageResult cycle parse,
+> so the ADR text is unchanged. No verification item remains open; items 1 (ADR-0001 and
+> ADR-0004 Accepted) and 3 (`/architecture-review`) still hold acceptance.
+>
 > **After acceptance:** the listener-count tests (Decision 8) are written by the ADR-0007
 > harness story and by the first story that builds `BattleWrapper`. Reopen trigger: if
 > the headless test, the wrapper test or the with-and-without-listeners run (Validation
@@ -70,11 +78,17 @@ Battle systems talk through Godot signals whose names, payloads, ID types, timin
 The gap is wired to acceptance: this ADR stays `Proposed` until each item has a recorded result. All six run in one headless script with no game code (`godot --headless -s check.gd` on throwaway `RefCounted` emitters and recording listeners). Owner: godot-specialist writes the script; the user runs it on the pinned 4.7.2 editor and the results go into `current-best-practices.md` with the engine version. The engine check (godot-specialist) expects the results noted below from its own knowledge; that is not a source.
 
 - **V1. Emit-time types and arity.** For `signal s(a: int, b: StringName)`: what do `s.emit("x", "y")`, `s.emit(1.5, &"y")`, `s.emit(1, "y")` and `s.emit(1)` do? Are values silently converted into a typed listener parameter (`String` to `StringName`, `1.5` to `int`)? Does an arity or type error in one listener log and let the emit continue to the next listener? Does the 4.7 analyzer check an `emit()` argument count at parse time? Expected: no type check at emit; a listener error is logged and the emit continues. **No decision depends on the answer**: recording fakes assert payload types with `typeof()`/`is` (Implementation Guidelines, ADR-0007), and tests capture engine errors with gdUnit4's error capture and fail on any.
+  - Result (2026-11-04, macOS arm64, headless): no type check at emit; values convert silently into typed listener params (`1.5` arrives as int 1, `String` as `StringName`); an incompatible value or a missing argument logs an error, skips that listener, and the emit continues; the analyzer does not check `emit()` arity; see docs/engine-reference/godot/verification-results.md.
 - **V2. Script signal list.** Does `get_script().get_script_signal_list()` return exactly the script-declared signals (own and inherited script classes) as `Dictionary` entries with a `name` key, without `Object`'s `script_changed` and `property_list_changed`? Branch: if unusable, `get_signal_list()` minus the names `RefCounted.new().get_signal_list()` returns.
+  - Result (2026-11-04, macOS arm64, headless): own and inherited script signals only, as Dictionaries with `name`; the fallback form gives the same list; see docs/engine-reference/godot/verification-results.md.
 - **V3. Connections and flags.** Does `get_signal_connection_list(name)` return `Dictionary` entries with `signal`, `callable` and `flags`, with `callable.get_object()` the target and `callable.get_method()` a `StringName`, and `flags` 0 for a plain `connect`? Does `Signal.get_connections()` return the same shape? Does `CONNECT_DEFERRED` show as a non-zero flag? Expected: a second `connect` of the same Callable pushes an error, returns `ERR_INVALID_PARAMETER` and adds nothing; a connection made in a `.tscn` carries `CONNECT_PERSIST` (2); a freed listener object's connections are dropped automatically.
+  - Result (2026-11-04, macOS arm64, headless): entries have `signal`, `callable`, `flags` with the target object and a StringName method; flags 0 plain, 1 deferred; `Signal.get_connections()` has the same shape; a double connect errors (ERR_INVALID_PARAMETER) and adds nothing; `.tscn` connection flags 34 include PERSIST; a freed listener's connections drop; see docs/engine-reference/godot/verification-results.md.
 - **V4. Call order and changes during an emit.** With listeners connected A, B, C, does one emit call A, B, C, and after `disconnect(B)` and `connect(B)`, A, C, B? If a listener connects or disconnects during the emit, does the running emit use a snapshot of the list? No outcome depends on order (Decision 7 rule 6) and both changes during an emit are forbidden; the answers fix what test logs may assume.
+  - Result (2026-11-04, macOS arm64, headless): ABC, then ACB; a connect or disconnect during an emit works on a snapshot (the running emit is unchanged); see docs/engine-reference/godot/verification-results.md.
 - **V5. Nested emit.** If listener A of `s` emits `t`, do all of `t`'s listeners finish before `s` reaches listener B? Is re-emitting `s` from its own listener delivered in full? Decision 5 relies on the first (Flow emits `lives_changed` and `phase_changed` inside `enemy_leaked`); the second is forbidden (Decision 7 rule 7). Branch: if nesting is not depth-first, Flow and TowerSim queue nested emits in a per-emitter outbox drained after the outer emit, and this ADR is revised.
+  - Result (2026-11-04, macOS arm64, headless): nested emits are depth-first (A, T1, T2, B); a re-emit is delivered in full (R1, R2, B, B). No outbox branch; see docs/engine-reference/godot/verification-results.md.
 - **V6. Enum and cyclic typed references.** Do `signal phase_changed(value: Phase)` in `Flow`, `signal damage_applied(source_kind: SourceKind, ...)` in `Combat`, and `var outcome: Flow.Phase` in `StageResult` (while `Flow` returns `StageResult`) parse and run on 4.7.2? Does `const EMITTER_KEYS: Array[StringName] = [...]` parse? ADR-0009 relies on the same cycle (`DamageEvent.source_kind: Combat.SourceKind`). Branch: enum parameters and fields typed `int` holding the enum value; an untyped const array; names and order unchanged.
+  - Result (2026-11-04, macOS arm64, headless): enum-typed signal params and fields and the Flow/StageResult cycle parse and run; `EMITTER_KEYS` parses as a typed, read-only `Array[StringName]`. No branch; see docs/engine-reference/godot/verification-results.md.
 
 ## ADR Dependencies
 

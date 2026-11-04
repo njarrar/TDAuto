@@ -27,6 +27,16 @@ Proposed
 > 4. MET: The user has confirmed or overturned each of the seven choices in Decision 11.
 >    Confirmed by the user, 2026-11-04, as recommended (choices 1 to 7).
 >
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary;
+> `docs/engine-reference/godot/verification-results.md`, standing in for
+> `current-best-practices.md` for this run): V1 to V8 (desktop) are RECORDED; ADR-0009 V1 and
+> V3 are recorded too, so V2 and V3 count. No branch was taken. V1 (e) differed from the
+> expected result: in a debug run only the callee stops and the caller continues, so
+> `_draining` is not left set and `recover_if_stuck()` may never trigger in debug; it is kept
+> for release (the Stuck flag note in Decision 7 says so). Still open, not holding acceptance:
+> the V7 debug-export and phone legs and the V8 phone leg (first phone build); the release
+> unwind leg is ADR-0004 V4's.
+>
 > **After acceptance:** the Input GDD's 37 Logic criteria become the resolver's unit tests. Reopen
 > trigger: any Validation Criterion that cannot pass as written, or a phone-test log (Pillar 4 gate
 > P1) showing a mis-fire the resolver caused, amends this ADR before the next input story closes.
@@ -64,13 +74,21 @@ The Input & Gesture Resolver turns one pointer's press, moves and release into e
 Owner: godot-specialist writes the scripts; the user runs them headless on 4.7.2 (`godot --headless -s <script>`, outside `src/`); results go into `current-best-practices.md`. "Expected" is not a source.
 
 - **V1. Delivery, re-entry, lifetime** (one script with ADR-0006 V4 and V5: `prototypes/adr-checks/check_signals.gd`, with the no-self-hold case alone in `check_signals_nohold.gd`). (a) Listener A of `s` calls `emitter.poke(1)`, listener B logs: does `s.emit(7)` run A then B before returning, with no error from the call back? (b) `while i < arr.size()` sees an element a listener appended mid-loop. (c) A listener disconnected during an emit still receives that emit? (d) A listener drops the emitter's last strong reference mid-emit: with `var _hold := self` in the emitting method, does it finish and free afterwards; without it, what happens? (e) A script error in a callee called from a loop: does the caller abort, leaving its flags set (debug run)? Expected: (a) to (d) yes; (e) aborts. **Decision 7 depends on (a), (b), (d).** Branch: if (a) fails, this ADR and ADR-0006 Decision 1 reopen together.
+  - Result (2026-11-04, macOS arm64, headless): (a) A7, poke1, B7, no error; (b) the loop sees appended elements; (c) yes (MBC); (d) with the hold it finishes then frees, and without it there was no crash here either; (e) only the callee stopped and the caller continued, so `_draining` is not left set in a debug run and `recover_if_stuck` may never trigger there; it stays for release. Decision 7 holds; see docs/engine-reference/godot/verification-results.md.
 - **V2. `Vector2` width (QQ-05).** ADR-0009 V1, plus `Vector2(299.0, 500.0).x - 270.0 == 29.0`. No decision depends on it.
+  - Result (2026-11-04, macOS arm64, headless): 29.0; components are 32-bit (ADR-0009 V1); see docs/engine-reference/godot/verification-results.md.
 - **V3. Non-finite floats.** ADR-0009 V3, plus `is_finite(Vector2(NAN, 0.0).x)` and `is_finite(Vector2(INF, 0.0).x)` false.
+  - Result (2026-11-04, macOS arm64, headless): both false; see docs/engine-reference/godot/verification-results.md.
 - **V4. Out-of-range enum arguments** (`5`, `-1`, another enum's value) to an `Accepts` parameter. Expected: no runtime check, possibly `INT_AS_ENUM_WITHOUT_CAST` or `INT_AS_ENUM_WITHOUT_MATCH` warnings. No branch: `register` checks explicitly.
+  - Result (2026-11-04, macOS arm64, headless): an int literal or a cast to the enum warns (raised to error in this project); another enum's value is a hard error; no runtime check, values arrive unchanged; see docs/engine-reference/godot/verification-results.md.
 - **V5. `Callable()` defaults** on `create` and `_init` parse, and `Callable().is_valid()` is false. Branch: the argument becomes required everywhere.
+  - Result (2026-11-04, macOS arm64, headless): the defaults parse and `Callable().is_valid()` is false. No branch; see docs/engine-reference/godot/verification-results.md.
 - **V6. Inner classes and fakes.** An inner `class Target extends RefCounted` as the element type of `Array[Target]`; `remove_at` keeps order (ADR-0009 V2(e)); `create()` calling `InputResolver.new(a, b, c)`; a test `FakeResolver extends InputResolver` built with `FakeResolver.new(15.0, 28.0)`, `_init` forwarding `super(a, b)`, typed overrides with explicit `return`. `FakeResolver.create()` returns a plain `InputResolver` (statics are not virtual), so tests never call it. Branch: untyped `Array`; or ADR-0007 fakes wrap the resolver and owners type it `Object`.
+  - Result (2026-11-04, macOS arm64, headless): all pass: inner-class `Array[Target]`, `remove_at` keeps order, `super(a, b)` forwards, a typed override with explicit `return` works through the base type, `FakeResolver.create()` returns a plain InputResolver; an override with no `return` does not load. No branch; see docs/engine-reference/godot/verification-results.md.
 - **V7. Development facts.** `OS.is_debug_build()` true in an editor run and a debug export (release: ADR-0001 V4); `OS.get_model_name()` non-empty. Branch: a tester-typed device label.
+  - Result (2026-11-04, macOS arm64, headless): `is_debug_build()` true in the editor run; `get_model_name()` = "Mac16,10". Debug-export and phone legs at the first phone build; see docs/engine-reference/godot/verification-results.md.
 - **V8. File append.** `WRITE` truncates; `READ_WRITE` fails on a missing file; `seek_end()` then `store_string()` appends; `flush()` writes through; `store_*` returns `bool`. Branch: if `READ_WRITE` truncates, the sink rewrites from memory at each flush.
+  - Result (2026-11-04, macOS arm64, headless): `WRITE` truncates; `READ_WRITE` fails on a missing file; `READ_WRITE` plus `seek_end()` appends; `flush()` writes through; every `store_*` returns `bool`. No branch; see docs/engine-reference/godot/verification-results.md.
 
 ## ADR Dependencies
 
@@ -235,7 +253,7 @@ func _enqueue(kind: int, pointer: int, pos: Vector2) -> void:
 - **Cancels outside a drain run at once** (`cancel_all()` from a loss notification; Flow's `cancel_input()` inside a tick), so G7 and G8 fire inside that callback, as ADR-0006 allows. A `cancel()` during a drain queues behind the batch.
 - **Runaway cap**: reaching 64 calls in one drain is a defect. `_abort_drain()` sets `_aborting`, calls `_report`, ends any live gesture as a cancel (listeners' gesture calls are discarded, so no nested drain starts), and clears `_aborting`; `_enqueue` then clears the queue.
 - **Teardown mid-drain** is forbidden by ADR-0001 Decision 7 (only `AppRoot._process` tears down, never a handler or fatal call); `_hold` guards a defect (V1 d).
-- **Stuck flag**: a script error inside `_run` aborts `_enqueue` in a debug run with `_draining` still true (V1 e; ADR-0004 V4 records release). Branch decided: `InputAdapter.flush()`, never nested, first calls `resolver.recover_if_stuck() -> bool`. If `_draining` is true there, the resolver reports, clears queue and flags, ends any live gesture as a cancel (with `_draining` set while it emits), and returns true. Resetting the flag inside `_enqueue` instead would break re-entrancy (Alternative 9).
+- **Stuck flag**: a script error inside `_run` was expected to abort `_enqueue` with `_draining` still true (V1 e; ADR-0004 V4 records release). V1 e (2026-11-04, debug run, macOS arm64) showed only the callee stops and the caller continues, so in debug the flag is not left set; a release export may still differ, so the recovery stays. Branch decided: `InputAdapter.flush()`, never nested, first calls `resolver.recover_if_stuck() -> bool`. If `_draining` is true there, the resolver reports, clears queue and flags, ends any live gesture as a cancel (with `_draining` set while it emits), and returns true. Resetting the flag inside `_enqueue` instead would break re-entrancy (Alternative 9).
 - Packed `clear()` may reallocate small arrays per drain: negligible. The queue is per resolver, never static.
 
 ### 8. Signals, the gesture record and the development log

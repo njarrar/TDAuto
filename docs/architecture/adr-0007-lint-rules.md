@@ -8,7 +8,7 @@ below differ. A rule whose owning ADR is not Accepted is marked **pending** and 
 off in `lint_rules.gd` until that ADR is Accepted; a pending rule prints
 `pending: <RULE> (<ADR>)` on every run, so it is never silent.
 
-Last updated: 2026-11-04.
+Last updated: 2026-11-04 (INIT-1 added from ADR-0009 V7 result).
 
 ## 1. How the lint reads code
 
@@ -150,6 +150,14 @@ in brackets.
 | ERR-5 | `preload(` in `src/root/app_root.gd` | ADR-0001 `app_root_scene_loading` |
 
 (ERR-2 is withdrawn: ADR-0001 bars `print_debug` from carrying error reports, not from use; code review.)
+
+### Construction
+
+| ID | Fails when | Source |
+|---|---|---|
+| INIT-1 | Under `src/` or `tests/`: a script `extends` a project class (class index) whose `_init` has a parameter with no default, and declares its own `func _init(` whose body has no `super(` call. A script with no `_init` of its own is not matched (the engine then checks the arguments, ADR-0009 V7) | ADR-0009 V7 (the engine does not enforce forwarding: a missing `super(...)` builds silently with the parent's fields at their defaults, 2026-11-04); ADR-0010 `InertHeroSim` |
+
+INIT-1 self-test (Section 5). Bad sample: `extends Targetable` (whose `_init(p_spawn_id: int)` has no default) with `func _init(p_spawn_id: int, p_def_id: StringName) -> void:` and a body of `def_id = p_def_id`; the finding is on the `func _init(` line. Near misses (no finding): the same file with `super(p_spawn_id)` as the body's first line; a subclass of `Targetable` with no `_init`; a subclass of a class whose `_init` arguments all have defaults; `extends RefCounted` with an `_init` and no `super(`. A second bad sample: the `super(p_spawn_id)` appears only in a comment or a string (masked, so it does not count).
 
 ### Tests
 

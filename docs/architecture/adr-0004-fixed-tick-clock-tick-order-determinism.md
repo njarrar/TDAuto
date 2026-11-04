@@ -25,6 +25,13 @@ Proposed
 > 3. MET: The user has confirmed or overturned each item in Decision 11, one by one.
 >    Confirmed by the user, 2026-11-04, as recommended (items 1 to 17).
 >
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary;
+> `docs/engine-reference/godot/verification-results.md`): the V4 desktop leg and V9 (key
+> read) are RECORDED; every desktop value matches, so Decisions 6, 7 and 9 stand unchanged.
+> `round()` is half away from zero; after a runtime error in a debug run the callee stops and
+> the caller continues. Still open before acceptance: V1, V2, V3 and V7 (device spike), the
+> V4 phone leg (SP15) and its release-export unwind leg, and the V9 SP14 stall compare.
+>
 > **After acceptance** (they need stories, which stay Blocked while this ADR is Proposed):
 > V5, V6 and V8 run in the stories named in each item. `MAX_TICKS_PER_FRAME = 3` is
 > provisional until V6. Reopen trigger: a V6 p99 tick above 1.33 ms changes N in place
@@ -75,8 +82,10 @@ Expected results are unsourced (pre-cutoff knowledge only). Split before and aft
 - **V2. `delta` on a stall and on return (reuses SP11; proposed kit item SP14).** Expected: after a T ms stall the next `delta` is about T ms, uncapped; the first `delta` after a return is large. *If capped*: record it; clamp and stall rule hold. *If 0 or negative*: no ticks, already the rule. SP14 (for ADR-0003's owner to add; SP13 is its focus item): a "Stall" action blocking 300 ms and 1,000 ms (`OS.delay_msec`, unsourced), logging the next two `PROC delta_ms`. Owner: the user runs the kit; godot-specialist records.
 - **V3. Cadence and tick distribution (SP14).** Ten seconds of per-frame `delta_ms` and the ticks a kit copy of `BattleClock` would run, on a 60 Hz phone and a 90 or 120 Hz one if available; record `Engine.max_fps`, refresh rate, and adaptive-refresh changes. Expected: 60 Hz gives exactly 1 tick every frame; 90 or 120 Hz a regular 0/1 mix. *0- and 2-tick frames at 60 Hz*: revise phase or cap before acceptance. *Uneven motion at 90 or 120 Hz*: a follow-up picks a 60 fps cap (key unsourced; uneven on a 90 Hz panel too) or interpolation (Alternative 7). No sim change.
 - **V4. Numeric golden values (headless script outside `src/`, run with `godot --headless -s`; proposed kit item SP15 on the phone).** Expected: `0.1 + 0.2 == 0.30000000000000004` and `16777217.0 + 1.0 == 16777218.0` (binary64); `-1 & 0xFFFFFFFF == 4294967295`, `0xFFFFFFFF << 13` no overflow (64-bit `int`); `floori`, `ceili`, `absf`, `sqrt`, `is_finite` as IEEE; Validation 3's `to_ticks` values; `SimRng.new(1)`: `270369, 67634689, 2647435461`; `SimRng.new(0)`: `1085196063, 2447379481, 2618286376`; `SimRng.new(-1)`: `253983, 4228382207, 1958451267` (computed in Python for this ADR). Record `round(0.5)`, `round(2.5)`, `round(-0.5)`, the call naming the CPU architecture (`OS.has_feature("x86_64")`, `"arm64"` or other), and whether a runtime error in a callee returns to the caller in a release export (Decision 3). *Desktop mismatch*: revise Decisions 6, 7, 9 first. *Phone-only mismatch*: per-architecture baselines cover it; record it. Owner: godot-specialist; the user runs SP15.
+  - Result (2026-11-04, macOS arm64, headless): desktop leg passes: binary64 floats, 64-bit int, typed maths as IEEE, Validation 3 `to_ticks` values, all three `SimRng` goldens and the clock checks; half-phase start gives 600 one-tick frames of 600 (zero phase: 300 zero-tick, 300 two-tick); `round()` is half away from zero (0.5 to 1, 2.5 to 3, -0.5 to -1); architecture arm64 (`get_architecture_name()` = arm64); after a runtime error in debug the callee stops and the caller continues, so the single-path flag design holds in debug. Phone leg (SP15) and release unwind leg still open; see docs/engine-reference/godot/verification-results.md.
 - **V7. Pause notification against the first frame after return (reuses SP10, SP11).** Expected: notifications first. Either way the stall rule and backlog drop (Decision 3) leave at most `MAX_TICKS_PER_FRAME` unseen ticks, only in SP10 Branch C below the stall threshold. Recorded; no branch.
 - **V9. Delta smoothing (V4 script plus SP14).** `application/run/delta_smoothing` is believed to exist, default on; it could hide 60 Hz aliasing and spread a stall so no `delta` exceeds 0.5 s. Decision: `project.godot` sets it off (key NEEDS VERIFICATION). Method: read it in the script; in SP14 compare stall `delta` on and off. *If the key is absent*: the stall rule covers only stalls that reach `_process` as one large `delta`; the clamp bounds the rest.
+  - Result (2026-11-04, macOS arm64, headless): the key `application/run/delta_smoothing` exists, default true; the `project.godot` false setting stands (PROJ-4). The SP14 on/off stall compare is still open; see docs/engine-reference/godot/verification-results.md.
 
 **After acceptance**
 

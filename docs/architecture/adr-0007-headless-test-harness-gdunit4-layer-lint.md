@@ -33,6 +33,13 @@ Proposed
 >    the `architecture.md` QQ-13, QQ-15, QQ-16 rows, the "provisional names" lines in ADR-0001 to
 >    ADR-0006, ADR-0008 and ADR-0009, and the ADR-0001 V1 and Risks fixes.
 >
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor binary;
+> `prototypes/adr-checks/`; `docs/engine-reference/godot/verification-results.md`): V3 and the
+> headless parts of V6 are RECORDED and take no branch. Still open before acceptance: V1, V2,
+> V4, V5, V7, and the V6 editor save and `.godot/` scan. Edits from this run: Decision 4 now
+> says tests drop recording lambdas before weakref asserts (ADR-0001 V1 lambda-release), and
+> `adr-0007-lint-rules.md` gains INIT-1 (ADR-0009 V7: the engine does not enforce `super(...)`).
+>
 > **Two-part activation.** Acceptance switches on everything except the ADR-0006-dependent parts.
 > Decision 6 (listener-count harness) and the lint rules marked *pending ADR-0006* in
 > `adr-0007-lint-rules.md` (WIRE-5 to WIRE-12) switch on when ADR-0006 is Accepted; rules marked
@@ -82,9 +89,11 @@ Owner of every item: godot-specialist writes the script or steps, the user runs 
 - **V1. Exit ladder of gdUnit4 6.2.0 on 4.7.2** (the reference saw 6.2.2): 0, 100 (wins over 101), 101, 105, 0 with `No test cases found`, 103; fail-fast without `-c`; helpers not run as suites; a parse error in a preloaded helper. Mac on the throwaway project; the Linux leg on V5's scratch branch. *Branch*: upgrade to the newest 6.2.x and rerun V1, V2.
 - **V2. Error capture headless**, setting on: unasserted `push_error` fails; one push, one assertion passes; two pushes, one assertion fails; setting off passes; engine errors and `push_warning` fail; a push through a method Callable is caught; (h) warnings raised by headless default-`Control` instantiation are recorded (they would fail SCENE-1). *Branch*: if an unasserted push passes, the Rollback plan.
 - **V3. Recording-fake listener**: `func(...args)` on 0, 1 and 6 arguments; `&"a"` reads `TYPE_STRING_NAME`, `"a"` into a `StringName` parameter reads `TYPE_STRING`; declared types from `get_script_signal_list()`. Beside ADR-0006 V1, V2. *Branch*: one method per arity with `bind(name)` (legal in tests).
+  - Result (2026-11-04, macOS arm64, headless): the variadic lambda sees 0, 1, 6 and 6 arguments and the raw emitted types (`&"a"` is StringName, `"a"` stays String); declared types read from the signal list. No branch; see docs/engine-reference/godot/verification-results.md.
 - **V4. Import on a fresh clone**: a throwaway clone with one uncommitted passing suite, run without and then with import (exit 0 with one test run; `No test cases found` fails the check); ten imports, any exit above 128 recorded; a new `class_name` reaches the cache.
 - **V5. CI action**: four scratch-branch pushes, one mutation each (fail, orphan, parse error, no suites): import step, logged exit, job colour, JUnit path and `tests=`. *Branch*: if it does not import or does not fail on 100, 101, 105, replace it with explicit steps; the zero-test step stays either way.
 - **V6. Lint engine facts**: PCRE2 lookbehind with `show_error`; `DirAccess` headless; `ClassDB.class_exists` false for every name found by **scanning `class_name <Name>` in `docs/architecture/adr-*.md`** at run time (so ADR-0008's `GestureRecord`, `GestureLog` and ADR-0009's rollback `CombatTypes` are included) and true for `Node`, `Input`, `Engine`; the `[connection signal=` token; no `prototypes/` path under `.godot/` once `prototypes/.gdignore` exists. *Branch*: a colliding class is renamed and its ADR amended before acceptance.
+  - Result (2026-11-04, macOS arm64, headless): headless parts pass: regex lookbehind, `DirAccess` headless, `ClassDB.class_exists` false for all 36 class names in the ADRs and true for Node, Input, Engine, and the `[connection signal=` token in a scene saved by `ResourceSaver`. No collision. The editor save and the `.godot/` scan are still open; see docs/engine-reference/godot/verification-results.md.
 - **V7. Export preset file**: include and exclude filter keys; whether `tests/*` excludes `res://tests/`; whether keystore passwords land in `export_presets.cfg` (expected: in `.godot/export_credentials.cfg`). *Branch*: if they do, the file stays ignored, PROJ-6 and PROJ-7 run locally only, and ADR-0002 Validation 10 is amended.
 
 Not relied on: gdUnit4's scene-runner input simulation (gdUnit4 warns input events are not transported headless), `assert_signal`, `monitor_signals`, any warning-as-error project setting, the text of engine errors.
@@ -168,6 +177,7 @@ godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin
 - `expect(expected)` compares the **whole** log in order (`[[name, [args]], ...]`); `ANY` matches any value of the declared type; any type error, unlisted, missing or misordered entry is one line of the result; empty means pass. Floats compare exactly (deterministic sim, binary-exact fixtures).
 - Method names avoid global functions: `entries()`, never `log()`.
 - The lambda captures the fake, so the emitter keeps the fake alive while connected. The fake holds payload values only, never an emitter, so it never keeps a battle alive in a weakref test.
+- A test drops its recording lambdas (disconnects them and clears every variable that holds one) before any weakref assert. ADR-0001 V1 (2026-11-04) saw a captured object stay alive after its lambda was dropped (lambda-release, still under a second look), so a weakref test must not rely on a lambda's release.
 - `assert_signal` and `monitor_signals` are not used (TEST-1).
 
 ### 5. Battle probes: enumerate, snapshot, run (TR-state-013, ADR-0004 Validation 6)

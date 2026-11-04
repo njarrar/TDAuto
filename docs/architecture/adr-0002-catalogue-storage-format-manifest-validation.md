@@ -13,6 +13,14 @@ Proposed
 > under `prototypes/` (not as a story), and W2 from an Android export of a
 > throwaway project that reads one JSON file the same way (no game code
 > needed); (3) ADR-0001 is Accepted.
+> Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor
+> binary; `docs/engine-reference/godot/verification-results.md`): W1 and W3
+> are RECORDED. Still open before acceptance: W2 (Android export). Edits from
+> the W1 result: the `bom_present` CI check is dropped (Decision 3 code list,
+> Decision 8, diagram, Risks, Migration Plan), because `get_file_as_string`
+> strips a file's BOM; the `duplicate_key` scan stays, because the parser keeps
+> the last value silently; the Decision 5 `make_read_only()` guard is confirmed
+> usable.
 > After acceptance: W4 (device load time) is measured at the first phone build
 > of the real catalogue. Reopen trigger: a median above 1000 ms starts a
 > load-time task under this ADR; it does not reject the format.
@@ -51,8 +59,10 @@ The Data & Config catalogue needs a storage format that catches a missing field,
 Verification items (wired to acceptance: this ADR stays `Proposed` until each has a recorded result):
 
 - **W1. JSON parsing.** Expected (unsourced): `JSON.parse` returns every number as `float`, including `3`. Check: the type of `3`, `3.0` and `160`; whether `NaN`, `Infinity` and `-Infinity` parse or fail; with a duplicate key in one object, which value survives or whether it fails; whether a leading UTF-8 BOM is a parse error. Method: a headless unit test per case. The validator below works whatever the number answer is; the duplicate-key and BOM answers decide whether the CI scans in Decision 8 stay.
+  - Result (2026-11-04, macOS arm64, headless): all numbers parse as `float`; `NaN`, `Infinity` and `-Infinity` are parse errors; a duplicate key keeps the last value silently, so the `duplicate_key` scan stays; a BOM inside a string is a parse error, but `get_file_as_string` strips a file's BOM and the file loads, so the `bom_present` check is dropped; `make_read_only()` turns an in-place write into an error and keeps the value, so the Decision 5 guard is usable; see docs/engine-reference/godot/verification-results.md.
 - **W2. Android export of the data files.** Expected (unsourced): Godot 4 imports `.json` under `res://` as a `JSON` resource, and the export ships the imported form, not the raw text, unless `*.json` is in the non-resource export filter. Check: with the filter, does `FileAccess.get_file_as_string("res://assets/data/<file>.json")` return the text on an Android export? Without it? Record whether the filter is required. Method: the first Android export, with a dev build that logs `catalogue Ready: <records> records from <files> files`, plus a release build with one broken record (GDD Acceptance 13). Owner: Technical Setup. If the raw text cannot be read in either case, use the Risks fallback (non-imported extension).
 - **W3. Canonical stringify.** Does `JSON.stringify(data, "", true, true)` sort keys at every nesting level and print floats at full precision in 4.7, so equal snapshots give equal strings and a one-ulp change gives a different one? Method: headless unit test; it is also the snapshot detector's self-test (GDD Acceptance 11). `to_dict()` returns JSON-native types only (Decision 7), so packed-array and `StringName` stringify behaviour does not matter.
+  - Result (2026-11-04, macOS arm64, headless): keys sorted at every level; equal snapshots give equal strings; floats round-trip at full precision and a one-ulp change gives a different string. No custom serializer; see docs/engine-reference/godot/verification-results.md.
 - **W4. Load time.** Median Loading-to-Ready over 5 cold launches on one named Adreno 5xx-class device, against the proposed 1000 ms (TR-data-015, QQ-11). Advisory: a miss starts a load-time task; it does not reject the format.
 
 ## ADR Dependencies
@@ -165,7 +175,7 @@ Codes (the list is closed; a new check adds its code here and in the validator i
 | Tags | `unknown_tag`, `role_tag_count`, `role_field_missing`, `role_field_without_tag` |
 | Geometry | `path_too_short`, `path_repeat_point`, `path_turn_too_sharp`, `path_segment_too_short`, `pin_rect_inverted`, `shape_invalid` |
 | References | `dangling_reference`, `wrong_reference_type` |
-| CI content tier only | `duplicate_key`, `bom_present` (Decision 8; never raised at boot) |
+| CI content tier only | `duplicate_key` (Decision 8; never raised at boot). `bom_present` was dropped 2026-11-04: W1 showed `get_file_as_string` strips a file's BOM, so a BOM file loads correctly |
 
 ### 4. Validation: schema-driven, collect everything, then fail
 
@@ -209,7 +219,7 @@ Only when every check passes does the catalogue build records. Names follow `arc
 - A record never holds a reference to the `Catalogue`, to another record object outside its owned sub-data, or to any battle object.
 - Records and sub-records reference each other only through `class_name`, never `preload`, to avoid script load cycles.
 
-Read-only is a rule with a test, not an engine guarantee (GDD Rule 6): no code outside `src/foundation/data/` writes a record field, and runtime state lives on runtime instances holding `def_id` (and level for towers). As an optional extra guard, the builder may call `make_read_only()` on each nested `Array` it creates, if W1's test run confirms the method exists in 4.7 and turns an in-place write into an error. The snapshot test stays the proof.
+Read-only is a rule with a test, not an engine guarantee (GDD Rule 6): no code outside `src/foundation/data/` writes a record field, and runtime state lives on runtime instances holding `def_id` (and level for towers). As an optional extra guard, the builder may call `make_read_only()` on each nested `Array` it creates, since W1's test run (2026-11-04) confirmed the method exists in 4.7, turns an in-place write into an error and keeps the value. The snapshot test stays the proof.
 
 ### 6. Catalogue lookups
 
@@ -243,7 +253,7 @@ Comparing strings avoids relying on deep `==` on nested containers, and `duplica
 The CI content tests live in `tests/integration/content/`. Each owning GDD's content rules (Enemy & Wave layout and wave rules, Hero and Burst rules, Battle HUD layout rules, non-empty `rationale`, declared balance ranges) are one function each, `check_<rule>(catalogue: Catalogue) -> Array[ValidationError]`, run against the real catalogue and, for each rule, against a broken fixture that must fail it (TR-hero-014, TR-hud-016). The suite also:
 
 - opens every Stage `scene_ref` with `ResourceLoader.exists()` and `load()`, failing with the stage named (GDD Rule 9), and checks that its root is a `StageLook` whose hue, base value and grid tilt are inside art bible §6's ranges, and that every record's `visual_key` has a `ViewStyles` entry (ADR-0011);
-- re-reads each real data file as text and scans it for a duplicate key inside one object (`duplicate_key`) and a leading BOM (`bom_present`), until W1 shows the parser itself rejects them.
+- re-reads each real data file as text and scans it for a duplicate key inside one object (`duplicate_key`). W1 (2026-11-04) showed the parser keeps the last value silently, so this scan stays. There is no BOM scan: W1 showed `get_file_as_string` strips a leading BOM, so a BOM file loads correctly.
 
 These run only in CI, never at boot, and never as warnings. The rules are defined by the owning GDDs; this ADR fixes only where they live and their shape.
 
@@ -281,7 +291,7 @@ Path drawability fixtures (ADR-0011 Decision 5): one stage with a 120 degree def
 
  Tests: Catalogue.from_data(label, dict) ──► same validator and builder, no file I/O
  CI:    tests/integration/content/ ──► check_<rule>(catalogue), scene_ref opens,
-        duplicate-key and BOM scan, snapshot tests
+        duplicate-key scan, snapshot tests
 ```
 
 ### Key Interfaces
@@ -409,7 +419,7 @@ For `/create-control-manifest` and `/dev-story`:
 ## Risks
 
 - **`.json` is imported and its raw text does not ship (W2).** Mitigation: the non-resource filter. If W2 shows the raw text is still unreadable, rename the data files to a non-imported extension (for example `.data`), keep the filter for that extension, and change only the paths in the manifest and the loader.
-- **Duplicate keys or a BOM pass the parser silently (W1).** Mitigation: the CI text scan in Decision 8. Dropped if W1 shows the parser rejects them.
+- **Duplicate keys pass the parser silently (W1, confirmed 2026-11-04: the last value wins).** Mitigation: the CI text scan in Decision 8. A BOM is not a risk: `get_file_as_string` strips it (W1), so the BOM scan was dropped.
 - **JSON number handling differs from the plan (W1).** Mitigation: the integer check tests the value, not the parsed type, and `float` fields accept whole numbers, so either answer works. `NaN` or `Infinity` tokens, if accepted, are caught by the finiteness check.
 - **Canonical stringify is not canonical (W3).** Mitigation: replace `JSON.stringify` with a small recursive serializer that sorts keys and formats floats with `var_to_str`.
 - **Load is slow on the device (W4).** Mitigation: the data is small (tens of records); profile parse against validate, and consider one combined file. The format does not change.
@@ -440,7 +450,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Migration Plan
 
-No code or data exists. First stories, in order: `ValidationError`, `LoadResult` and the schema table; the validator with the GDD's table-driven tests (Acceptance 1 to 5, 8); record classes, `to_dict()` and `from_data`; `load_manifest` with the manifest and file tier (Acceptance 9); `snapshot()` with its detector and coverage self-tests (Acceptance 11, W1, W3); starter data files from the prototype constants (marked as fixtures, not balance); the content-test shell with the scene, duplicate-key and BOM checks; the Android export check (W2, Acceptance 13, 15).
+No code or data exists. First stories, in order: `ValidationError`, `LoadResult` and the schema table; the validator with the GDD's table-driven tests (Acceptance 1 to 5, 8); record classes, `to_dict()` and `from_data`; `load_manifest` with the manifest and file tier (Acceptance 9); `snapshot()` with its detector and coverage self-tests (Acceptance 11, W1, W3); starter data files from the prototype constants (marked as fixtures, not balance); the content-test shell with the scene and duplicate-key checks; the Android export check (W2, Acceptance 13, 15).
 
 Same change as this ADR: ADR-0001 boot step 2 and `architecture.md` Data Flow 4 change `catalogue.load(manifest)` to `Catalogue.load_manifest(path)`; GDD Rule 7's "unknown property" wording becomes per record type.
 

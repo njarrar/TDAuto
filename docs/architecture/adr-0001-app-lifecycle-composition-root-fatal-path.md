@@ -12,6 +12,14 @@ Proposed
 >   script or throwaway project under `prototypes/` (not as a story), with the
 >   result recorded in `docs/engine-reference/godot/`. V4 from an Android
 >   export of the ADR-0003 device spike project, which needs no game code.
+> - **Verification progress, 2026-11-04** (macOS arm64, headless, Godot 4.7.2
+>   editor binary; `docs/engine-reference/godot/verification-results.md`): V1 is
+>   RECORDED and confirms the design (method Callables and connections hold an
+>   ID only; lambdas and `bind()` hold strongly; a lambda cycle leaks), so the
+>   no-lambda rule and the back-callables stand and the Rollback plan is not
+>   needed (Decision 5 and Risks note this). One V1 record, lambda-release,
+>   needs a second look (tests only). Still open before acceptance: V2, V3 and
+>   V4.
 > - **After acceptance:** V5, checked by the first AppRoot story and by the CI
 >   `[autoload]` check. Reopen trigger: if V1 to V3 are re-run inside the real
 >   code and disagree with the spike result, this ADR is amended before the
@@ -48,6 +56,7 @@ The game needs one place that owns the app's lifetime, the loaded catalogue and 
 Verification items (the gap is wired to acceptance: this ADR stays `Proposed` until each has a recorded result):
 
 - **V1. Callable reference semantics.** Does `obj.method` on a `RefCounted` object keep the object alive, or hold only its object ID? Does a signal connection keep its target alive? Does a lambda or `bind()` that captures a `RefCounted` hold a strong reference, and does a lambda written inside a method bind `self` strongly even when it captures no locals? Expected (unsourced): method Callables and connections hold an ID only; lambdas and `bind()` hold strong references. The Builder's own wiring relies on the first answer, because `halted`, `in_build` and `cancel_input` point back at `Battle` and `FatalRelay` and Flow point at each other. Method: a headless test that builds objects wired this way, drops every other reference and reads `weakref(...).get_ref()`. Owner: godot-specialist writes it as a standalone headless script outside `src/` (`prototypes/adr-checks/check_callables.gd`) and the user runs it before acceptance; the kept test (Validation 3b) is written by the ADR-0007 harness story, which builds the `battle_probe.alive()` helper first. This closes QQ-17.
+  - Result (2026-11-04, macOS arm64, headless): method Callables and connections hold an object ID only (targets and emitters freed, method-Callable cycles freed); lambdas and `bind()` hold strongly; a lambda that never uses `self` does not keep `self` alive, one that reads a member does; a lambda cycle leaks. The design holds; no `Battle.dispose()` is needed. lambda-release (captured object not freed after the lambda is dropped) needs a second look: the check may still hold a reference. It matters for tests only, since lambdas are banned in `src/`; see docs/engine-reference/godot/verification-results.md.
 - **V2. Teardown timing.** After `wrapper.detach()`, `remove_child(wrapper)` and `wrapper.queue_free()`, do `_process`, `_input` and `_unhandled_input` stop firing on the wrapper and its children at once, and are the old battle, each sim and the resolver released (weakrefs null) one frame later? Method: integration test over two frames, plus one manual run on the editor with a Control under the pointer.
 - **V3. Load and instantiate failure.** What do `ResourceLoader.load()` and `PackedScene.instantiate()` return, and what is logged, for a missing scene path, a scene with a broken script and a scene with a missing sub-resource, in the editor and in an Android export? Method: deliberately broken scenes in a throwaway project, run in the editor and from an export.
 - **V4. Release error output.** Does `push_error` print or log in a release export, and does `OS.is_debug_build()` read false there? Method: first Android export run reading `adb logcat`.
@@ -192,7 +201,7 @@ Rules for the Builder and for everything it builds:
 - **Wiring only.** A branch on a gameplay value inside the Builder or the wrapper is a defect.
 - **`obj.method` only.** Every injected or connected callable is `obj.method` on an object the Builder owns. The string forms `Callable(obj, "method")` and `connect("signal", ...)` are forbidden in `src/`, because the parser cannot check them. ADR-0007's lint rejects them.
 - **No lambdas, no `bind()`.** No lambda anywhere in `src/`, and no `bind()` for any injected or connected callable in `src/`, whether or not it captures locals (ADR-0007 C2; a `sort_custom` takes `obj.method` too). A lambda may bind `self` implicitly, and a captured `RefCounted` is a strong reference, so either can make a cycle. One flat rule is simpler to follow and to lint. (V1 checks the reference rules.)
-- **No reference fields back to `Battle`.** No sim stores `Battle` in a field. Systems reach each other only through injected callables and signals. Callables that point back at `Battle` (`halted`, `in_build`, `cancel_input`) and the mutual `FatalRelay` and Flow callables are allowed only because method Callables are expected to hold an object ID, not a reference. If V1 shows otherwise, the Rollback plan applies before any sim story starts.
+- **No reference fields back to `Battle`.** No sim stores `Battle` in a field. Systems reach each other only through injected callables and signals. Callables that point back at `Battle` (`halted`, `in_build`, `cancel_input`) and the mutual `FatalRelay` and Flow callables are allowed only because method Callables hold an object ID, not a reference (V1 confirmed this on 2026-11-04, macOS arm64). If a later run shows otherwise, the Rollback plan applies before any sim story starts.
 - **Session lifetime.** An object that lives for the session (`AppRoot`, `Catalogue`, any record) must never hold a per-battle callable or connect to a per-battle signal. The stat accessor is per battle (ADR-0005): the Builder creates it with the relay's `fatal`, and it is dropped with the battle. No sim connects to a catalogue signal. Otherwise a retry either leaks the old battle or sends a later fatal to a dead relay.
 - **No mutable `static var`** in any class under `src/`. Static state lives per script, survives a retry and defeats the rebuild.
 - **No deferred connections** on gameplay signals (TR-enemy-004, ADR-0006).
@@ -378,7 +387,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Risks
 
-- **A method Callable keeps an object alive (V1).** Then the Builder's own wiring (callables back to `Battle`, the relay and Flow pointing at each other) forms cycles by construction, and the weakref stays non-null. Mitigation: V1 test before any sim story; if it fails, add an explicit `Battle.dispose()` that disconnects every connection and clears every held Callable, called from teardown, and amend this ADR.
+- **A method Callable keeps an object alive (V1).** V1 (2026-11-04, macOS arm64) showed it does not: method-Callable cycles are freed. If a later run disagrees, then the Builder's own wiring (callables back to `Battle`, the relay and Flow pointing at each other) forms cycles by construction, and the weakref stays non-null. Mitigation: V1 test before any sim story; if it fails, add an explicit `Battle.dispose()` that disconnects every connection and clears every held Callable, called from teardown, and amend this ADR.
 - **`queue_free()` timing differs from the plan (V2).** Mitigation: the battle's release does not depend on node deletion, because `detach()` clears every reference in the wrapper subtree first.
 - **A string-form Callable or a lambda slips in.** Mitigation: the ADR-0007 lint rejects `Callable(`, string `connect(`, `func(` used as a value, and `.bind(` under `src/`.
 - **A per-battle callable leaks into a session-lived object.** Mitigation: the session-lifetime rule, and the retry weakref test run after a battle that made a bad accessor call.
