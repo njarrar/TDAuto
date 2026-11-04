@@ -202,7 +202,7 @@ const MOUSE_POINTER := 1 << 16
 ## Once per away episode, and on each back request, after resolver.cancel().
 signal lifecycle_paused()
 ## Built by BattleWrapper only.
-func setup(resolver: InputResolver, edge_reject_margin: float, insets: FieldInsets, dev_error: Callable) -> void
+func setup(resolver: InputResolver, edge_reject_margin: float, insets: FieldInsets, dev_error: Callable, is_mobile: bool) -> void
 ## Closed while a modal TapScreen shows. Drops presses only.
 func set_presses_blocked(blocked: bool) -> void
 
@@ -404,3 +404,6 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 - `architecture.md` v3: Gap Summary, Data Flow 1 and 6, B2, B3, QQ-02, QQ-06, QQ-12, QQ-20; `tr-registry.yaml` (the 11 TRs above).
 - GDDs: `input-gesture-resolver.md` (Rules 1, 7, 10, 12; Formulas; adapter contract), `battle-hud.md` (Rules 2, 17, 18; Layout; `burst_y`), `game-state-stage-flow.md` (Rule 17).
 - Mobile Platform & Performance GDD (VS, not written): inherits Decisions 1 and 3.
+
+## Amendments
+- **2026-11-04, with ADR-0007 (pending the user's confirmation at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.

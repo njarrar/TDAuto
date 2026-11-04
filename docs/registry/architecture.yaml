@@ -564,36 +564,39 @@ api_decisions:
     notes: "ADR-0006 Accepted 2026-11-04; binding"
   - purpose: headless_test_runner
     status: active
-    api: "tools/ci/run_tests.sh only, in CI and on desktops: --import (one retry on 139), godot-parse-check.gd, tools/ci/lint/lint_main.gd, GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c; exit 0 passes unless No test cases found; 101 and every other code fail; gdUnit4 6.2.0 pinned"
+    # was: retry on 139 only, -a res://tests, empty run by console text, gdUnit4 6.2.0 pinned (before godot-specialist and TD-ADR review)
+    api: "tools/ci/run_tests.sh only (commands.test, CI and desktops), every step under timeout: --import (one retry on any non-zero), godot-parse-check.gd, tools/ci/lint/lint_main.gd, GdUnitCmdTool.gd --path . -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c; 0 passes only if results.xml counts a test case; 101 fails with the orphan report; own codes 110 import, 111 parse, 112 lint, 113 empty, 124 timeout; gdUnit4 6.2.2 (upgrade pending user confirmation)"
     not: "gdUnit4-action as the test step; --check-only as a parse check; exit 101 as a pass"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "One pass rule the project owns; an orphan node is a leak the retry design guards against"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
   - purpose: project_lint
     status: active
-    api: "GDScript SceneTree lint run by Godot headless: token based (comments dropped, strings kept), pure rule functions in tools/ci/lint/rules/, scopes only in tools/ci/lint/scopes.gd, ProjectSettings/ClassDB/global class list reflection; IDs L-LAYER-1 to L-TEST-4; suppression '# lint-allow(ID): reason' except layer, name, autoload, RNG and test rules"
-    not: "Shell or Python regex over source text; gdtoolkit parser"
+    # was: one file per rule family, suppression markers allowed (before godot-specialist and TD-ADR review)
+    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5; no suppression markers"
+    not: "Shell or Python regex over source text; gdtoolkit parser; inline lint-allow markers"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
   - purpose: test_push_error_reporting
     status: active
-    api: "gdunit4/report/godot/push_error=true; an expected error is claimed with await assert_error(callable).is_push_error(msg); an unclaimed push_error fails the test; counts across calls use a recording DevErrorSink"
-    not: "Reporting off (is_push_error sees nothing); assert in src/"
+    # was: setting decides whether is_push_error sees errors; push_error only (before godot-specialist review)
+    api: "gdunit4/report/godot/push_error=true: any unclaimed push_error, push_warning, engine error or warning, or runtime script error fails the test; claim with await assert_error(callable).is_push_error(msg) or is_push_warning(msg), always awaited; counts across calls use a recording DevErrorSink"
+    not: "Reporting off (unclaimed errors pass silently); un-awaited assert_error; assert in src/"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
-    reason: "TR-combat-012 needs exactly-one error checks; read from gdUnit4 6.2.0 source, proved by probe H2"
+    reason: "TR-combat-012 needs exactly-one error checks; an assert_error records in its own logger whatever the setting; read from gdUnit4 6.2.0 source, proved by probe H2"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
