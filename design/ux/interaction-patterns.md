@@ -83,7 +83,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 | IP-21 | TapScreen modal | Designed |
 | IP-22 | Tap to resume | Designed |
 | IP-23 | One-tap retry | Designed |
-| IP-24 | Refusal cue | Designed in part (static cue open) |
+| IP-24 | Refusal cue | Designed |
 | IP-25 | Visible clock | Designed |
 | IP-26 | Reduce Motion fallback | Designed (flag at MVP) |
 | IP-27 | Handedness mirror | Designed (flag at MVP) |
@@ -246,12 +246,12 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **Description**: The first tap shows the price; a second tap inside a short window pays it.
 **Specification**:
 - Tap opens a 76 x 44 chip at (x, y - 76) of the tower for 1.5 s: cost (16 dp), the level-2 polygon (20 px cyan), and a draining bar (IP-25). Current and next range rings show.
-- Commit taps: the same tower, or the chip's own disc (TAP 300, radius 40), timed at release. One chip at a time. A drag from the hero over the tower never commits.
+- Commit taps: the same tower, or the chip's own disc (TAP 300, radius 40). The 200 ms guard counts from the press, as the arc's does (IP-09); the window end counts at release. One chip at a time. A drag from the hero over the tower never commits.
 
 | State | When | What a commit tap does |
 |---|---|---|
-| Guard | Under 200 ms at release | Ignored |
-| Open | 200 ms to under 1,500 ms at release | Upgrades; any result but NO_GOLD closes the chip |
+| Guard | Press begins under 200 ms | Ignored, even if released later |
+| Open | Press begins at 200 ms or later; released under 1,500 ms | Upgrades; any result but NO_GOLD closes the chip |
 | Refused | After NO_GOLD | Stays open and dimmed, window not restarted (IP-24); a later tap may commit |
 | Expired | 1,500 ms | Chip closes; the next tap on the tower opens a fresh chip and never commits |
 | Closed | A press on another tap target or none; Paused, Won, Lost, Fatal. Another tower opens its own chip | Nothing |
@@ -329,7 +329,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **Description**: An irreversible button that may appear under a thumb waits 300 ms before a press counts.
 **Specification**:
 - States: Hidden (not registered), Arming (registered; only the 2 px outline dims, alpha 0.5 rising to full over 300 ms; a press made now is dead even if released once Armed), Armed (a new press counts).
-- The labels stay at 4.5:1 or above while Arming, and the panel stays at 85%, since panel opacity never animates (AR-V-04, art bible §7). This departs from the HUD Visual table (OI-05).
+- The labels stay at 4.5:1 or above while Arming, and the panel stays at 85%, since panel opacity never animates (AR-V-04, art bible §7). The HUD Visual table says the same (OI-05, resolved).
 - Registers on appearing, not on arming, so an early press cannot land on what lies beneath.
 - Clock from frame time, clamped to 100 ms per frame, frozen while Paused; a return from Paused is not a new appearance.
 - Once armed: no pulse, no warning, no advice.
@@ -360,7 +360,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **Description**: Every spend shows its price on a panel beside the thing it buys, and the price updates live as gold changes.
 **Specification**:
 - Cost in 16 dp tabular digits on panel. Read at draw time, never cached from when the arc or chip opened.
-- Unaffordable: dimmed and struck through, no magenta. **Text alpha at least 0.6** (4.83:1, AR-V-05); the arc polygon may stay at 0.55. See OI-01.
+- Unaffordable: dimmed and struck through, no magenta. **Text alpha at least 0.6** (4.83:1, AR-V-05); the arc polygon may stay at 0.55. The HUD Visual table says the same (OI-01, resolved).
 - A disc or chip that becomes affordable while open works at once.
 - A refused tap gets a refusal (IP-24).
 **When to Use**: any gold spend.
@@ -466,13 +466,13 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **Category**: Feedback · **Used in**: unaffordable arc disc, unaffordable chip, locked burst button press
 **Description**: A refused tap must look refused, not missed.
 **Specification**:
-- Normal: a 2 px nudge once for 120 ms, no magenta. Before the first pin, a locked press also repeats the prompt.
-- Under Reduce Motion the nudge is skipped and **a static cue must replace it** (AR-V-11). The cue is not yet chosen; the arc-and-chip UX spec picks it. AR-V-11's examples: the strike thickens for 300 ms, or the dotted outline turns solid for 300 ms. See OI-04.
+- Normal: a 2 px nudge once for 120 ms, no magenta. Before the first pin, a locked press also repeats the prompt: the prompt line shows its text again for 1 s.
+- Under Reduce Motion the nudge and the prompt repeat are skipped and **a static cue replaces them** (AR-V-11): the refused item shows a dotted outline and one short line of text naming the reason, "Need N gold" or "Locked", 14 dp on panel, for 1 s, with no motion. N is the cost minus gold at the refusal. The arc-and-chip and pin-and-aim specs place the line. User decision 2026-11-04 (OI-04, resolved).
 - A cooling burst press is not a refusal: it shows the digit (IP-03).
 **When to Use**: any tap that reaches its owner and is turned down.
 **When NOT to Use**: misses that reach no owner; those stay silent (IP-14 aside).
 **Sources**: Tower UI Requirements; Hero UI Requirements; HUD Rule 7; AR-V-11.
-**Accessibility**: AR-V-11: a static cue under Reduce Motion, picked in the arc-and-chip spec.
+**Accessibility**: AR-V-11: under Reduce Motion, a dotted outline and a reason line for 1 s, with no motion.
 **Implementation Notes**: Owners report NO_GOLD or Locked; the HUD draws nudge or cue from `PresentationSettings`.
 
 #### IP-25 Visible clock
@@ -543,7 +543,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 
 | Gap | Needed by | Owner | Notes |
 |---|---|---|---|
-| Static refusal cue (completes IP-24) | MVP | Arc-and-chip UX spec | AR-V-11; Tower UX flag |
+| Placement of the static refusal cue's text line (IP-24; the cue was decided 2026-11-04) | MVP | Arc-and-chip and pin-and-aim UX specs | AR-V-11; Tower UX flag |
 | Chip details: armed look after the guard, a chip that would leave the field, maximum-level cue (IP-11) | MVP | Arc-and-chip UX spec | Tower UX flag |
 | Aim details: clamped reticle far from the thumb, preview past the reach ring, ring clipping, re-grabbing a hero pinned high | MVP | Pin-and-aim UX spec | Hero UX flag |
 | Pause control placement (IP-29) | Vertical Slice | HUD spec with Menu & Screen Flow | AR-C-01; OI-06 |
@@ -567,7 +567,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 
 **Not a pattern.** The Fatal screen takes no input at MVP (Flow Rule 18).
 
-**Cross-reference check (2026-11-04).** Input, HUD, Tower, Hero and Flow UI requirements are covered; Combat, Enemy & Wave and Data own no interaction. Five floors are not met by the sources (OI-01 to OI-05); OI-17 is an accepted exception. Empty states: prompt (none after the first burst), damage rows and gold read 0.
+**Cross-reference check (2026-11-04).** Input, HUD, Tower, Hero and Flow UI requirements are covered; Combat, Enemy & Wave and Data own no interaction. Five floors were not met by the sources (OI-01 to OI-05); the GDDs and art bible met them on 2026-11-04. OI-17 is an accepted exception. Empty states: prompt (none after the first burst), damage rows and gold read 0.
 
 ---
 
@@ -579,25 +579,25 @@ Each item names the sources that disagree and what this library follows. It edit
 
 | ID | Sources that disagree | Gap | Library follows | Owner |
 |---|---|---|---|---|
-| OI-01 | HUD Visual table "Unaffordable" (alpha 0.55) vs AR-V-05 | Cost text at 0.55 is 4.26:1, under 4.5:1 | Text at 0.6 or above (IP-17) | Battle HUD GDD (AR change 1) |
-| OI-02 | Tower Visual table "Range ring" (next level at alpha 0.25) vs AR-V-06 | 1.65:1 on the path, under 3:1; told apart by alpha only | Nothing new; IP-10 cites the ring without a value | Tower GDD (AR change 2) |
-| OI-03 | Art bible §6 slot marks vs AR-V-07 | 1 px outline at 0.3 is 2.1:1; corner mark has no alpha | Nothing new | art-director (AR change 3) |
-| OI-04 | Tower, Hero and HUD UI Requirements (nudge skipped under Reduce Motion, no stand-in) vs AR-V-11 | A refused tap reads as a missed tap | IP-24 requires a static cue, not yet picked | Arc-and-chip UX spec; Tower, Hero, HUD GDDs (AR change 4) |
-| OI-05 | HUD Visual table "Start/Call" (Arming at alpha 0.5, rising to full over 300 ms) vs AR-V-04 and art bible §7 | Labels at 0.5 are 3.75:1, under 4.5:1; art bible §7 says panel opacity never animates | The floor: labels stay at 4.5:1 or above while Arming and only the outline dims (IP-15) | Battle HUD GDD (AR change 15), art-director |
+| OI-01 | HUD Visual table "Unaffordable" (alpha 0.55) vs AR-V-05 | Cost text at 0.55 is 4.26:1, under 4.5:1 | Text at 0.6 or above (IP-17) | Resolved 2026-11-04: HUD Visual table sets text at 0.6 |
+| OI-02 | Tower Visual table "Range ring" (next level at alpha 0.25) vs AR-V-06 | 1.65:1 on the path, under 3:1; told apart by alpha only | Nothing new; IP-10 cites the ring without a value | Resolved 2026-11-04: Tower Visual table draws the next ring dashed at 0.5 or above |
+| OI-03 | Art bible §6 slot marks vs AR-V-07 | 1 px outline at 0.3 is 2.1:1; corner mark has no alpha | Nothing new | Resolved 2026-11-04: art bible §6 sets the corner mark at 0.45 or above |
+| OI-04 | Tower, Hero and HUD UI Requirements (nudge skipped under Reduce Motion, no stand-in) vs AR-V-11 | A refused tap reads as a missed tap | IP-24: a dotted outline and a reason line ("Need N gold", "Locked") for 1 s, no motion | Resolved 2026-11-04 (user decision): Tower, Hero, HUD UI Requirements; the UX specs place the line |
+| OI-05 | HUD Visual table "Start/Call" (Arming at alpha 0.5, rising to full over 300 ms) vs AR-V-04 and art bible §7 | Labels at 0.5 are 3.75:1, under 4.5:1; art bible §7 says panel opacity never animates | The floor: labels stay at 4.5:1 or above while Arming and only the outline dims (IP-15) | Resolved 2026-11-04: HUD Visual table; art bible §7 kept |
 | OI-06 | HUD Rule 4, Flow Rule 17 and Input UI Requirements ("no pause button") vs AR-C-01 | iOS has no back button. The top band ignores input (IP-20) and the bottom 30% is reserved, so no place is free | IP-22 at MVP; IP-29 planned | HUD spec, Flow GDD (AR change 6) |
 | OI-07 | Input burst sink, concept Pillar 4, Hero Rules 11 and 15 vs AR-M-06 | "A tap on the burst button does nothing" holds only in the default mode | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
-| OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits four rows | AR-V-10 (IP-26) | Battle HUD GDD (AR change 5) |
-| OI-09 | Tower Rule 7 ("dimmed and does nothing") vs HUD Rule 7 (the disc calls `build`; NO_GOLD nudges) and Tower UI Requirements | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Tower GDD |
-| OI-10 | HUD Rules 2 and 11, Flow Game Feel (Retry arms after 300 ms) vs ADR-0003 Decision 4 (`TapScreen` has no arming state) | No arming gate, and no owner for it | IP-21: TapScreen takes optional `arm_ms` (default 0) and ignores presses begun before arming; the result screen sets 300 (IP-23). **Proposed; needs an ADR-0003 amendment** | technical-director (ADR-0003), Battle HUD stories |
-| OI-11 | HUD Rule 6 and AC 4 (arc guard on press time) vs Tower Rule 8 (chip guard on release time) | Two 200 ms guards on different clocks. A press at 150 ms released at 250 ms upgrades on a chip and is ignored on an arc | Each as written (IP-09, IP-10). **Open**: one clock should be picked | Battle HUD and Tower GDDs |
+| OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits four rows | AR-V-10 (IP-26) | Resolved 2026-11-04: HUD UI Requirements point to AR-V-10 |
+| OI-09 | Tower Rule 7 ("dimmed and does nothing") vs HUD Rule 7 (the disc calls `build`; NO_GOLD nudges) and Tower UI Requirements | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Resolved 2026-11-04: Tower Rule 7 matches HUD Rule 7 |
+| OI-10 | HUD Rules 2 and 11, Flow Game Feel (Retry arms after 300 ms) vs ADR-0003 Decision 4 (`TapScreen` has no arming state) | No arming gate, and no owner for it | IP-21: TapScreen takes optional `arm_ms` (default 0) and ignores presses begun before arming; the result screen sets 300 (IP-23). **Proposed; needs an ADR-0003 amendment** | GDD side resolved 2026-11-04 (HUD Rules 2 and 11, Flow Game Feel); ADR-0003 amendment still owed (technical-director) |
+| OI-11 | HUD Rule 6 and AC 4 (arc guard on press time) vs Tower Rule 8 (chip guard on release time) | Two 200 ms guards on different clocks. A press at 150 ms released at 250 ms upgrades on a chip and is ignored on an arc | Both count from the press (IP-09, IP-10) | Resolved 2026-11-04 (user decision): Tower Rule 8 and its criteria now count from the press |
 | OI-12 | AR-M-06 (owners change, resolver signals do not) vs Input Rules 4 and 5 | The hero has no TAP disc, so a tap on it emits nothing; a second tap reaches whatever lies beneath. No signal means "tap at any point" | IP-28 restates AR-M-06 only | Input, Hero GDDs; Settings & Accessibility (Alpha) |
 | OI-13 | `.claude/docs/technical-preferences.md` Platform Notes ("skill button > tower > build slot > walkable ground") vs Input priority table | Legacy order is wrong and incomplete | Input priority (IP-04) | Project config owner (`/setup-engine`) |
 | OI-14 | HUD panel sizes vs AR-V-03 | Sized for 100% text only | Nothing new | Battle HUD GDD (AR change 7, Alpha) |
 | OI-15 | HUD content rules and Enemy & Wave L3 (checked at hit scale x1) vs AR-M-04 | Start/Call is 7.2 from the left burst disc and 17.3 from a slot; x1.25 breaks both | Nothing new | Battle HUD, Enemy & Wave GDDs (AR change 8, Alpha) |
-| OI-16 | Hero UI Requirements ("before a first pin, the nudge also repeats the prompt") vs HUD Rule 13 and AR-V-10 | The prompt already shows; "repeat" is unstated, under Reduce Motion too | Nothing new | Hero GDD, pin-and-aim UX spec |
+| OI-16 | Hero UI Requirements ("before a first pin, the nudge also repeats the prompt") vs HUD Rule 13 and AR-V-10 | The prompt already shows; "repeat" is unstated, under Reduce Motion too | IP-24: the prompt line shows its text again for 1 s; under Reduce Motion, the static cue | Resolved 2026-11-04: Hero UI Requirements |
 | OI-17 | Hero Visual "Cancelling" (reticle alpha 0.3) vs AR-V-04 | Now computed at about 2.4:1, under 3:1 | Accepted exception, as in the AR doc: the hidden preview and kill marks are the non-alpha backup | Resolved 2026-11-04 |
 | OI-18 | AR header said this library did not exist | Was stale | n/a | Resolved 2026-11-04 |
-| OI-19 | Concept Pillar 4 ("Drag priority: burst > hero") vs IP-04, IP-16, the Input table and Hero Rule 15 (hero 200 over burst 100) | The concept line is reversed | The GDDs are right (IP-04, IP-16) | Concept owner: fix the concept line |
+| OI-19 | Concept Pillar 4 ("Drag priority: burst > hero") vs IP-04, IP-16, the Input table and Hero Rule 15 (hero 200 over burst 100) | The concept line is reversed | The GDDs are right (IP-04, IP-16) | Resolved 2026-11-04: Pillar 4 now reads hero over burst |
 
 ### Other open questions
 

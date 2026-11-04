@@ -319,3 +319,9 @@ Wording only; no bound or balance value changed. The "Hero records, exactly one"
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. `idle` is now `became_idle` (ADR-0006 Decision 5). Rule 13 says HeroInput issues no command from `drag_cancelled` or `became_idle`, the cleanup edges `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6). Rule 16 names the payload `hero_pinned(pin_position)` (ADR-0006 Decision 4). The walk position is written per axis, with no `Vector2` operators in sim code (ADR-0004 Decision 9).
+
+## Revision — 2026-11-04 — accessibility and pattern fixes (MVP)
+No balance value changed; Status unchanged. Sources: `design/accessibility-requirements.md` (GDD and ADR Changes Needed, MVP rows) and `design/ux/interaction-patterns.md` (OI items).
+- UI Requirements, Locked (user decision): under Reduce Motion a locked press shows the dotted outline and "Locked" for 1 s, with no motion (AR-V-11, IP-24, OI-04).
+- UI Requirements: "the nudge also repeats the prompt" now says what repeat looks like: the prompt line shows its text again for 1 s. Under Reduce Motion the static cue replaces it (OI-16).
+- Visual table, Cancelling: the reticle at alpha 0.3 (about 2.4:1) is recorded as an accepted exception to AR-V-04, since hiding the preview and kill marks is a non-alpha backup (OI-17). The Reduce Motion row points to the static cue.

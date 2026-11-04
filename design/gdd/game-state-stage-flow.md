@@ -203,7 +203,7 @@ All durations are proposed, untested and presentation only, so the wrapper runs 
 
 - **Lost is immediate.** The simulation freezes on the tick lives reach 0, in-flight drags cancel without firing, and the screen appears about 0.4 s later.
 - **Won breathes.** Input is dead for a beat of about 1 s, then the screen appears.
-- **Retry is one tap, no confirm.** The button arms about 0.3 s after appearing and ignores presses begun earlier, so a thumb already down cannot fire it.
+- **Retry is one tap, no confirm.** The result screen's TapScreen uses `arm_ms` 300, counted from when its text shows, and ignores presses begun earlier, so a thumb already down cannot fire it (Battle HUD Rules 2 and 11).
 - **Start/Call arms the same way.** It appears when a wave clears, possibly under a thumb, and it is irreversible.
 - **Calling early shows both sides.** The button shows the bonus and the time left, with burst readiness beside it, in plain numbers and shapes.
 - **Starting a stage is never rushed.** Build has no timer.

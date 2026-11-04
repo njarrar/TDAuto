@@ -324,7 +324,7 @@ Primitives only. Nothing has been rendered and every value is unverified on a de
 | Aim | Reticle with no flip, and a solid 2 px radius preview | §3 |
 | Reach ring | Neutral, dotted 3 on and 13 off, 2 px, alpha 0.6, unfilled, two-tone over the path | New |
 | Clamped at reach | Reticle stops; ±20° of the reach arc turns solid, alpha 0.7 | New |
-| Cancelling | Reticle alpha 0.3, no ticks; preview and kill marks hidden | §7 |
+| Cancelling | Reticle alpha 0.3, no ticks; preview and kill marks hidden. Accepted exception to AR-V-04: the reticle is about 2.4:1, under 3:1, because hiding the preview and kill marks is a non-alpha backup that says "release cancels" | §7 |
 | Kill preview | Live aim only: an enemy in radius with `hp_left` at or below burst damage has its body knocked out to field colour, with a steady 2 px white contour; damaged core hidden | New |
 | T to T+0.1 | Near-circle wind-up; preview holds; field −3% from T | §5 |
 | T+0.1 to R | Hero snaps to 1.3×; gold ring grows to meet the preview exactly at R; glow 2 | §2 |
@@ -334,7 +334,7 @@ Primitives only. Nothing has been rendered and every value is unverified on a de
 | Unpinned | Dashed ring at the hero's grab radius 56, not the leash, with a one-line prompt, so the first thing to touch is marked and no enemy crosses it. A press shows the leash as usual | §3, new |
 | Ready | Four static 3 px ticks, 8 long, radius 40 around the hero, in Wave and Intermission, and only once pinned | New |
 | Ready, first frame | Ticks close in from radius 56, button scale 1.15 to 1, 120 ms, once; no glow change | §7 |
-| Reduce Motion | No dip, wind-up, snap or Ready pop; a static ring from T+0.1, 4 px at R; spokes stay | §7 |
+| Reduce Motion | No dip, wind-up, snap or Ready pop; a static ring from T+0.1, 4 px at R; spokes stay. A locked press shows the static refusal cue (UI Requirements) | §7 |
 | Defeat / Victory | Outline, glow 0 / idle, glow 1. Leash, rings and ticks removed | §2 |
 
 📌 **Asset Spec:** once the art bible is approved, run `/asset-spec system:hero-system`.
@@ -347,7 +347,8 @@ The pin commits on release: the ground ring lands first, and the hero follows, s
 
 Battle HUD draws these, and this system supplies the state.
 
-- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms, skipped under Reduce Motion. Before a first pin, the nudge also repeats the prompt.
+- Locked, in Build or before a first pin: dotted neutral outline, no fill or digit. A press nudges ±2 px once for 120 ms. Before a first pin, the press also repeats the prompt: the prompt line shows its text again for 1 s.
+- Under Reduce Motion the nudge and the prompt repeat are skipped, and the static refusal cue stands in: the button keeps its dotted outline and shows one short line of text, "Locked", for 1 s, with no motion (AR-V-11, IP-24; Battle HUD UI Requirements).
 - Prompt until the first pin: "Drag the hero", one line on panel, the first of three the Battle HUD owns (Rule 13 there). None needs an Onboarding system.
 - Ready press: a thin ring at radius 64, which is the cancel boundary and shows beyond the fingertip, plus a cancelling reticle, as the drag affordance.
 - Cooling press: the digit above the thumb, on panel.

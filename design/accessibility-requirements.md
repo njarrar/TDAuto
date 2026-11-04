@@ -97,15 +97,15 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
 | Pair | Ratio | Needs | Verdict |
 |---|---|---|---|
 | Neutral #C8D0E0 text on panel | 11.2:1 | 4.5:1 | Pass |
-| Unaffordable cost text, neutral at alpha 0.55 on panel | 4.26:1 | 4.5:1 (14 to 16 dp is not large text) | **Fail.** Alpha 0.6 gives 4.83:1 (AR-V-05) |
+| Unaffordable cost text, neutral at alpha 0.55 on panel | 4.26:1 | 4.5:1 (14 to 16 dp is not large text) | Fixed 2026-11-04: the Battle HUD sets the text at alpha 0.6, 4.83:1 (AR-V-05) |
 | Hero, tower, enemy, danger, status against field | 15.8, 9.0, 7.3, 5.5, 5.8:1 | 3:1 (graphics) | Pass |
 | Leash, neutral 2 px dashed at alpha 0.5, on field / on path | 3.8 / 3.8:1 | 3:1 | Pass; two-tone over the path stays (art bible §7) |
 | Reach ring dots, alpha 0.6, on path | 4.9:1 | 3:1 | Pass |
 | Current range ring, cyan alpha 0.5, on path | 3.05:1 | 3:1 | Pass, with no margin |
-| Next-level range ring, cyan alpha 0.25, on path | 1.65:1 | 3:1 | **Fail** (AR-V-06) |
-| Slot outline, 1 px at alpha 0.3, on field | 2.1:1 | 3:1 for the mark that says "free" | **Fail** if the outline is the only mark; the free-slot corner mark has no alpha yet (AR-V-07) |
+| Next-level range ring, cyan alpha 0.25, on path | 1.65:1 | 3:1 | Fixed 2026-11-04: the Tower GDD draws it dashed at alpha 0.5 or above, 3:1 or above, told apart by pattern (AR-V-06) |
+| Slot outline, 1 px at alpha 0.3, on field | 2.1:1 | 3:1 for the mark that says "free" | Fixed 2026-11-04: the art bible sets the free-slot corner mark at alpha 0.45 or above, 3.3:1; the outline is support only (AR-V-07) |
 | Ground rejection ring, alpha 0.35 | 2.5:1 | 3:1 | Accepted exception: a hint, not needed to play (Known Intentional Limitations) |
-| Start/Call labels while Arming, neutral at alpha 0.5 on panel | 3.75:1 | 4.5:1 | **Fail.** The labels stay at 4.5:1 or above and only the outline dims; panel opacity never animates (art bible §7). Change 15 |
+| Start/Call labels while Arming, neutral at alpha 0.5 on panel | 3.75:1 | 4.5:1 | Fixed 2026-11-04 in the Battle HUD Visual table: the labels stay at 4.5:1 or above and only the outline dims; panel opacity never animates (art bible §7). Change 15 |
 | Aim reticle, 3 px at alpha 0.7, live aim | Not computed | 3:1 | Owed: the art bible sets the alpha but no hue. The contrast unit test covers it once the hue is set |
 | Kill preview contour, 2 px white on the knocked-out body | About 18.7:1 | 3:1 | Pass |
 | Cancelling reticle, alpha 0.3 | About 2.4:1 | 3:1 | Accepted exception. The non-alpha backup is that the radius preview and kill marks hide, so "release cancels" never rests on the dim alone (Known Intentional Limitations) |
@@ -118,9 +118,9 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
 - **AR-V-02 Tabular numerals; digits swap, never bounce.** Already decided (art bible §7). MVP, Battle HUD.
 - **AR-V-03 Larger text, 125%.** New. One setting that scales every screen-space string by 1.25 (14 dp becomes about 18 dp). It does not scale field glyphs. Every HUD and menu panel must fit its longest string at 125% in its own language; a panel that cannot grow wraps to a second line or abbreviates by a rule its UX spec names. Alpha, Settings & Accessibility owns the flag; Battle HUD and Menu & Screen Flow own the layouts. **GDD change needed:** Battle HUD's panel sizes (arc panel 60 x 44, Start/Call 88 x 72 with two 14 dp lines, chip 76 x 44, prompt 300 x 34) are sized for 100% only.
 - **AR-V-04 Contrast floors.** New, as a rule for every view. Text: 4.5:1 against what it sits on, in every state, dimmed states included. Any graphic a player must see to act (a target, a state ring, a range ring, an aim mark): 3:1 against field and against path. A state that dims a button dims its outline, never its text: Start/Call while Arming is the case in point (change 15). MVP, every view owner; checked by the test plan.
-- **AR-V-05 Dimmed cost text at alpha 0.6 or above.** New. The unaffordable state keeps its strike-through and dim, but the text must not fall below 4.5:1. Alpha 0.6 gives 4.83:1. The polygon in the arc may stay at 0.55. MVP, Battle HUD. **GDD change needed:** Battle HUD Visual table, row "Unaffordable".
-- **AR-V-06 Next-level range ring at 3:1.** New. The chip's next-level ring is decision information (is the upgrade worth it?). It must reach 3:1 on the path, for example a dashed cyan line at alpha 0.5 so it differs from the current ring by pattern, not by fading. MVP, Tower System. **GDD change needed:** Tower GDD Visual table, row "Range ring" (alpha 0.25).
-- **AR-V-07 Free slot mark at 3:1.** New. A free build slot is a tap target, so its mark (the 4-dot corner mark) must reach 3:1 on the field; neutral at alpha 0.45 gives 3.3:1. The 1 px outline at 0.3 may stay as support. MVP, Tower System draws slots; art-director owns the art bible. **Art bible change needed:** §6 Architecture, slot marks.
+- **AR-V-05 Dimmed cost text at alpha 0.6 or above.** New. The unaffordable state keeps its strike-through and dim, but the text must not fall below 4.5:1. Alpha 0.6 gives 4.83:1. The polygon in the arc may stay at 0.55. MVP, Battle HUD. **Applied 2026-11-04** to the Battle HUD Visual table, row "Unaffordable".
+- **AR-V-06 Next-level range ring at 3:1.** New. The chip's next-level ring is decision information (is the upgrade worth it?). It must reach 3:1 on the path, for example a dashed cyan line at alpha 0.5 so it differs from the current ring by pattern, not by fading. MVP, Tower System. **Applied 2026-11-04** to the Tower GDD Visual table, row "Range ring": dashed at alpha 0.5 or above.
+- **AR-V-07 Free slot mark at 3:1.** New. A free build slot is a tap target, so its mark (the 4-dot corner mark) must reach 3:1 on the field; neutral at alpha 0.45 gives 3.3:1. The 1 px outline at 0.3 may stay as support. MVP, Tower System draws slots; art-director owns the art bible. **Applied 2026-11-04** to art bible §6 Architecture, slot marks.
 - **AR-V-08 Photosensitivity.** Already decided in part (art bible §7, UX photosensitivity note): the 2 Hz danger pulse swings at most 25% alpha or runs as travelling chevrons, and the 0.4 s burst field dip never chains within 1 s. New: no element may flash more than 3 times in any 1 s if it covers more than 25% of the screen, and no saturated red flash of any size may repeat above 3 Hz (Harding and WCAG SC 2.3.1). Hit flashes (80 ms, small, per enemy) pass by area; a full-screen effect of any kind needs this check first. No screen shake exists or is planned (Combat, Deferred). MVP for the rule, Visual Feedback & VFX (Vertical Slice) for the automated check.
 - **AR-V-09 Photosensitivity notice.** New. A short notice on first launch, before the first stage. Vertical Slice, Menu & Screen Flow. A store build cannot ship without it.
 - **AR-V-10 Reduce Motion.** Already decided as a flag (ADR-0001, `PresentationSettings`; Battle HUD UI Requirements; Hero Visual table; Tower UI Requirements; art bible §7). This document gathers what it does, since four documents each hold a part:
@@ -139,7 +139,7 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
   | Cooldown sweep, chip drain bar | Linear clock | Stay; a clock is information | Art bible §7 |
 
   Default off. MVP for the flag and every row above (the flag already exists at MVP); Alpha for the settings toggle (Settings & Accessibility). Where the OS exposes its own Reduce Motion (iOS) or Remove Animations (Android) setting, the first launch should copy it into the default (Open Questions: the Godot 4.7 API for this is unverified).
-- **AR-V-11 A non-motion refusal cue.** New. Under Reduce Motion a refused tap (unaffordable disc or chip, locked burst button) has no nudge, so it reads as a missed tap. Each needs a static cue, for example the struck cost thickening its strike for 300 ms, or the locked button's dotted outline turning solid for 300 ms. MVP, Tower System and Hero System supply the state; Battle HUD draws it; the arc-and-chip UX spec picks the cue (the Tower GDD's UX flag already asks for this).
+- **AR-V-11 A non-motion refusal cue.** New. Under Reduce Motion a refused tap (unaffordable disc or chip, locked burst button) has no nudge, so it reads as a missed tap. **Decided 2026-11-04 (user):** the refused item shows a dotted outline and one short line of text naming the reason, for example "Need 20 gold" or "Locked", for 1 s, with no motion. MVP, Tower System and Hero System supply the state; Battle HUD draws it; the arc-and-chip and pin-and-aim UX specs place the text. Applied 2026-11-04 to the Tower, Hero and Battle HUD UI Requirements (IP-24).
 - **AR-V-12 Greyscale legibility.** Already decided as a test (art bible §5: render each enemy at minimum size in grey and name it in one second; Combat: tower and hero hits tell apart in greyscale). Every new glyph, tower or enemy type must pass the same test before it enters content. MVP, art-director; each content GDD.
 - **AR-V-13 Hero always readable.** Already decided (Pillar 1 design test; Combat burst clearance): no VFX may hide the hero or a path. Recorded here because it is the low-vision rule that matters most in a fight. MVP, Visual Feedback & VFX and Combat.
 
@@ -148,7 +148,7 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
 | Minimum text size: menu UI | Standard | All menus and modal screens | Not Started | 14 dp floor, 16 dp for labels (AR-V-01). Menus do not exist until Vertical Slice (Menu & Screen Flow) |
 | Minimum text size: subtitles | N/A | No voiced content | N/A | No voice at any tier |
 | Minimum text size: HUD | Standard | Battle HUD | Designed | 14 dp floor; 16 dp gold, lives, costs; 18 dp burst digit (Battle HUD, art bible §7). Not yet rendered |
-| Text contrast: UI text on backgrounds | Standard | All UI text | Designed, two fails | 11.2:1 for neutral on panel. Dimmed cost fails at 4.26:1 (AR-V-05); Start/Call labels while Arming fail at 3.75:1 (AR-V-04, change 15) |
+| Text contrast: UI text on backgrounds | Standard | All UI text | Designed | 11.2:1 for neutral on panel. Two fails fixed 2026-11-04: dimmed cost text now at alpha 0.6, 4.83:1 (AR-V-05); Start/Call labels stay at 4.5:1 or above while Arming (AR-V-04, change 15) |
 | Text contrast: subtitles | N/A | No subtitles | N/A | |
 | Colorblind mode: Protanopia | Standard (met by design) | All colour-coded gameplay | Designed | No palette swap. Magenta vs orange is the one real protan/deutan risk; chevron shape plus pulse backs it (art bible §4). See Colour audit |
 | Colorblind mode: Deuteranopia | Standard (met by design) | All colour-coded gameplay | Designed | Same as above |
@@ -177,13 +177,13 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
 | Hero vs tower vs enemy | Gold vs cyan vs orange | Who is who | Kite vs regular polygon vs circle; survives greyscale at quarter scale (art bible §1, §5) | Designed |
 | Hero shot vs tower shot | Gold vs cyan line | Who dealt the hit | Line origin shape, width and flash strength (Combat) | Designed |
 | Build arc discs | All cyan | Which tower role | Triangle, hexagon, square in a fixed order, plus a word panel: Single, Splash, Slow (Battle HUD Rule 6) | Designed |
-| Unaffordable disc or chip | Dim | Cannot afford | Strike-through on the cost (Battle HUD, Tower). No magenta | Designed; contrast fix AR-V-05 |
+| Unaffordable disc or chip | Dim | Cannot afford | Strike-through on the cost (Battle HUD, Tower). No magenta | Designed; contrast fix AR-V-05 applied 2026-11-04 |
 | Wave pips | Fill | Done, current, upcoming | Filled, outlined, dotted (Battle HUD) | Designed |
 | Lives | Dash alpha | Lives left | Dash count; lost dashes stay countable (Battle HUD) | Designed |
-| Free vs blocked slot | Alpha | Can build here | 4-dot corner mark vs diagonal hairline, shape first (art bible §6) | Designed; contrast fix AR-V-07 |
+| Free vs blocked slot | Alpha | Can build here | 4-dot corner mark vs diagonal hairline, shape first (art bible §6) | Designed; contrast fix AR-V-07 applied 2026-11-04 |
 | Leash in-zone vs out-of-zone | Tint | Hero can or cannot fight there | Dash density, dashed to solid (art bible §4) | Designed |
 | Kill preview during aim | None (body knocked out) | This enemy dies to the burst | Knocked-out body with a steady white contour (Hero) | Designed |
-| Current vs next range ring | Alpha only | Range now vs after upgrade | **None yet besides alpha.** AR-V-06 asks for a pattern (dashed) | GDD change needed |
+| Current vs next range ring | Alpha only | Range now vs after upgrade | Dashed next-level ring vs solid current ring (Tower Visual table, AR-V-06) | Designed 2026-11-04 |
 | Stage A vs stage B | Field hue | Which stage | Path curve and grid tilt; hue alone never separates two stages (art bible §6) | Designed |
 | Burst aim cancelling | Dim | Release will cancel | Reticle alpha 0.3, radius preview hidden, kill marks hidden (Hero) | Designed |
 
@@ -423,15 +423,15 @@ Every screenshot above is retained in `production/qa/evidence/` (coding standard
 
 ## GDD and ADR Changes Needed
 
-This document edits no GDD, ADR or the art bible. These are the places they would have to change to meet it. Each is for the owning document's next revision.
+This document edits no GDD, ADR or the art bible. These are the places they would have to change to meet it. Each is for the owning document's next revision. The MVP rows (1 to 5 and 15) were applied on 2026-11-04.
 
 | # | Document and place | Today | Needed | Requirement | Tier |
 |---|---|---|---|---|---|
-| 1 | `battle-hud.md` Visual/Audio table, "Unaffordable" | Alpha 0.55 | Cost text at alpha 0.6 or above (4.83:1); the polygon may stay at 0.55 | AR-V-05 | MVP |
-| 2 | `tower-system.md` Visual/Audio table, "Range ring" | Next level at alpha 0.25 (1.65:1) | 3:1 on the path, told apart by pattern (for example dashed at 0.5) | AR-V-06 | MVP |
-| 3 | `design/art/art-bible.md` §6, slot marks | Outline 1 px at alpha 0.3 (2.1:1); corner mark alpha unset | Free-slot corner mark at 3:1 or above (alpha 0.45 gives 3.3:1) | AR-V-07 | MVP |
-| 4 | `tower-system.md` and `hero-system.md` UI Requirements; `battle-hud.md` | Refusal and locked nudges skipped under Reduce Motion, with no replacement | A static refusal cue under Reduce Motion | AR-V-11 | MVP |
-| 5 | `battle-hud.md` UI Requirements, Reduce Motion line | Lists slides only | Point to the AR-V-10 table here as the one list | AR-V-10 | MVP |
+| 1 | `battle-hud.md` Visual/Audio table, "Unaffordable" | Alpha 0.55 | Cost text at alpha 0.6 or above (4.83:1); the polygon may stay at 0.55 | AR-V-05 | MVP, applied 2026-11-04 |
+| 2 | `tower-system.md` Visual/Audio table, "Range ring" | Next level at alpha 0.25 (1.65:1) | 3:1 on the path, told apart by pattern (for example dashed at 0.5) | AR-V-06 | MVP, applied 2026-11-04 |
+| 3 | `design/art/art-bible.md` §6, slot marks | Outline 1 px at alpha 0.3 (2.1:1); corner mark alpha unset | Free-slot corner mark at 3:1 or above (alpha 0.45 gives 3.3:1) | AR-V-07 | MVP, applied 2026-11-04 |
+| 4 | `tower-system.md` and `hero-system.md` UI Requirements; `battle-hud.md` | Refusal and locked nudges skipped under Reduce Motion, with no replacement | A static refusal cue under Reduce Motion | AR-V-11 | MVP, applied 2026-11-04 |
+| 5 | `battle-hud.md` UI Requirements, Reduce Motion line | Lists slides only | Point to the AR-V-10 table here as the one list | AR-V-10 | MVP, applied 2026-11-04 |
 | 6 | `battle-hud.md` Rule 4 and Deliberately not built; `game-state-stage-flow.md` Rule 17; `input-gesture-resolver.md` UI Requirements | No pause button | A pause control from the first phone build | AR-C-01 | Vertical Slice |
 | 7 | `battle-hud.md` Layout and Visual table | Panels sized for 100% text | Panels fit 125% text | AR-V-03 | Alpha |
 | 8 | `battle-hud.md` content rules; Enemy & Wave L3 | Clearances checked at hit scale x1 (Start/Call 17.3 from a slot, 7.2 from the left burst disc) | State the hit scale the rules hold at; check at x1.25 | AR-M-04 | Alpha |
@@ -441,7 +441,7 @@ This document edits no GDD, ADR or the art bible. These are the places they woul
 | 12 | ADR-0004 (fixed tick clock) | 60 Hz tick from real time | Decide whether a 0.75x game speed can slow ticks alone. Nothing sets `Engine.time_scale`, and scaling the wrapper's `delta` would slow the real-time presentation clocks too | AR-C-08 | Alpha |
 | 13 | ADR-0003 Negative consequences (G16) | TapScreen accessible name unverified | Verify in a probe whether a plain Control can carry an accessible name; record the answer | AR-P-02 | Vertical Slice |
 | 14 | ADR-0001 / architecture.md, `PresentationSettings` | Read once from the Input record at AppRoot | At Alpha, Settings is the source (already planned); gains the new Alpha fields (text scale, hit scale, slop scale, two-tap mode, multipliers), or they live elsewhere | AR-C-10 and Alpha settings | Alpha |
-| 15 | `battle-hud.md` Visual table, Start/Call Arming | Alpha 0.5 for 300 ms; the labels fall to 3.75:1 | Labels stay at 4.5:1 or above; only the outline dims | AR-V-04 | MVP |
+| 15 | `battle-hud.md` Visual table, Start/Call Arming | Alpha 0.5 for 300 ms; the labels fall to 3.75:1 | Labels stay at 4.5:1 or above; only the outline dims | AR-V-04 | MVP, applied 2026-11-04 |
 
 One tension with an Accepted ADR: AR-C-08 against ADR-0004 (row 12). Nothing sets `Engine.time_scale`, and the real-time presentation clocks share the one `delta`, so a slower game would slow them too. The 0.75x speed waits on a technical-director decision. Every other item adds to an ADR or fills a gap it names, and none reverses a decision.
 

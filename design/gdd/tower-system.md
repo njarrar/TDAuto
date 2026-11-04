@@ -63,13 +63,13 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 IDs and levels are checked before any accessor read, through Data's non-fatal `is_tower(id)` and `level_count(def_id)` (Data Rule 10), so a bot's bad ID or a last-level upgrade returns a refusal rather than reaching the fatal handler. Cost is read through the accessor at use time, never cached from when the arc or chip opened. On success, in one step and with nothing between: gold falls by the cost, the tower is created or its level raised, then `gold_changed` fires, then `tower_built` or `tower_upgraded`. All state is committed before the first signal, and a listener to these signals must not call a command. A refusal changes nothing and emits nothing.
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
-7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and does nothing. The arc belongs to the HUD, which calls `build`.
-8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
+7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and struck through. A tap on it still calls `build`, which returns `NO_GOLD`, and the HUD shows a refusal (Battle HUD Rule 7). The arc belongs to the HUD, which calls `build`.
+8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when its press begins at `elapsed ≥ 200` ms and it is released at `elapsed < 1500` ms. A press that begins in the first 200 ms is ignored, even if released later, a hard guard against a bounce (Input Rule 8). The guard counts from the press, as the arc's does (Battle HUD Rule 6); TowerInput takes the press time from `pressed`. The chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
 
 | Event while a chip is open | Result |
 |---|---|
-| Same tower tapped under 200 ms | Ignored; the window keeps running |
-| Same tower tapped inside the window | Calls `upgrade`. On `NO_GOLD` it stays open and dimmed, and the window does not restart. Any other result closes it |
+| Same tower pressed under 200 ms, released at any time | Ignored; the window keeps running |
+| Same tower pressed at 200 ms or later and released inside the window | Calls `upgrade`. On `NO_GOLD` it stays open and dimmed, and the window does not restart. Any other result closes it |
 | Window expires, then the tower is tapped | Opens a new chip; never commits. The chip's disc unregisters, and a chip press held past expiry does nothing |
 | `pressed` naming the chip | Stays open |
 | `pressed` naming another tap target, or none | Closes. If it names another tower, that tap opens that tower's own chip |
@@ -353,7 +353,7 @@ The MVP minimum, primitives only, drawn by one `_draw()` node for all towers. Al
 | Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms | §8 |
 | Upgrade | First frame: the inset is present, with the same overlay | §1 |
 | Slow fires | Cyan line, no flash; violet only on the victim, plus Combat's slow drag lines, so a slowed enemy reads without a number | §4 |
-| Range ring | Solid 2 px cyan, unfilled, alpha 0.5, under entities. Arc open: one ring per distinct level-1 range. Chip open: current, plus next at alpha 0.25. After a build or upgrade: 400 ms, then a 200 ms fade | §1 |
+| Range ring | Solid 2 px cyan, unfilled, alpha 0.5, under entities. Arc open: one ring per distinct level-1 range. Chip open: current, plus next as a dashed 2 px cyan line at alpha 0.5 or above, so it reaches 3:1 on the path and differs from the current ring by pattern, not by fade (AR-V-06). After a build or upgrade: 400 ms, then a 200 ms fade | §1 |
 
 **Budget per tower.** Contour, level element, state ring. Burst clearance suppresses overlays and rings, but geometry still changes.
 
@@ -371,10 +371,11 @@ Battle HUD draws these; this system supplies the data.
 
 - Gold at top-right, as digits that swap.
 - Cost on each arc disc and on the chip, on a panel.
-- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta, and is skipped under Reduce Motion.
+- Unaffordable: dimmed plus struck through, updated live. A refused tap nudges ±2 px once for 120 ms, with no magenta.
+- Under Reduce Motion the nudge is skipped and a static cue stands in: the refused disc or chip shows a dotted outline and one short line of text, "Need N gold", for 1 s, with no motion. N is the cost minus gold at the refusal (AR-V-11, IP-24; Battle HUD UI Requirements).
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
-📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path. That pass must specify a refusal cue that does not rely on motion, since Reduce Motion leaves a refused tap with only the standing dim. It must also cover an expired or closed chip, an armed look after the 200 ms guard, a maximum-level cue beside the range ring, a chip that would leave the field, static fallbacks for the build overlay and arc collapse, and the unit-to-dp scale behind the 44 pt / 48 dp targets.
+📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path. That pass must place the static refusal cue set in UI Requirements (AR-V-11). It must also cover an expired or closed chip, an armed look after the 200 ms guard, a maximum-level cue beside the range ring, a chip that would leave the field, static fallbacks for the build overlay and arc collapse, and the unit-to-dp scale behind the 44 pt / 48 dp targets.
 
 ## Cross-References
 
@@ -406,10 +407,10 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 10. (Rule 9) **GIVEN** a spy doubling damage between two shots, **THEN** the second `deliver` carries the new damage.
 11. (Rule 5) **GIVEN** a latch in the cost read, **WHEN** `build`, **THEN** `HALTED`, gold and slots unchanged, an empty log.
 12. (Rule 5) **GIVEN** a `gold_changed` listener, **WHEN** `build` is `OK`, **THEN** the listener already reads the tower through `slot_state`.
-13. (Rule 8) Tap at 199: no `upgrade`, expiry unmoved.
+13. (Rule 8) Press at 199, release at 250: no `upgrade`, expiry unmoved.
 14. (Rule 8) Closed, last level: a tap opens no chip and emits `tower_inspected(slot_index)`.
-15. (Chip commit) Tap at 200: one `upgrade`.
-16. (Chip commit) Tap at 1499: one `upgrade`.
+15. (Chip commit) Press at 200, release at 210: one `upgrade`.
+16. (Chip commit) Press at 1450, release at 1499: one `upgrade`.
 17. (Chip commit) `upgrade` returns `OK`: closes.
 18. (Chip commit) `upgrade` returns `NO_GOLD`: stays dimmed, expiry unmoved.
 19. (Chip commit) `upgrade` returns `HALTED`: closes.
@@ -472,7 +473,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | `burst_spike`, L11, intermission, Combat's bypass row | Hero stories | They join the content test; Combat's invariant `I` holds over a real stage |
 | Burst state (Flow) | Hero stories | The bonus is unaffected by burst state; the burst is refused in Build |
 | TowerInput wiring | Tower UI story | With a fake resolver, the chip's disc is TAP 300, radius 40, at (x, y − 76) while open and unregistered on close; taps reach `ChipWindow`; a built slot is disabled; `slot_tapped` fires; `phase_changed` closes the chip |
-| Arc, result | Battle HUD stories | A disc builds once; an unaffordable one does nothing; a double tap on a slot dismisses; damage by source and Slowed are shown; screenshots retained |
+| Arc, result | Battle HUD stories | A disc builds once; an unaffordable one builds nothing and shows a refusal; a double tap on a slot dismisses; damage by source and Slowed are shown; screenshots retained |
 | Phone test (Input P1) | Producer | Under the Pillar 4 protocol, no accidental upgrades or wrong discs on the first phone build |
 
 **Manual** (retained in `production/qa/evidence/`):

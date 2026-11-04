@@ -35,3 +35,6 @@ Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf49
 Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
 Reviewed-Content-Hash: design/art/art-bible.md 83386ecd1c2641b152ea5bb9c50a81e17b2fca44
 Reviewed-Content-Hash: design/gdd/systems-index.md be3052ce50f27a962ca9eff65e11f8cb50db0ef7
+
+## Revision — 2026-11-04 — accessibility and pattern fixes (MVP)
+Status unchanged. Pillar 4's design test read "Drag priority: burst > hero". It now reads "hero over burst (hero 200, burst 100)", matching the Input GDD priority table and Hero Rule 15 (OI-19 in `design/ux/interaction-patterns.md`).
