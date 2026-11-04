@@ -97,6 +97,21 @@ func test_build_returns_battle_with_every_member_and_no_node() -> void:
 	assert_int(battle.ticks_run()).is_equal(0)
 
 
+func test_build_sets_seed_arc_tower_ids_and_wave_records() -> void:
+	var cat: Catalogue = TestBattles.catalogue()
+	var battle: Battle = BattleBuilder.build(cat, TestBattles.STAGE, 4242, Callable())
+
+	assert_int(battle.rng_seed).is_equal(4242)
+	var ids: Array[StringName] = cat.tower_ids()
+	assert_int(battle.arc_tower_ids.size()).is_equal(mini(3, ids.size()))
+	for i: int in battle.arc_tower_ids.size():
+		assert_str(String(battle.arc_tower_ids[i])).is_equal(String(ids[i]))
+	var stage: StageRecord = cat.stage(TestBattles.STAGE)
+	assert_int(battle.wave_records.size()).is_equal(stage.wave_ids.size())
+	for i: int in battle.wave_records.size():
+		assert_str(String(battle.wave_records[i].id)).is_equal(String(stage.wave_ids[i]))
+
+
 func test_build_sets_stage_record_and_visual_keys() -> void:
 	var battle: Battle = TestBattles.build()
 

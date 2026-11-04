@@ -23,6 +23,8 @@ var _combat_model: CombatViewModel = null
 var _hero_model: HeroViewModel = null
 var _gesture_log: GestureLog = null
 var _run_log: RunLog = null
+## The session root, when the wrapper sits under one. Only its request_retry is used.
+var _app_root: AppRoot = null
 
 @onready var _field_backdrop: FieldBackdrop = $FieldBackdrop
 @onready var _tower_view: TowerView = $TowerView
@@ -31,21 +33,29 @@ var _run_log: RunLog = null
 @onready var _hero_view: HeroView = $HeroView
 @onready var _hud_field: HudField = $HudField
 @onready var _hud_top_band: HudTopBand = $HudTopBand
+@onready var _result_screen: ResultScreen = $ResultScreen
+@onready var _paused_screen: PausedScreen = $PausedScreen
 
 
 ## Builds the presentation around `battle` and wires every listener. Returns
 ## false on any failure (AppRoot treats false as fatal). A second call while
 ## attached changes nothing and returns false. `dev_logs` is null in release.
+## The Retry button reaches AppRoot.request_retry through the parent node (ADR-0001:
+## the call only sets a latch and never frees the wrapper); with no AppRoot parent
+## the button does nothing.
 func attach(battle: Battle, reduce_motion: bool, dev_logs: DevLogs = null) -> bool:
 	if _battle != null or battle == null:
 		return false
 	if _field_backdrop == null or _hud_top_band == null:
+		return false
+	if _result_screen == null or _paused_screen == null:
 		return false
 	if not _battle_complete(battle):
 		return false
 	_battle = battle
 	_reduce_motion = reduce_motion
 	_was_paused = false
+	_app_root = get_parent() as AppRoot
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if not _build(dev_logs):
 		detach()
@@ -69,6 +79,12 @@ func detach() -> void:
 		elif battle.resolver != null:
 			battle.resolver.cancel()
 		_disconnect_signals()
+	if _result_screen != null:
+		_result_screen.clear_press()
+		_result_screen.close()
+	if _paused_screen != null:
+		_paused_screen.clear_press()
+		_paused_screen.close()
 	if _gesture_log != null:
 		_gesture_log.detach()
 		_remove_child_node(_gesture_log)
@@ -106,6 +122,7 @@ func detach() -> void:
 		_remove_child_node(_adapter)
 		_adapter = null
 	_clock = null
+	_app_root = null
 	_battle = null
 
 
@@ -146,6 +163,9 @@ func _process(delta: float) -> void:
 		_hero_view.queue_redraw()
 	_hud_field.queue_redraw()
 	_hud_top_band.queue_redraw()
+	var phase: Flow.Phase = battle.flow.phase()
+	if phase == Flow.Phase.WON or phase == Flow.Phase.LOST:
+		_result_screen.refresh_view()
 
 
 func _battle_complete(battle: Battle) -> bool:
@@ -183,7 +203,7 @@ func _build(dev_logs: DevLogs) -> bool:
 		_run_log.name = "RunLog"
 		add_child(_run_log)
 		_run_log.attach(b.flow, b.tower_sim, b.hero_sim, b.stage_record.id, b.ticks_run,
-				_sink_of(dev_logs.run_sink), dev_logs.launch_id, dev_logs.build_hash, dev_error)
+				_sink_of(dev_logs.run_sink), dev_logs.launch_id, dev_logs.build_hash, dev_error, b.rng_seed)
 
 	var snapshot_taken: Callable = Callable()
 	var call_made: Callable = Callable()
@@ -196,6 +216,11 @@ func _build(dev_logs: DevLogs) -> bool:
 			b.accessor, b.stage_record, b.input_record, insets, b.halted, b.sim_time.to_ticks,
 			_reduce_motion, dev_error, snapshot_taken, call_made):
 		return _fail("hud logic attach failed")
+	if not _hud_logic.set_arc_tower_ids(b.arc_tower_ids):
+		return _fail("hud arc tower ids rejected")
+	_hud_logic.set_ticks_source(b.ticks_run)
+	_hud_logic.set_run_seed(b.rng_seed)
+	_hud_logic.set_wave_preview(_wave_preview(b.wave_records))
 	var burst_centre: Vector2 = _hud_logic.burst_button_centre()
 
 	_hero_input = HeroInput.new()
@@ -204,6 +229,7 @@ func _build(dev_logs: DevLogs) -> bool:
 
 	_tower_input = TowerInput.new()
 	_tower_input.attach(b.resolver, b.tower_sim, b.accessor, b.halted, dev_error)
+	_hud_logic.bind_inputs(_tower_input, _hero_input)
 
 	if dev_logs != null and OS.is_debug_build():
 		_gesture_log = GestureLog.new()
@@ -222,7 +248,8 @@ func _build(dev_logs: DevLogs) -> bool:
 	if not _combat_model.attach(b.combat, b.enemy_wave, b.accessor, b.halted, b.visual_keys, _reduce_motion, dev_error):
 		return _fail("combat view model attach failed")
 	_hero_model = HeroViewModel.new()
-	if not _hero_model.attach(b.hero_sim, _hero_input, b.visual_keys, _reduce_motion, dev_error):
+	if not _hero_model.attach(b.hero_sim, _hero_input, b.visual_keys, _reduce_motion, dev_error,
+			b.accessor, b.enemy_wave, b.combat, b.halted):
 		return _fail("hero view model attach failed")
 	_backdrop_model = FieldBackdropModel.new()
 	if not _backdrop_model.attach(b.stage_record, b.flow, b.enemy_wave, b.tower_sim, b.hero_sim,
@@ -234,9 +261,23 @@ func _build(dev_logs: DevLogs) -> bool:
 	_enemy_view.model = _enemy_model
 	_combat_view.model = _combat_model
 	_hero_view.model = _hero_model
+	_tower_model.ring_request = _hud_logic.range_ring_slot
 	_hud_field.model = _hud_logic
+	_hud_field.tower_input = _tower_input
+	_hud_field.tower_view_centres = _tower_model.centres
 	_hud_top_band.model = _hud_logic
 	return true
+
+
+## Next-wave line data: one Dictionary (enemy id to total count) per Wave record, in order.
+func _wave_preview(records: Array[WaveRecord]) -> Array[Dictionary]:
+	var preview: Array[Dictionary] = []
+	for record: WaveRecord in records:
+		var counts: Dictionary = {}
+		for group: WaveGroup in record.groups:
+			counts[group.enemy_id] = int(counts.get(group.enemy_id, 0)) + group.count
+		preview.append(counts)
+	return preview
 
 
 func _fail(message: String) -> bool:
@@ -278,6 +319,11 @@ func _connect_signals() -> void:
 	b.flow.phase_changed.connect(_on_phase_changed)
 	_adapter.lifecycle_paused.connect(b.flow.pause)
 	_adapter.display_changed.connect(_on_display_changed)
+	_adapter.lifecycle_paused.connect(_result_screen.clear_press)
+	_adapter.lifecycle_paused.connect(_paused_screen.clear_press)
+	_paused_screen.resume_requested.connect(b.flow.resume)
+	if _app_root != null:
+		_result_screen.retry_requested.connect(_app_root.request_retry)
 	if _hud_logic != null:
 		b.flow.phase_changed.connect(_hud_logic._on_phase_changed)
 		b.flow.lives_changed.connect(_hud_logic._on_lives_changed)
@@ -326,6 +372,14 @@ func _disconnect_signals() -> void:
 	if _adapter != null:
 		_drop(_adapter.lifecycle_paused, b.flow.pause)
 		_drop(_adapter.display_changed, _on_display_changed)
+		if _result_screen != null:
+			_drop(_adapter.lifecycle_paused, _result_screen.clear_press)
+		if _paused_screen != null:
+			_drop(_adapter.lifecycle_paused, _paused_screen.clear_press)
+	if _paused_screen != null:
+		_drop(_paused_screen.resume_requested, b.flow.resume)
+	if _result_screen != null and _app_root != null:
+		_drop(_result_screen.retry_requested, _app_root.request_retry)
 	if _hud_logic != null:
 		_drop(b.flow.phase_changed, _hud_logic._on_phase_changed)
 		_drop(b.flow.lives_changed, _hud_logic._on_lives_changed)
@@ -372,11 +426,18 @@ func _drop(sig: Signal, listener: Callable) -> void:
 		sig.disconnect(listener)
 
 
-## P1. Drops the clock backlog on entering and on leaving PAUSED (ADR-0004).
+## P1. Drops the clock backlog on entering and on leaving PAUSED (ADR-0004), and
+## opens or closes the two modal screens.
 func _on_phase_changed(value: Flow.Phase) -> void:
 	var paused: bool = value == Flow.Phase.PAUSED
 	if (paused or _was_paused) and _clock != null:
 		_clock.drop_backlog()
+	if paused and not _was_paused:
+		_paused_screen.open()
+	elif _was_paused and not paused:
+		_paused_screen.close()
+	if value == Flow.Phase.WON or value == Flow.Phase.LOST:
+		_result_screen.open(_hud_logic)
 	_was_paused = paused
 
 
@@ -387,5 +448,7 @@ func _on_display_changed() -> void:
 	var insets: FieldInsets = _adapter.field_insets()
 	if _hud_logic != null:
 		_hud_logic.set_insets(insets)
+	_result_screen.clear_press()
+	_paused_screen.clear_press()
 	_hud_top_band.position = Vector2.ZERO
 	_hud_top_band.size = Vector2(FieldBounds.WIDTH, FieldBounds.HEIGHT)

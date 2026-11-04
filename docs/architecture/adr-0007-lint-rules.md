@@ -110,13 +110,13 @@ in brackets.
 |---|---|---|
 | TIME-1 | `_physics_process` is declared | ADR-0004 |
 | TIME-2 | `_process` is declared outside `battle_wrapper.gd`, `app_root.gd`, `input_adapter.gd` | ADR-0004 |
-| TIME-3 | `Timer`, `create_timer(`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.` or `OS.get_ticks_` appears. File exceptions: `Time.get_unix_time_from_system` and `Time.get_ticks_msec` in `app_root.gd` (seed, ADR-0004 V8); `Time.get_ticks_usec` in `battle_wrapper.gd` (dev timers); `Time.` under `src/presentation/dev/` (ADR-0008 `GestureLog`, **verify against final ADR-0008**) | C4 [owner: sim scope and real-time models only] |
+| TIME-3 | `Timer`, `create_timer(`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.` or `OS.get_ticks_` appears. File exceptions: `Time.get_unix_time_from_system` and `Time.get_ticks_msec` in `app_root.gd` (seed, ADR-0004 V8); `Time.get_ticks_usec` in `battle_wrapper.gd` (dev timers); `Time.` under `src/presentation/dev/` (ADR-0008 `GestureLog`, **verify against final ADR-0008**). Excluded from the rule: `src/root/dev_logs.gd` (`Time.get_unix_time_from_system` for the launch id, ADR-0010) and `src/presentation/dev/gesture_log.gd` (ADR-0008) | C4 [owner: sim scope and real-time models only] |
 | TIME-4 | `get_tree().paused` or `low_processor_mode` appears | ADR-0003 `scene_tree_pause`; ADR-0004 |
 | TIME-5 | `-= dt`, `-= delta`, `-= _dt`, or `x = x - dt` on one name, in the sim scope | ADR-0004 `float_duration_countdown` |
 | MATH-1 | A global `floor`, `ceil`, `abs`, `sign`, `round`, `sin`, `cos`, `tan`, `atan2`, `pow`, `exp`, `log`, `fmod`, `fposmod`, `lerp`, `move_toward` or `snapped` call in the sim scope | ADR-0004 `sim_nondeterministic_math` |
 | MATH-2 | `.distance_to(`, `.distance_squared_to(`, `.normalized(`, `.direction_to(`, `.angle_to(`, `.rotated(`, `.limit_length(`, `.dot(`, `.cross(` in the sim scope | ADR-0004; ADR-0009 |
 | MATH-3 | `RandomNumberGenerator`, or a global `randi`, `randf`, `randi_range`, `randf_range`, `randfn`, `randomize`, `seed` call, in the sim scope | ADR-0004 `engine_rng_in_sim` |
-| MATH-4 | `rng_seed` or `sim_rng` appears under `src/presentation/` | ADR-0004 |
+| MATH-4 | `RandomNumberGenerator`, `SimRng`, `sim_rng`, or a global `randi`, `randf`, `randi_range`, `randf_range`, `randfn`, `randomize`, `seed` call appears under `src/presentation/`. The data field name `rng_seed` is allowed: it is a copied integer (`Battle.rng_seed`, `ResultSnapshot.rng_seed`, the dev-log key of ADR-0010), not an RNG, and banning the name forced a string trick in `RunLog` | ADR-0004 |
 | MATH-6 | In the sim scope, a member typed `Vector2` or initialised `:= Vector2(` | ADR-0009 `sim_position_representation` |
 
 (MATH-5 is withdrawn: ADR-0004 bans instance IDs and hashes only in ordering and payloads, which text cannot tell; the determinism test covers it.)

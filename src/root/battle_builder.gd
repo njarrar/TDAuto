@@ -58,6 +58,11 @@ static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fat
 	battle.stage_record = stage
 	battle.visual_keys = VisualKeys.from_catalogue(catalogue, hero_id)
 	battle.resolver = resolver
+	battle.rng_seed = rng_seed
+	battle.wave_records = waves
+	var tower_ids: Array[StringName] = catalogue.tower_ids()
+	for i: int in mini(3, tower_ids.size()):
+		battle.arc_tower_ids.append(tower_ids[i])
 
 	# Step 3: construct the systems.
 	var sim_time: SimTime = SimTime.new()

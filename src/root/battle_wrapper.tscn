@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://src/root/battle_wrapper.gd" id="1_wrapper"]
 [ext_resource type="Script" path="res://src/presentation/field/field_backdrop.gd" id="2_backdrop"]
@@ -8,6 +8,8 @@
 [ext_resource type="Script" path="res://src/presentation/hero/hero_view.gd" id="6_hero"]
 [ext_resource type="Script" path="res://src/presentation/hud/hud_field.gd" id="7_hud_field"]
 [ext_resource type="Script" path="res://src/presentation/hud/hud_top_band.gd" id="8_hud_top"]
+[ext_resource type="PackedScene" path="res://src/presentation/hud/result_screen.tscn" id="9_result"]
+[ext_resource type="PackedScene" path="res://src/presentation/hud/paused_screen.tscn" id="10_paused"]
 
 [node name="BattleWrapper" type="Node"]
 process_mode = 3
@@ -35,3 +37,7 @@ script = ExtResource("7_hud_field")
 mouse_filter = 2
 focus_mode = 0
 script = ExtResource("8_hud_top")
+
+[node name="ResultScreen" parent="." instance=ExtResource("9_result")]
+
+[node name="PausedScreen" parent="." instance=ExtResource("10_paused")]

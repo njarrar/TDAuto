@@ -14,9 +14,9 @@ const SNAPSHOT_FIELDS: Array[StringName] = [
 	&"burst_victims", &"burst_kills", &"kills_per_burst", &"kills_on_hit_3", &"best_victims",
 ]
 
-## JSON key of the run seed. Joined from two parts so lint MATH-4 (no seed names under
-## src/presentation/) does not match; the log field is still named as ADR-0010 says.
-const SEED_KEY: String = "rng_" + "seed"
+## JSON key of the run seed, as ADR-0010 names it. Lint MATH-4 bans RNG use in
+## presentation, not this data field name.
+const SEED_KEY: String = "rng_seed"
 
 var _flow: Flow = null
 var _tower_sim: TowerSim = null

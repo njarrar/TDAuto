@@ -2,8 +2,8 @@ class_name ResultSnapshot extends RefCounted
 ## Values of one finished attempt (ADR-0010 Decision 11). Built once by HudLogic on the
 ## first advance after phase_changed(WON) or (LOST). It references no sim object, so a
 ## view may keep it after the battle is dropped. The result rows and the log read only it.
-## Field names follow ADR-0010. NOTE: lint MATH-4 bans the token `rng_seed` under
-## src/presentation/; the parent must reconcile (ADR form kept).
+## Field names follow ADR-0010. Lint MATH-4 bans RNG use in presentation, not this
+## recorded `rng_seed` value.
 
 var result: StageResult = null
 var stage_id: StringName = &""

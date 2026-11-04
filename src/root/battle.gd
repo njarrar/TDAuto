@@ -30,6 +30,15 @@ var input_record: InputRecord = null
 var stage_record: StageRecord = null
 ## Read-only by contract; StringNames only; set by BattleBuilder (ADR-0011).
 var visual_keys: VisualKeys = null
+## Read-only by contract; the run seed the Builder was given (ADR-0001). Data only: the
+## sim's generator is sim_rng. Views copy it into the result snapshot and the dev log.
+var rng_seed: int = 0
+## Read-only by contract; the first three tower ids of the catalogue, in order. The HUD
+## build arc shows them (triangle, hexagon, square). Set by BattleBuilder.
+var arc_tower_ids: Array[StringName] = []
+## Read-only by contract; the stage's Wave records in wave_ids order. The HUD next-wave
+## line reads them. Set by BattleBuilder.
+var wave_records: Array[WaveRecord] = []
 
 var _ticking: bool = false
 var _ticks_run: int = 0
