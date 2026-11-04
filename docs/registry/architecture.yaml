@@ -145,6 +145,39 @@ state_ownership:
     added: 2026-11-04
     revised: ""
     notes: "ADR-0008 Accepted 2026-11-04; binding"
+  - state: enemy_roster
+    status: active
+    owner_system: enemy-wave
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "EnemyWave.roster() and targets() -> Array[Targetable], the internal arrays in ascending spawn_id, read-only by contract and never kept past the reader's slot; targets() is the in-field subset (0 <= x <= 540, 0 <= y <= 960); removal by remove_at, then the emit"
+    write_access: "enemy-wave only: spawn_id, distance, x, y, removed on each Targetable; one add-enemy step for schedule spawns and later splitter children"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+  - state: enemy_health_status
+    status: active
+    owner_system: combat
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "Targetable.health (Health: hp, max_hp) and Targetable.status (Status: slow_strength, slow_ticks), made only by Combat.attach(target, max_hp) -> bool; read outside src/core/combat/ only through hp_left, is_dead, speed_factor"
+    write_access: "combat only: attach, deliver, apply_slow, tick_status"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+  - state: damage_counters
+    status: active
+    owner_system: combat
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "Combat.dealt_by_id(id: StringName), dealt_by_kind(kind), dealt_total() (tower + hero + burst in that order), hero_share() ((hero + burst) / total, 0 when total is 0); readable until the battle is dropped; Battle.take_result_snapshot() copies them into ResultSnapshot"
+    write_access: "combat only, in deliver step 6"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -390,6 +423,36 @@ interfaces:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0008 Accepted 2026-11-04; binding"
+  - contract: combat_api
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - battle
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    signal_signature: "Combat.new(to_ticks, dev_error), Battle.combat injected as an object into EnemyWave, TowerSim, HeroSim; no dt, no halted(), no catalogue; deliver(event: DamageEvent) -> float in a tick only, guards no-target, removed, amount or kind, dead (silent), applied = min(amount, hp), commit hp and counters, then emit; apply_slow(enemy, strength, seconds) stores max(1, to_ticks(seconds)); first_in, nearest_in, all_in_radius(list: Array[Targetable], origin: Vector2, r: float) inclusive squared test on x, y, skip dead, tie lowest spawn_id, never mutate; report_attack before deliver; callers reuse one DamageEvent and null its target after the attack"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+  - contract: damage_applied_payload
+    status: active
+    pattern: signal
+    producer: combat
+    consumers:
+      - battle-wrapper
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    signal_signature: "damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int), plain values, VIEW role; replaces the DamageEvent payload in battle_signal_catalogue once ADR-0006 is amended at ADR-0009 acceptance"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -433,6 +496,17 @@ performance_budgets:
     notes: "All ticks in one frame; one tick at most 2.0 ms p95 on an Adreno 5xx-class phone; unmeasured (QQ-11). ADR-0004 Accepted 2026-11-04; binding"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+    added: 2026-11-04
+    revised: ""
+  - system: combat-targeting
+    status: active
+    budget_ms: 0.5
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    notes: "Share of ADR-0004's 2.0 ms p95 tick: targeting helpers 0.5, Combat deliver/status/emit 0.2, EnemyWave move/leak/reap 0.3, stat reads 0.7 (ADR-0005 P1), bookkeeping 0.3; desktop bench P2 trigger 0.05 ms p95; unmeasured. ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     revised: ""
 
@@ -847,6 +921,27 @@ forbidden_patterns:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0008 Accepted 2026-11-04; binding"
+  - pattern: hp_write_outside_combat
+    status: active
+    description: "No code in src/ outside src/core/combat/ reads or writes .health or .status, or calls Health.new or Status.new; every HP change goes through Combat.deliver (lint L-COMBAT-1, ADR-0007 amendment owed)"
+    why: "One HP path keeps the damage counters and hero share honest and invariant I true"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: targetable_write_outside_enemy_wave
+    status: active
+    description: "No code in src/ outside src/feature/enemy_wave/ assigns spawn_id, distance, x, y or removed on a Targetable, keeps a roster() or targets() list past its slot, or mutates one (lint L-COMBAT-2, ADR-0007 amendment owed)"
+    why: "EnemyWave is the sole roster owner; a kept list or a second writer breaks spawn_id order and retry freeing"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: damage_event_per_hit_or_kept
+    status: active
+    description: "No DamageEvent.new() outside tower_sim.gd and hero_sim.gd (one reused instance each); the caller nulls its target after the attack; no view payload carries a Targetable (lint L-COMBAT-3, ADR-0007 amendment owed)"
+    why: "A new event per hit allocates in the tick; a kept target holds an enemy across ticks"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
