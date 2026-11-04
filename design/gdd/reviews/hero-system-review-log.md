@@ -313,3 +313,6 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9e
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
 Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
 Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-04 — ADR sync
+Wording only; no bound or balance value changed. The "Hero records, exactly one" row leaves the content-rule table and becomes a boot check: zero or two Hero records fail the load with `record_count` (ADR-0002 Decision 5, Tier 0b; Data Rule 7).

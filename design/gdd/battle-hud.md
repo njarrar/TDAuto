@@ -3,7 +3,7 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
@@ -31,7 +31,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 | HudTopBand | Display-only Controls for gold, lives and pips, which ignore input |
 | HudField | One `_draw` for arc, chip, Start/Call, burst button art and rings, with its hit targets as Input discs |
 
-2. **Modal screens are Controls.** The result and Paused screens are full-screen Controls that consume every event before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
+2. **Modal screens are Controls.** The result and Paused screens are full-screen `TapScreen` Controls that consume every press before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. The endings (move, release, cancel) of a drag the adapter had already forwarded still reach it, so a drag begun before the screen showed ends once. While a modal shows, the wrapper also closes the adapter's press gate, so presses drop there too (ADR-0003 2.4 and Decision 4). So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
 
 **What is on screen, and when.**
@@ -93,7 +93,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **Paused.**
 
-17. **Tap to resume.** A 40% scrim and "Paused. Tap to resume" at centre. The whole screen is the Control. It resumes on the release of a press it saw, with no countdown (Flow Rule 17).
+17. **Tap to resume.** A 40% scrim and "Paused. Tap to resume" at centre. The whole screen is the Control. It resumes on the release of a press it saw, with no countdown (Flow Rule 17). On desktop the click that refocuses the window is such a press, so it resumes; if playtests find that wrong, the screen ignores the first press after a desktop focus-in (ADR-0003 Decision 5).
 
 **Commands.**
 
@@ -103,7 +103,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied()`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
-**Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units, 0 on desktop. 1.5 units is 1 dp at a 360 dp width.
+**Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units. `I_top` and `I_bottom` are read once per battle, at build, and never change mid-battle. They are 0 on desktop and usually 0 on a phone, because ADR-0003's letterbox puts the notch and gesture bar in the bars outside the field. 1.5 units is 1 dp at a 360 dp width.
 
 | Element | Position |
 |---|---|
@@ -139,11 +139,11 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 - **Flow:** exposes reads of lives, phase, `intermission_left` and the result; the root takes the retry latch.
 - **Hero:** prompt text moves here.
 - **Tower:** Rule 8 gains the chip's target, `chip_state()` and `tower_inspected`.
-- **Technical director:** stretch mode. 540 × 960 is 9:16 and a 360 × 800 dp phone is taller, so insets must be converted to field space. MVP is on desktop at 540 × 960, so every inset here is 0 until the Mobile Platform GDD.
+- **Technical director:** stretch mode. 540 × 960 is 9:16 and a 360 × 800 dp phone is taller, so insets must be converted to field space. MVP is on desktop at 540 × 960, so every inset here is 0 until the Mobile Platform GDD. **Done by ADR-0003:** `canvas_items` stretch with `keep` letterboxes a taller phone, and a pure function converts the safe area to field-unit insets once per battle, net of the bars.
 
 **Deliberately not built for MVP.** A pause button, settings UI, wave number digit, gold icon, percentages, bars, per-tower damage, arc flip code, path draw-in, Won's brighten sequence, stage select, onboarding beyond three lines, and any keyboard, gamepad or screen-reader path, since every game action is a disc.
 
-→ Becomes an ADR: Control event order against the adapter, input before ticks in a frame, `free()` timing on retry, safe-area and stretch.
+→ Becomes an ADR: Control event order against the adapter, input before ticks in a frame, `free()` timing on retry, safe-area and stretch. ADR-0001 settles retry teardown; ADR-0003 settles event order, the modal gate, safe area and stretch, pending its S0 spike. Input before ticks stays with ADR-0004.
 
 ### States and Transitions
 
@@ -263,6 +263,8 @@ The **chip_bar** formula is defined as:
 - **If the arc's cost would be asked past a level count**: unreachable. The arc reads level 1, and the chip reads `level + 1` only below the count.
 - **If `halted()` turns true during a cost read**: the read is abandoned, and the Fatal screen replaces the HUD, ahead of any retry latch.
 - **If the app loses focus with an arc open**: Paused closes it, and the resume tap reaches nothing beneath.
+- **If a desktop player clicks the window to refocus it while Paused**: that click is the resume tap, so the battle resumes, and the click reaches nothing beneath (Rule 17, ADR-0003 Decision 5).
+- **If a drag was in flight when a modal shows**: its press already passed the adapter, so its endings still reach the adapter and the gesture ends once; new presses drop at the modal and at the closed press gate (Rule 2).
 - **If a player taps Play again after a Won**: the same rebuild, with the same seed.
 - **If the log file cannot be written**: a development error, and play goes on. It is never fatal.
 - **If handedness is left**: only the burst button and its digit mirror. Start/Call stays, 7.2 clear at the worst.
@@ -273,13 +275,14 @@ The **chip_bar** formula is defined as:
 
 | System | Interface |
 |---|---|
-| Game State & Stage Flow | `phase`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume |
+| Game State & Stage Flow | `phase`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume; the Burst's ID from the builder for the wedge (Rule 12) |
+| Enemy & Wave | `wave_index()` for the pips in every phase and the result; `to_ticks` (Enemy & Wave Formulas) for the wedge; `got_through_by_type()`, `targets()` |
 | Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected`, `slows_applied()` |
 | Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
 | Input & Gesture Resolver | Registry, `pressed`, `tap`, `drag_started`, `idle`, `ground_tap` |
-| Data & Config Pipeline | Costs and stats through the accessor; level count; Stage and Wave directly |
+| Data & Config Pipeline | Costs and stats through the accessor, Burst `cooldown` included; level count; Stage and Wave directly |
 
-**Soft:** Combat (counters for the result), Enemy & Wave (`wave_index()`, `got_through_by_type()`, `targets()`).
+**Soft:** Combat (counters for the result). The fixed `dt` the wedge uses is the tick constant (ADR-0004), passed in by the wrapper.
 
 **Downstream (these have no GDD yet):**
 
@@ -411,7 +414,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | Do three prompts crowd a first run, or still leave room for the first-run target? | First-run test | First playable |
 | Is the prompt at the top seen, while the eyes are on the lane? | First-run test | First playable |
 | Which font? Tabular figures and a licence must be checked | art-director | First render |
-| Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16 | technical-director | Mobile Platform |
+| Does the stretch mode change every inset check? A 360 × 800 dp phone is taller than 9:16. **Answered by ADR-0003:** `keep` letterboxes it, so insets are net of the bars and usually 0; the inset checks stand as written | technical-director | Closed (ADR-0003) |
 | At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |

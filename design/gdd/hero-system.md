@@ -3,7 +3,7 @@
 > **Status**: Approved 2026-11-03 by the user, on a lighter exit after the seventh design review (NEEDS REVISION; two blockers applied, the revised criteria confirmed by one reader, no eighth full review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (pin shortfall stated, re-pin counter, calling restated, first pin taught, first-run measure). User then set the cooldown to 10 s, accepted the value of re-pinning, first about 3 lives and then about 2 (Rule 7), and set the first-run target; the burst was reworked to fit, after the gate.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 2 (One Hero, Not an Army); Pillar 4 (Thumb-First)
 
@@ -132,7 +132,8 @@ Aim now counts for a lot, and share moves with it. Reacting in 1 s with perfect 
 | `pin_exclusion` | Covers each hand's burst line, tagged with that hand, and Start/Call's centre for both, at a radius above both the hero's 56 and that target's hit radius | 60 |
 | Burst `damage` | At least the `max_hp` of `normal` and of `fast`, so a burst kills each one it touches (Rule 10) | 130 ≥ 125 and 60 |
 | `pin_rect` | x margin at least 36; top at least 174 (L6); bottom at most 888 | Pass |
-| Hero records | Exactly one at MVP, so the builder selects nothing | 1 |
+
+**Checked at boot, not in the content test.** Exactly one Hero record at MVP, so the builder selects nothing. A catalogue with zero or two Hero records fails the load with `record_count` (Data Rule 7, ADR-0002 Tier 0b), since a second record would be silently ignored.
 
 **Handed to owning GDDs.**
 - **Battle HUD:** done. It places the button at the active hand's `pin_exclusion` shape, draws the digit, exposes `burst_button_centre()`, keeps Start/Call clear of `hero_start`, and ignores a Start/Call tap whose press named the hero.

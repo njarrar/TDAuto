@@ -3,7 +3,7 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-03
+> **Last Updated**: 2026-11-04
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 
@@ -51,11 +51,11 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Retry.**
 
-16. **Rebuild, never reset.** Retry destroys the whole battle and builds a new one; no system has a reset function. The prototype's hand-listed reset of 22 fields is exactly how state leaks between attempts. The Retry button only sets a latch on the app root, whose frame acts on it, Fatal first. The order is: stop the clock, cancel input, remove the old battle at once, build the new one. It happens between ticks, never inside a signal. The input resolver and adapter are rebuilt too, because their registrations belong to dying owners. A retried battle opens in Build, skipping the path's draw-in.
+16. **Rebuild, never reset.** Retry destroys the whole battle and builds a new one; no system has a reset function. The prototype's hand-listed reset of 22 fields is exactly how state leaks between attempts. The Retry button only sets a latch on the app root, whose frame acts on it, Fatal first. The order is (ADR-0001 Decision 5): stop the clock; cancel input; disable the battle's view wrapper; undo every view connection to the battle (`view_wiring.disconnect_all()`), then remove the wrapper from the tree and free it at frame end; unwire the battle (`battle.unwire()` undoes every connection the builder made); drop the root's references to the old battle and wrapper; build the new one. It happens between ticks, never inside a signal. The input resolver and adapter are rebuilt too, because their registrations belong to dying owners. A retried battle opens in Build, skipping the path's draw-in.
 
 **Pause.**
 
-17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
+17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. Input's adapter treats any of three notifications as "away" (app focus out, app paused, window focus out), because which ones fire on each platform is unverified; the first of an away episode cancels input and emits the adapter's one `lifecycle_paused()` signal, which calls `pause()`, and later ones in the episode do nothing. The Android back request also pauses, every time, instead of quitting mid-battle (ADR-0003 2.5). A notification-shade pull pauses too. `pause()` is idempotent. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. On desktop the click that refocuses the window is that tap, so it resumes (ADR-0003 Decision 5). The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
 
 **Fatal.**
 
@@ -105,7 +105,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 | Tower System | wires | Forwards `wave_called_early(seconds_left)`; connects kills to gold | Tower (bonus value) |
 | Hero System | wires | Builds and ticks it; injects `halted()` and `in_build()`; reads `left_handed` from Data's Input record and the one Hero record's ID and `burst_id`, passing the IDs and the hand to HeroSim, the hand to the wrapper's HeroInput and HUD, and the Burst's ID to the HUD for the wedge (Hero Rules 2, 8; Battle HUD Rule 12) | Hero |
 | Combat & Damage | wires, reads | Reads per-source counters for the result | Combat |
-| Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
+| Battle HUD | listens | `lives_changed`, `phase`; reads lives, `in_build()`, `intermission_left`, result; receives the Burst's ID for the wedge; sends Start/Call, Retry, resume | HUD (drawing, button placement) |
 | Bots and tests | call | `build`, `tick`, commands, read result; timeouts belong to the harness | Harness |
 
 ## Formulas
@@ -174,11 +174,11 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 | System | Interface |
 |---|---|
 | Input & Gesture Resolver | Built per battle; cancelled on outcome, pause, fatal and retry; forwards lifecycle |
-| Enemy & Wave | Emits the wave signals; owns durations |
+| Enemy & Wave | Emits the wave signals; owns durations; Flow reads `wave_index()` for the result (Rule 15) |
 | Tower System | Early-call bonus; kills to gold; direct build command |
 | Hero System | Built and ticked here; receives `halted()`, `in_build()`, the hand and the Hero's and Burst's IDs |
 | Combat & Damage | Per-source counters readable after the outcome |
-| Battle HUD & Build UI | Draws phases, lives, countdown, result; sends commands |
+| Battle HUD & Build UI | Draws phases, lives, countdown, result; sends commands; receives the Burst's ID for the wedge (HUD Rule 12) |
 | Stage Progression & Stars (VS) | Reads the result (soft at MVP) |
 | Save/Load, Menu & Screen Flow (VS) | Join the app machine (soft at MVP) |
 
@@ -262,7 +262,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Button arming | Battle HUD stories | A press begun before Start/Call or Retry arms does nothing |
 
 **Manual**
-- (Rule 17, desktop) In each phase: unfocus, refocus, tap. The game is frozen, and the tap resumes and reaches nothing beneath. Repeat on the first phone build.
+- (Rule 17, desktop) In each phase: unfocus, refocus, tap. The refocus click is the tap. The game is frozen until it, and the tap resumes and reaches nothing beneath. Repeat on the first phone build.
 - Retained screenshots of the fatal, Won and Lost screens in `production/qa/evidence/`.
 
 **Checked by code review, not tests:** no gameplay branch in the builder (Rule 3), no `_process` in gameplay systems (Rule 4).

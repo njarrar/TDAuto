@@ -114,3 +114,10 @@ Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43
 Reviewed-Content-Hash: design/gdd/game-concept.md 2eb89302dc6d316c2f3f8c74c11f10d44219e5b2
 Reviewed-Content-Hash: design/gdd/systems-index.md 941dc953b87336a149fe249c484a103dcba5531e
 Reviewed-Content-Hash: design/art/art-bible.md f27f37cc8274e7edee283103be2c318dc98e43d7
+
+## Revision — 2026-11-04 — ADR sync
+Wording and tables only; no domain bound or balance value changed.
+- Rule 7: `unknown_property` is a field the record's own type does not declare; `record_count` (exactly one Input and one Hero record) joins the manifest tier; "empty lists" becomes each list's `min_count` (ADR-0002 Decisions 3 and 5).
+- Rule 9: the content test also fails an unlisted data file, a manifest path whose case differs from the file, and a key repeated in one JSON object (ADR-0002 Decision 7).
+- The "Becomes an ADR" note and the format and snapshot Open Questions rows point to ADR-0002 and read JSON; only the Android export proof stays open. The unknown-property edge case matches Rule 7.
+- Interactions and Dependencies rows for the HUD add Burst `cooldown` through the accessor for the wedge (cross-review N2).
