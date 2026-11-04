@@ -22,14 +22,17 @@ Proposed
 >    script run outside `src/` (`prototypes/adr-0006-signal-check/` or a scratch folder),
 >    copied into `docs/engine-reference/godot/current-best-practices.md`. Where a result
 >    takes a branch, this ADR is revised to that branch first.
-> 3. The GDD and architecture edits for the renames in Decision 3 and the payload change in
->    Decision 4 are applied, or the user overturns them one by one (they are listed for
->    the user in the cascade notes, section d).
+> 3. The GDD, `architecture.md`, ADR-0003 and ADR-0009 edits for Decisions 3 and 4 are
+>    applied, or the user overturns them one by one (cascade notes, section d); then
+>    `/architecture-review` runs so the TR registry and the traceability matrix pick up
+>    the renames.
+> 4. The user has confirmed or overturned each item in Decision 9.
 >
 > **After acceptance:** the listener-count tests (Decision 8) are written by the ADR-0007
 > harness story and by the first story that builds `BattleWrapper`. Reopen trigger: if
-> either test, once written, cannot be built from the introspection calls V2 and V3
-> confirm, this ADR is amended before the next story closes.
+> the headless test, the wrapper test or the with-and-without-listeners run (Validation
+> 2 to 4) shows the contract cannot be met as written, this ADR is amended before the
+> next story closes.
 
 ## Date
 
@@ -41,7 +44,7 @@ Proposed
 
 ## Decision Makers
 
-User (njarrar, project owner), technical-director (TD-ADR gate), godot-specialist (engine check). Authored with the /architecture-decision flow in autonomous mode.
+User (njarrar, project owner), technical-director (TD-ADR gate: CONCERNS on the first draft, findings T1 to T12 applied in this revision), godot-specialist (engine check: no blocking issues, minor notes applied to V1, V3, V4, V6, Decision 2, Key Interfaces and Risks). Authored with the /architecture-decision flow in autonomous mode.
 
 ## Summary
 
@@ -57,18 +60,18 @@ Battle systems talk through Godot signals whose names, payloads, ID types, timin
 | **Knowledge Risk** | MEDIUM (signals are stable since 4.0 per `breaking-changes.md`, which lists no signal change in 4.4 to 4.7 for the classes used here; but emit-time type checks, introspection return shapes and nested-emit order are not in the pinned reference) |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`. No `modules/` file covers Core, scripting or signals (modules present: animation, audio, input, navigation, networking, physics, rendering, ui). |
 | **Post-Cutoff APIs Used** | None. Two pinned facts bear on the decision: `deprecated-apis.md` replaces `connect("signal", obj, "method")` with `signal.connect(callable)` (4.0) and lists string-based `connect()` as a deprecated pattern; `current-best-practices.md` records that a one-argument lambda on a zero-argument signal errors "Method expected 1 argument(s), but called with 0" when the signal fires (observed on 4.6.1), so an arity mismatch shows at call time, not at `connect`. |
-| **Verification Required** | V1 to V6 below. NOT SOURCEABLE in `docs/engine-reference/godot/**`: whether `emit()` checks parameter types or coerces them; the return shape of `get_signal_connection_list()` and `Script.get_script_signal_list()`; whether listeners run in connection order; nested-emit order; enum-typed and cross-class-typed signal parameters. Whether a signal connection holds its target strongly is ADR-0001 V1 and is not repeated here. |
+| **Verification Required** | V1 to V6 below. NOT SOURCEABLE in `docs/engine-reference/godot/**`: emit-time type, arity and conversion behaviour; the shapes of `get_script_signal_list()`, `get_signal_connection_list()` and `Signal.get_connections()`, and their flags; duplicate-connect behaviour; call order and changes to connections during an emit; nested-emit order; enum-typed parameters and cyclic class references. Whether a signal connection holds its target strongly is ADR-0001 V1 and is not repeated here. |
 
 ### Verification items
 
-The gap is wired to acceptance: this ADR stays `Proposed` until each item has a recorded result. All six run in one headless script with no game code. Owner: the ADR-0007 test harness author, run before the first sim story. Method for each: a throwaway `RefCounted` emitter and recording listeners, `godot --headless -s check.gd`, results pasted into `current-best-practices.md` with the engine version.
+The gap is wired to acceptance: this ADR stays `Proposed` until each item has a recorded result. All six run in one headless script with no game code (`godot --headless -s check.gd` on throwaway `RefCounted` emitters and recording listeners). Owner: godot-specialist writes the script; the user runs it on the pinned 4.7.2 editor and the results go into `current-best-practices.md` with the engine version. The engine check (godot-specialist) expects the results noted below from its own knowledge; that is not a source.
 
-- **V1. Emit-time type and arity checks.** For `signal s(a: int, b: StringName)`: what happens on `s.emit("x", "y")`, `s.emit(1.5, &"y")`, `s.emit(1, "y")` (a `String` where `StringName` is declared) and `s.emit(1)` (too few)? Is it a runtime error, a silent coercion, or a silent pass with the wrong type? What does a listener typed `func on_s(a: int, b: StringName)` receive? Expected (unsourced; `architecture.md` Data Flow 3 rule 5 states it without a source): types are not checked at emit, a typed listener parameter errors at call time on a mismatch, a too-few emit errors at call time. **No decision depends on the answer**: Decision 9's recording fakes assert payload types with `typeof()` and `is` themselves. Branch: if a `String` arrives in a `StringName` listener parameter converted silently, the fakes must check `typeof(arg) == TYPE_STRING_NAME` before the listener's own typed parameter hides it; this is the default rule already.
-- **V2. Script signal list.** Does `get_script().get_script_signal_list()` on a script-class instance return exactly the script-declared signals (its own and any inherited script class's), as an `Array` of `Dictionary` with a `name` key, and exclude `Object`'s own signals (`script_changed`, `property_list_changed`)? Compare with `get_signal_list()`. Decision 8 enumerates signals this way. Branch: if the script list is missing or unusable, the test uses `get_signal_list()` minus the names that `RefCounted.new().get_signal_list()` returns.
-- **V3. Connection list shape and flags.** Does `get_signal_connection_list(name)` (and `Signal.get_connections()`) return an `Array` of `Dictionary` with keys `signal`, `callable` and `flags`, where `callable.get_object()` is the target and `callable.get_method()` its method name as `StringName`, and `flags` is `0` for a plain `connect(callable)`? Does a `CONNECT_DEFERRED` connection report a non-zero flag? Decision 8 asserts on all three.
-- **V4. Call order.** With three listeners connected in order A, B, C, does one `emit()` call them A, B, C? After `disconnect(B)` and `connect(B)` again, is the order A, C, B? Decision 7 makes no outcome depend on order; the answer fixes what recording-fake logs may assume when two fakes listen to one signal.
-- **V5. Nested emit.** If listener A of signal `s` emits signal `t` synchronously, do all listeners of `t` finish before `s` reaches its next listener B? If a listener of `s` emits `s` again, does the inner emit reach every listener, and does the outer emit then continue? Decision 5 relies on the first answer being yes (a leak handler in Flow emits `lives_changed` and `phase_changed` inside `enemy_leaked`). The second case is forbidden (Decision 7) and is checked only so a lint rule is justified. Branch: if nesting is not depth-first, nested emits are replaced by a per-emitter outbox drained after the outer emit, and this ADR is revised.
-- **V6. Enum and cross-class typed parameters.** Do `signal phase_changed(value: Phase)` inside `Flow`, `signal damage_applied(source_kind: SourceKind, ...)` inside `Combat`, and a field `var outcome: Flow.Phase` in `StageResult` (while `Flow` names `StageResult` as a return type) parse and run on 4.7.2? ADR-0009 relies on the same cross-class reference (`DamageEvent.source_kind: Combat.SourceKind`). Branch: if either fails to parse, the parameter or field is typed `int` and documented as holding the enum's value; the names and order do not change.
+- **V1. Emit-time types and arity.** For `signal s(a: int, b: StringName)`: what do `s.emit("x", "y")`, `s.emit(1.5, &"y")`, `s.emit(1, "y")` and `s.emit(1)` do? Are values silently converted into a typed listener parameter (`String` to `StringName`, `1.5` to `int`)? Does an arity or type error in one listener log and let the emit continue to the next listener? Does the 4.7 analyzer check an `emit()` argument count at parse time? Expected: no type check at emit; a listener error is logged and the emit continues. **No decision depends on the answer**: recording fakes assert payload types with `typeof()`/`is` (Implementation Guidelines, ADR-0007), and tests capture engine errors with gdUnit4's error capture and fail on any.
+- **V2. Script signal list.** Does `get_script().get_script_signal_list()` return exactly the script-declared signals (own and inherited script classes) as `Dictionary` entries with a `name` key, without `Object`'s `script_changed` and `property_list_changed`? Branch: if unusable, `get_signal_list()` minus the names `RefCounted.new().get_signal_list()` returns.
+- **V3. Connections and flags.** Does `get_signal_connection_list(name)` return `Dictionary` entries with `signal`, `callable` and `flags`, with `callable.get_object()` the target and `callable.get_method()` a `StringName`, and `flags` 0 for a plain `connect`? Does `Signal.get_connections()` return the same shape? Does `CONNECT_DEFERRED` show as a non-zero flag? Expected: a second `connect` of the same Callable pushes an error, returns `ERR_INVALID_PARAMETER` and adds nothing; a connection made in a `.tscn` carries `CONNECT_PERSIST` (2); a freed listener object's connections are dropped automatically.
+- **V4. Call order and changes during an emit.** With listeners connected A, B, C, does one emit call A, B, C, and after `disconnect(B)` and `connect(B)`, A, C, B? If a listener connects or disconnects during the emit, does the running emit use a snapshot of the list? No outcome depends on order (Decision 7 rule 6) and both changes during an emit are forbidden; the answers fix what test logs may assume.
+- **V5. Nested emit.** If listener A of `s` emits `t`, do all of `t`'s listeners finish before `s` reaches listener B? Is re-emitting `s` from its own listener delivered in full? Decision 5 relies on the first (Flow emits `lives_changed` and `phase_changed` inside `enemy_leaked`); the second is forbidden (Decision 7 rule 7). Branch: if nesting is not depth-first, Flow and TowerSim queue nested emits in a per-emitter outbox drained after the outer emit, and this ADR is revised.
+- **V6. Enum and cyclic typed references.** Do `signal phase_changed(value: Phase)` in `Flow`, `signal damage_applied(source_kind: SourceKind, ...)` in `Combat`, and `var outcome: Flow.Phase` in `StageResult` (while `Flow` returns `StageResult`) parse and run on 4.7.2? Does `const EMITTER_KEYS: Array[StringName] = [...]` parse? ADR-0009 relies on the same cycle (`DamageEvent.source_kind: Combat.SourceKind`). Branch: enum parameters and fields typed `int` holding the enum value; an untyped const array; names and order unchanged.
 
 ## ADR Dependencies
 
@@ -83,11 +86,11 @@ The gap is wired to acceptance: this ADR stays `Proposed` until each item has a 
 
 ### Problem Statement
 
-Seven GDDs declare battle signals, and four of them say "on Flow's view allowlist" without any document defining the list. `architecture.md` Data Flow 3 states five rules for all signals and marks them ADR-0006's. Open items block code: QQ-07 (five names break `naming.signals: past_tense` in `project.yaml`), QQ-04 (`tower_id` as `StringName`, `String` or `int`), ADR-0009's open recommendation to stop passing the whole `DamageEvent` to views, and `StageResult`, which B0 assigns here with no field list. GDScript signals fail quietly: an unconnected signal does nothing, and the pinned reference does not say whether a wrong payload type is caught. Without one contract, each system's first story picks its own timing and wiring, and the first deferred connection or listener that changes state breaks the tick order and the "same result with or without views" guarantee the bots rely on.
+Seven GDDs declare battle signals; four say "on Flow's view allowlist", which no document defines. Open items block code: QQ-07 (five names break `naming.signals: past_tense`), QQ-04 (the `tower_id` type), ADR-0009's recommendation to stop passing `DamageEvent` to views, and `StageResult`, which B0 assigns here without fields. GDScript signals fail quietly: an unconnected signal does nothing, and the pinned reference does not say whether a wrong payload type is caught. Without one contract, the first deferred connection or state-changing listener breaks the tick order and the "same result with or without views" guarantee the bots rely on.
 
 ### Current State
 
-No code exists. `architecture.md` Data Flow 3 lists the signals and five rules; B2, B5 to B8 sketch the declarations; ADR-0001, ADR-0003, ADR-0004 and ADR-0009 (all Proposed) each defer naming, payload types and the allowlist to this ADR. The GDDs use `tap`, `ground_tap`, `idle`, `waves_complete` and `phase` (the last already renamed `phase_changed` in `architecture.md`, TD-ARCHITECTURE B1).
+No code exists. `architecture.md` Data Flow 3 lists the signals and five rules; B2 and B5 to B8 sketch declarations; ADR-0001, ADR-0003, ADR-0004 and ADR-0009 (all Proposed) defer naming, payload types and the allowlist here. The GDDs use `tap`, `ground_tap`, `idle`, `waves_complete` and `phase`.
 
 ### Constraints
 
@@ -124,10 +127,11 @@ No code exists. `architecture.md` Data Flow 3 lists the signals and five rules; 
 | Connection | Made in | Undone in | Examples |
 |---|---|---|---|
 | **Wiring** (sim to sim) | `BattleBuilder.build`, ADR-0001 step 4, one function, statically typed locals | never (dropped with the battle) | W1 to W5 in Decision 5 |
-| **Wrapper** (sim, resolver or adapter to a wrapper node) | `BattleWrapper.attach`, one function `_connect_signals()` | `BattleWrapper.detach`, one function `_disconnect_signals()`, same list | P1 to P9, G1 to G8, A1, A2 |
+| **Wrapper** (sim, resolver or adapter to an object the wrapper owns: a node in its subtree or a model it holds, such as HudLogic) | `BattleWrapper.attach`, one function `_connect_signals()` | `BattleWrapper.detach`, one function `_disconnect_signals()`, same list | P1 to P9, G1 to G8, A1, A2 |
 
-- Every connection is `emitter.signal_name.connect(listener.method)` with no flags argument. `CONNECT_DEFERRED`, `CONNECT_ONE_SHOT` and `CONNECT_REFERENCE_COUNTED` are forbidden on every battle signal (TR-enemy-004 names deferred; the other two hide a connection's lifetime from the listener-count test).
-- No connection is made or removed anywhere else, and never from inside a signal handler. `register`/`unregister` on the resolver are registry calls, not connections, and stay legal in handlers (Input GDD).
+- Every connection is `emitter.signal_name.connect(listener.method)` in code with no flags argument. `CONNECT_DEFERRED`, `CONNECT_ONE_SHOT` and `CONNECT_REFERENCE_COUNTED` are forbidden on every battle signal (TR-enemy-004 names deferred; the other two hide a connection's lifetime from the listener-count test). No battle signal is connected in a `.tscn` or the editor (those carry `CONNECT_PERSIST`, V3).
+- `attach` runs once per wrapper; a second `connect` of the same Callable is an engine error (V3), which the wrapper test fails on.
+- In `src/`, no connection is made or removed anywhere else, and never from inside a signal handler. **Tests are exempt:** code under `tests/` may connect recording fakes, disconnect a wiring edge (Decision 8 step 6) and call test seams such as `add_enemy` from a listener (Enemy & Wave Acceptance 28, ADR-0009 loop rules). Decisions 2 and 7 bind `src/` only. `register`/`unregister` on the resolver are registry calls, not connections, and stay legal in handlers (Input GDD).
 - No battle signal is connected to a lambda, a bound Callable or a string-named Callable (ADR-0001).
 - The resolver is part of `Battle` (ADR-0001), but all its listeners live in the wrapper, so its signals are wrapper connections.
 
@@ -144,6 +148,8 @@ No code exists. `architecture.md` Data Flow 3 lists the signals and five rules; 
 | `phase` | `phase_changed` | Flow | Already renamed in `architecture.md` (a signal and the `phase()` read cannot share a name); this ADR makes the GDDs match |
 
 Kept: `pressed` (already a past participle, the same form as `tower_built`), and every other battle signal name, all already past tense: `enemy_leaked`, `enemy_killed`, `wave_cleared`, `lives_changed`, `wave_called_early`, `gold_changed`, `tower_built`, `tower_upgraded`, `hero_pinned`, `burst_started`, `attack_fired`, `damage_applied`, `drag_started`, `drag_moved`, `drag_ended`, `drag_cancelled`; wrapper-side `lifecycle_paused`, `display_changed`, `slot_tapped`, `tower_inspected`.
+
+A signal may not share a name with a method, property or inherited native member of its class: GDScript rejects it at parse time ("member already exists"). None of the names above collides. An emitter that ever extends `Node` must also avoid `Node`'s own names (`ready`, `renamed`, `visibility_changed` and the rest).
 
 Reason for renaming over recorded exceptions: no code or test exists, so the cost today is document edits only (listed exactly in the cascade notes); after the first test it is code, tests and documents. An exception list would grow and every later reviewer would have to check it.
 
@@ -234,11 +240,13 @@ var dealt_total: float           # Combat.dealt_total()
 ```
 
 - Flow builds it as part of the outcome commit (WON, LOST, FATAL), before `cancel_input()` and before `phase_changed`, so a `phase_changed` listener can already call `result()`. `Flow.result()` returns null before an outcome and the same object after. It is read-only by contract.
-- Flow gets the reads as three injected method Callables (B9 additions): `wave_index` (`enemy_wave.wave_index`), `dealt_by_kind` (`combat.dealt_by_kind`), `dealt_total` (`combat.dealt_total`). Flow keeps no wave count and no reference to EnemyWave or Combat (Game State Rule 15). If a callable is not yet valid (a fatal during build, before step 4), the field is 0; the Builder returns null in that case anyway.
+- Flow gets the reads as three injected method Callables (B9 additions): `wave_index` (`enemy_wave.wave_index`), `dealt_by_kind` (`combat.dealt_by_kind`), `dealt_total` (`combat.dealt_total`). Flow keeps no wave count and no reference to EnemyWave or Combat (Game State Rule 15). Each defaults to an empty `Callable()`, and Flow calls it only after `is_valid()`; a fatal during ADR-0001's Builder step 3, before step 4 injects them, leaves those fields 0, and the Builder returns null then anyway.
 - Every sim value is frozen once `halted()` is true, so building at the commit and building a frame later give the same numbers.
 - **The HUD's snapshot** (screen and run log, Battle HUD Rule 15) is taken once, in the first `HudLogic.advance(ms)` after HudLogic hears `phase_changed(WON)` or `phase_changed(LOST)`. WON and LOST commit only inside a tick (frame step 3), so that `advance` is frame step 1 of the next frame: the frame after the outcome, as the GDD requires. The snapshot holds the `StageResult` plus the other reads the GDD lists (got through by type, `slows_applied()`, Hero counters, `hero_share()`); its class and fields are ADR-0010's. Screen and log read only the snapshot.
 
 ### 7. Listener rules
+
+These rules bind `src/`; test code is exempt (Decision 2).
 
 1. **Wiring listeners** (W1 to W5) may change only their own system's state and emit their own signals. They never call a command, a tick entry, `deliver`, `apply_slow`, or another system's method.
 2. **View listeners** (P1 to P9) hold presentation state only. They may read queries and set flags; they never call a command, a tick entry, `deliver`, a sim setter, `request_retry`, or `connect`/`disconnect`; they never emit a battle signal; they never keep an object reached through a query past the handler (ADR-0009's roster rule). Heavy work waits for frame step 4.
@@ -247,7 +255,7 @@ var dealt_total: float           # Combat.dealt_total()
 5. **No sim listens to a view signal.** A sim object connected to any P or G signal is a defect; the headless test (Decision 8) proves it.
 6. **No outcome depends on listener order.** Two listeners of one signal must not rely on which runs first. A view that needs another system's new state listens to that system's own signal (gold from `gold_changed`, not from `enemy_killed`). V4 records the engine's actual order for test authors only.
 7. **No emitter re-emits the signal being delivered** from inside one of its own listeners (V5, second case).
-8. **Gameplay never depends on listeners.** A battle run with no wrapper connections, and the same battle with recording fakes on every P and G signal that also call every read-only query in each handler, produce identical per-tick digests (ADR-0004 Validation 6), signal logs on W1 to W5 and `StageResult` (TR-tower-012, TR-hud-004, TR-combat-010).
+8. **Gameplay never depends on listeners.** A battle run with no wrapper connections, and the same battle with recording fakes on every P and G signal that also call every read-only query in each handler (fakes on P8 and P9 skip the `StatAccessor`, rule 4), produce identical per-tick digests (ADR-0004 Validation 6), signal logs on W1 to W5 and `StageResult` (TR-tower-012, TR-hud-004, TR-combat-010).
 
 ### 8. The allowlist and the listener-count tests (TR-state-013 contract)
 
@@ -259,11 +267,11 @@ The contract lives with the tests, because production code does not need it: `te
 `Battle` exposes the emitters for tests and tools:
 
 ```gdscript
-const EMITTER_KEYS := [&"flow", &"combat", &"enemy_wave", &"tower_sim", &"hero_sim", &"resolver"]
+const EMITTER_KEYS: Array[StringName] = [&"flow", &"combat", &"enemy_wave", &"tower_sim", &"hero_sim", &"resolver"]
 func emitters() -> Array[Object]   # same order as EMITTER_KEYS; read-only use
 ```
 
-**Headless test** (ADR-0007 harness; `BattleBuilder.build` on a fixture catalogue, no scene):
+**Headless test** (ADR-0007 harness; `BattleBuilder.build` on a fixture catalogue, no scene; the test holds the `Battle` throughout, because a freed listener drops its connections, V3; any engine error logged during the test fails it):
 
 1. For every emitter, every signal from `get_script().get_script_signal_list()` (V2) must have a key in `WIRING` or `VIEW_ALLOWLIST`. An unlisted signal fails, naming it.
 2. Every key in either list must exist on its emitter. A stale key fails, naming it.
@@ -274,8 +282,18 @@ func emitters() -> Array[Object]   # same order as EMITTER_KEYS; read-only use
 
 **Wrapper test** (first `BattleWrapper` story; needs the wrapper scene):
 
-1. After `attach`, every `VIEW_ALLOWLIST` key with `required_after_attach` has at least one connection, all with `flags == 0`, all to nodes in the wrapper subtree; A1 and A2 are connected as ADR-0003 states.
+1. After `attach`, every `VIEW_ALLOWLIST` key with `required_after_attach` has at least one connection, each listener exactly once, all with `flags == 0`, all to objects the wrapper owns (nodes in its subtree or the models it holds); A1 and A2 are connected as ADR-0003 states. No engine error is logged.
 2. After `detach`, every battle emitter's connections equal the `WIRING` set exactly: no wrapper connection survives (supports TR-tower-013 and ADR-0001's weakref proof).
+
+### 9. Choices pending user confirmation
+
+Three choices are design content in the HUD and acceptance criteria, not only architecture. They are proposed here and need the user (game-designer or ux-designer input optional) before acceptance:
+
+1. **`StageResult` fields** (Decision 6): outcome, last wave started, lives left, damage by the three kinds and the total; no per-tower-ID breakdown (the HUD snapshot reads that).
+2. **HUD snapshot timing** (Decision 6): the first `HudLogic.advance` after `phase_changed(WON)` or `phase_changed(LOST)`.
+3. **Log notation** (Decision 3): GDD acceptance logs write `phase_changed(WAVE)`, `tapped(T)`, `became_idle`.
+
+The other autonomous choices are listed in the cascade notes, section d, and are approved one by one with the edits (precondition 3).
 
 ### Architecture Diagram
 
@@ -342,7 +360,7 @@ signal drag_cancelled(best_drag: int)
 signal became_idle()
 
 # src/root/battle.gd (adds to ADR-0001 and ADR-0004)
-const EMITTER_KEYS := [&"flow", &"combat", &"enemy_wave", &"tower_sim", &"hero_sim", &"resolver"]
+const EMITTER_KEYS: Array[StringName] = [&"flow", &"combat", &"enemy_wave", &"tower_sim", &"hero_sim", &"resolver"]
 func emitters() -> Array[Object]
 
 # src/core/flow/stage_result.gd: Decision 6
@@ -358,7 +376,8 @@ For `/create-control-manifest` and `/dev-story`:
 - Must commit every state change and counter an event describes before emitting it; must check `halted()` after every emit and return at once if true (Combat excepted, ADR-0009 Decision 4).
 - Must emit nothing on a refusal or a no-op; a `*_changed` signal fires only on an actual change.
 - Must make sim-to-sim connections only in `BattleBuilder.build` and wrapper connections only in `BattleWrapper.attach`, undone in `detach`; must never connect or disconnect anywhere else or inside a handler.
-- Must connect as `emitter.signal_name.connect(listener.method)` with no flags; must never use `CONNECT_DEFERRED`, `CONNECT_ONE_SHOT` or `CONNECT_REFERENCE_COUNTED` on a battle signal.
+- Must connect as `emitter.signal_name.connect(listener.method)` with no flags; must never use `CONNECT_DEFERRED`, `CONNECT_ONE_SHOT` or `CONNECT_REFERENCE_COUNTED` on a battle signal; must never connect a battle signal in a `.tscn` or the editor.
+- Must never give a signal the name of a method, property or inherited member of its class.
 - Must type every signal parameter; must use `StringName` for catalogue IDs and `int` for `slot_index`, `spawn_id`, resolver ids and `level`; must never use `String` for an ID.
 - Must never put a sim object (`Targetable`, `Enemy`, `DamageEvent`, `Health`, `Status`, `ReadContext`, a record, a system, `Battle`) in a signal payload.
 - Wiring listeners must change only their own system's state; view listeners must never call a command, tick entry, `deliver`, sim setter, `request_retry`, `connect` or `disconnect`, and must never emit a battle signal.
@@ -442,7 +461,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ### Negative
 
-- About 150 text edits across eight GDDs, `architecture.md`, the TR registry, the traceability matrix, ADR-0003 and ADR-0009 for the renames and the payload change (exact list in the cascade notes).
+- About 140 text edits across eight GDDs, `architecture.md`, ADR-0003, ADR-0004 and ADR-0009 for the renames and the payload change (exact list in the cascade notes), then an `/architecture-review` run so the TR registry and traceability matrix follow.
 - Two places make connections (Builder and wrapper), so a reader checks two functions.
 - The contract is copied into a test file; a new signal needs three edits (ADR, contract, GDD).
 - Flow gains three injected callables.
@@ -454,7 +473,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Risks
 
-- **Emit-time types are unchecked (V1).** A `String` passed for a `StringName` may pass silently. Mitigation: recording fakes check `typeof()`; IDs always come from records, which are `StringName` (ADR-0002).
+- **Emit-time types are unchecked (V1).** A `String` passed for a `StringName` may be converted silently, and a listener error is logged while the emit continues. Mitigation: recording fakes check `typeof()`; tests fail on any captured engine error; IDs always come from records, which are `StringName` (ADR-0002).
 - **Introspection shape differs (V2, V3).** Mitigation: each item has a fallback; the test is written only after the result is recorded.
 - **Nested emit is not depth-first (V5).** Mitigation: the branch in V5 (per-emitter outbox) is stated; this ADR is revised before any Flow story.
 - **Enum-typed parameters fail (V6).** Mitigation: `int` with the same names.
@@ -489,7 +508,7 @@ For `/create-control-manifest` and `/dev-story`:
 
 ## Migration Plan
 
-No code exists. Apply the GDD, `architecture.md`, TR registry, ADR-0003 and ADR-0009 edits in the cascade notes before the first story that names a signal. ADR-0007 writes `battle_signal_contract.gd` and the headless test with its first harness story.
+No code exists. Apply the GDD, `architecture.md`, ADR-0003, ADR-0004 and ADR-0009 edits in the cascade notes before the first story that names a signal, then run `/architecture-review`, which owns the TR registry and traceability matrix and takes the cascade's section e as input. ADR-0007 writes `battle_signal_contract.gd` and the headless test with its first harness story.
 
 **Rollback plan**: If V5 shows nested emits are not depth-first, replace synchronous nested emits in Flow and TowerSim with a per-emitter outbox flushed right after the outer emit, and revise Decision 1. If V6 fails, type enum parameters as `int`. If V2 or V3 fails, use the stated fallbacks. Renames are not rolled back once tests exist.
 
@@ -500,7 +519,7 @@ No code exists. Apply the GDD, `architecture.md`, TR registry, ADR-0003 and ADR-
 3. The wrapper test passes after `attach` and after `detach`.
 4. The with-and-without-listeners run gives identical per-tick digests, W1 to W5 logs and `StageResult` (Decision 7 rule 8).
 5. Recording-fake logs in the Game State, Enemy & Wave, Tower, Hero, Combat and Input acceptance criteria use the Decision 3 names and Decision 4 payloads, with argument types asserted.
-6. ADR-0007 lint finds no `emit_signal(`, no `CONNECT_` flag, no `.connect(` outside `battle_builder.gd` and `battle_wrapper.gd` (and the adapter's own `size_changed` connection, ADR-0003 Decision 7), no `signal` in `src/foundation/data/`, and no `String`-typed ID parameter.
+6. ADR-0007 lint, over battle modules only (`src/core/`, `src/feature/`, `src/foundation/input/`, `src/presentation/` battle views, `battle_builder.gd`, `battle_wrapper.gd`; menus, `AppRoot` and modal screens are out of scope), finds no `emit_signal(`, no `CONNECT_` flag, no connection to a battle emitter's signal outside `battle_builder.gd` and `battle_wrapper.gd`, no battle-signal connection in a `.tscn`, no `signal` in `src/foundation/data/`, and no `String`-typed ID parameter.
 7. A `StageResult` read after a LOST by a fatal leak shows that leak counted (Battle HUD Acceptance 19).
 
 ## Related
@@ -508,6 +527,7 @@ No code exists. Apply the GDD, `architecture.md`, TR registry, ADR-0003 and ADR-
 - Depends on: ADR-0001 (wiring mechanism, fatal path), ADR-0004 (tick and frame order).
 - Binds and is bound by: ADR-0002 (`StringName` IDs), ADR-0003 (`lifecycle_paused`, `display_changed`), ADR-0009 (Combat and EnemyWave signals; this ADR changes `damage_applied`'s payload, which ADR-0009 deferred here).
 - Enables: ADR-0007, ADR-0008, ADR-0010, ADR-0011.
+- Amends: ADR-0004 V6 (measured with the wrapper's views connected) and ADR-0009 (the `damage_applied` payload), through the cascade notes.
 - Supersedes registry entry `listener_stores_damage_event` (ADR-0009) with `sim_object_in_signal_payload`.
 - Closes QQ-04 and QQ-07 in `docs/architecture/architecture.md`.
 - GDDs: `design/gdd/game-state-stage-flow.md`, `enemy-wave.md`, `tower-system.md`, `hero-system.md`, `combat-damage.md`, `input-gesture-resolver.md`, `battle-hud.md`, `data-config-pipeline.md`.
