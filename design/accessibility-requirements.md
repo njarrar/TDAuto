@@ -2,7 +2,7 @@
 
 > **Status**: Committed (tier chosen in autonomous mode on 2026-11-04; the user may revise it, see AQ-01)
 > **Author**: ux-designer (autonomous mode; user to review)
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-04 (result timing corrected after `/ux-review`)
 > **Accessibility Tier Target**: Standard, phased (MVP ships the Basic subset the design already meets; the Standard items arrive with Settings & Accessibility at Alpha)
 > **Platform(s)**: iOS, Android (touch only). A desktop build exists for development and testing only, with the mouse standing in for touch.
 > **External Standards Targeted**:
@@ -132,7 +132,7 @@ All rows come from art bible section 4 ("Colour-blind safety") or from the GDDs.
 | Pause anywhere | Basic | All gameplay states | **Gap** | Game State Rule 17 says **no pause button exists at MVP**; Paused comes only from focus loss or backgrounding. Build already stops the clock, but Wave and Intermission cannot be paused by choice. This conflicts with the Basic row. See AQ-02. |
 | Difficulty options | Standard | Whole game | **Gap** | The GDDs define none. Waves are tuned assuming the hero's contribution, and bots calibrate the balance. See AQ-06. |
 | Tutorial persistence | Standard | Three HUD prompts | Not Started | The prompts stay until the action is done (no auto-dismiss), so they cannot be lost by reflex. Once done, they cannot be read again. Add a Help entry when the Menu exists (PQ-06). |
-| Reading time for UI | Standard | Auto-dismissing elements | Designed with one exception | Nothing auto-dismisses except the upgrade chip and the range ring, both 1.5 s. The chip shows an actionable cost; the Standard rule asks for at least 5 s on actionable text. The window multiplier (Motor, above) is the mitigation, and the chip loses nothing when it expires. Result text appears after a delay (400 ms Lost, 1,000 ms Won) and stays. |
+| Reading time for UI | Standard | Auto-dismissing elements | Designed with one exception | Nothing auto-dismisses except the upgrade chip and the range ring, both 1.5 s. The chip shows an actionable cost; the Standard rule asks for at least 5 s on actionable text. The window multiplier (Motor, above) is the mitigation, and the chip loses nothing when it expires. Result text appears after a 400 ms delay (Won and Lost alike) and stays. |
 | Objective clarity | Standard | Stage goal | Designed | Pips and a next-wave line are always visible in Build and Intermission. Lives are always visible. |
 | Cognitive load | Comprehensive | Per system | Reviewed below | See the matrix. The HUD deliberately shows no damage numbers, HP bars, tower stats or spawn timings. The next-wave line is capped at 3 enemy types. |
 | Visual indicators for audio-only information | Standard | All gameplay SFX | Designed | No gameplay information is audio-only (see the SFX audit). Rule for the Audio GDD: **a cue may not be the only carrier of any state**. |
@@ -183,7 +183,7 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 |--------|----------------|---------------|-------------------|------------------|-----------|-------|
 | 1 Data & Config | None (owns no screen); owns the `reduce_motion` and `left_handed` flags | None | None | None | Yes | The fatal screen belongs to Game State. |
 | 2 Input & Gesture | None | Slops and edge rejection set the tap and drag feel; 48 dp targets with no margin | One pointer only | None | Partly | Slop values and edge margins need the phone test (PQ-01, PQ-02). |
-| 3 Game State & Stage Flow | Result, Paused and Fatal screens: plain text, no auto-dismiss | Resume tap is an Armed Button (P-08) | **No user pause button** | None | **Gap** | AQ-02. |
+| 3 Game State & Stage Flow | Result, Paused and Fatal screens: plain text, no auto-dismiss | Resume uses the modal press model (P-11); whether it arms is open (PQ-09) | **No user pause button** | None | **Gap** | AQ-02. |
 | 4 Combat & Damage | Hit flash is an 80 ms white disc | None | Result shows damage by source as plain numbers, no percentage | None | Partly | Flash rate audit (AQ-09). |
 | 5 Enemy & Wave | Enemy types by size, notch and ring, not colour; danger needs chevron shape | None | Next-wave line is capped at 3 types | None | Yes | Danger pulse freezes under Reduce Motion. |
 | 6 Tower | Role by polygon, ready by ring shape | Chip is a 1.5 s timed commit | Mis-spend safeguard (chip, no selling) | None | Partly | Chip window setting (Alpha). Refusal cue without motion (P-12). |
