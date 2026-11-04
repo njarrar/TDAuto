@@ -224,6 +224,37 @@ state_ownership:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-04
     revised: ""
+  - state: gold
+    status: active
+    owner_system: tower-sim
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    interface: "TowerSim.gold() -> int (non-negative); gold_changed(current: int) only on a change; written only by build, upgrade, on_enemy_killed (W2), on_wave_called_early (W5); frozen once halted"
+    write_access: tower-sim-only
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+    revised: ""
+  - state: hero_run_counters
+    status: active
+    owner_system: hero-sim
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    interface: "HeroSim reads repins, bursts_fired, bursts_hit_0/3/5, burst_victims, burst_kills (int); kills_per_burst, kills_on_hit_3, best_victims (PackedInt32Array copies); updated only in pin() and at burst release"
+    write_access: hero-sim-only
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+    revised: ""
+  - state: upgrade_chip_window
+    status: active
+    owner_system: tower-input
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    interface: "TowerInput.chip_state() -> TowerInput.ChipState (open, slot_index, elapsed_ms, level; reused, never kept); is_chip_open() -> bool; ChipWindow fed by TowerInput.advance(ms) in frame step 1"
+    write_access: tower-input-only
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -334,6 +365,7 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
     revised: ""
   - contract: damage_delivery
@@ -432,6 +464,7 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
     revised: ""
   - contract: realtime_model_step
@@ -460,10 +493,11 @@ interfaces:
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
     revised: ""
   - contract: battle_view_signals
-    status: active
+    status: "superseded_by: ADR-0010"   # was: active; replaced by battle_view_signals_v2
     pattern: signal
     producer: all-battle-systems
     consumers:
@@ -530,6 +564,66 @@ interfaces:
     signal_signature: "InputResolver.last_gesture() -> GestureRecord: null before the first gesture, else a new copy (serial, pointer, press_pos, end_pos, moves, max_travel, winners, sink flag, frozen centres, candidates and WinRule per class, slop, Outcome); finalised before became_idle"
     referenced_by:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_commands
+    status: active
+    pattern: direct_call
+    producer: hud-logic
+    consumers:
+      - tower-sim
+      - hero-sim
+      - flow
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    signal_signature: "TowerSim.build(slot_index: int, tower_id: StringName) -> BuildResult; upgrade(slot_index: int) -> UpgradeResult; HeroSim.pin(pos: Vector2) -> PinResult; burst(aim_point: Vector2) -> BurstResult; Flow.start_wave() -> StartResult; call_early() -> CallResult; pause(), resume(); callers HudLogic, TowerInput, HeroInput, bots; each checks between_ticks() first in every build (fatal, then HALTED), then halted(); enums OK = 0 first, explicit values, names by find_key"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-04
+    revised: ""
+  - contract: bot_script
+    status: active
+    pattern: direct_call
+    producer: test-harness
+    consumers:
+      - tower-sim
+      - hero-sim
+      - flow
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    signal_signature: "battle_runner.run(battle, ticks, bot.between); between(i: int) -> void issues only build, upgrade, pin, burst, start_wave, call_early and reads only Decision 7's surface; ScriptBot fires CommandStep (at_tick, command, slot_index, tower_id, x, y) once when ticks_run() >= at_tick, in array order, recording every result in a PackedInt32Array"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+    revised: ""
+  - contract: dev_log_sink
+    status: active
+    pattern: direct_call
+    producer: run-log
+    consumers:
+      - jsonl-file-sink
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    signal_signature: "sink: Callable = write_line(text: String) -> bool; JsonlFileSink.open(path) null in release or on failure (caller reports get_open_error() once); user://run_log.jsonl and user://gesture_log.jsonl; DevLogs on AppRoot, close() on quit; JSON.stringify(record, \"\", true, true), no Vector2; failure is one dev_error, never fatal"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_view_signals_v2
+    status: active
+    pattern: signal
+    producer: all-battle-systems
+    consumers:
+      - battle-hud
+      - battle-wrapper
+      - tower-input
+      - views
+      - run-log   # development builds only
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    signal_signature: "Flow.phase_changed(value: Phase), lives_changed(current: int); TowerSim.gold_changed(current: int), tower_built(slot_index: int, tower_id: StringName), tower_upgraded(slot_index: int, level: int); HeroSim.hero_pinned(position: Vector2), burst_started(aim_point: Vector2, telegraph_ticks: int); Combat.attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float), damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int); on the view allowlist; connected only in BattleWrapper.attach, undone in detach, flags 0; no sim listens"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
     revised: ""
 
@@ -723,7 +817,7 @@ api_decisions:
     added: 2026-11-04
     revised: ""
   - purpose: sim_position_representation
-    status: active
+    status: "superseded_by: ADR-0010"   # was: active; replaced by sim_position_representation_v2
     api: "float scalar pairs (pos_x, pos_y; origin_x, origin_y; impact_x, impact_y) in all sim state and comparisons, including HeroSim and TowerSim"
     not: "Vector2 for any stored or compared sim position (allowed only for adapter input, command arguments converted on entry, report_attack, view signals, view_position())"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
@@ -953,6 +1047,31 @@ api_decisions:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
     revised: ""
+  - purpose: command_result_codes
+    status: active
+    api: "Typed enums per command (BuildResult, UpgradeResult, PinResult, BurstResult, StartResult, CallResult), OK = 0 first, every value explicit, names via Enum.find_key(v)"
+    not: "bool returns, implicit enum values, renumbering, keys()[v], push_error or fatal for a refusal"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    reason: "Bots and baselines store the int; a new check may take a value out of declaration order; a refusal is data, not an error"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: sim_position_representation_v2
+    status: active
+    api: "float scalar pairs (pos_x, pos_y; origin_x, origin_y; impact_x, impact_y) in all sim state and comparisons, including HeroSim and TowerSim"
+    not: "Vector2 for any stored or compared sim position (allowed only for adapter input, command arguments converted on entry, report_attack, view signals, view_position(), position queries returning a new Vector2 for views and bots (HeroSim.position, pin_target; TowerSim.slot_position))"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    reason: "Vector2 is expected 32-bit (QQ-05, V1); data is PackedFloat64Array and PinGeometry is scalar"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -1175,7 +1294,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
     added: 2026-11-04
   - pattern: command_inside_tick
-    status: active
+    status: "superseded_by: ADR-0010"   # was: active; replaced by command_inside_tick_v2
     description: "No command (pin, burst, build, upgrade, start_wave, call_early, pause, resume) runs inside Battle.tick, from a signal listener, or from a real-time model's advance or update."
     why: "Commands apply only between ticks (TR-state-004); displayed must equal paid (TR-hud-005)"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
@@ -1322,6 +1441,39 @@ forbidden_patterns:
     description: "No push_warning in src/."
     why: "With gdUnit4 error reporting on, a warning fails tests; ADR-0001 has no warning tier (ERR-3)"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-04
+  - pattern: unchecked_command_entry
+    status: active
+    description: "A command (build, upgrade, pin, burst, start_wave, call_early, pause, resume) whose first statement is not the injected between_ticks() check, or that answers a failed check with anything but fatal."
+    why: "A mid-tick command can only come from a wiring defect; Principle 5 forbids a silent fallback"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+  - pattern: input_class_mutates_sim
+    status: active
+    description: "TowerInput, HeroInput, HudLogic or a bot writes a sim field or calls a tick entry; they change state only through the commands."
+    why: "Keeps bots and players on one door (TR-tower-001, TR-hero-001, TR-hero-012)"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+  - pattern: dev_log_in_release
+    status: active
+    description: "RunLog, GestureLog, JsonlFileSink or DevLogs created when OS.is_debug_build() is false, or a dev-log failure that calls fatal."
+    why: "TR-hud-013, TR-input-015: release never writes; a log failure is never fatal"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+  - pattern: absent_branch_in_production
+    status: active
+    description: "A Builder option, null check or factory in src/ that exists only so a test can run without HeroSim (or another system); tests swap in a tests/helpers subclass instead."
+    why: "Hero criterion 28 is proven without a production test branch (ADR-0010 Decision 9)"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-04
+  - pattern: command_inside_tick_v2
+    status: active
+    description: "No command (pin, burst, build, upgrade, start_wave, call_early, pause, resume) runs inside Battle.tick, from a signal listener, or from a real-time model's advance or update; enforced at run time in every build by the between_ticks() check (ADR-0010)."
+    why: "Commands apply only between ticks (TR-state-004); displayed must equal paid (TR-hud-005)"
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
 
 # Example:
