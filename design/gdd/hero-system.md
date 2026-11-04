@@ -293,6 +293,7 @@ The **hero_share_bound** formula is defined as:
 - **If an enemy reaches the exit during a telegraph**: it leaks first (Combat Rule 11), so the burst does not touch it.
 - **If an enemy is off the field at release**: untouched, since it is not in `targets()`.
 - **If a fatal leak arrives during a telegraph**: the rest of the tick is skipped, so nothing lands (Flow Rule 15).
+- **If a Won arrives during a telegraph**: later ticks do nothing, so nothing lands, and no BURST `attack_fired` comes. Visual Requirements' outcome row ends the telegraph's look.
 - **If Paused arrives during an aim**: `drag_cancelled` from `cancel()`: nothing fires, and the thumb starts over.
 - **If Paused arrives during a telegraph or walk**: the clock stops, and both resume exactly.
 - **If the last wave's burst is unused**: nothing happens. It has no value after Won.
@@ -313,7 +314,9 @@ The **hero_share_bound** formula is defined as:
 | Data & Config Pipeline | Hero and Burst through the accessor; `hero_start`, `pin_rect`, `pin_exclusion` |
 | Game State & Stage Flow | Build, tick order, `halted()`, `in_build()` |
 
-**Soft:** Tower System, through bot gates and `burst_spike` only. Battle HUD, which has its own GDD, reads Rule 16's reads and signals, conforms to `pin_exclusion`, and supplies the button's centre.
+**Soft:** Tower System, through bot gates and `burst_spike` only.
+
+**Hard for HeroInput only:** Battle HUD, which has its own GDD, reads Rule 16's reads and signals, conforms to `pin_exclusion`, and supplies `burst_button_centre()`, which HeroInput reads. HeroSim does not depend on it, so bots run without a HUD.
 
 **Downstream (these have no GDD yet, so the interfaces are provisional until they confirm them):**
 
@@ -350,7 +353,9 @@ Primitives only. Nothing has been rendered and every value is unverified on a de
 | Ready | Four static 3 px ticks, 8 long, radius 40 around the hero, in Wave and Intermission, and only once pinned | New |
 | Ready, first frame | Ticks close in from radius 56, button scale 1.15 to 1, 120 ms, once; no glow change | §7 |
 | Reduce Motion | No dip, wind-up, snap or Ready pop; a static ring from T+0.1, 4 px at R; spokes stay | §7 |
-| Defeat / Victory | Outline, glow 0 / idle, glow 1. Leash, rings and ticks removed | §2 |
+| Outcome, burst unreleased | Nothing lands. In real time, since the clock has stopped: field restores and the hero returns to 1× in 120 ms, at once under Reduce Motion. Gold ring, preview and kill marks removed; no spokes or pulse | New |
+| Outcome on the release tick | The R row plays to its end in real time, so a stage-winning burst keeps its payoff | New |
+| Defeat / Victory | Outline, glow 0 / idle, glow 1. Leash, rings and ticks removed, except an R row still playing | §2 |
 
 📌 **Asset Spec:** once the art bible is approved, run `/asset-spec system:hero-system`.
 
@@ -452,7 +457,7 @@ A recording fake logs Hero's signals, `attack_fired` and `deliver`, and each THE
 | HeroInput wiring | Hero UI story | With a fake resolver, gestures reach the commands |
 | Pins near a button | User, first phone build | A pin drag ending in the bottom third lands within 40 of the finger on at least 90% of attempts, and no press meant for the hero calls a wave or arms an aim (game-designer review, 2026-11-02) |
 
-**Manual** (retained in `production/qa/evidence/`): unpinned prompt and leash; ghost; reach ring; cooling digit; cancelling state; kill preview in greyscale; telegraph and spokes; Ready ticks at quarter scale.
+**Manual** (retained in `production/qa/evidence/`): unpinned prompt and leash; ghost; reach ring; cooling digit; cancelling state; kill preview in greyscale; telegraph and spokes; an outcome mid-telegraph with the field and hero restored; a stage-winning burst's ring and spokes; Ready ticks at quarter scale.
 
 **Checked by code review, not tests:** HeroInput acts only through `pin` and `burst`; `burst_safe_distance` and `hero_share_bound` have no code.
 

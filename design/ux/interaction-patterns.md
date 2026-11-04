@@ -74,7 +74,7 @@ accessibility notes match each pattern's accessibility line.
 | Lost life dash | 200 ms fade to alpha 0.2 | linear | Kept (a fade) | Art bible 7 |
 | Ground-tap ring (P-16) | 150 ms fade in | linear | Kept (a fade) | Art bible 7 |
 | Cooldown sweep, chip drain bar | real time | linear (it is a clock) | Kept | Art bible 7; HUD Rule 9 |
-| Armed button arming (P-08) | 300 ms | n/a (state, not motion) | Kept | HUD Rule 11 |
+| Armed button arming (P-08) | 300 ms, then a step to full alpha | n/a (state, not motion) | Kept | HUD Rule 11 |
 | Paused | instant | none | n/a | HUD Rule 17 |
 | Danger pulse | 2 Hz, at most 25% alpha swing | sine | Frozen | Art bible 7 |
 | Never animated | Leash, panel opacity, counter values | | | Art bible 7 |
@@ -297,9 +297,9 @@ accessibility notes match each pattern's accessibility line.
 - States: Hidden, Arming (300 ms of real time), Armed.
 - It registers with the resolver on appearing, not on arming, or an early press would land on what lies beneath.
 - A tap whose press began during Arming is dead, even if released once Armed. A press begun before the button appeared cannot win.
-- A Control fires only on a release whose press it saw while Armed, and clears that press on the lifecycle signal (focus loss), so a thumb held across a screen change cannot fire it.
+- A Control fires only on a release whose press it saw while Armed, and clears that press on the lifecycle signal (focus loss) or a resize, so a thumb held across a screen change cannot fire it.
 - The clock is `advance(ms)` from the frame time, clamped to 100 ms per frame, frozen while Paused. Returning from Paused is not a new appearance.
-- Retry and Play again arm the same way, starting when their text shows.
+- Retry and Play again arm the same way, starting when their text shows, and lighten while a counting press is held, so a slide-off shows.
 - Start: "Start" in Build. Call: "Call +7" in Intermission (bare "Call" when the bonus is 0), with the seconds left and a small burst glyph under it. No pulse, warning or advice once armed.
 - Accessibility: Arming is a deliberate delay of 300 ms, not a demand. Arming is drawn at alpha 0.5 and steps to full at Armed; panel opacity never animates (art bible 7). Retry and Play again also lighten while a counting press is held, so a slide-off shows. Paused has no arming (user decision, 2026-11-04).
 
@@ -342,7 +342,7 @@ accessibility notes match each pattern's accessibility line.
 
 **Specification**:
 - Burst button: 84 px visible, 96 px hit, bottom corner on the dominant-hand side. Shown in Build, Wave and Intermission; Paused shows it as the phase it left; Won and Lost hide it. A tap does nothing (P-04). Locked in Build or before a first pin (P-14).
-- Ready press: a thin ring at radius 64 shows beyond the fingertip; this is the cancel boundary. Cancelling starts when the finger ends over 64 from the button's centre and resumes at 48.
+- Ready press: a thin ring at radius 64 shows beyond the fingertip; this is the cancel boundary. Every aim starts cancelling; cancelling stops once the finger is over 64 from the button's centre and resumes at 48 or less (Hero Rule 13).
 - Reticle: a 3 px solid ring with four ticks, alpha 0.7, drawn offset 100 units above the finger so the thumb never hides it, clamped to the viewport and the burst's reach, with no flip.
 - While cancelling, the reticle dims and the radius preview hides, because releasing then cancels.
 - A radius preview is a solid unfilled outline. The reach ring is neutral, dotted (3 on, 13 off), 2 px, alpha 0.6.
@@ -353,21 +353,21 @@ accessibility notes match each pattern's accessibility line.
 **When to Use**: The burst.
 **When NOT to Use**: Any tap action; the burst is drag-only by design.
 
-**Implementation**: HeroInput holds the aim state machine (Idle, Cancelling, Live) and calls `HeroSim.burst(pos)` on release; HudField draws the button, HeroInput's view draws the reticle and preview.
+**Implementation**: HeroInput holds the aim state machine (Idle, Cancelling, Live) and calls `HeroSim.burst(pos)` on release; HudField draws the button, Hero's view draws the reticle and preview.
 
 ### P-11 Modal Screen
 
 **Category**: Control
 **Used In**: Result (Won, Lost), Paused, Fatal
-**Source**: Battle HUD Rules 2 and 15; Game State Rules 15 to 18
+**Source**: Battle HUD Rules 1, 2, 4, 15 and 17; Game State Rules 15 to 18
 **Status**: Draft
 
 **Specification**:
-- A full-screen `Control` that consumes every input event before the Input adapter sees it, so a tap cannot reach a tower or the hero. The Result and Paused Controls are built once and toggled visible (HudModals); they forward presses and releases to HudLogic.
-- **Modal press model** (HUD Rule 2). Because Controls skip the adapter, HudLogic repeats the adapter's rules: a press inside `edge_reject_margin` of a side edge or inside an inset does not count; a tap counts only if its release is by the same pointer, within `tap_slop` of its press; a later press replaces an unmoved earlier one and otherwise is ignored; the lifecycle signal clears a held press. A press begun before the screen appeared never counts.
+- A full-screen `Control` that stops presses before the Input adapter sees them, while moves and releases of a gesture already under way still reach it (Input adapter contract), so a tap cannot reach a tower or the hero. The Result and Paused Controls are built once and toggled visible on `modal_changed` (HudModals), which HudLogic emits synchronously with the phase change, and none on Fatal (HUD Rule 1); they forward presses, moves and releases to HudLogic.
+- **Modal press model** ([Battle HUD Rule 2](../gdd/battle-hud.md#core-rules)). Because presses skip the adapter, HudLogic repeats the adapter's rules. Rule 2 is the contract, under Translation, Rejected presses, Target, Tap under `tap_slop`, Second press, Cancel and Arming; they are not copied here.
 - Result: a transparent modal turns visible on the outcome, so input is dead at once. The first frame after it builds one snapshot (which also feeds the log) and starts the text timer: text appears after 400 ms for both Won and Lost. Plain text in fixed order, same weight. A lost stage reads "Broke on wave N of 6" (N is `wave_index()`). Both show damage by source (Towers, Hero, Burst, then Slowed if a slow tower was built) as whole numbers with no percentage. Lost also shows "Got through" by enemy type; Won omits it on screen (the log keeps it), because it does not fit Won's 198-unit column. Won is a compact panel low on the screen in two columns ("Stage clear" and "Lives N of M" left, damage rows right), so the finished build stays visible above it. Retry and Play again use P-08's arming.
 - Paused: instant. A 40% scrim and "Paused. Tap to resume" at centre; the whole screen is the Control. It resumes on a counted release with no countdown, and is hidden, never freed, inside its own handler. There is no pause button at MVP; Paused comes from focus loss or backgrounding. Paused has no arming: a counted release resumes at once (user decision, 2026-11-04; Battle HUD Rule 2). The accepted cost is that a brush can resume a live wave, which the phone test logs.
-- Fatal: a generic, catalogue-free screen that is guaranteed to load. Fatal overrides Won, Lost and Paused.
+- Fatal: a generic, catalogue-free screen that is guaranteed to load. Fatal overrides Won, Lost and Paused and hides the whole HUD (HUD Rule 4).
 - Modals add about 4 draw calls.
 - Accessibility: these are real `Control` nodes, so they are the screens that can carry accessibility labels for TalkBack and VoiceOver. Nothing auto-dismisses.
 
@@ -443,7 +443,7 @@ accessibility notes match each pattern's accessibility line.
 - Towers: Ready is a complete ring; Cooling is a regrowing ring.
 - The sweep is linear (it is a clock). The digit swaps and never bounces.
 - Colour-blind safe: ready and cooling differ by shape (outline vs filled plus the returning fill; complete vs regrowing ring), never fill level alone.
-- The digit is hidden while the thumb is on the button (device test needed).
+- With no press the digit sits on the button. During a cooling press it shows above the thumb only, on panel, and the button is bare (HUD Rule 12).
 - The burst button is hidden on Won and Lost (see P-10).
 
 
@@ -451,7 +451,7 @@ accessibility notes match each pattern's accessibility line.
 **When to Use**: Anything that recharges.
 **When NOT to Use**: One-off timers with no recharge, such as the chip window (that uses P-07's draining bar).
 
-**Implementation**: Burst: HudField computes the fill from `cooldown_left()` and Burst `cooldown` read through the accessor. Towers: field view reads `slot_state().cooldown_left`.
+**Implementation**: Burst: HudField computes `burst_fill` from `cooldown_left()` and Burst `cooldown` read through the accessor, and reads `cooldown_digit()` and `button_press()` from HeroInput, redrawing on a quantised key (HUD Rule 1). Towers: field view reads `slot_state().cooldown_left`.
 
 ### P-16 Ground Tap Rejection
 
@@ -571,3 +571,4 @@ accessibility notes match each pattern's accessibility line.
 | PQ-08 | Should the arc panels (word and cost) become tap targets, or keep dismissing the arc (Battle HUD edge case)? | ux-designer, arc and chip spec |
 | PQ-09 | Closed 2026-11-04: Paused has no arming (Battle HUD Rule 2, user decision). Its cost, unintended resumes, is logged in the phone test | game-designer |
 | PQ-10 | What the Android back button or gesture does in battle and on each modal | game-designer, Game State GDD |
+| PQ-11 | Arc panels cover the lane in Wave at slot (270, 305), against art bible 7's "never under a panel" (Battle HUD Open Questions; HQ-16) | art-director, arc and chip spec |

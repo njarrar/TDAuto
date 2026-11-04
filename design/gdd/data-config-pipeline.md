@@ -179,15 +179,16 @@ There is no reload transition: a data change applies on the next run.
 | System | Data interface |
 |---|---|
 | Game State & Stage Flow | Triggers load; reads Stage; injects the catalogue |
-| Combat & Damage | None directly; callers pass values in |
 | Enemy & Wave | Enemy, Wave, Stage records |
-| Tower System | Tower levels via the accessor |
-| Hero System | Hero and Burst via the accessor |
+| Tower System | Tower levels via the accessor; `is_tower(id)`; `level_count(def_id)`; Stage's `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
+| Hero System | Hero and Burst via the accessor; Stage's `hero_start`, `pin_rect`, `pin_exclusion` |
 | Input & Gesture Resolver | The Input record |
-| Battle HUD & Build UI | Costs and Burst `cooldown` via the accessor |
+| Battle HUD & Build UI | Costs, stats and Burst `cooldown` via the accessor; `level_count(def_id)`; Stage and Wave directly; the Input record's fields; tower IDs and role tags from the Tower records, injected by the wrapper |
 | Stat & Modifier Resolution (VS) | Key vocabulary; replaces the accessor's internals |
 | Skill Tree, Hero Weapons, Synergies (VS) | New record types reserved in Core Rules |
 | Save/Load (VS) | Stable IDs and retired-ID list |
+
+Combat & Damage has no interface here: it reads no data, and its callers read values and pass them in.
 
 Per the bidirectional rule, each of these must list this one. The MVP GDDs that read data do, and the Vertical Slice ones must when authored.
 

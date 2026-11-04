@@ -326,6 +326,8 @@ The **gold_upper_bound** formula is defined as:
 | Combat & Damage | Health, Status, `speed_factor`, `is_dead`, `deliver` for test kills; Rule 11's tick order |
 | Game State & Stage Flow | `start_next_wave()`, `halted()`, wiring, tick slots, `to_ticks` in Rule 4 |
 
+**Soft:** Input & Gesture Resolver, for the slot and burst hit radii layout rule L3 checks. A value only, with no runtime call.
+
 **Downstream (hard, with their own GDDs):**
 
 | System | Interface |
@@ -480,7 +482,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough, and a fail reopens wave 2 |
 | L10, L11, L14, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass |
 | Retry (Flow) | Game State stories | Flow's Retry row: this system's roster and wave state must be part of the snapshot |
-| Listener test (Flow) | This system's, Tower stories | The count is non-zero, and removing a connection fails naming it |
+| Listener test (Flow owns it) | Game State stories, once this system and Tower exist | The count is non-zero, and removing a connection fails naming it |
 | Order, leaks (Combat) | This system's stories | On the real tick, leaks resolve before fire |
 | Order, fatal leak (Combat) | This system's stories | A fatal leak pays nothing |
 | Order, kills (Combat) | This system's stories | `enemy_killed` fires once, and no corpse moves |
@@ -509,14 +511,12 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 |---|---|---|
 | On one path, does re-pinning matter, or does one good pin suffice? The two-front gate shows the geometry exists, not that humans use it. If the pinned-once bot or a tester says it does not, parallel lanes are the first thing to pull forward, ahead of more content | qa-lead + Hero GDD | First playable |
 | Do the layout rules leave room for different stages? Sketch Vertical Slice stages 2 and 3 through L1 to L13 on paper before authoring them. They pass only if they differ in the bottom third, and a mirror does not count; if the rules forbid that, amend the rows, which are data | level-designer | Before Vertical Slice stages |
-| The concept names bursts hitting 3 or more as a mastery metric, yet it barely tests aim here. Log human burst hit counts and revisit that threshold | Hero GDD | First playable |
 | A leak loses both a life and its bounty, so failure compounds. Accepted because retry is instant; unproven | qa-lead | First playable |
 | Do uncapped splash and slow erode the packets the burst needs? The packet target assumes splash radius below 90 at starter values | Tower GDD + bots | First playable |
-| Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
 | Stretch mode and the minimum supported width in dp: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. L6's zero margin at the largest inset is unverified on devices | technical-director | Input ADR |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check | technical-director | App Lifecycle ADR |
-| Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
+| Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | ADR-0009 for path and slots, ADR-0004 for the tick order (QQ-08) |
 | Wave 6 pays 174 of 510 bounty gold. At most 496 is held at its start, 54 short of the cheapest full board and 254 of the dearest, so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |
 | Nothing restores a lost life, so early leaks shrink the cushion for wave 6. Is that fair? | Playtest | First playable |

@@ -3,6 +3,7 @@
 > **Status**: In Design (autonomous draft, 2026-11-04; revised after three `/ux-review hud` passes the same day, the third aligning it with the Battle HUD GDD approved in PR #7)
 > **Author**: ux-designer (autonomous mode; user to review)
 > **Last Updated**: 2026-11-04
+> **Conformed**: to the GDDs approved on 2026-11-04
 > **Platform Targets**: iOS and Android, portrait, touch only (a mouse stands in for touch on the desktop development build at 540 x 960)
 > **Template**: HUD Design
 > **Source of truth**: `design/gdd/battle-hud.md` owns the rules, formulas and layout numbers. This document is the UX layer on top: it organises them as a HUD design, adds states, hierarchy, budget, feedback and accessibility, and records conflicts. Where a number appears here it is copied from that GDD (rule numbers in brackets) or computed from it, and the computation is shown. If the two ever differ, the GDD is right and this file is stale.
@@ -17,7 +18,7 @@
 The player never reads numbers to decide a fight. The HUD deliberately shows **no** damage numbers, HP bars, tower stats, spawn timings or hit counters [Rule 4]. It teaches three verbs with three one-line prompts [Rule 13] and then goes quiet. A resting thumb must never be punished: the bottom 30% of the screen holds only the burst button and the field, so the pinned thumb never hides the lower lane.
 
 **Constraints this philosophy sets for every decision below:**
-1. No element may cover the lane. Panels sit in the top band; the lane is never routed under a panel.
+1. No element may cover the lane. Panels sit in the top band; the lane is never routed under a panel. Arc panels at slot (270, 305) are the open exception (HQ-17).
 2. Screen-space colour stays neutral; cyan, orange, gold, violet and magenta each mean one gameplay fact and appear in the field (art bible 4).
 3. Nothing in screen space loops, glows or animates counters. Digits swap; they never bounce.
 4. Every control is a 48 dp target, and every state has a non-colour cue.
@@ -46,7 +47,7 @@ Drawn from the UI Requirements sections of all 8 GDDs. Combat, Data & Config and
 | 12 | Enemy glyphs, danger chevrons, hit flashes | Enemy & Wave, Combat | Enemy & Wave, Combat |
 | 13 | First-time prompt (one line) | Hero, Tower | Battle HUD |
 | 14 | Ground-tap rejection ring | Input (`ground_tap`) | Battle HUD |
-| 15 | Result: Won or Lost text, got-through glyphs, damage by source | Flow, Combat, Enemy & Wave, Tower | Battle HUD |
+| 15 | Result: Won or Lost text, got-through glyphs (Lost only), damage by source | Flow, Combat, Enemy & Wave, Tower | Battle HUD |
 | 16 | Paused screen | Flow | Battle HUD |
 | 17 | Fatal screen | Flow | Flow (generic, catalogue-free) |
 | 18 | Hero share of damage as a percentage | Combat | Not shown (balance metric; log only) |
@@ -57,7 +58,7 @@ Drawn from the UI Requirements sections of all 8 GDDs. Combat, Data & Config and
 
 | Category | Items | Why |
 |---|---|---|
-| **Must Show** (always while it applies) | 1 lives, 2 pips, 3 gold, 6 burst button (Build, Wave, Intermission; Paused shows the phase it left), 5 Start/Call (Build and Intermission), 12 enemy glyphs, 10 state rings, 19 build slots | The player decides with these on every wave. Lives, pips and gold are always on; the others follow the phase [Rule 4] |
+| **Must Show** (always while it applies) | 1 lives, 2 pips, 3 gold, 6 burst button (Build, Wave, Intermission; Paused shows the phase it left), 5 Start/Call (Build and Intermission), 12 enemy glyphs, 10 state rings, 19 build slots | The player decides with these on every wave. Lives, pips and gold are always on, short of Fatal, which hides all of it; the others follow the phase [Rule 4] |
 | **Contextual** | 4 next-wave line (Build and Intermission), 7 build arc (slot tapped), 8 upgrade chip (tower tapped, 1.5 s), 9 range rings, 11 Hero field visuals (while aiming or pinned), 13 prompt (until its act is done), 14 ground ring (first three taps), 15 result (outcome), 16 Paused (focus lost), 17 Fatal | Shown only when the situation calls for them |
 | **On Demand** | none | There is no menu, toggle or hold-to-reveal at MVP. Tapping a level-2 tower shows its range ring for 1.5 s, which is the closest thing, and it is contextual |
 | **Hidden** | Damage numbers, HP bars, tower stats, spawn timings, hit counters, hero share percentage, 20 the debug logs | Deliberately never on screen [Rule 4, Rule 15]. The human log keeps hero share and median kills; the logs are files, written in debug builds only |
@@ -113,7 +114,7 @@ Approximate, not to scale vertically. Phase shown: Intermission (Build is the sa
 | Start/Call | centre (186, 800), rect 88 x 72, corner 24, hit radius 48, both hands | P-08 | Resolver disc, priority 350 | [Layout] |
 | Burst button | x 456 (84 left-handed); y = clamp(888 - `I_bottom`, 816, 888); 84 px visible, 96 px hit | P-10, P-14, P-15 | Resolver discs (drag 100; sink tap 400) | [Layout] |
 | Lost panel | x 48 to 492, y 200 to 752; Retry 128 x 72 at (270, 700) | P-11 | Modal Control | [Layout] |
-| Won panel | x 48 to 492, y 744 to 944, moved up by `B = min(I_bottom, 72)`; Play again 128 x 72 at (270, 904 - `B`) | P-11 | Modal Control | [Layout] |
+| Won panel | x 48 to 492, y 744 to 944, moved up by `B = min(I_bottom, 72)`; two columns from y 756 - `B` to 860 - `B`, rows 1 and 2 at x 64 to 262, damage rows at x 278 to 476; Play again 128 x 72 at (270, 904 - `B`) | P-11 | Modal Control | [Layout] |
 | Paused | full-screen 40% scrim, centre panel 300 x 64 | P-11 | Modal Control | [Rule 17, Visual] |
 
 **Zone rationale (UX alternatives; the GDD records only the choice).** Three arrangements were weighed against the philosophy.
@@ -136,7 +137,7 @@ One row per element. "Pattern" refers to `design/ux/interaction-patterns.md`; "T
 | Gold | Must Show | Top band, right | Tower | Integer gold | 16 dp tabular digits, right-aligned at x 516 | Signal (`gold_changed`) | Always | Digits swap; never count up or bounce | MUST KEEP | P-18 |
 | Next-wave line | Contextual | Top band, second row | Enemy & Wave (Wave records) | "Next", then a glyph and count per type, order heavy, normal, fast, absent types omitted | Neutral glyphs at true size 16, 22 and 30 with the fast's notch; counts 14 dp | On phase change | Build, Intermission | None | SHOULD KEEP | none (pattern gap, HQ-14) |
 | Start / Call | Must Show (Build, Intermission) | Bottom left, centre (186, 800) | Flow, Tower (bonus) | "Start" in Build. "Call +N" in Intermission (bare "Call" when N is 0), seconds left, burst glyph 16 px | Panel rect 88 x 72, 2 px neutral outline, two 14 dp lines | Frame, redrawn on a quantised key | Build, Intermission; hidden in Wave | Arming: alpha 0.5, stepping to full at Armed (panel opacity never animates, art bible 7). No pulse or advice once armed | MUST KEEP | P-08 |
-| Burst button | Must Show (Build, Wave, Intermission) | Bottom corner, dominant hand | Hero, Data | State: Locked, Ready, Telegraphing, Cooling | Dotted outline (Locked); gold fill and full ring (Ready); fill 0 (Telegraphing); neutral outline with the gold fill returning as a clockwise sweep, `burst_fill = 1 - clamp(cooldown_left / to_ticks(cooldown), 0, 1)`, and a seconds digit (Cooling). On a cooling press the digit shows above the thumb and the button is bare | Frame, redrawn on a quantised key | Hidden on Won and Lost; Paused shows the phase it left | 2 px nudge once, 120 ms, on a refused press (skipped under Reduce Motion) | MUST KEEP | P-10, P-14, P-15 |
+| Burst button | Must Show (Build, Wave, Intermission) | Bottom corner, dominant hand | Hero, Data | State: Locked, Ready, Telegraphing, Cooling | Dotted outline (Locked); gold fill and full ring (Ready); fill 0 (Telegraphing); neutral outline with the gold fill returning as a clockwise sweep, `burst_fill = 1 - clamp(cooldown_left / max(1, to_ticks(cooldown)), 0, 1)`, and a seconds digit (Cooling). On a cooling press the digit shows above the thumb and the button is bare | Frame, redrawn on a quantised key | Hidden on Won and Lost; Paused shows the phase it left | 2 px nudge once, 120 ms, on a Locked press (skipped under Reduce Motion) | MUST KEEP | P-10, P-14, P-15 |
 | Build arc | Contextual | Field, above the tapped slot | Tower, Data (costs) | Three tower discs and their word and cost | Triangle (Single), hexagon (Splash), square (Slow), left to right, radius 96 above the slot; panels 80 x 56 with two 14 dp lines; 3 px cyan contour | On open, and on `gold_changed` while open | Slot tap | 120 ms collapse on a build (art only) | MUST KEEP while open | P-06 |
 | Upgrade chip | Contextual | Field, 76 above the tapped tower | Tower | Cost, level-2 glyph, draining bar | 76 x 44 panel, 16 dp cost, 20 px cyan polygon, neutral bar 3 units tall | Frame during its 1.5 s | Tap on a level-1 tower | Bar drains linearly | MUST KEEP while open | P-07 |
 | Range rings | Contextual | Field, around a tower | Tower, Data | Tower reach | Solid unfilled outlines: arc open, one per distinct level-1 range; chip open, current plus next at alpha 0.25; after build or upgrade, 400 ms then a 200 ms fade; level-2 tap, 1.5 s | Event | As listed | Fade only | CAN HIDE | none (drawn by HudField; Tower Visual Requirements) |
@@ -146,6 +147,8 @@ One row per element. "Pattern" refers to `design/ux/interaction-patterns.md`; "T
 | Result (Won) | Contextual | Won panel, x 48 to 492, y 744 to 944 minus `B` | Flow, Combat, Enemy & Wave, Tower | "Stage clear", "Lives N of M" (left column); Towers, Hero, Burst, Slowed (right column); Play again. No "Got through" row: it needs about 270 units against a 198-unit column, so the log keeps it (user decision, 2026-11-04) | Compact two-column panel, board visible above it; Play again looks and arms like Retry | Once | Won | Text appears 400 ms after; brighten sequence cut | MUST KEEP | P-11, P-08 |
 | Paused | Contextual | Full screen | Flow | "Paused. Tap to resume" | 40% scrim, 300 x 64 panel | Instant | Focus loss | None | MUST KEEP | P-11 |
 | Fatal | Contextual | Full screen | Flow | Generic failure text | Catalogue-free screen | Instant | Fatal | None | MUST KEEP | P-11 |
+
+**Redraw and modal visibility** [Rule 1]. HudField redraws when a quantised key changes (fill in steps of 1/60 of a turn, digit, bonus label, visible set, arming state, held press, affordability of each open disc and chip) and every frame while a timed visual runs: chip bar, ring fade, nudge, collapse. HudLogic owns which modal shows: it emits `modal_changed` (none, paused or result) synchronously with the phase change, and none on Fatal, and HudModals toggles visible on it.
 
 **Drawn by other systems, not by this HUD.** Inventory items 10 (tower and hero state rings), 11 (hero field visuals), 12 (enemy glyphs, danger chevrons, hit flashes) and 19 (build slots) are drawn by the Tower, Hero, Enemy & Wave and Combat views. They appear in this document for the budget and hierarchy only; their specs live in those GDDs and, for the hero, in the pin and aim spec still to be written.
 
@@ -175,11 +178,12 @@ The game has no exploration, dialogue or cutscene. The four contexts the review 
 
 | Element | Variant | Trigger | What changes |
 |---|---|---|---|
-| Burst button | Locked | Build, or before a first pin | Dotted outline, no fill, no digit; a press nudges 2 px once and repeats prompt 1 |
+| Burst button | Locked | Build, or before a first pin | Dotted outline, no fill, no digit; a press nudges 2 px once and, before a first pin, repeats prompt 1 |
 | Burst button | Ready / Telegraphing / Cooling | `burst_state()` | See the element table |
 | Gold / cost | Unaffordable | Gold below cost | Dimmed (alpha in Tuning Knobs, HQ-01) and cost struck through, live |
 | Build arc | Disabled Start/Call | Arc open | Start/Call registers but ignores presses; enables when the arc closes |
 | Start/Call, Retry, Play again | Arming | 300 ms after appearing | Alpha 0.5, stepping to full at Armed; a press begun now never counts. Paused has no arming (user decision, 2026-11-04) |
+| Retry, Play again | Press held | A counting press is held | Lighter, so a slide-off shows |
 | Lives | Low | One life left | No change to the HUD; urgency is carried by in-field chevrons (art bible 7) |
 | Pips | Empty | Before any wave | Pip 1 is current in Build |
 | Empty data | Next-wave line | No waves left | The line is omitted |
@@ -192,7 +196,7 @@ When a state would exceed the budget or a safe-area inset squeezes the layout, d
 
 | Tier | Element | Reason | What carries the information when hidden |
 |---|---|---|---|
-| MUST KEEP | Lives | Loss condition | Nothing; always visible |
+| MUST KEEP | Lives | Loss condition | Nothing; visible in every phase but Fatal |
 | MUST KEEP | Gold | Every build decision | Nothing |
 | MUST KEEP | Burst button | The hero's one verb | Nothing |
 | MUST KEEP | Start/Call (Build, Intermission) | The only way to start a wave | Nothing |
@@ -358,8 +362,8 @@ Each can be checked by a tester with a build and the numbers here. Positions are
 - [ ] **Arming.** Pressing a newly shown Start/Call within 300 ms of it appearing does nothing, including when the finger lifts after 300 ms.
 - [ ] **Double tap.** Double-tapping a slot so the second tap lands on a disc inside 200 ms closes the arc and buys nothing.
 - [ ] **Unaffordable.** A disc or chip whose cost exceeds gold shows its cost struck through and dimmed, and the dimmed cost has a contrast ratio of at least 4.5:1 on the panel. (Depends on HQ-01: the GDD's alpha 0.55 gives 4.25:1 and fails this until it is raised to 0.6.)
-- [ ] **Result.** On a Lost, the modal blocks every touch at once, the text appears 400 ms later in the stated order with no percentage, and Retry rebuilds the battle in one tap even if tapped twice. A Won shows "Stage clear" and "Lives N of M" in the left column and the damage rows in the right after 400 ms, with no "Got through" row, a compact panel and the board visible above it. Retry and Play again stay at alpha 0.5 and ignore presses for 300 ms after their text shows.
-- [ ] **Paused.** Switching away from the app shows "Paused. Tap to resume" and no prompt line; a tap resumes and does not select a tower or move the hero; a finger held across the pause does nothing until lifted.
+- [ ] **Result.** On a Lost, the modal stops every new press at once, the text appears 400 ms later in the stated order with no percentage, and Retry rebuilds the battle in one tap even if tapped twice. A Won shows "Stage clear" and "Lives N of M" in the left column and the damage rows in the right after 400 ms, with no "Got through" row, a compact panel and the board visible above it. Retry and Play again stay at alpha 0.5 and ignore presses for 300 ms after their text shows.
+- [ ] **Paused.** Switching away from the app shows "Paused. Tap to resume" and no prompt line; a tap outside the rejected zones resumes and does not select a tower or move the hero; a finger held across the pause does nothing, even when lifted.
 - [ ] **Reduce Motion.** With the flag on, a refused press shows no 2 px nudge and no panel slide, and the arc closes without the 120 ms collapse (proposal: the GDD does not yet say what Reduce Motion does to the collapse, HQ-04); the lost-life fade and cooldown sweep still play.
 - [ ] **Colour independence.** With a battle screenshot passed through a protanopia and a deuteranopia simulator, these can still be told apart: burst Ready (filled, full ring) vs Cooling (outline, returning fill, digit); an affordable cost vs a struck-through cost; done, current and upcoming pips (filled, outlined, dotted); a full life dash vs a lost one.
 - [ ] **Ground ring cap.** In a fresh battle, four taps on empty field show a ring for the first three and none for the fourth; a tap that dismisses an open arc shows none; after Retry, the count starts again at three.

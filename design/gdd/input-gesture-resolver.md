@@ -272,6 +272,7 @@ The **target_ok** formula is defined as:
 | Hero System | Registers hero, burst button and its sink; listens to `pressed`, `drag_*`; owns the aim-point offset and what a burst drag means; refuses invalid pins. The Hero GDD adopts the DRAG radius of 56 and the cancel hysteresis, and keeps a pin offset of 0 until the phone test | Hard — pin and burst are this system's two drags |
 | Tower System | Registers towers and slots as TAP targets; listens to `tap` and `pressed`; owns the cost-chip window, a hard (not proposed) bounce guard of at least 200 ms before a commit tap, and the chip's own TAP target (Tower Rule 8) | Hard — build and upgrade are its two taps |
 | Battle HUD & Build UI | Registers arc discs and the arc backdrop while an arc is open, and closes the arc on `pressed` unless `best_tap` is one of its discs; listens to `pressed` and `ground_tap`, ignores `tap(backdrop)`; its result and Paused Controls sit above the adapter | Hard for the build arc and rejection ring |
+| Enemy & Wave | Layout rule L3 and its content check use the slot and burst hit radii. A value only, with no runtime call | Soft |
 | Settings & Accessibility (Alpha) | Runtime slop setter, hit-area scale | Soft — reserved in prose, nothing built |
 | Mobile Platform & Performance (VS) | Safe-area and gesture insets feed the adapter and the HUD's button placement, not the resolver | Soft |
 
