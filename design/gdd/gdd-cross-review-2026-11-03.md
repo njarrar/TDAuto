@@ -200,3 +200,93 @@ The user chose the recommended fix for all four blockers. Applied, pending `/rev
 - **Scenario 4:** `wave_index()` is defined in Enemy & Wave Rule 14 (1-based, 0 before a start, set at commit, unchanged by a clear). The HUD's pips and "Broke on wave N" and Flow's result all use it, with Flow's value injected by the builder.
 
 Statuses: Input and Enemy & Wave are In Review; Flow and Battle HUD are back to Designed, since neither has had a review.
+
+---
+
+## Consistency Re-run — 2026-11-03 (after the four fixes)
+
+GDDs Reviewed: 8 of 8 present
+Not read: none. All eight GDDs and `systems-index.md` were read in full; `game-concept.md` from Core Mechanics to Anti-Pillars, plus the MVP section.
+Focus: consistency only, design theory not run. The D warnings above stay open and were not rechecked. The scenarios were re-walked only for the four fixes.
+Systems Covered: Data & Config, Input & Gesture Resolver, Game State & Stage Flow, Combat & Damage, Enemy & Wave, Tower, Hero, Battle HUD
+
+**Method.** This pass ran in the main session rather than through a `game-designer` sub-agent, since there was no second phase to run beside it. So it is not independent of the session that loaded the text. The entity registry is still empty.
+
+### The four fixes hold
+
+| Item | Result |
+|---|---|
+| B1 bot path | Holds in Input's deferred row and edge case, and in Flow. Input's Overview still has the old claim (N2) |
+| B2 cooldown total | Holds. HUD Rule 12 reads `cooldown_left() / to_ticks(cooldown)`, Flow injects the Burst's ID, and no HUD text asks Hero for a total. Data's HUD row is stale (C17) |
+| B3 chip log | Holds. Input Rule 13 listens to `tower_upgraded` and reads `chip_state()`, both in Tower Rule 17. Rule 13 has a similar gap for bursts (N4) |
+| `wave_index()` | Holds. Enemy & Wave Rule 14 and its criteria 24, 30 and 33 agree with HUD Rule 15, the pips and Flow Rule 15 |
+
+### Blocking
+
+None.
+
+### New warnings
+
+- ⚠️ **N1. The concept's drag priority is reversed.** `game-concept.md` Pillar 4: "Drag priority: burst > hero". Hero Rule 15 and Input's table: hero DRAG 200, burst button DRAG 100, by user decision on 2026-11-02. Input's table is also described as one that "matches the concept's Pillar 4 order". The GDDs agree with each other, so correct the concept.
+- ⚠️ **N2. Input's Overview contradicts Rule 11.** The Overview says "the bot acceptance modes drive the hero through the same press, move and release calls a thumb would". Rule 11 says "headless bots call Hero's and Tower's commands directly". This is what remains of B1. Replace the clause.
+- ⚠️ **N3. The HUD's bonus has no read to call.** HUD Rule 10 and Interactions take the bonus "through Tower's formula", and HUD criterion 31 needs shown to equal paid. Tower Rule 17's reads and the HUD's Tower dependency row do not list it, and the formula takes seconds while the HUD holds `intermission_left` in ticks. Add a pure read to Tower Rule 17 and the HUD row, or the HUD will copy the formula.
+- ⚠️ **N4. P1 cannot classify a burst from the Rule 13 log.** P1 counts "any burst not prompted" as a mis-fire. Rule 13 names the resolver's signals and Tower's only. `drag_ended` from the button can also be a cancel (Hero Rule 13), which Input's edge case calls "A miss, never a mis-fire". Have the harness also listen to Hero's `burst_started`.
+- ⚠️ **N5. Rule 14 does not say when a leak is counted.** HUD criterion 19 needs the result to include the fatal leak. Enemy & Wave Rule 13 returns at once after every signal, and Rules 10 and 14 do not place the `got_through_by_type()` increment. Counted after `enemy_leaked`, the fatal leak would be lost. Say it is counted before the signal, and add a case to criterion 16.
+- ⚠️ **N6. Flow's `phase(Paused)` and `phase(Fatal)` have no criterion, and two criteria exclude them.** Rule 15 emits them and Tower's chip relies on them (Tower Rule 8). Flow says "each THEN is the entire log", but criteria 12 and 13 list neither. The stage machine also has no Fatal row. Add them to the criteria and the table.
+
+### Earlier warnings, rechecked
+
+Open, unchanged: **C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13, C14, C15, C19.** C2 (who calls `cancel()`) and C1 (no failure path for a cross-invalid Input record) are the two that affect the architecture. Both belong in the App Lifecycle ADR. C4 also covers the HUD's "Digit, wedge, ticks" row, because Hero's Visual table claims the Ready ticks.
+
+Open, with additions:
+- **C16 stale text.** The earlier items stand. Added: Input's Formulas give `r` as "36–48 at MVP" against the hero's 56 in its own table. Hero Rule 14 says the UX offset is 105, and its Open Questions say 100. Enemy & Wave's Cross-References still cite Input's "Open Question on slots". HUD Rule 4 says it corrects Input on the pause button, which Input already says.
+- **C17 dependency tables.** The earlier items stand. Added: Data's HUD row and dependency row say only "Costs", though the HUD now also reads Burst `cooldown`. Hero, Tower and the HUD use `to_ticks` without listing Enemy & Wave's formula as its source. The Cross-References tables in Data, Input and Flow have no rows for most systems written after them.
+
+Partly resolved:
+- **C18 systems index.** "Design docs approved | 2" is now correct, since Enemy & Wave went back to In Review. Still stale: "reviewed | 1", "Four-piece decomposition", the short dependency cells, the Next Steps, and the header's claim that the concept needs revision. Input's header says "Revised" where the index says "In Review". Input's and the HUD's Last Updated dates predate today's fixes.
+
+### Formula compatibility
+
+No range mismatches. Recomputed by hand from the starter tables, and all match where cited: path length 1,720 and the L5, L9 and `time_to_exit` values; wave HP and the 16,790 total; bounties, `gold_upper_bound`, `gold_before_wave`, `wave_income` and the bonus cap; `lives_at_risk`; full-board costs; `burst_spike` 5.78; burst fit against `max_hp`; `hero_start` and Start/Call clearances; arc geometry; prompt overlap. Not rechecked: bot results, which come from `hero_bots.py`.
+
+### Cross-system scenarios, re-walked for the fixes
+
+- ℹ️ **Lost mid-wave (Flow, Enemy & Wave, HUD).** `wave_index()` now gives "Broke on wave N" one definition. N5 is the remaining gap.
+- ℹ️ **Burst wedge in Intermission (Hero, Data, HUD).** Clean. Telegraphing reads 0 and draws empty, as Hero's step 5 and HUD Rule 12 agree.
+- ⚠️ **Focus loss with an aim held (Input, Flow, Hero).** Unchanged: it behaves correctly, but C2 leaves the caller of `cancel()` on an outcome or retry open.
+
+### GDDs Flagged for Revision
+
+| GDD | Reason | Type | Priority |
+|-----|--------|------|----------|
+| input-gesture-resolver.md | N2, N4; C1 to C3, C6, C7, C11, C12, C16, C17 | Consistency | Warning |
+| game-state-stage-flow.md | N6; C1, C2, C13, C15, C17 | Consistency | Warning |
+| battle-hud.md | N3; C4, C5, C16, C17 | Consistency | Warning |
+| enemy-wave.md | N5; C6, C9, C10, C14 to C17 | Consistency | Warning |
+| tower-system.md | N3; C5, C9, C14, C15 | Consistency | Warning |
+| hero-system.md | C4, C8, C9, C14, C16, C17 | Consistency | Warning |
+| data-config-pipeline.md | C1, C7, C9, C17 | Consistency | Warning |
+| combat-damage.md | C15, C17 | Consistency | Warning |
+| game-concept.md | N1 | Consistency | Warning |
+| systems-index.md | C18 | Consistency | Warning |
+
+Statuses in the systems index were left unchanged, because nothing here is blocking.
+
+### Verdict: CONCERNS (consistency only, design theory not run)
+
+No blocking issues. 6 new warnings, and 19 earlier ones still open or partly open.
+
+### Resolution of the re-run — 2026-11-03
+
+Applied at the user's request, uncommitted, not re-reviewed. No balance value changed.
+
+- **Fixed:** N1 to N6, C3, C5, C7 to C18. C19 needs no action until the Mobile Platform GDD.
+- **Fixed by a choice the user can overturn:**
+  - **C4:** a hero view draws field-anchored visuals; the HUD draws the button, digit and prompts.
+  - **C6:** hit radii are named constants on owners' input objects, not catalogue fields.
+  - **C7:** a HUD content row at 84 against 84, with no value changed.
+  - **C14:** owners moved to Hero stories, as Tower and Hero already said.
+  - **C17:** Flow now lists Input and Combat as upstream, and the HUD lists Enemy & Wave as hard.
+- **Routed to ADR-0001, not decided:** C2 as QQ-19 and C1 as QQ-20, in `docs/architecture/architecture.md` and the Open Questions of Input, Flow and Data. ADR-0001 is not written yet.
+
+- **Closed 2026-11-03/04:** C2 and C1 are decided, not routed: Flow cancels through the injected `cancel_input()`, AppRoot on retry, a repeat call finds Idle (Input Rule 7); the catalogue validator rejects `tap_slop` ≤ `drag_slop` (Data Rule 7), and the wrapper builds the resolver, with a null from `create` calling the failure handler (Flow Rule 18). An independent check of this pass found 6 conflicts and 9 stale references, mainly in the architecture, all fixed. No balance value changed. It also found 100 for 105 in Hero's offset prose, and word-form count fixes, which are corrections. Not re-reviewed: Data & Config, Input and Tower. Enemy & Wave re-reviewed, Approved. Battle HUD and Flow: first reviews, Needs Revision.

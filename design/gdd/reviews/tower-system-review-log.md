@@ -55,3 +55,6 @@ Decided without asking, in autonomous mode: the income bounds (cheapest cost, tw
 
 ## Revision — 2026-11-02 — Enemy & Wave review's change applied, re-review still pending
 A `heavy` now costs 3 lives, so the upgrade order table and the leak worth are refreshed; single alone now wins with 6 lives. `burst_spike` no longer cites a gate of 5 hits, since Enemy & Wave's gates use 4.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `early_call_bonus(seconds_left)` added to Rule 17's reads (N3), `visual_key` names, `to_ticks` dependency.

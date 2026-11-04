@@ -114,3 +114,6 @@ Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43
 Reviewed-Content-Hash: design/gdd/game-concept.md 2eb89302dc6d316c2f3f8c74c11f10d44219e5b2
 Reviewed-Content-Hash: design/gdd/systems-index.md 941dc953b87336a149fe249c484a103dcba5531e
 Reviewed-Content-Hash: design/art/art-bible.md f27f37cc8274e7edee283103be2c318dc98e43d7
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `requires_bend` in Rule 10, HUD rows, Input record note, cross-references, QQ-20 in Open Questions.

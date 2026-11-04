@@ -313,3 +313,6 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9e
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
 Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
 Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Hero view named as drawer of field-anchored visuals (C4, new wording), `visual_key`, L11 condition, L14 row, always-call clause, 100 offset. No rule value changed; Approved stands, pending the user's view.
