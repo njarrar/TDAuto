@@ -406,4 +406,4 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 - Mobile Platform & Performance GDD (VS, not written): inherits Decisions 1 and 3.
 
 ## Amendments
-- **2026-11-04, with ADR-0007 (pending the user's confirmation at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.
+- **2026-11-04, with ADR-0007 (confirmed by the user 2026-11-04 at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.

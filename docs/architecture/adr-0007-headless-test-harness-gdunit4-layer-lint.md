@@ -1,7 +1,7 @@
 # ADR-0007: Headless Test Harness, gdUnit4 and Layer Lint
 
 ## Status
-Proposed
+Accepted
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. Route: `/architecture-decision accept ADR-0007`.
 
@@ -12,6 +12,7 @@ Proposed
 2026-11-04 (engine reference of 2026-10-17 and gdUnit4 6.2.0 source; nothing run)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar), with the gdUnit4 6.2.2 upgrade, the dated ADR-0003 amendment (is_mobile) and exit 101 as a failure
 - Author: `/architecture-decision` in autonomous mode (decisions in `production/session-logs/decision-log.md`)
 - Reviews: godot-specialist and technical-director TD-ADR, both CONCERNS, all findings applied (Reviews)
 - Acceptance: the user
@@ -35,7 +36,7 @@ ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 to ADR-0006 (all Accepted 2026-11-04); amends ADR-0003 (`setup()` gains `is_mobile`, pending the user's confirmation at acceptance) |
+| **Depends On** | ADR-0001 to ADR-0006 (all Accepted 2026-11-04); amends ADR-0003 (`setup()` gains `is_mobile`, confirmed by the user 2026-11-04 at acceptance) |
 | **Enables** | ADR-0008 to ADR-0011 (their tests use these helpers and lints); `/create-control-manifest` (QQ-15 rules); `/test-setup` refresh (QQ-13) |
 | **Blocks** | Every story with automated test evidence; the CI and lint stories in Migration. No story file exists yet |
 | **Ordering Note** | The CI story (Migration 0 to 5) comes before the first Logic story. ADR-0003 spike S0a may run first (a prototype outside `src/`) |
@@ -71,7 +72,7 @@ Six Accepted ADRs say "ADR-0007 places them" for tests (ADR-0001 V1 to V8, ADR-0
 ## Decision
 
 ### 1. Runner and CI job (QQ-13)
-- **gdUnit4 moves to 6.2.2** (Migration 0), the only version the reference saw on 4.7.2. The godot reviewer found no source reason 6.2.0 would differ; H1 and H2 run after the upgrade either way. Pending the user's confirmation at acceptance.
+- **gdUnit4 moves to 6.2.2** (Migration 0), the only version the reference saw on 4.7.2. The godot reviewer found no source reason 6.2.0 would differ; H1 and H2 run after the upgrade either way. Confirmed by the user 2026-11-04.
 - **`tools/ci/run_tests.sh` is the only test entry.** It `cd`s to the repo root. `GODOT` names the binary (CI: the pinned download; desktops: `engine.path` from `project.yaml`). Each step runs under `timeout` (`gtimeout` on macOS, the tool `.claude/scripts/test-run.sh` also picks) and stops the run on failure:
   1. **Import**: `"$GODOT" --headless --path . --import`, every run. Any non-zero exit gets one retry, with the code logged (the reference saw exit 139 in 3 of 17 fresh imports on 4.7.x). The import is not a parse check: it exits 0 on a parse error.
   2. **Parse check**: `"$GODOT" --headless --path . -s res://.claude/scripts/godot-parse-check.gd -- <every .gd in src/, tests/, tools/ci/ except tools/ci/selftest/>`. Never `--check-only`.
@@ -334,7 +335,7 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 - **Network**: One pinned editor download per CI run (cacheable).
 
 ## Migration Plan
-0. Upgrade `addons/gdUnit4/` to 6.2.2 (pending the user's confirmation).
+0. Upgrade `addons/gdUnit4/` to 6.2.2 (confirmed by the user 2026-11-04).
 1. Write `tools/ci/run_tests.sh` and `tools/ci/selftest/`; run H1, H2, H3, H7, H8.
 2. Set `gdunit4/report/godot/push_error=true`; write `harness_probe_test.gd`; watch H2 (c) fail.
 3. Remove the `!**/.godot/global_script_class_cache.cfg` line and its comment from `.gitignore`, then `git rm --cached .godot/global_script_class_cache.cfg`. Rewrite `tests/README.md`; close QQ-13.
@@ -394,7 +395,7 @@ Harness tests:
 | TD | gdUnit4 version; exit 101; PresentationSettings; TR-combat-012; trims | 6.2.2 Migration 0; 101 fails with report; `src/presentation/`; Full; trims made |
 
 ## Related
-- Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, pending). Adds L-STAT-4 for the registry's `read_context_per_read`.
+- Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.
 - Sync items, not made here: ADR-0002 and ADR-0006 rename `test_content_real_data.gd` and `test_signal_probes.gd` at their next revision; `architecture.md` moves `PresentationSettings`' file to `src/presentation/` (Composition Root row), adds "Shared, not counted: TR-input-014 bot part" to ADR-0010's entry, and closes QQ-13, QQ-15, QQ-16; `.claude/scripts/test-run.sh` learns codes 110 to 113 and 101 as a failure.
 - GDDs: `design/gdd/data-config-pipeline.md`, `input-gesture-resolver.md`, `game-state-stage-flow.md`, `combat-damage.md`, `enemy-wave.md`, `tower-system.md`.
 - `.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`.

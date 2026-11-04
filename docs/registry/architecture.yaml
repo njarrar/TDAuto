@@ -573,7 +573,7 @@ api_decisions:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
   - purpose: project_lint
     status: active
     # was: one file per rule family, suppression markers allowed (before godot-specialist and TD-ADR review)
@@ -585,7 +585,7 @@ api_decisions:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
   - purpose: test_push_error_reporting
     status: active
     # was: setting decides whether is_push_error sees errors; push_error only (before godot-specialist review)
@@ -597,7 +597,7 @@ api_decisions:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -759,21 +759,21 @@ forbidden_patterns:
     why: "assert_signal awaits and is timing-dependent (TR-input-014); generated doubles do not check payload types"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
   - pattern: file_or_scene_in_unit_tests
     status: active
     description: "Nothing under tests/unit/ uses FileAccess, DirAccess, load_manifest, a .tscn or .scn path, or get_tree(); catalogues come from code-built fixtures through from_documents or from_texts (lint L-TEST-2)"
     why: "TR-data-012 and TR-enemy-014: logic tests are fast, isolated and deterministic; real files belong to tests/integration/"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
   - pattern: class_name_in_tests_or_tools
     status: active
     description: "No class_name in tests/ or tools/; helpers load by const preload. Every class_name in src/ must not clash with an engine class or another global script class (lints L-NAME-1, L-NAME-2)"
     why: "Every class_name is global; gdUnit4 already holds names such as Comparator, Fuzzer, LocalTime, ValueProvider"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    notes: "ADR-0007 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0007 Accepted 2026-11-04; binding"
 
 # Example:
 #
