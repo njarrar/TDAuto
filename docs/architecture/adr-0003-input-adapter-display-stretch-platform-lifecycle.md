@@ -162,7 +162,7 @@ buffering/agile_event_flushing=false
 - Result and Paused use `TapScreen extends Control`: full rect, `MOUSE_FILTER_STOP`, `focus_mode = FOCUS_NONE`. Not `Button`, because its press clearing on focus loss is unverified.
 - `TapScreen._gui_input()` reads the **mouse family only**: left `InputEventMouseButton`, real or emulated (`emulate_mouse_from_touch = true`). It keys a real mouse press by `MOUSE_POINTER` and an emulated one by its `device`. It does **not** drop `DEVICE_ID_EMULATION`: on a phone the emulated event is the only one it reads. It fires `tapped` only on the release of a press it saw, ignores a release where `is_canceled()`, and clears every held press after firing. `clear_press()` forgets all held presses. It calls `accept_event()` on every pointer event.
 - So a phone tap (touch plus its emulated mouse) fires once. The godot-specialist notes only the first finger is emulated and the emulated event comes first, so mouse-only is enough for a one-finger modal; S2 and S3 (c) confirm.
-- Retry and Play again are `TapScreen` regions with the same rule.
+- Retry and Play again are `TapScreen` regions with the same rule, plus `arm_ms = 300` counted from when the result text shows (amended 2026-11-04). The Paused screen keeps `arm_ms = 0`.
 - The wrapper calls `clear_press()` on show and on `lifecycle_paused` (HUD Rule 2). Paused resumes on `tapped`; its press was taken by the screen and gated at the adapter, so it reaches nothing beneath (TR-state-010).
 - **Every non-interactive Control** in the wrapper has `mouse_filter = MOUSE_FILTER_IGNORE`, set on each node and checked by a lint. The 4.5 recursive property (`mouse_behavior_recursive`, named by S9) may replace that. The wrapper root is a `Node2D`, never a full-rect Control.
 
@@ -224,6 +224,9 @@ class_name TapScreen extends Control      # MOUSE_FILTER_STOP, FOCUS_NONE, mouse
 ## Fires on the release of a press this screen saw; then clears every held press.
 signal tapped()
 func clear_press() -> void
+## Optional arming (amended 2026-11-04): until armed, presses that began before arming are ignored.
+var arm_ms: int = 0                        # 0 = armed at once; the result screen sets 300
+func start_arming(now_ms: int) -> void      # called by the owning screen when its text shows
 ```
 
 Names are proposed here; `MOUSE_POINTER`, `setup()`, `set_presses_blocked()`, `FieldInsets`, `SafeAreaMath` and `TapScreen` are new against B3. `lifecycle_paused` keeps B3's name and is past tense. QQ-16 may add a prefix (ADR-0007).
@@ -411,3 +414,4 @@ Manual evidence (`production/qa/evidence/`, blocking for UI stories): desktop at
 - **2026-11-04, with ADR-0007 (confirmed by the user 2026-11-04 at ADR-0007 acceptance).** InputAdapter.setup() gains `is_mobile: bool`, passed by the wrapper, so the adapter reads no OS and A7's mobile branch and F2 run on Linux CI.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Android edge-to-edge is the export preset option `screen/edge_to_edge` in `export_presets.cfg`, not a `ProjectSettings` key: Decision 1 moves it to an export preset note, S0b checks it, and S7 and S9 follow. Decision 1, S0a, S9 and A11 record that 7 of the 13 Decision 1 keys equal engine defaults and are dropped on save, so checks read effective values. S9 names `mouse_behavior_recursive`. S0a's parse check and settings dump are marked verified 4.7.2 headless.
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Conflict 1). The S1 contract now matches ADR-0004. ADR-0004 ticks from `BattleWrapper._process`, never `_physics_process`, and does not adopt the S1 command queue (ADR-0004 Decision 4 and Alternative 4). S1 no longer gates TR-hud-005; it still runs, and its result is recorded (ADR-0004 V14). Changed: the Enables row, the S1 row's fail branch in the S0 table, the S1 risk and review row G14.
+- **2026-11-04, from /ux-review (pending the user's confirmation; Status stays Accepted).** `TapScreen` gains an optional `arm_ms` (default 0) and `start_arming(now_ms)`. Until armed it ignores any press that began before arming. The result screen starts it when its text shows and uses 300 ms, so Retry and Play again arm 700 ms after a Lost and 1,300 ms after a Won (Battle HUD Rules 2 and 11, IP-21, IP-23). Paused keeps 0. Add a test: a press begun at 299 ms after arming starts does not fire; one begun at 300 ms does.
