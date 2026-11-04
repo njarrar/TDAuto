@@ -43,12 +43,12 @@ The catalogue of authored gameplay values needs a storage format, a manifest, a 
 
 Each item is a fact the pinned reference and the 4.7.2 class reference do not state. None is filled from memory. This ADR cannot move to `Accepted` until each named run is done and its result is recorded here.
 
-1. **Variant type of a parsed whole number.** `JSON.xml` says numbers are parsed with `String.to_float` and does not say whether `5` comes back as `int` or `float`. Settled by: desktop headless (a unit test that parses `5` and `5.0` and records `typeof`). The validator accepts both until then.
+1. **Variant type of a parsed whole number.** `JSON.xml` says "Numbers are parsed using `String.to_float`" (doc/classes/JSON.xml@4.7.2-stable, class description) and `String.to_float` returns `float` (doc/classes/String.xml@4.7.2-stable, `to_float`), so `5` parses as `TYPE_FLOAT`. This is settled by the reference. A unit test that parses `5` and `5.0` pins it. The validator keeps the `TYPE_INT` branch only as defence.
 2. **Duplicate key inside one JSON object.** `JSON.xml` is silent. Settled by: desktop headless (parse `{"a":1,"a":2}` and record the result). Until then, duplicates are an accepted gap (see Risks).
 3. **What a write to a read-only `Dictionary` or `Array` does.** `Dictionary.xml` and `Array.xml` say only that modification is disabled and that nested content is not covered. Settled by: desktop headless (write to a frozen container in a debug run and in a headless run, record error versus silent no-op). The snapshot test, not the freeze, is the guard either way.
 4. **Missing and unknown property handling when a `.tres` loads.** `Resource.xml` and `ResourceLoader.xml` do not describe it. It matters only to the rejected alternative, so it does not change the decision. Settled by: desktop headless (informational).
-5. **Whether the export preset includes `*.json` and under which setting.** `FileAccess.xml` says a non-resource file needs Keep File import mode or an extension in the non-resource export filter, but the pinned reference does not give the preset key. Settled by: the phone session (an Android export that loads the manifest and every data file). CI may add an export smoke step later; the phone session is the required one.
-6. **Whether the editor imports `.json` files, and the effect on the edit-save-run loop.** Settled by: desktop headless (`godot --headless --path . --import`, then inspect for `.import` files and time the loop against the 10 s target).
+5. **Whether the export preset includes `*.json` and under which setting, and whether `.json` counts as a resource file for export.** `ResourceLoader.xml` says "non-resource files are not exported by default" (doc/classes/ResourceLoader.xml@4.7.2-stable, class description) and `FileAccess.xml` names Keep File import mode or a `*.json` entry in the non-resource export filter. `JSON.xml` shows `JSON` inherits `Resource` (doc/classes/JSON.xml@4.7.2-stable, class header), so whether a `.json` file is exported as a resource is open. The pinned reference does not give the preset key. Settled by: the phone session (an Android export that loads the manifest and every data file). CI may add an export smoke step later; the phone session is the required one.
+6. **Whether the editor imports `.json` files (see item 5: `JSON` inherits `Resource`, and `keep_text` is "used when saving the resource", doc/classes/JSON.xml@4.7.2-stable, `parse`), and the effect on the edit-save-run loop.** Settled by: desktop headless (`godot --headless --path . --import`, then inspect for `.import` files and time the loop against the 10 s target).
 7. **Whether GDScript accepts a static method named `load`.** `@GDScript.xml` lists `load` as a built-in function. `architecture.md` Data Flow 4 writes `Catalogue.load(manifest)`. This ADR names the factory `from_manifest` to avoid the question. Settled by: desktop headless (informational; only needed if the name is ever changed back).
 8. **Catalogue load time.** Median Loading-to-Ready at most 1000 ms on an Adreno 5xx-class device is a proposal. Settled by: the phone session (first phone build).
 9. **Scene checks on an export.** The test runner cannot run on an exported build, so scene checks run on the project. Whether a manual export check is enough is the GDD's open question. Settled by: the phone session (open each `scene_ref` stage once on the export).
@@ -171,7 +171,7 @@ Each rule above must be shown to fail on a deliberately broken fixture; a rule n
 
 ### 7. Export and the tuning loop
 
-The export preset must include `*.json` (NOT SOURCEABLE item 5). The loader reads through `FileAccess`, never `ResourceLoader`, because `ResourceLoader.xml` says non-resource files cannot be read that way. There is no import step and no bake, so the edit-save-run loop is a save and a run (TR-data-015; items 6 and 8).
+The export preset must include `*.json` (NOT SOURCEABLE item 5). The loader reads through `FileAccess`, never `ResourceLoader`, because `ResourceLoader.xml` says non-resource files cannot be read that way. The premise that there is no import step and no bake rests on items 5 and 6, because `JSON` inherits `Resource` (doc/classes/JSON.xml@4.7.2-stable); if the editor does import `.json`, the loop changes and the result is recorded. If neither import nor bake applies, then the edit-save-run loop is a save and a run (TR-data-015; items 6 and 8).
 
 ### Implementation Guidelines
 
@@ -229,7 +229,7 @@ The export preset must include `*.json` (NOT SOURCEABLE item 5). The loader read
 - **Whole-number type surprise.** Mitigation: the validator accepts both types; a unit test pins the result (item 1).
 - **A frozen container hides a write, or crashes.** Mitigation: the snapshot test is the guard (item 3).
 - **Load time on a low-end phone is unmeasured.** Mitigation: measure in the first phone build (item 8).
-- **Tick-rate drift.** `MIN_INTERVAL_SECONDS` could fall out of step with ADR-0004. Mitigation: the Ordering Note; a test asserts the constant equals one tick.
+- **Tick-rate drift.** `MIN_INTERVAL_SECONDS` could fall out of step with ADR-0004. Mitigation: the Ordering Note; a test asserts `MIN_INTERVAL_SECONDS == TickTime.dt`.
 
 ## GDD Requirements Addressed
 
@@ -262,6 +262,7 @@ Nothing exists to migrate. Order: `ValidationError`, `LoadResult`, `TextSource`,
 - An Android export loads the manifest and shows the fatal screen for one invalid record.
 - The snapshot text is identical after a scripted battle with a death.
 - Every content rule fails on its broken fixture.
+- A unit test asserts `MIN_INTERVAL_SECONDS == TickTime.dt` (ADR-0004).
 - Every NOT SOURCEABLE item above has a recorded result.
 
 ## Related

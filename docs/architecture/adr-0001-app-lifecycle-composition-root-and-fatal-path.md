@@ -152,6 +152,7 @@ signal latched(cause: String)              # emitted once, on the first fatal
 func _init(forward: Callable = Callable()) -> void
 func fatal(cause: String) -> void          # first cause wins; forwards once if forward.is_valid()
 func on_accessor_fail(cause: StringName, error: ValidationError) -> void   # adapter for ADR-0005 `fail`; calls fatal(String(cause))
+func on_accessor_fail(cause: StringName, error: ValidationError) -> void   # adapter for ADR-0005 `fail`; calls fatal(String(cause))
 func is_fatal() -> bool
 func cause() -> String
 

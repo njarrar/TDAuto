@@ -90,6 +90,7 @@ Nothing exists. `architecture.md` B1 sketches the signatures; ADR-0002 defines t
 class_name StatAccessor extends RefCounted     # src/foundation/data/stat_accessor.gd
 
 ## fail is a method Callable: fail.call(cause: StringName, error: ValidationError) -> void.
+## In the game the Builder passes FatalLatch.on_accessor_fail (ADR-0001), which has this exact signature.
 func _init(catalogue: Catalogue, fail: Callable) -> void
 
 ## Typed read. The key's declared type must match the call. Never cache the result,
@@ -150,7 +151,7 @@ A bad call is checked in this fixed order. The first failure wins, so a test can
 
 On a bad call the accessor builds one `ValidationError` with `code` set to the cause, `source` set to `"accessor"`, `record_id` set to `ctx.def_id` (or empty), and `field` set to the key. It then calls the handler and returns `0` or `0.0`. If `fail.is_valid()` is false it calls `push_error` with the cause and still returns the sentinel, because `.call()` on a dead callable aborts the caller (NOT SOURCEABLE item 3). The checks are ordinary `if` statements and never `assert`.
 
-**The handler is the contract.** In the game it reaches the fatal screen; tests replace it. The sentinel is never a usable value. After every read whose result matters, the caller checks the injected `halted()` before using the number (B1 invariants).
+**The handler is the contract.** In the game it is `FatalLatch.on_accessor_fail(cause: StringName, error: ValidationError)` (ADR-0001), which latches the fatal path and reaches the fatal screen; tests replace it. The sentinel is never a usable value. After every read whose result matters, the caller checks the injected `halted()` before using the number (B1 invariants).
 
 Caller rules from the GDDs:
 

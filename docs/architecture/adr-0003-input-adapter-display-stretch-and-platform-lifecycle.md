@@ -83,7 +83,7 @@ Each item names the spike run (Validation Criteria) that settles it.
 - NOT SOURCEABLE: when Android and iOS set `canceled` on a touch (edge back gesture, notification shade, incoming call, focus loss), and that a canceled touch arrives with `pressed == false`. Settled by **S-2** (Android, iOS).
 - NOT SOURCEABLE: whether a `MOUSE_FILTER_STOP` Control consumes an `InputEventScreenTouch` press, so it never reaches `_unhandled_input`. `Control.xml` documents STOP for mouse events only. Settled by **S-3** (Android, iOS, desktop export with mouse).
 - NOT SOURCEABLE: which events a STOP Control's `_gui_input` receives for one phone tap and one desktop click (touch, emulated mouse, or both, and their order). Settled by **S-4** (Android, iOS, desktop export).
-- NOT SOURCEABLE: how many events one physical phone press produces under the emulation settings, and their `device` values; that an emulated touch from a desktop mouse carries `device == -1`; which mouse buttons `emulate_touch_from_mouse` turns into touch (right and middle). Settled by **S-5** (Android, desktop export).
+- NOT SOURCEABLE: how many events one physical phone press produces under the emulation settings, and their `device` values. `InputEvent.xml` partly settles the rest: `DEVICE_ID_EMULATION` (-1) is "used ... for emulated touch input from a mouse" (doc/classes/InputEvent.xml@4.7.2-stable, `DEVICE_ID_EMULATION`). Still open: which mouse buttons `emulate_touch_from_mouse` turns into touch (right and middle). Settled by **S-5** (Android, desktop export).
 - NOT SOURCEABLE: that `InputEventScreenTouch.position` reaches the adapter in base 540 x 960 coordinates under `canvas_items` and `keep`, and that a press in a letterbox bar reports a position outside 0 to 960. Settled by **S-6** (a 9:19.5 phone and a 4:3 window).
 - NOT SOURCEABLE: the coordinate space of `get_display_safe_area()` on Android and iOS (screen or window pixels), and the feature tag names `"android"` and `"ios"` used to detect them (they are in the feature-tags tutorial, not the class reference). Settled by **S-7** (notched Android, notched iOS).
 - NOT SOURCEABLE: which of `NOTIFICATION_APPLICATION_FOCUS_OUT`, `_PAUSED`, `_FOCUS_IN` and `_RESUMED` reach a non-root child node such as the adapter through `_notification`, in what order, and whether both FOCUS_OUT and PAUSED always fire on backgrounding; whether a click on the editor debugger fires FOCUS_OUT; whether the refocusing click on desktop also arrives as a press. Settled by **S-8** (Android, iOS, desktop export, editor run).
@@ -150,7 +150,7 @@ pointing/emulate_touch_from_mouse=true
 ```
 
 - The setting defaults are `disabled` and `keep`; 4.7 writes `canvas_items` and `expand` only into new projects. This project was created without them, so writing both keys removes any doubt about what an unset key means.
-- `canvas_items` renders at the target resolution and keeps one coordinate space for drawing and input. `keep` letterboxes rather than revealing more world, which `expand` would do.
+- `canvas_items` renders at the target resolution and is expected to keep one coordinate space for drawing and input (unverified for input; S-6 settles it). `keep` letterboxes rather than revealing more world; `expand` grows the viewport in the direction the screen is larger (doc/classes/ProjectSettings.xml@4.7.2-stable, `display/window/stretch/aspect`).
 - `orientation=1` is `SCREEN_PORTRAIT`. Width 540 and height 960 are written explicitly, because a portrait value does not flip them.
 - `emulate_touch_from_mouse=true` turns a desktop mouse into touch events, so desktop runs the phone code path. `emulate_mouse_from_touch` stays at its default `true`.
 - `stretch/scale` and `stretch/scale_mode` stay at their defaults. No code changes stretch settings at runtime.
@@ -171,7 +171,7 @@ The adapter reads two callbacks and never calls `Viewport.set_input_as_handled()
 
 | Callback | Events it acts on | Why |
 |---|---|---|
-| `_unhandled_input` | `InputEventScreenTouch` with `pressed == true` | A modal Control (`MOUSE_FILTER_STOP`) under the finger handles the press first, so a tap on Result or Paused never reaches a disc (TR-hud-002, TR-input-013) |
+| `_unhandled_input` | `InputEventScreenTouch` with `pressed == true` | A modal Control (`MOUSE_FILTER_STOP`) under the finger handles the press first, so a tap on Result or Paused never reaches a disc (TR-hud-002, TR-input-013); unverified for touch, tagged S-3 |
 | `_input` | `InputEventScreenDrag`, and `InputEventScreenTouch` with `pressed == false`, for pointers the adapter has open | `_input` runs before any Control, so a Control that appears under a moving finger cannot hide the move or the release (TR-input-003) |
 
 The adapter keeps a set of open pointers. A press it forwards opens that pointer. In `_input`, events for a pointer that is not open are ignored, so a press a modal consumed never has its release forwarded. A release or `cancel_pointer` closes the pointer; `cancel()` closes all.
@@ -186,7 +186,7 @@ The adapter keeps a set of open pointers. A press it forwards opens that pointer
 
 `canceled` is checked before `pressed == false` is read as a release. A release is never made up from a cancel, a resize or a lifecycle event. `double_tap` is ignored.
 
-**If S-3 fails** (a touch press passes a STOP Control and reaches `_unhandled_input`), the adapter gains `set_press_gate(open: bool)`. The wrapper connects HudLogic's `modal_changed(kind)` to it: any kind but none drops every new press until none. Moves and releases are unchanged. This is the only fallback, and it is chosen here so the spike result only switches it on.
+**Press gate.** Recommended (non-blocking, TD-ADR 2026-11-04): the adapter has `set_press_gate(open: bool)` and the wrapper wires it always, not only if S-3 fails, so a modal never depends on STOP consuming a touch press. If S-3 fails (a touch press passes a STOP Control and reaches `_unhandled_input`) the gate is the fix. The wrapper connects HudLogic's `modal_changed(kind)` to it: any kind but none drops every new press until none. Moves and releases are unchanged. This is the only fallback; it is built in either way, so the spike result changes nothing about the adapter.
 
 ### 4. Touch and mouse: one event family
 
@@ -282,7 +282,7 @@ signal viewport_resized()
 
 ## Call before add_child. Holds the resolver for the battle's life.
 func setup(resolver: InputResolver, edge_reject_margin: float, insets: FieldInsets) -> void
-## Fallback only, enabled if spike S-3 fails. true drops new presses; moves and releases still pass.
+## Always wired (recommended). true drops new presses; moves and releases still pass.
 func set_press_gate(open: bool) -> void
 
 func _input(event: InputEvent) -> void            # moves and releases of open pointers
@@ -349,7 +349,7 @@ The resolver interface is architecture B2, unchanged.
 
 - **Description**: The adapter reads presses, moves and releases in `_unhandled_input`, and Controls consume first.
 - **Pros**: One callback; the engine does all modal blocking.
-- **Cons**: `_unhandled_input` is skipped for events a Control consumed. A Result panel that appears under a hero drag would take the release and strand the gesture, which the adapter contract forbids. The resolver has no clock and cannot recover.
+- **Cons**: `_unhandled_input` is skipped for events a Control consumed. A Result panel that appears under a hero drag would take the release and strand the gesture, which the adapter contract forbids (S-3 and S-4 test whether a panel takes the release). `Node.xml` `_unhandled_input`: called when an InputEvent "hasn't been consumed by `_input` or any GUI Control item" (doc/classes/Node.xml@4.7.2-stable). The resolver has no clock and cannot recover.
 - **Rejection Reason**: It breaks TR-input-003 by construction.
 
 ### Alternative 2: All events in `_input` with a modal gate as the main path
@@ -392,7 +392,7 @@ The resolver interface is architecture B2, unchanged.
 
 ### Negative
 
-- The adapter keeps an open-pointer set and, if S-3 fails, a press gate.
+- The adapter keeps an open-pointer set and a press gate (recommended always on).
 - Bars on tall phones waste some screen.
 - Desktop mouse behaviour depends on `emulate_touch_from_mouse`, whose button mapping the reference does not state (S-5).
 - The editor pauses on focus loss, which interrupts debugging.
