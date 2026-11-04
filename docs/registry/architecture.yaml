@@ -134,6 +134,17 @@ state_ownership:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0005 Accepted 2026-11-04; binding"
+  - state: hit_target_registry
+    status: active
+    owner_system: input-resolver
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    interface: "InputResolver disc registry {id, centre, radius, accepts, priority, enabled, sink}; ids from 1, never reused, NONE = -1; register/unregister/set_centre/set_enabled act at once in any state and never change a gesture in flight (winners and tap disc frozen at press); tie-break higher priority, then smaller squared distance, then lower id, within a class only"
+    write_access: "input owners (HeroInput, TowerInput, HudLogic) through the four registry methods, each for its own targets"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -362,6 +373,22 @@ interfaces:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0006 Accepted 2026-11-04; binding"
+  - contract: input_resolver_signals
+    status: active
+    pattern: signal
+    producer: input-resolver
+    consumers:
+      - hero-input
+      - tower-input
+      - hud-logic
+      - gesture-log
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    signal_signature: "pressed(best_tap: int, best_drag: int, press_pos: Vector2), tapped(target: int, release_pos: Vector2), ground_tapped(release_pos: Vector2), drag_started(target: int, press_pos: Vector2, pos: Vector2), drag_moved(target: int, press_pos: Vector2, pos: Vector2), drag_ended(target: int, press_pos: Vector2, release_pos: Vector2), drag_cancelled(target: int), became_idle() last on every exit to Idle; commit before emit; gesture calls made mid-drain queue FIFO (max 64 per drain) and drain in the outermost call; non-finite positions dropped with push_error before queueing; owners never command from drag_cancelled or became_idle"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -598,6 +625,28 @@ api_decisions:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0007 Accepted 2026-11-04; binding"
+  - purpose: input_resolver_construction
+    status: active
+    api: "InputResolver extends RefCounted in src/foundation/input/; built only by static create(drag_slop, tap_slop), null unless validate() (finite, drag 8..30, tap 16..34, tap > drag); no clock, scene or engine event; float scalars from .x and .y, no Vector2 operators"
+    not: "InputResolver.new() in game code; Area2D or Control picking for gameplay targets"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    reason: "Headless tests drive the five calls with synthetic positions; a constructor cannot refuse and assert is stripped"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+  - purpose: gesture_trace_and_log
+    status: active
+    api: "InputResolver.last_trace() -> GestureTrace (fresh per press, final before became_idle) read only by src/presentation/dev/GestureLog and tests; GestureLog built by the wrapper only when OS.is_debug_build(), listens through view_wiring to the eight resolver signals and tower_upgraded, reads chip_state() at each tower prompt, writes JSON lines through ADR-0010's sink"
+    not: "A clock or log in the resolver; a log inside TowerSim or TowerInput"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    reason: "Sub-slop travel, silent endings and tie-break rules reach no signal; the Pillar 4 phone test needs them (TR-input-015)"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -774,6 +823,20 @@ forbidden_patterns:
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
     notes: "ADR-0007 Accepted 2026-11-04; binding"
+  - pattern: command_from_resolver_cancel_signals
+    status: active
+    description: "An input owner never issues a command from its drag_cancelled or became_idle handler; it only reverts or clears its own presentation state there"
+    why: "Both fire from cancel(), which Flow calls inside a tick and AppRoot calls at teardown"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: resolver_gesture_call_outside_adapter
+    status: active
+    description: "Only InputAdapter calls press, move, release and cancel_pointer; only the adapter, Flow's injected cancel_input() and AppRoot call cancel(); no owner reads last_trace() (lints L-INPUT-6, L-INPUT-7, handed to ADR-0007)"
+    why: "A gesture from anywhere else bypasses the adapter's one-ending-per-press contract; meaning built on the trace would hide outside the signal contract"
+    adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-04
+    notes: "ADR-0008 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
