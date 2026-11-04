@@ -97,3 +97,6 @@ Reviewed-Content-Hash: design/gdd/systems-index.md bdde32bd2e24d37db0ad44a7fa731
 
 ## Revision — 2026-11-03 — Two cross-GDD blockers applied, re-review still pending
 From design/gdd/gdd-cross-review-2026-11-03.md. B1: the deferred row and edge case now say headless bots call commands directly, matching Rule 11. B3: Rule 13's harness logs `tower_upgraded` and `chip_state()`, and P1 no longer cites a Tower chip log.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Overview's bot claim, N4's `burst_started` in Rule 13, C3, C4, C6, C7, C11, C12 and stale rows. QQ-19 and QQ-20 added to Open Questions. Header set to In Review to match the index.

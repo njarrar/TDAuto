@@ -1,6 +1,6 @@
 # Enemy & Wave
 
-> **Status**: In Review (lean design review 2026-11-03 APPROVED, then the cross-GDD review added the `wave_index()` definition; re-check pending in `/review-all-gdds consistency`. Six recommended items remain in the review log)
+> **Status**: Approved (lean design re-review 2026-11-04, after the cross-GDD fixes; 13 recommended items in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-03
@@ -25,13 +25,13 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 1. **One path.** A stage has one continuous path, and an enemy's progress is one distance along it. MVP and Vertical Slice need nothing more, because Vertical Slice's "different paths" are shape changes. Forks, parallel lanes and flyer gaps wait until after Vertical Slice, and would need `path_id` on wave groups and an amended art bible §6. On one path, "the leaking lane" means the stretch the player's towers do not cover, so it depends on the build. Whether that makes players re-pin is unproven (Open Questions).
 2. **Stage geometry is data.** `path_points[]`, `slot_positions[]` and `path_width` are new fields on the Stage record. This amends Data & Config, which placed them in the stage scene. Path length sets time to leak and slots set tower coverage, so they are gameplay values (Data Rule 1), and the builder and tests run without a scene (Flow Rule 2). The scene keeps the look only: field hue, base value and grid tilt. A view draws the path from the same points, so the two cannot disagree. Curves, if ever wanted, are baked to points once at load.
-3. **Slots belong to the stage.** This GDD owns the layout rules below, the Stage record holds the positions, and the content test (Data Rule 9) enforces them. Tower reads `slot_positions` directly, and a slot's index is its identity, which is the order towers fire in. Hit radii come from the Input GDD: slot 36, burst 48.
+3. **Slots belong to the stage.** This GDD owns the layout rules below, the Stage record holds the positions, and the content test (Data Rule 9) enforces them. Tower reads `slot_positions` directly, and a slot's index is its identity, which is the order towers fire in. Hit radii are constants on their owners' input objects (Input Rule 9): slot 36, burst 48.
 
 **Layout rules, checked by the content test.** All numbers are proposed. Insets assumed are 0 to 48 dp at the bottom and 0 to 68 dp at the top, unverified on devices. These must be rechecked once the stretch mode is decided (Input Open Questions).
 
 | # | Rule | Starter stage |
 |---|---|---|
-| L1 | Slot x within 138 to 402, y at least 304: its hit disc and build arc stay in the field and below the band, with no flip code (Battle HUD) | Pass |
+| L1 | Slot x within 156 to 384, y at least 304: its hit disc and build arc stay in the field and below the band, with no flip code (Battle HUD) | Pass |
 | L2 | Slot to path centreline at least `path_width / 2 + 40`: a 56 px slot at any tilt stays off the path | 76 needed, 80 |
 | L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, confirmed by Battle HUD), at least 92, the slot's hit radius 36 plus the hero's grab 56, the same clearance as Hero's `hero_start` | 144 |
 | L4 | Slot to slot at least 72 | 160 |
@@ -70,7 +70,7 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 7. **Wave control.** Flow calls `start_next_wave()` with no argument. This system owns the index into `wave_ids` and resets its per-wave state on each start, storing nothing on the record, so repeated wave IDs work. A start during an active wave or past the last wave logs a development error and is ignored. The call commits at once: the wave is Active at `wave_tick` 0. Members due at tick 0 spawn in the next advance slot, and `wave_tick` rises at the end of that slot. Either way, members spawn in the first advance slot after the commit: a countdown's end commits in Flow's slot, so that same tick, and an early call or Start Wave commits between ticks, so the next one.
 8. **Spawning uses an absolute schedule.** Each member's whole tick is computed from wave start (Formulas), never by repeating a float countdown. Members spawn when `wave_tick` reaches their tick, with groups scanned in authored order and members in ascending order. Each takes the next battle-wide `spawn_id`, which also breaks ties, and gets its Health (seeded once from `max_hp`) and Status. `spawn_interval` has no effect when `count` is 1.
 9. **Movement.** Each enemy reads `move_speed` through the stat accessor at use time, with a read context made once per enemy (the context is reused, not the value), and multiplies by Combat's `speed_factor`. An enemy moves on the tick it spawns, as in the prototype. Its position is computed once in the move step and kept for that tick's targeting and views, clamped to the path's end.
-10. **Leaks.** An enemy whose distance reaches the path length leaks. In ascending `spawn_id` order, its `lives_cost` is read through the accessor, it leaves the roster at once, and `enemy_leaked(lives_cost)` fires synchronously. A fatal leak ends the loop (Rule 13).
+10. **Leaks.** An enemy whose distance reaches the path length leaks. In ascending `spawn_id` order, its `lives_cost` is read through the accessor, it leaves the roster at once, `got_through_by_type()` counts it, and `enemy_leaked(lives_cost)` fires synchronously, so a fatal leak is counted. A fatal leak ends the loop (Rule 13).
 11. **Kills and clearing.** In the reap slot, dead enemies are handled in ascending `spawn_id` order: `bounty` is read through the accessor, `enemy_killed(bounty)` fires, and the corpse is removed. Then comes the clear check. **It runs every tick, not only on a kill**, or a wave whose last enemy leaks would never clear, and only while a wave is active, or an empty field would emit forever. A wave is clear when its schedule is exhausted and the roster is empty, with no separate counter that could disagree. By index, not ID, the last wave emits `waves_complete()` and any other emits `wave_cleared(intermission_duration)`, with the state committed first. Leak events therefore always precede the clear, as Flow Rule 13 requires.
 12. **Tick order confirmed.** Combat Rule 11 stands: Flow, then this system's advance slot (spawn, move, leak), Status countdown, towers by slot index, hero then burst, then this system's reap slot. So this system has two tick entries, and the battle's tick passes the roster to Combat's countdown, since Flow owns no roster. A corpse is reaped on the tick it dies, so it never moves.
 13. **Halting.** The builder injects Flow's `halted()`, true on Won, Lost and Fatal (Flow Rules 15 and 18), so this system needs no reference to Flow. It is checked immediately after every accessor read, before the value is used, and after every signal. Spawn, move, leak and reap return at once when it is true, so nothing follows a fatal leak, and a bad read can never persist a garbage value or emit one. Enemies left on the roster at an outcome freeze where they are.
@@ -84,6 +84,7 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 | `path_points` | (−40, 210), (430, 210), (430, 400), (110, 400), (110, 570), (270, 570), (270, 980) |
 | `slot_positions` | (270, 305), (190, 485), (350, 485), (170, 700), (370, 700) |
 | `path_width`, `starting_lives`, `starting_gold` | 72, 10, 120 |
+| `requires_bend` | true |
 
 | Enemy | `max_hp` | `move_speed` | `bounty` | `lives_cost` | `visual_key` |
 |---|---|---|---|---|---|
@@ -104,7 +105,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 | 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,710 | 15 | An early leak, then a convergence |
 | 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Fronts stagger from the entry to past the last slot |
 
-Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called.
+Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called. Calling is a fast-forward (Flow Rule 9), so 5 to 8 describes the uncalled stage, and Hero's table bounds the called one.
 
 **Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` and `peak_alive_ub` rows need Burst and Tower data, so they join in the Hero and Tower stories.
 
@@ -203,7 +204,7 @@ The **d_next** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `d` | float, units | 0 to `path_length` | calculated | Distance travelled |
 | `move_speed` | float, units/s | above 0, up to 2,000 | data file via the accessor | Read at use time |
-| `speed_factor` | float | `1 − max_slow` up to 1 | Combat | Slow. Slows do not stack (Combat Rule 7), so this is its floor, and `peak_alive_ub` relies on it. A `max_slow` near 1 would stall a wave, so Combat keeps it well below |
+| `speed_factor` | float | `1 − max_slow` up to 1 | Combat | Slow. Slows do not stack (Combat Rule 7), so this is its floor, and `peak_alive_ub` relies on it. A `max_slow` near 1 would stall a wave, so Tower's content test caps `slow_strength` at 0.6 |
 | `path_length` | float, units | above 0 | calculated | Sum of segment lengths |
 
 **Output Range:** a step of above 0 to 33.33 units. Overshoot is discarded. The `time_to_exit` floor keeps a path from being crossed in one step, and caps a real stage near 143 units/s on the starter path, so 2,000 is code-built only.
@@ -331,7 +332,7 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Tower System | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound` |
 | Hero System | `targets()`; `time_to_exit` and intermission rules against burst cooldown |
-| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records for any next-wave line |
+| Battle HUD & Build UI | Burst button coordinates for L3 and L7; Wave records for the next-wave line; `wave_index()`, `got_through_by_type()` |
 
 **Downstream (soft; no GDD yet, so each interface is provisional until that GDD confirms it):**
 
@@ -339,6 +340,8 @@ The **gold_upper_bound** formula is defined as:
 |---|---|
 | Stage Progression & Stars (VS) | New stages against the layout and wave rules (soft) |
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
+
+`to_ticks`, a pure conversion with no enemy state, is also used by Combat, Flow, Tower, Hero and the HUD.
 
 Per the bidirectional rule, each of these GDDs must list this one when authored. Data, Combat, Game State, Tower, Hero and Battle HUD already do.
 
@@ -375,7 +378,7 @@ Pacing should breathe: a string to read, then a packet that makes the player loo
 
 ## UI Requirements
 
-None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, and any next-wave line from the Wave records (Open Questions). Slots and the path are field drawings, listed above.
+None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, and the next-wave line from the Wave records (Battle HUD Rule 5). Slots and the path are field drawings, listed above.
 
 ## Cross-References
 
@@ -384,7 +387,7 @@ None owned. Battle HUD draws lives, wave pips and the outcome screen from Flow, 
 | Wave and Stage records, accessor, content test | `design/gdd/data-config-pipeline.md` | Core Rules; Rules 1, 9, 10 | Amended here |
 | Instant hits, slow, tick order, targeting helpers, `spawn_id` | `design/gdd/combat-damage.md` | Rules 4, 7, 8, 10, 11; Handed to owning GDDs | Rule dependency; `to_ticks` amends its slow storage |
 | Wave signals, lives, intermission, halt, pause | `design/gdd/game-state-stage-flow.md` | Rules 4, 7, 8, 13, 14, 15, 15a, 17, 18 | Rule dependency; `to_ticks` and payload amend it |
-| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | Open Question on slots | Answers it here |
+| Slot and burst hit radii | `design/gdd/input-gesture-resolver.md` | Hit targets; Rule 9 | Value dependency |
 | Hero share, wave-design rule, stage length, slot count, first wave | `design/gdd/game-concept.md` | Pillar 2, MVP, Onboarding | Rule dependency |
 | Enemy primitives, path, slots, chevrons, pools | `design/art/art-bible.md` | §2, §3, §5, §6, §7, §8 | Value dependency; amended |
 | Prototype path, wave values | `prototypes/hero-pin-concept/main.gd` | `PATH`, `SLOTS`, `WAVES` | Evidence; not reused |
@@ -409,7 +412,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 13. (Rule 5) **GIVEN** a spy changing `max_hp` after spawn, **THEN** current HP is unchanged.
 14. (Rule 10) **GIVEN** two stacked enemies with costs 1 and 2, **WHEN** T5, **THEN** `enemy_leaked(1), enemy_leaked(2), wave_cleared(2.0)`.
 15. (Rule 10) **GIVEN** that stack, **THEN** during the first event the roster holds only the second.
-16. (Rule 13) **GIVEN** that stack and a listener latching halt on the first event, **THEN** `enemy_leaked(1)` only, and the second stays.
+16. (Rule 13) **GIVEN** that stack and a listener latching halt on the first event, **THEN** `enemy_leaked(1)` only, the second stays, and `got_through_by_type()` counts the first.
 17. (Rule 13) **GIVEN** an enemy at `d` 50 and a spy latching during its `move_speed` read, **WHEN** the move, **THEN** an empty log, `d` 50 and position (10, 970).
 18. (Rule 13) **GIVEN** a corpse and the latch, **WHEN** reap, **THEN** an empty log.
 19. (Rule 13) **GIVEN** a spy latching during the second member's `max_hp` read, **THEN** that enemy is not added and no later member spawns.
@@ -468,15 +471,15 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Towers-only | Hero stories | Each mixed build's towers-only bot ends with 3 lives or fewer, a loss included (MVP), and at 0 from Vertical Slice. Waves are never tuned to stay beatable without the hero |
 | Driven margin | Hero stories | A driven hero ends at least 4 lives above that |
 | Pillar 2 bots (Combat's row) | Hero stories | Thresholds live in Hero's deferred table. A failure of hero-only, never-pinned or pinned-once reopens wave design here first |
-| Mono-role | Tower stories | Every build of one role ends below the best mixed build |
-| Always-call, flips | Tower stories | Towers-only always-call turns no loss into a win |
+| Mono-role | Hero stories | Every build of one role ends below the best mixed build |
+| Always-call, flips | Hero stories | Towers-only always-call turns no loss into a win |
 | Tick order (Combat's Order row) | Enemy & Wave stories | In a scripted tick, `tick_status` runs after the leak step and before any tower fires |
-| Always-call, lives | Tower stories | It gains at most 2 lives per build. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" alone would leave no bonus at all |
-| Always-call, against the hero | Tower stories | It does not beat a driven hero |
+| Always-call, lives | Hero stories | It gains at most 2 lives per build. Waiting costs a towers-only bot nothing, so any bonus helps it, and "does not beat" alone would leave no bonus at all |
+| Always-call, against the hero | Hero stories | It does not beat a driven hero |
 | No input | This system's stories | With only Start pressed, the run ends wave 1 with at least 2 lives |
 | Empty field | Hero stories | A driven hero's longest empty `targets()` during a wave is at most 5 s. Wave 2's 9 s gap may fail this unless the first packet lives long enough, and a fail reopens wave 2 |
 | L10, L11, L14, intermission, peak rows | Tower, Hero stories | These checks join the content test and pass |
-| Retry (Flow) | This system's stories | A retried battle's snapshot equals a fresh one, the old battle's `weakref` is null, and only the catalogue is shared |
+| Retry (Flow) | Game State stories | Flow's Retry row: this system's roster and wave state must be part of the snapshot |
 | Listener test (Flow) | This system's, Tower stories | The count is non-zero, and removing a connection fails naming it |
 | Order, leaks (Combat) | This system's stories | On the real tick, leaks resolve before fire |
 | Order, fatal leak (Combat) | This system's stories | A fatal leak pays nothing |
@@ -512,7 +515,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Concept's "Stage 1 has one tower type" against an MVP stage with three | Stage Progression GDD | Vertical Slice |
 | Stages are now point lists in data, with no visual path editing. Fine for one stage; a converter or editor tool is needed before 20. Point lists also fit Vertical Slice's 3 | tools-programmer + producer | Before Vertical Slice content |
 | Stretch mode and the minimum supported width in dp: if a 9:16 field is centred on a taller phone, or a wider one reveals off-field entry, L3, L5, L6 and L7 must be rechecked. L6's zero margin at the largest inset is unverified on devices | technical-director | Input ADR |
-| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check; and where the Reduce Motion setting lives | technical-director | App Lifecycle ADR |
+| Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
 | Wave 6 pays 174 of 510 bounty gold. At most 496 is held at its start, 54 short of the cheapest full board and 254 of the dearest, so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |

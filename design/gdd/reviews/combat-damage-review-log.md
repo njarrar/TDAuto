@@ -157,3 +157,6 @@ Applied in `design/gdd/combat-damage.md`: the ADR stated as a prerequisite for t
 Decided without asking: the 8 of 10 threshold and every safe range are proposed values with no test behind them; qa-lead and the first phone build can change them. No rule, formula or balance number changed, so the bots were not re-run.
 Checked: gdUnit4 6.2.0's source confirms `assert_error`, `is_push_error` and `is_success`, the setting's default of off, and that a leftover logged error fails the test. A runtime probe was denied at the permission prompt and not run, so the first test story keeps a negative test.
 No edit for the Vertical Slice item: Visual Feedback & VFX and Stage Progression & Stars have no GDD to change yet, and Dependencies already requires them to list this one when authored.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Two deferred rows acknowledged from Flow (full determinism, micro-battle). No rule changed; Approved stands.

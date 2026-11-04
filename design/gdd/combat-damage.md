@@ -1,6 +1,6 @@
 # Combat & Damage
 
-> **Status**: Approved (fourth design review 2026-11-03, lean: APPROVED; its recommended items applied afterwards)
+> **Status**: Approved (fourth design review 2026-11-03, lean: APPROVED; its recommended items applied afterwards) Cross-GDD text reconciliation later the same day changed no rule or value and kept this status; see the review log.
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (share is a lower bound with burst reported separately, splash gate, burst visual owner, kill-attribution test; the lower-bound wording was retracted in the 2026-11-03 review). User kept the invulnerable hero and instant hits; concept reworded.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-03
@@ -277,6 +277,8 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 
 | Criterion | Owner | Passes when |
 |---|---|---|
+| Full determinism (Flow) | Combat stories | The same stage, seed and script give an identical result |
+| Micro-battle (Flow) | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 | Bypass (Rule 2) | Tower, Hero stories | `I` holds over a real stage, within 0.001 since real values are not binary-exact, with reaped enemies counted and the output retained in `production/qa/evidence/` |
 | Order (Rules 2, 4, 11) | Enemy & Wave stories | Status counts down before Towers fire, and Towers fire by slot index; leaks resolve before fire; a fatal leak pays nothing; `enemy_killed` fires once. `deliver` running only inside a tick is caller discipline, checked here |
 | Burst between ticks (Rule 2) | Hero stories | A burst commanded between ticks releases in the Hero-and-burst slot at least one tick later, and its corpses are reaped without moving |
