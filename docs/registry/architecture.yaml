@@ -126,12 +126,13 @@ state_ownership:
     status: active
     owner_system: data-config
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
-    interface: "StatKeys (src/foundation/data/stat_keys.gd): StringName const per key, enum Kind INT/FLOAT, const ROWS per record type (tower, enemy, hero, burst), const ROLE_TAG; ROWS matches schema.gd numeric fields both ways (V4); reserved grant_kind values GRANT_SKILL_TREE, GRANT_HERO_WEAPON, GRANT_SYNERGY"
+    # was: ROWS mapped type to key kinds; no KIND table (before godot-specialist and TD-ADR reviews)
+    interface: "@abstract StatKeys (src/foundation/data/stat_keys.gd): StringName const per key, enum Kind INT/FLOAT, untyped const KIND (every key to Kind), ROWS (record type tower/enemy/hero/burst to allowed key set), ROLE_TAG; V4 checks KIND and ROWS against schema.gd numeric fields both ways; reserved grant_kind values GRANT_SKILL_TREE, GRANT_HERO_WEAPON, GRANT_SYNERGY"
     write_access: data-config-only
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
@@ -320,11 +321,12 @@ interfaces:
       - hero-sim
       - hud-logic
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
-    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int, stat_float(ctx, key) -> float; bad call (null context, unresolved def, unknown key, inapplicable key, type mismatch, bad level, in that order) calls fatal once with cause code and returns 0 or 0.0; is_tower(id), level_count(def_id) never call fatal; object injected by the Builder; HudLogic gets it via Battle.stat_accessor(); caller checks halted() after every read; ReadContext made once per owner, live entity held by WeakRef"
+    # was: HudLogic got it via a Battle.stat_accessor() getter and could read in a gold_changed handler (TD-ADR T1, T2)
+    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int, stat_float(ctx, key) -> float; bad call (null context, unresolved def, unknown key, inapplicable key, type mismatch, bad level, in that order) calls fatal once with cause code and returns 0 or 0.0; is_tower(id), level_count(def_id) never call fatal; object injected by the Builder from the public read-only member Battle.stat_accessor (ADR-0001 amended); the wrapper passes it and battle.halt_gate.halted (public read-only member, ADR-0001 amended) to HudLogic, which reads only in frame step 3, never inside a sim signal handler; caller checks halted() after every read; ReadContext made once per owner, live entity held by WeakRef or null"
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
@@ -492,14 +494,15 @@ api_decisions:
     notes: "ADR-0004 Accepted 2026-11-04; binding"
   - purpose: stat_key_format
     status: active
-    api: "StringName constants in StatKeys, named after schema fields; untyped const Dictionary tables; value fetched with Object.get(key) on the record or TowerLevel"
+    # was: no KIND table, no P1 trigger (before reviews)
+    api: "StringName constants in StatKeys, named after schema fields; untyped const KIND, ROWS, ROLE_TAG read with Dictionary.get(key, default); value fetched with Object.get(key) on the record or TowerLevel, null is stat_inapplicable_key"
     not: "String literal or &-literal keys at call sites, int enum keys, Variant stat() read, typed Dictionary const (4.4+, unverified offline)"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
-    reason: "One key list checked against schema.gd; pointer compare; matches future modifier data with no map; match-per-key is the fallback if perf check P1 fails"
+    reason: "One key list checked against schema.gd; pointer compare; matches future modifier data with no map; match-per-key fallback is built if P1 exceeds 0.5 us per read on desktop"
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:

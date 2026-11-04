@@ -78,7 +78,7 @@ No code. `src/` holds only a `CLAUDE.md`. `project.godot` sets no main scene, no
 - `BattleBuilder.build(catalogue, stage_id, rng_seed, fatal_handler) -> Battle` is a static function on a `RefCounted` class. It touches no node, so tests and bots call it headless. It is never called from inside a signal handler. The parameter is `rng_seed`, not `seed`, so it does not shadow the global `seed()`.
 - Build order: (a) create the battle `FatalLatch`, forwarding to `fatal_handler`; (b) create a fresh `StatAccessor` over the shared read-only `Catalogue`, with the battle latch's `fatal` as its failure handler; (c) read the Stage, Input and Hero records and check stage inputs; create `InputResolver.create(drag_slop, tap_slop)` and call `fatal("input_record_invalid")` if it returns null (this closes the Builder's part of QQ-19); (d) construct `HaltGate`, `TickMath`, `DevErrorSink`, `Wiring`, `Flow`, `Combat`, `EnemyWave`, `TowerSim`, `HeroSim`; (e) inject values and make every signal connection, each through `Wiring.connect_recorded()`; (f) return the `Battle`.
 - After each step the Builder checks the battle latch. If it is set, `build` drops its locals and returns `null`, so a partial battle is never ticked.
-- `Battle` is a `RefCounted`. Public read-only members: `flow`, `combat`, `enemy_wave`, `tower_sim`, `hero_sim`, `fatal_latch`, `input_resolver` (new, see Consequences). Private strong members: `_halt_gate`, `_tick_math`, `_dev_error_sink`, `_stat_accessor`, `_wiring`.
+- `Battle` is a `RefCounted`. Public read-only members: `flow`, `combat`, `enemy_wave`, `tower_sim`, `hero_sim`, `fatal_latch`, `input_resolver` (new, see Consequences), `stat_accessor` and `halt_gate` (amended 2026-11-04, ADR-0005). Private strong members: `_tick_math`, `_dev_error_sink`, `_wiring`.
 - **Every object behind an injected Callable is a member of `Battle` or `AppRoot`.** So while the battle lives, every Callable a sim holds has a live target, whether Callables are strong or weak.
 - The `Catalogue` holds no per-battle reference. Each battle's accessor points at the catalogue; the catalogue points at nothing in a battle. ADR-0005 follows this.
 - `Battle.halted()` is a pass-through to its `HaltGate`, for the wrapper and tests. Sims get `HaltGate.halted`, never a Callable on `Battle`.
@@ -86,7 +86,7 @@ No code. `src/` holds only a `CLAUDE.md`. `project.godot` sets no main scene, no
 ### 3. Injection rules and the acyclic graph
 - Everything a sim needs from outside arrives as an injected value or a method `Callable` bound to a Builder-owned object (B9). The Builder never passes a lambda, and never uses `bind()` with a sim object as an argument.
 - **No sim object holds a reference to `Battle`, to `AppRoot` or to any `Node`.** `HaltGate` holds `Flow` and the battle `FatalLatch`, and `halted()` is true when `flow.phase()` is `WON`, `LOST` or `FATAL`, or the latch is set. It is false while `PAUSED`; the tick gate stops time then.
-- Injected Callables point only one way, so they form no cycle on their own. The targets are: `HaltGate.halted`, `TickMath.to_ticks`, `DevErrorSink.report`, the battle latch's `fatal`, the battle's `StatAccessor`, `EnemyWave.targets` and `EnemyWave.wave_index`, `Flow.in_build`, and `InputResolver.cancel` (as `cancel_input()`). Flow holds Callables to `EnemyWave`, the resolver, `TickMath` and the sink only; it holds nothing that points at `HeroSim`, `TowerSim` or `HaltGate`. Nothing points back at a sim that points at it.
+- Injected Callables point only one way, so they form no cycle on their own. The targets are: `HaltGate.halted`, `TickMath.to_ticks`, `DevErrorSink.report`, the battle latch's `fatal`, the battle's `StatAccessor` (injected as an object, not a method Callable; ADR-0005), `EnemyWave.targets` and `EnemyWave.wave_index`, `Flow.in_build`, and `InputResolver.cancel` (as `cancel_input()`). Flow holds Callables to `EnemyWave`, the resolver, `TickMath` and the sink only; it holds nothing that points at `HeroSim`, `TowerSim` or `HaltGate`. Nothing points back at a sim that points at it.
 - Signal connections do point both ways (for example `EnemyWave.enemy_leaked` to `Flow`, while `Flow` holds `EnemyWave.wave_index`). If Godot treats a connection as a strong reference, that is a cycle. Section 5 removes it at teardown.
 - `left_handed` and `reduce_motion` come from the Input record. The Builder passes `left_handed` to `HeroSim` with the Hero record ID and `burst_id` (TR-hero-004). The wrapper passes `PresentationSettings` (both flags) to HeroInput, HudLogic and every view. Views read Reduce Motion only from `PresentationSettings`, never from the catalogue (QQ-09). At Alpha, Settings becomes the source of `PresentationSettings` and no view changes.
 
@@ -180,10 +180,10 @@ var tower_sim: TowerSim
 var hero_sim: HeroSim
 var fatal_latch: FatalLatch
 var input_resolver: InputResolver
-var _halt_gate: HaltGate             # private: held so injected Callables stay valid
+var stat_accessor: StatAccessor      # read-only by contract; one per battle (ADR-0005)
+var halt_gate: HaltGate              # read-only by contract; held so injected Callables stay valid (ADR-0005)
 var _tick_math: TickMath
 var _dev_error_sink: DevErrorSink
-var _stat_accessor: StatAccessor     # one per battle (ADR-0005)
 var _wiring: Wiring
 func tick(dt: float) -> void         # gate and order: ADR-0004
 func halted() -> bool                # pass-through to HaltGate
@@ -390,3 +390,6 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 - `docs/architecture/tr-registry.yaml`: the 15 TRs above
 - GDDs: `design/gdd/game-state-stage-flow.md` (Rules 1 to 3, 15 to 18), `design/gdd/data-config-pipeline.md` (Rules 8, 10), `design/gdd/input-gesture-resolver.md` (Rule 7, Interactions), `design/gdd/enemy-wave.md` (Rule 13), `design/gdd/tower-system.md`, `design/gdd/hero-system.md`, `design/gdd/battle-hud.md` (Rule 18)
 - Enables ADR-0002 to ADR-0007 and ADR-0009 (none written yet)
+
+## Amendments
+- **2026-11-04, with ADR-0005** (Status stays Accepted). The battle's `StatAccessor` moves from the private member `_stat_accessor` to the public read-only member `stat_accessor`, beside `input_resolver` (Decision 2, Key Interfaces). The Builder injects it into EnemyWave, TowerSim and HeroSim as an object, not a method Callable (Decision 3); the wrapper passes `battle.stat_accessor` to HudLogic. `_halt_gate` likewise becomes the public read-only member `halt_gate`, so the wrapper can pass `battle.halt_gate.halted` to HudLogic as a method Callable; B9's rule against injecting `Battle.halted()` stands. Still one accessor per battle, made in build step (b). The Architecture Diagram's `_halt_gate` and `_stat_accessor` and Consequences' "five private members" now read `halt_gate`, `stat_accessor` and three; they are left as written.
