@@ -209,6 +209,8 @@ func _init(dev_error: Callable) -> void
 func connect_recorded(sig: Signal, target: Callable) -> void
 ## Disconnects each pair only if is_connected(); then clears the record. Idempotent.
 func disconnect_all() -> void
+## Read-only copy of {signal, callable} per pair (amended 2026-11-04 with ADR-0006, pending confirmation).
+func pairs() -> Array[Dictionary]
 
 class_name DevErrorSink extends RefCounted
 func report(msg: String) -> void     # push_error in every build; never halts
@@ -393,3 +395,4 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 
 ## Amendments
 - **2026-11-04, with ADR-0005** (Status stays Accepted; confirmed by the user 2026-11-04 when ADR-0005 was accepted). The battle's `StatAccessor` moves from the private member `_stat_accessor` to the public read-only member `stat_accessor`, beside `input_resolver` (Decision 2, Key Interfaces). The Builder injects it into EnemyWave, TowerSim and HeroSim as an object, not a method Callable (Decision 3); the wrapper passes `battle.stat_accessor` to HudLogic. `_halt_gate` likewise becomes the public read-only member `halt_gate`, so the wrapper can pass `battle.halt_gate.halted` to HudLogic as a method Callable; B9's rule against injecting `Battle.halted()` stands. Still one accessor per battle, made in build step (b). The Architecture Diagram's `_halt_gate` and `_stat_accessor` and Consequences' "five private members" now read `halt_gate`, `stat_accessor` and three; they are left as written.
+- **2026-11-04, with ADR-0006 (pending the user's confirmation at ADR-0006 acceptance).** Status stays Accepted. `Wiring` gains `func pairs() -> Array[Dictionary]`, a read-only copy of `{signal, callable}` per recorded pair, so ADR-0006's listener-count tests read both records (Key Interfaces). `connect_recorded()` also checks the `Error` that `connect()` returns and sends a failure to the dev-error sink without recording the pair (ADR-0006 Decision 1). Nothing else in this ADR changes.
