@@ -466,7 +466,7 @@ This library names every interaction pattern TowerRiot already uses, so UX specs
 - GDD UI requirements: Input, HUD, Tower, Hero and Flow are each covered. Combat, Enemy & Wave and Data own no interaction.
 - New patterns to add: none beyond this file.
 - Navigation mismatches: none; no screen specs exist to compare.
-- Accessibility: every entry cites its AR floor; four floors are not met by the sources today (OI-01 to OI-05).
+- Accessibility: every entry cites its AR floor; five floors are not met by the sources today (OI-01 to OI-05), and one more is unmeasured (OI-17).
 - Empty states: prompt (None after the first burst), damage rows (read 0), gold (shows 0). Later screens need their own.
 
 ---
@@ -485,7 +485,7 @@ Each item names the sources that disagree. This library follows the accessibilit
 | OI-04 | Tower UI Requirements, Hero UI Requirements and HUD (nudge skipped under Reduce Motion, nothing in its place) vs AR-V-11 | A refused tap reads as a missed tap | IP-24 requires a static cue, not yet picked | Arc-and-chip UX spec; Tower, Hero, HUD GDDs (AR change 4) |
 | OI-05 | HUD Visual table "Start/Call" (Arming at alpha 0.5, rising to full over 300 ms) vs AR-V-04 and art bible §7 | Labels at 0.5 fall below 4.5:1 (0.55 is already 4.26:1), and AR-V-04 says dimmed states count. Art bible §7 also says panel opacity never animates, and the Start/Call panel fades in | Nothing new; IP-15 records the HUD value and this item | Battle HUD GDD, art-director |
 | OI-06 | HUD Rule 4, Flow Rule 17 and Input UI Requirements ("no pause button") vs AR-C-01 | iOS has no back button; a phone build needs a pause control. The top band ignores input (IP-20) and the bottom 30% is reserved, so no place is free | IP-22 at MVP; IP-29 planned | HUD spec, Flow GDD (AR change 6) |
-| OI-07 | Input burst sink, concept Pillar 4 and Hero Rule 11 ("a tap on the burst button does nothing") vs AR-M-06 | True only in the default mode once two-tap mode exists | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
+| OI-07 | Input burst sink, concept Pillar 4 and Hero Rules 11 and 15 ("a tap on the burst button does nothing") vs AR-M-06 | True only in the default mode once two-tap mode exists | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
 | OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits arc collapse, build overlay scale, refusal and hero breathing | AR-V-10 (IP-26) | Battle HUD GDD (AR change 5) |
 | OI-09 | Tower Rule 7 ("one the player cannot afford is dimmed and does nothing") vs HUD Rule 7 (the disc always calls `build`; NO_GOLD stays open with a nudge) and Tower UI Requirements (a refused tap nudges) | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Tower GDD |
 | OI-10 | HUD Rules 2 and 11 and Flow Game Feel (Retry arms after 300 ms and ignores presses begun earlier) vs ADR-0003 Decision 4 (`TapScreen` fires on the release of any press it saw; no arming state) | The ADR's interface has no arming gate, and no document names who holds it for a `TapScreen` region | IP-15 and IP-23 as the HUD states; gate owner open | technical-director, Battle HUD stories |
@@ -496,7 +496,7 @@ Each item names the sources that disagree. This library follows the accessibilit
 | OI-15 | HUD content rules and Enemy & Wave L3 (checked at hit scale x1) vs AR-M-04 | Start/Call is 7.2 from the left burst disc and 17.3 from a slot; x1.25 breaks both | Nothing new | Battle HUD, Enemy & Wave GDDs (AR change 8, Alpha) |
 | OI-16 | Hero UI Requirements ("before a first pin, the nudge also repeats the prompt") vs HUD Rule 13 and AR-V-10 | The prompt line already shows then; what "repeat" looks like, and whether it survives Reduce Motion, is unstated | Nothing new | Hero GDD, pin-and-aim UX spec |
 | OI-17 | Hero Visual "Cancelling" (reticle alpha 0.3) vs AR-V-04 | The AR contrast table has no ratio for it, though it tells the player a release will cancel | Nothing new | ux-designer, test plan |
-| OI-18 | AR document header and Open Questions ("`design/ux/interaction-patterns.md` does not exist yet") | Now stale | n/a | AR document's next revision |
+| OI-18 | AR document header and Open Questions ("`design/ux/interaction-patterns.md` does not exist yet") | Was stale | n/a | Resolved 2026-11-04 by `/ux-review`: the AR header and Open Questions now name this library |
 
 ### Other open questions
 
