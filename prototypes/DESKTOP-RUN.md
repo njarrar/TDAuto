@@ -17,6 +17,17 @@ text and go on with the next step. Do not fix it.
 
 ## Checklist
 
+0. **The game's own tests, lint and a first launch** (from the repo root, not
+   `prototypes/`). Run these first: the code has never been parsed, so parse
+   errors show up here.
+   - Import once: `cd /path/to/TDAuto && $GODOT --headless --path . --import > import.log 2>&1`
+   - Lint: `$GODOT --headless --path . -s res://tools/lint/run_lint.gd > lint.log 2>&1`
+   - Tests: `$GODOT --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode > tests.log 2>&1`
+   - Launch: `$GODOT --path .` and play the starter stage for a minute, then close it.
+   Paste: the end of `tests.log` (the summary and every failure), every
+   `ERROR` or `SCRIPT ERROR` line from `import.log`, `lint.log` and the launch,
+   and one line on what the launch showed. Then `cd prototypes` for step 1.
+
 1. **Headless checks again** (after the session's fixes):
    `cd adr-checks && GODOT=$GODOT ./run_all.sh; cd ..`
    Paste: the Summary block and every FAIL, NOT_RUN or INCOMPLETE line.
