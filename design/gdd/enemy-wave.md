@@ -31,7 +31,7 @@ Enemy & Wave is what the player defends against. It holds the stage's one path a
 
 | # | Rule | Starter stage |
 |---|---|---|
-| L1 | Slot x within 156 to 384, y at least 304: its hit disc and build arc stay in the field and below the band, with no flip code (Battle HUD) | Pass |
+| L1 | Slot x within 156 to 384, y 304 to 924: its hit disc and build arc stay in the field and clear of the band at inset 0, with no flip code (Battle HUD) | Pass |
 | L2 | Slot to path centreline at least `path_width / 2 + 40`: a 56 px slot at any tilt stays off the path | 76 needed, 80 |
 | L3 | Slot to the burst button's centre line, either hand (x 456 or 84, y 816 to 888, confirmed by Battle HUD), at least 92, the slot's hit radius 36 plus the hero's grab 56, the same clearance as Hero's `hero_start` | 144 |
 | L4 | Slot to slot at least 72 | 160 |
@@ -105,7 +105,7 @@ A group below is type × count @ `spawn_interval` + `start_delay`, in seconds fr
 | 5 | fast×8 @0.4 +0; heavy×2 @4 +0; normal×10 @0.5 +4; fast×8 @0.4 +16 | 3,710 | 15 | An early leak, then a convergence |
 | 6 | heavy×4 @3 +0; normal×12 @0.5 +10; fast×10 @0.4 +20; normal×8 @0.5 +24 | 6,100 | 15 (unused on the last wave) | Fronts stagger from the entry to past the last slot |
 
-Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, inside the concept's 5 to 8, or about 3.8 with every wave called. Calling is a fast-forward (Flow Rule 9), so 5 to 8 describes the uncalled stage, and Hero's table bounds the called one.
+Each wave's total HP is 1.26 to 1.64 times the last. With nothing called early, a stage where enemies die about 60% along the path runs about 5.2 minutes in simulation, or about 3.8 with every wave called. The concept's 5 to 8 is for 8 to 12 waves, so it does not bound MVP's 6, and Hero's table and Flow Rule 9 bound the called stage.
 
 **Wave rules, checked by the content test.** All bounds are proposed. Waves are checked per position in `wave_ids`, because IDs repeat. A real stage also needs `starting_lives` of at least 2 and at least 2 waves, or the lives rules below cannot all hold; code-built fixtures are exempt. The `intermission_duration` and `peak_alive_ub` rows need Burst and Tower data, so they join in the Hero and Tower stories.
 

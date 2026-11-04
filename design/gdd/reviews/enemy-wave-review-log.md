@@ -161,3 +161,9 @@ Reviewed-Content-Hash: design/gdd/tower-system.md 29b611f32294caeca03b4114b86d3b
 Reviewed-Content-Hash: design/gdd/hero-system.md f6addad6559296cd1f8f60724b24f7c0db0284df
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 4c34ae187a1d77212e8c66bd6454c8d7a170ad95
 Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Amendment — 2026-11-04 — not a new verdict
+L1 gains the upper bound y 924 and "clear of the band at inset 0", from the Battle HUD's second review. The starter stage still passes. Status stays Approved; the hashes above no longer match this document.
+
+## Amendment — 2026-11-04 — not a new verdict
+The stage-length note no longer applies the concept's 5 to 8 minutes to MVP's 6 waves. Status stays Approved.
