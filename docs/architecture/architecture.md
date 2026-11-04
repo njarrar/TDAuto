@@ -22,7 +22,7 @@ Engine: Godot 4.7.2. The model's training covers Godot up to about 4.3, so 4.5, 
 | Input | HIGH | 4.7 mouse and keyboard events report `DEVICE_ID_MOUSE` and `DEVICE_ID_KEYBOARD`, not device 0; 4.6 dual focus | InputAdapter must classify events by type, never by `device == 0`. Touch is the primary input; mouse emulates it on desktop |
 | UI | HIGH | 4.6 dual focus (touch focus separate from keyboard focus); 4.5 recursive disable of mouse and focus on a Control hierarchy; 4.7 new projects stretch by default | Modal screens and the top band are Controls. `focus_mode` NONE on modals, `mouse_filter` IGNORE on the top band |
 | Rendering (2D canvas) | HIGH | 4.7 `CanvasItem` lines are drawn without an antialiasing feather, so they look thinner | All field art is `_draw` primitives with 2 px and 3 px strokes. Widths need a device check. Renderer is Mobile (the reference calls Forward+ desktop-focused) |
-| Project settings | HIGH | 4.7 new projects default to `stretch/mode` canvas_items and `stretch/aspect` expand. `project.godot` sets no stretch key today, so the 4.7.2 defaults are what apply. ADR-0008 must write both keys explicitly | The 540 x 960 field on taller phones. Expand shows area outside the field, which Enemy & Wave requires masked (ADR-0008) |
+| Project settings | HIGH | 4.7 new projects default to `stretch/mode` canvas_items and `stretch/aspect` expand. The 4.7 change writes those values into newly created `project.godot` files; the setting defaults in the 4.7.2 class reference (`ProjectSettings.xml`) stay `disabled` and `keep`. `project.godot` sets no stretch key today, so this project currently runs with no stretch at all. ADR-0008 writes `canvas_items` and `keep` explicitly | The 540 x 960 field on taller phones. Expand shows area outside the field, which Enemy & Wave requires masked (ADR-0008) |
 | Animation | MEDIUM | 4.7 `Tween.tween_await()` | Presentation tweens only (120 ms and 200 ms motions) |
 | Physics, Audio, Navigation, Networking | n/a | not used | `project.yaml` and the technical preferences name Godot Physics 2D; `project.godot` sets no physics key. No physics body, area or server call exists in the design |
 
@@ -277,6 +277,7 @@ class_name EnemyState extends RefCounted     # one live enemy; owned by EnemyWav
 var spawn_id: int
 var def_id: StringName
 var distance: float                          # along the path, field units
+var in_field: bool                           # cached per tick; targets() keeps only these (ADR-0009)
 var position: Vector2                        # cached once per tick from distance (ADR-0009)
 var health: Health                           # attached by Combat at spawn (ADR-0007)
 var status: Status
@@ -296,13 +297,16 @@ var tower_id: StringName                      # &"" when empty
 var level: int
 var cooldown_left: int                        # ticks
 
-class_name HitTarget extends RefCounted       # one Input disc
-var center: Vector2
+class_name HitTarget extends RefCounted       # one Input disc (fields per the Input GDD; ADR-0006)
+var centre: Vector2
 var radius: float
 var priority: int
 var accepts: int                              # bit mask of InputResolver.Gesture
 var enabled: bool
+var sink: bool                                # takes the gesture and does nothing (tap sink)
 var owner_tag: StringName
+func set_centre(p: Vector2) -> void
+func set_enabled(on: bool) -> void
 
 class_name StageRecord extends RefCounted     # structural fields, read directly
 var path_points: PackedVector2Array
@@ -497,7 +501,11 @@ signal hero_pinned(position: Vector2)
 signal burst_started(aim_point: Vector2, telegraph_ticks: int)
 
 class_name AimModel extends RefCounted
-func update(battle: BattleReadModel, finger: Vector2, finger_down: bool) -> void
+func begin(p: Vector2) -> void                 # drag started on the burst button
+func move(p: Vector2) -> void
+func release(p: Vector2) -> Vector2            # aim point to pass to burst, or the cancel result (ADR-0011)
+func clear() -> void
+func update(battle: BattleReadModel) -> void   # per frame while the hero walks
 func aim_state() -> int
 func aim_point() -> Vector2
 func aim_ring_radius() -> float
@@ -506,7 +514,8 @@ func cooldown_digit() -> int
 
 class_name PinGeometry extends RefCounted
 func is_valid(x: float, y: float) -> bool
-func clamp(x: float, y: float) -> Vector2      # computed on 64-bit scalars, converted once at the end
+func check(x: float, y: float) -> int          # three-valued result (ADR-0011)
+func clamp(x: float, y: float, hold: Vector2) -> Vector2   # 64-bit scalars, converted once at the end
 ```
 
 HeroInput changes the battle only through `pin` and `burst`; one equivalence test keeps a resolver-driven script and a direct-command script identical. The same holds for TowerInput and `upgrade`.
@@ -724,7 +733,7 @@ Grouped by layer, Foundation first. Run in number order: each ADR depends only o
 | QQ-01 | Which lifecycle notification enters Paused on each platform, and how a desktop developer avoids pausing on every focus-out | High | ADR-0002 |
 | QQ-02 | Where the frame hook lives (`_process` or `_physics_process`) and the `FixedStepClock` clamp value | High | ADR-0003 |
 | QQ-03 | Control event order against the adapter, and whether a STOP Control hides events from it | High | ADR-0006 |
-| QQ-04 | Stretch mode and masking on taller phones; `project.godot` has no stretch keys, so the 4.7.2 defaults apply until ADR-0008 writes them | High | ADR-0008 |
+| QQ-04 | Stretch mode and masking on taller phones. `project.godot` has no stretch keys, so the class-reference defaults (`disabled`, `keep`) apply until ADR-0008 writes `canvas_items` and `keep`, letting the letterbox bars mask the area outside the field | High | ADR-0008 |
 | QQ-05 | Catalogue file format and manifest form | High | ADR-0004 |
 | QQ-06 | How Health and Status attach to `EnemyState` (fields, or Combat-side tables keyed by `spawn_id`) | High | ADR-0007, ADR-0009 |
 | QQ-07 | **Resolved by TD-ARCHITECTURE, 2026-11-04.** BattleBuilder composition root: accepted, moved to the Composition tier with a ShellBuilder beside it; "no branch on a gameplay value" is a review rule. TowerSim and TowerInput split: accepted; TowerInput holds only registration and the chip disc, gets an equivalence test, and the two shell callers are documented. ProjectileSpawner cut: accepted for MVP; ADR-0007 records the reversal cost, and the Mobile Platform & Performance system should rescope "heavy projectile load" to tracer and effect pooling | Closed | ADR-0002, ADR-0007, ADR-0010 carry the conditions |
