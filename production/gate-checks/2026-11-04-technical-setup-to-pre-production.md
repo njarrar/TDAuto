@@ -50,20 +50,20 @@ Panel required: 4 of 4 (`workflow: full`, `review_mode: full`). None could be sp
 - Art Director (AD-PHASE-GATE): CONCERNS. The visual identity is set and written down. `design/art/art-bible.md` has all 9 sections (1 to 4 required), and the HUD, arc and chip, pin and aim specs and the accessibility file all build on its hexes, shapes and line rules. Pre-Production can start. Gaps to close there before view stories, or they cause rework: (1) Art bible §8 still asks for 3 shaders, a CPUParticles2D death pop and per-enemy draw nodes; ADR-0011 bars all three, and the bible edit (technical-artist) is not done. (2) Leash colour and the in-zone/out-of-zone leash state are unset (PAQ-17), yet the leash is the most-seen line in play. (3) Arc panels cover the lane in Wave, against the bible's panel rule (HQ-17). (4) The bible is still "Under Review": alpha, contrast, line width after the 4.7 AA change and batching are unproven on a phone, and the hit-flash rate audit is open (AQ-09). (5) The enemy death pop has no ADR-legal look yet.
 
 ### Blockers
-No hard blocker found in artifacts or checks. These NOT ASSESSED items hold the stage; the CONCERNS override is not offered while they stand:
-1. **CD-PHASE-GATE not run.** Re-run `/gate-check pre-production` in a session that can spawn `creative-director`.
-2. **TD-PHASE-GATE not run.** Same, `technical-director`.
-3. **PR-PHASE-GATE not run.** Same, `producer`.
-4. **AD-PHASE-GATE not run.** Same, `art-director`.
+No hard blocker found in artifacts or checks. The four panel seats first came back NOT ASSESSED (no agent could be spawned). They ran later on 2026-11-04 and all four returned CONCERNS (see the panel lines above), so nothing is NOT ASSESSED now:
+1. ~~CD-PHASE-GATE not run.~~ Ran: CONCERNS.
+2. ~~TD-PHASE-GATE not run.~~ Ran: CONCERNS.
+3. ~~PR-PHASE-GATE not run.~~ Ran: CONCERNS.
+4. ~~AD-PHASE-GATE not run.~~ Ran: CONCERNS.
 
 ### Concerns
 1. **No ADR is Accepted.** 0 of 126 TRs rest on an Accepted ADR, and every HIGH-risk engine row is still NEEDS VERIFICATION. Kept Proposed by user choice. Clear: run the engine runs in `production/qa/engine-verification-plan.md`, then `/architecture-decision accept ADR-NNNN`, ADR-0001 first.
-2. **Architecture review is CONCERNS and partly stale.** Fixes landed after 04c, but no review re-ran, and `requirements-traceability.md` still lists TR-enemy-016 and TR-enemy-017 as Partial. Clear: `/architecture-review full` (or `rtm`).
+2. **Architecture review is CONCERNS and partly stale.** Fixes landed after 04c, but no review re-ran, and `requirements-traceability.md` still lists TR-enemy-016 and TR-enemy-017 as Partial. (Update: the index was corrected after this report; it now shows 126 covered, 0 partial.) Clear: `/architecture-review full` (or `rtm`).
 3. **No save/load ADR.** The checklist names save/load as a Foundation ADR. `architecture.md` defers Save/Load to Vertical Slice with a no-globals rule. Clear: write the ADR before any VS save work, or accept the deferral.
 4. **Thin test proof.** Only the 2-test canary; `tests/integration/` holds no test. The gate relied on CI, not a local run. Clear: first real Logic tests in Pre-Production; set `engine.path` for this host if local runs are wanted.
 5. **UX specs await user review** (`hud.md` is an autonomous draft). Clear: user review or `/ux-review`.
 
 ### Verdict: CONCERNS
-Precedence: no FAIL; Concerns 1 to 5 set CONCERNS, which outranks the NOT ASSESSED panel. Stage stays Technical Setup. No stage write was offered or made.
+Precedence: no FAIL; Concerns 1 to 5 set CONCERNS. The panel later ran in full (4 of 4 CONCERNS), so the CONCERNS override may now be offered under Section 6. It needs the user's explicit acceptance of the named risks; a general go-ahead does not count. Not taken: stage stays Technical Setup.
 
 Chain-of-Verification: 5 questions checked (control manifest scope re-read in `gate-production.md`; traceability Partial rows re-grepped; ADR sections re-counted; CI re-queried; save/load re-grepped). Verdict unchanged.
