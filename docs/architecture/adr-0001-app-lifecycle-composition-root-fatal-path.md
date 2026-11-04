@@ -291,7 +291,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Must never `preload` a scene in `app_root.gd`; load the fatal and wrapper scenes at run time and null-check.
 - Every node in the wrapper subtree that holds a sim, the resolver or the Battle must implement `detach()` and clear those references in it.
 - Must check `halted()` after every accessor read and every signal emit that can end the battle, and return at once.
-- Must report a release-relevant failure through `fatal` or `dev_error`. Must never use `assert` for it.
+- Must report a release-relevant failure through `fatal` or `dev_error`. Must never use `assert` for it. One scoped exception: Combat's five guard codes (`ERR_REMOVED`, `ERR_BAD_AMOUNT`, `ERR_BAD_SLOW`, `ERR_BAD_MAX_HP`, `ERR_ALREADY_ATTACHED`) use `push_error` directly (ADR-0009 Decision 4).
 - Must never call `fatal` expecting the callee to stop the caller. The caller returns.
 - Must never free the wrapper, or drop the battle, from inside a signal handler or a `fatal` call. Only `AppRoot._process` tears down.
 - Must never use `free()` on a node that took part in the current input or signal call. Use `queue_free()` after `remove_child()` and `detach()`.

@@ -65,7 +65,7 @@ Owner of each HIGH row: Input and app lifecycle, ADR-0003 (verification spike fi
 2. **Composition Root is the one exemption.** App Root and Battle Builder reference every layer because wiring is their only job. No module references them. Anything a module needs from the root arrives as an injected value, `Callable` or signal.
 3. Presentation reads the simulation only through read-only queries and view signals. The simulation never references Presentation, and gives identical results with or without it (TR-hud-004, TR-combat-010, TR-hero-008).
 4. Inside Feature, Enemy & Wave, Tower and Hero do not reference each other. They meet only in the builder, through signals and injected callables.
-5. Combat (Core) cannot name the enemy class (Feature) without an upward dependency. Combat therefore owns a small base class, `Targetable extends RefCounted` (`spawn_id`, `position`, `removed`, `health`, `status`), and Enemy & Wave's `Enemy` extends it. Combat's helpers take and return `Targetable`, so every field access is checked at parse time rather than by dynamic lookup on `Object`. Lists are built as `Array[Targetable]` from the start, because GDScript typed arrays are invariant and an `Array[Enemy]` cannot be passed where `Array[Targetable]` is expected. ADR-0009 ratifies this.
+5. Combat (Core) cannot name the enemy class (Feature) without an upward dependency. Combat therefore owns a small base class, `Targetable extends RefCounted` (`spawn_id`, `distance`, `pos_x`, `pos_y`, `removed`, `health`, `status`; sim positions are float scalars, ADR-0009), and Enemy & Wave's `Enemy` extends it. Combat's helpers take and return `Targetable`, so every field access is checked at parse time rather than by dynamic lookup on `Object`. Lists are built as `Array[Targetable]` from the start, because GDScript typed arrays are invariant and an `Array[Enemy]` cannot be passed where `Array[Targetable]` is expected. ADR-0009 ratifies this.
 6. GDScript has no module boundaries and every `class_name` is global, so rules 1 to 5 are enforced by a layer-import lint in CI (ADR-0007), not by the language.
 
 ### System-to-layer table
@@ -131,14 +131,14 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | **Flow** (Game State, pure object) | Stage state machine (Build, Wave, Intermission, Paused, Won, Lost, Fatal). Lives. `intermission_left` as integer ticks. The stage result. The remembered phase while Paused. | `phase()`, `lives()`, `result()`, `in_build()`, `intermission_left`; commands `start_wave()`, `call_early()`, `pause()`, `resume()` (names proposed, QQ-18); signals `phase_changed`, `lives_changed`, `wave_called_early` | Enemy & Wave signals (`wave_cleared`, `waves_complete`, `enemy_leaked`); injected `cancel_input()` and the battle FatalLatch; the adapter's lifecycle signal (wired by the Builder's wrapper step) | None |
-| **Combat** | `Targetable` base class, `DamageEvent` value, one Health and one Status per target, per-source damage counters. | `deliver(event) -> float`; `apply_slow`; `speed_factor`; `tick_status(roster)`; `first_in`, `nearest_in`, `all_in_radius`; `dealt_by_id`, `dealt_by_kind`, `dealt_total`, `hero_share`; `is_dead`, `hp_left`; `report_attack`; signals `attack_fired`, `damage_applied` | Values passed in by callers; `to_ticks` and `dt` injected at build | None (pure) |
+| **Combat** | `Targetable` base class, `DamageEvent` value, `Health` and `Status` classes (one each per target, held one way by the Targetable, created by `attach`), per-source damage counters. | `attach(t, max_hp) -> bool`; `deliver(event) -> float`; `apply_slow`; `speed_factor`; `tick_status(roster)`; `first_in`, `nearest_in`, `all_in_radius` (float scalar origins); `dealt_by_id`, `dealt_by_kind`, `dealt_total`, `hero_share`; `is_dead`, `hp_left`; `report_attack`; signals `attack_fired`, `damage_applied` | Values passed in by callers; `to_ticks` injected at build (it carries the fixed `dt`; Combat takes no separate `dt`, ADR-0009) | None (pure) |
 | *Stat & Modifier (VS)* | Modifier stack, fixed evaluation order | Behind `StatAccessor` | Catalogue, tree nodes | None |
 
 ### Feature
 
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
-| **EnemyWave** | Roster (sole owner of enemies), wave state machine, cached positions along the path polyline, `spawn_id` counter | `roster()`, `targets()` (both in `spawn_id` order, valid for the slot only); `advance(tick)`, `reap()`, `start_next_wave()`, add-enemy step; signals `enemy_leaked(lives_cost)`, `enemy_killed(bounty)`, `wave_cleared(intermission_duration)`, `waves_complete` | Stage and Wave records (direct), stats via accessor, Combat attach call, injected `halted()` and error sink | None in the sim. Views use `CanvasItem._draw` (see Presentation) |
+| **EnemyWave** | Roster (sole owner of enemies), per-enemy `ReadContext`s keyed by `spawn_id`, wave state machine (`WaveState`), `PathTrack` (cached cumulative lengths), `spawn_id` counter | `roster()`, `targets()` (both in `spawn_id` order, internal buffers, read-only, valid for the slot only); `advance()`, `reap()`, `start_next_wave()`, `add_enemy(def_id, start_distance)` (EnemyWave and tests only); signals `enemy_leaked(lives_cost)`, `enemy_killed(bounty)`, `wave_cleared(intermission_duration)`, `waves_complete` | Stage and Wave records (direct), stats via accessor, `Combat.attach`, `dt`, `FieldBounds` size, injected `halted()`, `fatal`, error sink and `to_ticks` | None in the sim. Views use `CanvasItem._draw` (see Presentation) |
 | **TowerSim** | Gold (non-negative int), slots, towers, per-tower `cooldown_left` (ticks) | `build(slot_index, tower_id) -> BuildResult`, `upgrade(slot_index) -> UpgradeResult`, `tick()`, `slot_state()`, `chip_state()`, `gold()`; signals `gold_changed`, `tower_built`, `tower_upgraded` | `slot_positions` from the Stage record; accessor; `enemy_killed` straight from EnemyWave and `wave_called_early` from Flow (both wired by the Builder); injected `targets()` and `halted()`; Combat helpers | None |
 | **HeroSim** | Hero position, pin target, pin state, burst state, cooldown, telegraph, run counters | `pin(pos) -> PinResult`, `burst(pos) -> BurstResult`, `tick()`, read-only queries (`position`, `pin_target`, `pin_state`, `burst_state`, `cooldown_left`), counters; signals `hero_pinned`, `burst_started` | Stage record (`hero_start`, `pin_rect`, `pin_exclusion`), accessor, Combat, injected `targets()`, `halted()`, `in_build()` and `left_handed` | None |
 | **PinGeometry** | Pure clamp and validity maths in float scalars | `is_valid(pos) -> PinResult` (`OUT_OF_BOUNDS`, `BUTTON_ZONE` or `OK`, per Hero Rule 14), `clamp(pos)` | Pin rect and exclusion segments | None (avoids `Vector2` methods on purpose, see QQ-05) |
@@ -362,8 +362,12 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | `ValidationError` | `RefCounted` | `src/foundation/data/validation_error.gd` | `code: StringName`, `source: String`, `record_id: StringName`, `field: StringName` | ADR-0002 |
 | Record classes: `TowerRecord`, `EnemyRecord`, `WaveRecord`, `StageRecord`, `HeroRecord`, `BurstRecord`, `InputRecord` | `Resource` or `RefCounted` (format is ADR-0002) | `src/foundation/data/records/` | `id: StringName` plus each GDD's fields. `StageRecord` holds `path_points`, `slot_positions`, `path_width`, `requires_bend`, `early_call_seconds_per_gold`, `hero_start`, `pin_rect`, `pin_exclusion`, `scene_ref`. `InputRecord` holds `drag_slop`, `tap_slop`, `edge_reject_margin`, `left_handed` | ADR-0002 |
 | `ReadContext` | `RefCounted` | `src/foundation/data/read_context.gd` | `def_id: StringName`, `level: int = 0`, `live_entity: Object = null`. **One reused instance per caller** (per enemy, per tower slot, one for the hero), never one per read, so a tick allocates nothing | ADR-0005 |
-| `Targetable` | `RefCounted` | `src/core/combat/targetable.gd` | `spawn_id: int`, `position: Vector2` (cached once per tick), `removed: bool`, `health: Health`, `status: Status` | ADR-0009 |
-| `Enemy` | `Targetable` | `src/feature/enemy_wave/enemy.gd` | Adds `def_id: StringName`, `distance: float`. Its `ReadContext` is held by EnemyWave keyed by `spawn_id`, never by the enemy (ADR-0005, no cycle) | ADR-0009 |
+| `Targetable` | `RefCounted` | `src/core/combat/targetable.gd` | `spawn_id: int`, `distance: float`, `pos_x: float`, `pos_y: float` (cached once per tick; float scalars, not `Vector2`, QQ-05), `removed: bool`, `health: Health`, `status: Status`; `view_position() -> Vector2` for views and view-signal payloads only | ADR-0009 |
+| `Enemy` | `Targetable` | `src/feature/enemy_wave/enemy.gd` | Adds `def_id: StringName`, `segment: int` (path segment hint); `_init` calls `super(spawn_id)`. Its `ReadContext` is held by EnemyWave keyed by `spawn_id`, never by the enemy (ADR-0005, no cycle) | ADR-0009 |
+| `Health` | `RefCounted` | `src/core/combat/health.gd` | `hp: float`, `max_hp: float` (the spawn seed). Holds no reference | ADR-0009 |
+| `Status` | `RefCounted` | `src/core/combat/status.gd` | `strength: float`, `ticks_left: int`. Holds no reference | ADR-0009 |
+| `PathTrack` | `RefCounted` | `src/feature/enemy_wave/path_track.gd` | `static make(path_points) -> PathTrack` (null on unusable points); cumulative lengths; `place(e: Enemy)` | ADR-0009 |
+| `FieldBounds` | `RefCounted` (constants only) | `src/foundation/field_bounds.gd` | `WIDTH := 540.0`, `HEIGHT := 960.0`; injected into EnemyWave by the Builder | ADR-0009 (ADR-0003 may take ownership) |
 | `DamageEvent` | `RefCounted` | `src/core/combat/damage_event.gd` | `target: Targetable`, `amount: float`, `source_kind: Combat.SourceKind`, `source_id: StringName` | ADR-0009 |
 | `StageResult` | `RefCounted` | `src/core/flow/stage_result.gd` | `outcome: Flow.Phase` (WON, LOST or FATAL), `last_wave_started: int`, `lives_left: int`, per-source damage copied from Combat | ADR-0006 |
 | `Battle` | `RefCounted` | `src/root/battle.gd` | Read-only members: `flow: Flow`, `combat: Combat`, `enemy_wave: EnemyWave`, `tower_sim: TowerSim`, `hero_sim: HeroSim`, `fatal_latch: FatalLatch`, `stat_accessor: StatAccessor` (ADR-0005) | ADR-0001 |
@@ -482,9 +486,10 @@ func deliver(event: DamageEvent) -> float                            # applies m
 func apply_slow(enemy: Targetable, strength: float, seconds: float) -> void   # Combat converts seconds to ticks
 func speed_factor(enemy: Targetable) -> float
 func tick_status(roster: Array[Targetable]) -> void
-func first_in(list: Array[Targetable], origin: Vector2, max_range: float) -> Targetable     # lowest spawn_id on ties
-func nearest_in(list: Array[Targetable], origin: Vector2, max_range: float) -> Targetable
-func all_in_radius(list: Array[Targetable], impact: Vector2, radius: float) -> Array[Targetable]
+func attach(t: Targetable, max_hp: float) -> bool                                           # ERR_ALREADY_ATTACHED, ERR_BAD_MAX_HP
+func first_in(list: Array[Targetable], origin_x: float, origin_y: float, max_range: float) -> Targetable     # greatest distance; lowest spawn_id on ties
+func nearest_in(list: Array[Targetable], origin_x: float, origin_y: float, max_range: float) -> Targetable
+func all_in_radius(list: Array[Targetable], impact_x: float, impact_y: float, radius: float) -> Array[Targetable]
 func is_dead(enemy: Targetable) -> bool
 func hp_left(enemy: Targetable) -> float
 func report_attack(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float) -> void
@@ -495,25 +500,29 @@ func hero_share() -> float
 signal attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)
 signal damage_applied(event: DamageEvent, applied: float, position: Vector2, killed: bool, spawn_id: int)
 ```
-Invariants: every HP change goes through `deliver`. Guards run in a fixed order (removed, amount, dead) and report named `push_error` codes. The parameter is `max_range` because `range` is a GDScript global. Combat reads no catalogue data. Helpers never mutate the list and skip the dead. View signals carry copied positions, and listeners never call `deliver`. The list parameter types (`Array[Targetable]`) are this document's proposal; the GDD leaves list typing to the ADR.
+Invariants: every HP change goes through `deliver`. Guards run in a fixed order (removed, amount, dead) and report named `push_error` codes. The parameter is `max_range` because `range` is a GDScript global. Combat reads no catalogue data. Helpers never mutate the list and skip the dead. View signals carry copied positions, and listeners never call `deliver`. ADR-0009 fixes the list type as `Array[Targetable]`, sim positions as float scalars (`Vector2` only in `report_attack` and the view signals), `attach` as the registration call, and `push_error` direct for Combat's guard codes (a scoped exception to ADR-0001 Decision 4).
 
 ### B7. Enemy and Wave (ADR-0009)
 
 ```gdscript
 class_name EnemyWave extends RefCounted
-func advance(tick: int) -> void
+func advance() -> void                      # EnemyWave owns wave_tick; returns at once if add_enemy fails
 func reap() -> void
 func start_next_wave() -> void              # parameterless; commits at wave_tick 0
+func add_enemy(def_id: StringName, start_distance: float) -> bool   # EnemyWave and tests only
 func roster() -> Array[Targetable]          # spawn_id order; caller must not hold it past its slot
 func targets() -> Array[Targetable]         # targetable only: centre inside the 540x960 field
 func wave_index() -> int                    # view-only read requested by the HUD
 func got_through_by_type() -> Dictionary    # view-only read requested by the HUD
+enum WaveState { WAITING, ACTIVE, FINISHED }
+func wave_state() -> WaveState
+func wave_tick() -> int
 signal enemy_leaked(lives_cost: int)
 signal enemy_killed(bounty: int)
 signal wave_cleared(intermission_duration: float)
 signal waves_complete()                     # breaks the past-tense rule: QQ-07
 ```
-The enemy stays a valid reference after removal (`removed` is set, the object is not freed). Lists are built as `Array[Targetable]` from the start, since typed arrays are invariant.
+The enemy stays a valid reference after removal (`removed` is set, the object is not freed). Lists are built as `Array[Targetable]` from the start, since typed arrays are invariant (ADR-0009 V2). `roster()` and `targets()` return EnemyWave's internal buffers, read-only by contract and size-checked at each `advance()` and `reap()`; a removed enemy leaves both before its signal fires. Constructor, loops and `add_enemy`: ADR-0009 Decision 7.
 
 ### B8. TowerSim and HeroSim commands (ADR-0010)
 
@@ -538,7 +547,7 @@ func burst(pos: Vector2) -> BurstResult
 signal hero_pinned(position: Vector2)
 signal burst_started(aim_point: Vector2, telegraph_ticks: int)
 ```
-Invariants: commands run only between ticks. State is checked before geometry. A refusal mutates and emits nothing. All stats a command needs are read before any mutation, so a bad read halts with nothing half done. After `OK`, the enum lists checks in the GDD's order. TowerInput's `slot_tapped` and `tower_inspected` are signals from TowerInput, not reads.
+Invariants: commands run only between ticks. State is checked before geometry. A refusal mutates and emits nothing. All stats a command needs are read before any mutation, so a bad read halts with nothing half done. After `OK`, the enum lists checks in the GDD's order. TowerInput's `slot_tapped` and `tower_inspected` are signals from TowerInput, not reads. ADR-0009 binds HeroSim and TowerSim to float scalar sim positions: `pin(pos)` and `burst(pos)` take `Vector2` from HeroInput and convert on entry; stored hero position, pin target and aim point are float pairs; `hero_pinned` and `burst_started` stay `Vector2` as view signals.
 
 ### B9. Injected values and callables (ADR-0001)
 
@@ -666,10 +675,10 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. | High | ADR-0003 |
 | QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
-| QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 |
+| QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 (float policy); ADR-0009 makes every sim position a float scalar pair and verifies `Vector2` precision (V1) |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
-| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. | High | ADR-0001, ADR-0004, ADR-0009 |
+| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009 |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
 | QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004, ADR-0011, performance-analyst |

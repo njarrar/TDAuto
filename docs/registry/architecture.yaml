@@ -93,6 +93,7 @@ state_ownership:
     write_access: data-config-only
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
   - state: stat_reads
@@ -103,6 +104,37 @@ state_ownership:
     write_access: read-only
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - state: enemy_roster
+    status: active
+    owner_system: enemy-wave
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "EnemyWave.roster() and targets() -> Array[Targetable], internal buffers, read-only, spawn_id order, never kept past the reader's slot; only EnemyWave writes distance, pos_x, pos_y, removed; add_enemy is the one join path"
+    write_access: enemy-wave-only
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - state: enemy_health_and_status
+    status: active
+    owner_system: combat
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "Combat.attach(t, max_hp) creates Health and Status on the Targetable; read through is_dead, hp_left, speed_factor; written only by deliver, apply_slow, tick_status"
+    write_access: combat-only
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - state: damage_counters
+    status: active
+    owner_system: combat
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    interface: "dealt_by_id(id: StringName), dealt_by_kind(kind), dealt_total(), hero_share() -> float; readable until the battle is dropped"
+    write_access: combat-only
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
 
@@ -212,6 +244,45 @@ interfaces:
     signal_signature: "ReadContext{def_id: StringName, level: int = 0, live_entity: Object = null}; one per caller, created with its owner, reused, held by the owning system"
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - contract: damage_delivery
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - tower-sim
+      - hero-sim
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    signal_signature: "Combat.deliver(event: DamageEvent) -> float, inside a tick only; guards removed, amount, dead; report_attack before deliver; one DamageEvent per victim"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - contract: targeting_helpers
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - tower-sim
+      - hero-sim
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    signal_signature: "first_in/nearest_in(list: Array[Targetable], origin_x: float, origin_y: float, max_range: float) -> Targetable; all_in_radius(list, impact_x, impact_y, radius) -> Array[Targetable]; inclusive squared distance, lowest spawn_id ties, never mutate, skip dead and removed"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - contract: combat_attach
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - enemy-wave
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    signal_signature: "Combat.attach(t: Targetable, max_hp: float) -> bool; false with ERR_ALREADY_ATTACHED or ERR_BAD_MAX_HP; EnemyWave then calls fatal and adds nothing"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
 
@@ -282,10 +353,11 @@ api_decisions:
     reason: "Parser-checked wiring; lambdas and bind() can hold strong references and make RefCounted cycles"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
   - purpose: release_relevant_checks
-    status: active
+    status: "superseded_by: ADR-0009"
     api: "injected fatal or dev_error plus push_error"
     not: "assert, print_debug"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
@@ -334,6 +406,27 @@ api_decisions:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-04
     revised: ""
+  - purpose: release_relevant_checks_v2
+    status: active
+    api: "injected fatal or dev_error plus push_error; exception: Combat's guard codes (ERR_REMOVED, ERR_BAD_AMOUNT, ERR_BAD_SLOW, ERR_BAD_MAX_HP, ERR_ALREADY_ATTACHED) call push_error directly"
+    not: "assert, print_debug"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    reason: "assert and print_debug are stripped from export builds; Combat's guards catch unreachable caller bugs, change nothing, and keep to_ticks its only dependency; bad max_hp is escalated to fatal by EnemyWave"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: sim_position_representation
+    status: active
+    api: "float scalar pairs (pos_x, pos_y; origin_x, origin_y; impact_x, impact_y) in all sim state and comparisons, including HeroSim and TowerSim"
+    not: "Vector2 for any stored or compared sim position (allowed only for adapter input, command arguments converted on entry, report_attack, view signals, view_position())"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    reason: "Vector2 is expected 32-bit (QQ-05, V1); data is PackedFloat64Array and PinGeometry is scalar"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -371,6 +464,9 @@ forbidden_patterns:
     description: "No sim object stores Battle in a field, and no RefCounted cycle exists in battle code."
     why: "GDScript has no cycle collector; a cycle leaks the old battle on retry"
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
   - pattern: session_object_holds_battle_callable
     status: "superseded_by: ADR-0005"
@@ -389,6 +485,9 @@ forbidden_patterns:
     description: "An entity (enemy, tower, hero) never stores its own ReadContext; the owning system holds contexts keyed by spawn_id or slot and drops them with the entity."
     why: "ReadContext.live_entity points at the entity; both holding each other is a RefCounted cycle that never frees"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
   - pattern: stat_key_literal
     status: active
@@ -401,6 +500,9 @@ forbidden_patterns:
     description: "No value read from the StatAccessor is stored for later use, except max_hp seeding Health at spawn."
     why: "Vertical Slice modifiers must take effect with no call-site change (TR-data-008)"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
   - pattern: mutable_static_var
     status: active
@@ -431,12 +533,51 @@ forbidden_patterns:
     description: "A record stores other records only by StringName ID, never as an object reference or file path (owned sub-data excepted)."
     why: "Keeps records read-only, snapshot-safe and free of cycles"
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
   - pattern: method_named_load
     status: active
     description: "No method named load in src/."
     why: "It shadows GDScript's global load() inside its class"
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-04
+  - pattern: core_names_feature_enemy
+    status: active
+    description: "No code under src/core/ names Enemy or any Feature class; Combat takes and returns Targetable, lists are Array[Targetable] from creation."
+    why: "Upward dependency (layer rule 1); typed arrays are invariant"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: combat_piece_back_reference
+    status: active
+    description: "Health and Status hold no reference to their Targetable or any object; Enemy holds no ReadContext, EnemyWave, Combat, Battle or Callable."
+    why: "A back-reference is a RefCounted cycle that never frees"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: hp_change_outside_deliver
+    status: active
+    description: "No code writes hp, max_hp, strength or ticks_left outside src/core/combat/; every HP change goes through deliver inside a tick."
+    why: "Counters and hero share would be bypassed (Combat Rule 2)"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: mutate_roster_view
+    status: active
+    description: "No caller appends to, erases from, sorts, clears or keeps the arrays returned by roster() or targets(); filtered lists go in the caller's own buffer."
+    why: "They are EnemyWave's internal buffers; mutation corrupts the sole-owner roster"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: listener_stores_damage_event
+    status: active
+    description: "No damage_applied listener stores the DamageEvent or reads event.target; views use the copied position and spawn_id."
+    why: "Keeps reaped enemies alive and makes views depend on sim objects"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+    added: 2026-11-04
+  - pattern: remove_during_foreach
+    status: active
+    description: "No element is removed from an array inside a for-in loop over it; removal loops are while i < arr.size() index loops that do not advance i after remove_at(i)."
+    why: "Skips the next element and misses children appended by listeners (Enemy & Wave Acceptance 28)"
+    adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
 
 # Example:

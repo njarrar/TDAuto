@@ -62,11 +62,11 @@ HeroInput changes the battle only through the two commands. Bots call the two co
 **Tick.** In Combat Rule 11's slot, with `halted()` checked after every read and signal, returning at once:
    1. Walking: subtract 1 from `walk_left`, and set the position along the line. At 0: exactly at the pin, Pinned.
    2. If `attack_left` is above 0, subtract 1. If still above 0, or not Pinned, go to 5.
-   3. Read `leash_radius`, then `nearest_in(targets(), position, leash)`. None: hold at 0 and go to 5.
+   3. Read `leash_radius`, then `nearest_in(targets(), pos_x, pos_y, leash)`, with the hero's position as two floats (ADR-0009). None: hold at 0 and go to 5.
    4. Read `damage` and `attack_interval`. Set `attack_left = to_ticks(attack_interval)`, call Combat's `report_attack`, which emits `attack_fired`, then `deliver`.
    5. If Cooling: subtract 1 from `cooldown_left`; at 0, Ready. Nothing else touches the burst here, since `cooldown_left` is also 0 while Ready and Telegraphing.
    6. Telegraphing: subtract 1 from `telegraph_left`. If still above 0, end.
-   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius`, `report_attack` with source kind BURST, the Burst's ID and the hero's position as origin, one `deliver` per victim, then the counters.
+   7. Release: read `radius`, `damage` and `cooldown`. Set Cooling and `cooldown_left = to_ticks(cooldown)`. Then `all_in_radius(targets(), aim_x, aim_y, radius)`, with the aim point as two floats (ADR-0009), `report_attack` with source kind BURST, the Burst's ID and the hero's position as origin (as `Vector2`, a view payload), one `deliver` per victim, then the counters.
 
 **Starter values.** These are fixtures, not balance.
 
