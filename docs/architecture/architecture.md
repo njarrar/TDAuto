@@ -1,13 +1,14 @@
 # TowerRiot: Master Architecture
 
 ## Document Status
-- Version: 3 (v2 revised after TD-ARCHITECTURE and LP-FEASIBILITY CONCERNS; v3 carries the 2026-11-03 cross-GDD fixes and closes QQ-09, QQ-19 and QQ-20. No gate has re-reviewed v2 or v3)
-- Last Updated: 2026-11-03
+- Version: 4 (v2 revised after TD-ARCHITECTURE and LP-FEASIBILITY CONCERNS; v3 carries the 2026-11-03 cross-GDD fixes and closes QQ-09, QQ-19 and QQ-20; v4 brings Data Flow, API Boundaries, ADR Audit and Required ADRs in line with the second 2026-11-04 architecture review: the Flow and Battle HUD revisions, Hero Rule 2, and 125 requirements)
+- Last Updated: 2026-11-04
 - Engine: Godot 4.7.2 (GDScript, Mobile renderer, Godot Physics 2D). Pinned in `docs/engine-reference/godot/VERSION.md`.
 - GDDs Covered (8 MVP systems): `data-config-pipeline`, `input-gesture-resolver`, `game-state-stage-flow`, `combat-damage`, `enemy-wave`, `tower-system`, `hero-system`, `battle-hud`. Context only: `game-concept`, `systems-index`.
 - Vertical Slice and Alpha systems (14 of 22) have no GDD yet. They appear in the layer map as reserved slots with the seams MVP code must leave for them. This document is revised when those GDDs exist.
 - ADRs Referenced: none exist yet. 11 are proposed (ADR-0001 to ADR-0011, numbers provisional until `/architecture-decision` assigns them). Version 1 proposed 15; four pairs were folded together to cut scope for a solo developer. Every contract below that a GDD defers to an ADR is marked **ADR-pending**: it is a working default, not a decision.
-- Technical Requirements: 120, all registered in `docs/architecture/tr-registry.yaml` (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud). Coverage by ADRs: 0 of 120.
+- Technical Requirements: 125, all registered in `docs/architecture/tr-registry.yaml` v4 (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud). Coverage by ADRs: 0 of 125.
+- Flow (`game-state-stage-flow`) and Battle HUD (`battle-hud`) are In Review with re-reviews pending, and Hero's Rule 2 amendment awaits a re-check. A rule change there can move this document again.
 - TD-ARCHITECTURE: 2026-11-03, REVISED after CONCERNS. v1 findings B1 to B4 and A3 (blocking) and A1, A2, A4 to A10 (advisory) applied in v2. A11 (acceptance of the four GDD amendments) waits for the ADRs (QQ-08). v2 has not been re-reviewed.
 - LP-FEASIBILITY: 2026-11-03, REVISED after CONCERNS. v1 findings 1 to 7 (blocking) applied in v2, except finding 1's note that `sink` was invented: the Input GDD defines it as a TAP-only `bool`, and v2 keeps it with that type. Advisory 8 to 15 applied or carried into the named ADRs. v2 has not been re-reviewed.
 
@@ -255,6 +256,7 @@ After any step that can commit an outcome (leak, kill, fatal), later steps check
 | `hero_pinned`, `burst_started` | HeroSim | Views, HUD | After state set; handlers never issue commands |
 | `attack_fired`, `damage_applied` | Combat | Combat view, audio (Alpha) | View-only; listeners never call `deliver` |
 | Gesture signals | InputResolver | HeroInput, TowerInput, HudLogic | Re-entrant calls queue FIFO and drain in the outermost call |
+| `tower_upgraded`, `burst_started`, gesture signals (dev builds only) | TowerSim, HeroSim, InputResolver | Gesture log harness (Input Rule 13) | Listens and logs only; it also reads `chip_state()` at tower prompts. Only `burst_started` counts as a burst, since a `drag_ended` from the button may be a cancel. Absent in release builds, so it is not a listener the allowlist test may rely on (TR-input-015) |
 
 Rules for all of them (ADR-0006):
 1. **Commit, then emit.** State is final before the first listener runs.
@@ -293,14 +295,16 @@ Result screen "Retry" pressed
   ─► sets idempotent retry latch on AppRoot (does NOT free the caller)
 AppRoot next frame:
   1. If Fatal: show fatal screen, stop
-  2. Stop Clock;  InputResolver.cancel()
+  2. Stop Clock;  old_battle.cancel_input()   (the same guarded method Flow uses; TR-state-016)
   3. Free the wrapper and its nodes (adapter, HUD, views). Drop every reference to the Battle and the
      resolver: they are RefCounted, so they cannot be freed, only released. A weakref to the old
-     Battle must then read null (TR-state-009, TR-enemy-008, TR-tower-013). That holds only if no
-     reference cycle exists: no lambda or bind() capturing a sim object, no sim back-reference to Battle.
+     Battle, every system, the accessor and the resolver must then read null (TR-state-009,
+     TR-enemy-008, TR-tower-013). That holds only if no reference cycle exists: no lambda or bind()
+     capturing a sim object, no sim back-reference to Battle. A move from a finger held across the
+     retry is dropped until it lifts.
   4. Builder.build(...) again with the SAME catalogue (it is held by AppRoot)
 ```
-Retry resets nothing in place. It rebuilds. `free()` vs `queue_free()` timing for the wrapper nodes, and whether a method Callable holds a strong reference, are **NEEDS VERIFICATION** (ADR-0001, QQ-17).
+Retry resets nothing in place. It rebuilds. A latch set outside Won or Lost causes no rebuild. A method `Callable` or signal connection does not keep a `RefCounted` target alive (4.7.2 editor probe, QQ-17), so the old battle's helpers live only through `Battle`'s typed fields and go when it goes (TR-state-015). `free()` vs `queue_free()` timing for the wrapper nodes, and the Callable probe on an export template and a phone, are **NEEDS VERIFICATION** (ADR-0001).
 
 ### 6. Pause and focus path
 
@@ -317,14 +321,19 @@ Real-time models (button arming, chip window) freeze while Paused (TR-hud-007).
 ### 7. Fatal path
 
 ```
-Any of: catalogue load failure · bad accessor call · stage scene that fails to load · bad stage input
+Any of: catalogue load failure · bad accessor call · stage scene that fails to load or instantiate
+        · bad stage input, such as a null Stage record (build calls the handler and returns null)
+        · InputResolver.create() returning null in the wrapper
   ─► fatal(cause)   (injected Callable; idempotent; keeps the FIRST cause)
-       latches the per-battle FatalLatch and the AppRoot FatalLatch; Flow enters FATAL and emits
-       phase_changed(FATAL); the current tick halts; a partial build is discarded;
-       AppRoot (state Fatal) shows the catalogue-free fatal screen and never opens saves
+       latches the per-battle FatalLatch and the AppRoot FatalLatch; Flow enters FATAL from any
+       state, Won, Lost and Paused included, calls cancel_input() and emits phase_changed(FATAL);
+       a transition interrupted by it emits nothing more; the current tick halts;
+       a partial build is discarded with 0 ticks; the wrapper checks the latch after each
+       assembly step and stops; AppRoot frees the wrapper and the battle on its next frame,
+       then (state Fatal) shows the catalogue-free fatal screen and never opens saves
   Development builds name each error by file, record and field.
 ```
-GDScript has no exceptions, so after `fatal` every caller checks `halted()` and returns (TR-state-011). The injected `halted()` is `Battle.halted()`: true when Flow is WON, LOST or FATAL, or the battle FatalLatch is set. It is false while PAUSED; the tick gate, not `halted()`, stops time during a pause.
+GDScript has no exceptions, so after `fatal` every caller checks `halted()` and returns (TR-state-011). The injected `halted()` is `Battle.halted()`: true when Flow is WON, LOST or FATAL, or the battle FatalLatch is set. It is false while PAUSED; the tick gate, not `halted()`, stops time during a pause. HudLogic tests `phase() == FATAL` rather than `halted()`, because its result snapshot runs after an outcome. A stage scene whose script is broken still loads and is not caught here; it shows on the first run.
 
 ### 8. Save/load path (Vertical Slice, reserved)
 
@@ -449,6 +458,7 @@ func cancel_input() -> void       # public, guarded with is_valid(); Flow and Ap
 
 class_name BattleBuilder extends RefCounted
 static func build(catalogue: Catalogue, stage_id: StringName, seed: int, fatal_handler: Callable) -> Battle
+                                  # null after calling fatal_handler when the stage cannot be built
 ```
 Invariants: `build` touches no node, so bots and tests call it headless. It creates the per-battle FatalLatch first, then makes every connection in one function. It is never called from inside a signal. Injected callables are method Callables only: no lambda or `bind()` that captures a sim object, and no sim object holds a reference back to `Battle`, so dropping the `Battle` frees everything and the weakref test passes. Gameplay classes never read `Engine`, `Time`, `OS`, a timer or `await`.
 
@@ -510,8 +520,8 @@ func reap() -> void
 func start_next_wave() -> void              # parameterless; commits at wave_tick 0
 func roster() -> Array[Targetable]          # spawn_id order; caller must not hold it past its slot
 func targets() -> Array[Targetable]         # targetable only: centre inside the 540x960 field
-func wave_index() -> int                    # view-only read
-func got_through_by_type() -> Dictionary    # view-only read
+func wave_index() -> int                    # Flow reads it for the result (sim-to-sim); the HUD for pips and text
+func got_through_by_type() -> Dictionary    # view-only read for the result
 signal enemy_leaked(lives_cost: int)
 signal enemy_killed(bounty: int)
 signal wave_cleared(intermission_duration: float)
@@ -580,26 +590,26 @@ No ADRs exist (`docs/architecture/adr-*.md` matches nothing; `adr-dep-graph.sh` 
 
 ### Traceability Coverage Check
 
-Technical Requirements Baseline: **120 requirements from 8 GDDs, 120 registered, 0 provisional** (TR registry read, 120 entries, all `active`). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the review that built it is `docs/architecture/architecture-review-2026-11-03.md`.
+Technical Requirements Baseline: **125 requirements from 8 GDDs, 125 registered, 0 provisional** (TR registry v4 read, 125 entries, all `active`). No GDD contributed zero requirements. The full per-requirement matrix is `docs/architecture/requirements-traceability.md`; the review that built it is `docs/architecture/architecture-review-2026-11-04b.md`. That review added TR-state-015, TR-state-016, TR-enemy-017 and TR-hud-017 and reworded 17 others.
 
 | Status | Count |
 |---|---|
 | Covered by an Accepted ADR | 0 |
 | Covered by a Proposed ADR | 0 |
 | Partial | 0 |
-| **Gap** | **120** |
+| **Gap** | **125** |
 
-By GDD: data-config 15, input 16, game-state 14, combat 14, enemy-wave 15, tower 15, hero 15, battle-hud 16. By layer tag: 53 Foundation, 44 Core, 3 Feature, 20 Presentation. By engine risk: 14 HIGH, 31 MEDIUM, 75 LOW.
+By GDD: data-config 15, input 16, game-state 16, combat 14, enemy-wave 17, tower 15, hero 15, battle-hud 17. By layer tag: 55 Foundation, 46 Core, 3 Feature, 21 Presentation. By engine risk: 15 HIGH, 33 MEDIUM, 77 LOW.
 
-The per-ADR coverage in the next section assigns every one of the 120 requirements to exactly one proposed ADR, so no requirement is left without a planned decision.
+The per-ADR coverage in the next section assigns every one of the 125 requirements to exactly one proposed ADR, so no requirement is left without a planned decision.
 
 ## Required ADRs
 
-Eleven ADRs close all 120 gaps. Numbers are proposed, in dependency order, and `/architecture-decision` assigns the final ones. The review used labels P01 to P15; the column maps them. Version 1 proposed 15. To cut scope for a solo part-time developer (LP-FEASIBILITY 13), four pairs were folded: Fatal Path into App Lifecycle, Determinism into the Tick ADR, Combat API into the Enemy Entity ADR, and Dev Telemetry into the command and resolver ADRs. Input Resolver moved to Foundation to match its module. TR-hero-012 (bot equivalence) moved to ADR-0010 because it needs the command enums.
+Eleven ADRs close all 125 gaps. Numbers are proposed, in dependency order, and `/architecture-decision` assigns the final ones. The review used labels P01 to P15; the column maps them. Version 1 proposed 15. To cut scope for a solo part-time developer (LP-FEASIBILITY 13), four pairs were folded: Fatal Path into App Lifecycle, Determinism into the Tick ADR, Combat API into the Enemy Entity ADR, and Dev Telemetry into the command and resolver ADRs. Input Resolver moved to Foundation to match its module. TR-hero-012 (bot equivalence) moved to ADR-0010 because it needs the command enums.
 
 | Proposed ID | Title | Layer | Depends on | Review label | TRs | Engine risk |
 |---|---|---|---|---|---|---|
-| ADR-0001 | App Lifecycle, Composition Root and Fatal Path | Foundation | none | P01, P06 | 15 | HIGH |
+| ADR-0001 | App Lifecycle, Composition Root and Fatal Path | Foundation | none | P01, P06 | 17 | HIGH |
 | ADR-0002 | Catalogue Storage Format, Manifest and Validation | Foundation | ADR-0001 | P03 | 10 | HIGH |
 | ADR-0003 | Input Adapter, Display Stretch and Platform Lifecycle | Foundation | ADR-0001 | P05 | 11 | HIGH |
 | ADR-0004 | Fixed-Tick Clock, Tick Order, Frame Order and Determinism | Foundation | ADR-0001, ADR-0003 | P02, P07 | 20 | HIGH |
@@ -607,14 +617,14 @@ Eleven ADRs close all 120 gaps. Numbers are proposed, in dependency order, and `
 | ADR-0006 | Battle Signal Contracts and View Allowlist | Foundation | ADR-0001, ADR-0004 | P10 | 10 | MEDIUM |
 | ADR-0007 | Headless Test Harness, gdUnit4 and Layer Lint | Foundation | ADR-0001, ADR-0006 | P08 | 6 | MEDIUM |
 | ADR-0008 | Input Resolver Core and Signal Contract | Foundation | ADR-0003, ADR-0006 | P09, part of P15 | 11 | MEDIUM |
-| ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0005 | P11, P12 | 16 | MEDIUM |
+| ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0005 | P11, P12 | 18 | MEDIUM |
 | ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Core | ADR-0004, ADR-0008, ADR-0009 | P13, part of P15 | 10 | LOW |
-| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0009, ADR-0010 | P14 | 5 | MEDIUM |
+| ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0009, ADR-0010 | P14 | 6 | MEDIUM |
 
 ### What each ADR decides and which requirements it covers
 
-**ADR-0001 App Lifecycle, Composition Root and Fatal Path** (Foundation). Decides: no autoloads, AppRoot states (Boot, InStage, Fatal), scene-free builder, injected callables (method Callables only, no capturing lambdas or bind), per-battle FatalLatch, push_error vs assert, dev-error sink, retry by dropping references and the weakref proof, free() vs queue_free() timing. It records the settled answers on who cancels input and where the resolver is built (see Open Questions, Closed).
-Covers (15): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, TR-state-001, TR-state-002, TR-state-009, TR-state-011, TR-enemy-005, TR-enemy-012, TR-tower-006, TR-tower-013, TR-hero-004, TR-hud-006.
+**ADR-0001 App Lifecycle, Composition Root and Fatal Path** (Foundation). Decides: no autoloads, AppRoot states (Boot, InStage, Fatal), scene-free builder, injected callables (method Callables only, no capturing lambdas or bind), per-battle FatalLatch, push_error vs assert, dev-error sink, retry by dropping references and the weakref proof, free() vs queue_free() timing, the battle's strong typed fields for its helpers, and the guarded `cancel_input()`. It records the settled answers on who cancels input and where the resolver is built (see Open Questions, Closed), and repeats the Callable lifetime probe on an export template and a phone.
+Covers (17): TR-data-004, TR-data-006, TR-data-009, TR-data-011, TR-input-012, TR-state-001, TR-state-002, TR-state-009, TR-state-011, TR-state-015, TR-state-016, TR-enemy-005, TR-enemy-012, TR-tower-006, TR-tower-013, TR-hero-004, TR-hud-006.
 
 **ADR-0002 Catalogue Storage Format, Manifest and Validation** (Foundation). Decides: Resource vs JSON, record classes, strict field checks, manifest load proven on an Android export, read-only proof with duplicate_deep, content tests.
 Covers (10): TR-data-001, TR-data-002, TR-data-003, TR-data-005, TR-data-007, TR-data-013, TR-data-015, TR-enemy-001, TR-hero-014, TR-hud-016.
@@ -638,13 +648,13 @@ Covers (6): TR-data-012, TR-input-014, TR-state-013, TR-combat-012, TR-enemy-014
 Covers (11): TR-input-001, TR-input-007, TR-input-008, TR-input-009, TR-input-010, TR-input-011, TR-input-015, TR-tower-011, TR-hero-010, TR-hud-008, TR-hud-009.
 
 **ADR-0009 Enemy Entity, Roster and Combat API** (Core). Decides: Targetable base class, Health and Status attachment, roster ownership and typed lists, path lookup, deliver guards, targeting helpers, per-tick budget.
-Covers (16): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-combat-005, TR-combat-006, TR-combat-007, TR-combat-008, TR-combat-013, TR-enemy-008, TR-enemy-009, TR-enemy-010, TR-enemy-011, TR-enemy-013, TR-tower-007, TR-hero-007.
+Covers (18): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-combat-005, TR-combat-006, TR-combat-007, TR-combat-008, TR-combat-013, TR-enemy-008, TR-enemy-009, TR-enemy-010, TR-enemy-011, TR-enemy-013, TR-enemy-016, TR-enemy-017, TR-tower-007, TR-hero-007.
 
 **ADR-0010 Sim/Input Split, Command Result Codes and Dev Telemetry** (Core). Decides: HeroSim/TowerSim vs HeroInput/TowerInput, result enums with OK = 0, gold ownership, bot equivalence, run counters and run log.
 Covers (10): TR-tower-001, TR-tower-002, TR-tower-008, TR-tower-009, TR-hero-001, TR-hero-002, TR-hero-009, TR-hero-012, TR-hero-015, TR-hud-013.
 
-**ADR-0011 Battle Field Rendering and Draw-Call Budget** (Presentation). Decides: single _draw nodes, pools, draw order, path polygon, HUD draw budget, hit-flash shader question.
-Covers (5): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015.
+**ADR-0011 Battle Field Rendering and Draw-Call Budget** (Presentation). Decides: single _draw nodes, pools, draw order, path polygon, HUD draw budget and quantised redraw, hit-flash shader question.
+Covers (6): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015, TR-hud-017.
 
 ### Priority
 
