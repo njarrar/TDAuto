@@ -261,3 +261,70 @@ All eight carry warnings only; none is Blocking, so the systems index keeps each
 ## Verdict: CONCERNS (consistency only — design theory not run)
 
 No blocking issue remains. About two dozen consistency warnings are stale or one-sided cross-references, each a sentence-level edit. The design-theory warnings from the full run are design questions for first playable. Architecture is not gated on this consistency-only run: `/create-architecture` is offered after a run of both passes.
+
+---
+
+# Full re-run — 2026-11-04 — Focus: full
+
+GDDs Reviewed: 8 of 8 present
+Not read: none
+Focus: full (consistency, design theory and cross-system scenarios)
+Change since re-run 2: one commit applied the sentence-level fixes for its consistency warnings across all eight GDDs. No design value changed, except Tower's phone test, which now allows no wrong disc (Input's P1 gate).
+Coverage note: the design-theory agent checked Data & Config, Input, Flow and Combat only through their Game Feel sections and its searches, since they hold few design levers and this morning's full run covered them. The consistency agent did not assess four "no GDD yet" downstream lists. The main session checked them: hero, tower, battle-hud and enemy-wave name only later-milestone systems, each with a systems-index entry, so they are planned work, not broken references.
+
+## Consistency
+
+Blocking: none.
+
+Of re-run 2's 23 warnings, 21 are resolved, 1 is partly resolved and 1 still stands. The fixes introduced no new contradiction. These were checked: Flow Rule 1 against Battle HUD Rules 13, 14 and 19; the zero-wrong-disc phone test against Tower Rule 4, Input P1 and Battle HUD's fallback; Enemy & Wave's bot-gate rows against Hero's.
+
+Warnings:
+- ⚠️ **Data's Cross-References omit Battle HUD**, though two Dependencies rows list it. Data's other sibling rows are now in place (partly resolved). → Add a battle-hud.md row.
+- ⚠️ **Flow's Overview** says "A lost stage retries at once with nothing carried over". Rule 1 now keeps the HUD's presentation state. → "with no gameplay state carried over".
+- ⚠️ **Battle HUD criterion 33** has copies for 3 of its 10 IDs ("The other IDs get copies in their story"). Still stands.
+
+## Game design
+
+Blocking: none.
+
+This morning's warnings still standing:
+- 3b: the one-thumb attention budget (unowned).
+- 3c: greedy play against kills per burst. The log fields now exist, but Enemy & Wave's Open Question still says "hits 3 or more".
+- 3c and 3e: greedy play plus calling every wave at a 30.83% share median. Only Hero's general Open Questions own it, and no GDD decides whether the share gate runs with calls.
+- 3e: share is measured only for the whole stage.
+- 3e: the wave 6 step (partly owned by Tower's Open Question and the HUD's last-wave field).
+- 3g: "calm" against "keeps the thumb busy".
+
+Partly resolved: stage length. Enemy & Wave's row now names the mid-skill bot, but no GDD says which play the 5 to 8 minutes describes. Now owned: the 24-gold headroom, by Tower's `gold_before_last_wave` row.
+
+New warnings:
+- ⚠️ **3b/3c: calling early and building mid-wave cost attention.** Tower Rule 6 says mid-wave building costs "attention: the thumb cannot re-pin at the same time". Hero and the concept say calling early costs preparation time. No bot models either, so both trade-offs are free in every simulation. → One one-thumb bot mode, with a busy time per gesture, tests both and the 3b budget. Rerun the Always-call and Upgrade order rows on it.
+- ⚠️ **3c: lives max out.** At 10 starting lives the greedy bot ends every mixed build on 10, and mid-skill ends every one on 9. The Dominant build, Upgrade order and Always-call gates pass on ties. Tower's Open Question admits "no fixed bot can tell". → Add a measure that does not max out (total enemy progress, lowest lives during the run), or run the gates with fewer lives.
+- ⚠️ **3c/3g: letting heavies through undercuts the showcase burst.** This does not reopen the accepted decision. Enemy & Wave's Game Feel and wave 4 present "a packet closing on heavies" as the burst moment; its Open Questions accept that letting heavies through is efficient. → Add a first-playable check: do testers burst the hairpin, or let the heavies through?
+- ⚠️ **3e: greedy play with calls misses the called-run floor.** At 3.4 to 3.7 minutes, it would also miss Enemy & Wave's 3.5-minute floor for runs with every wave called.
+
+No progression competition (3a). No pillar drift or anti-pillar breach (3f).
+
+## Cross-system scenarios
+
+The five scenarios from the full run were re-walked against the edited text. The retry-state warning is resolved: Flow Rule 1 names the HUD's session flags and timer as presentation state that no gameplay system reads. The three info notes stand:
+- Unprocessed leakers are missing from "Got through" after a fatal leak.
+- Tower-first kills can beat the burst preview, and enemies die without a hit flash during clearance.
+- An open arc makes Call take two taps.
+
+## GDDs flagged for revision
+
+All carry warnings only, so the systems index keeps each at In Review.
+
+| GDD | Reason | Type | Priority |
+|-----|--------|------|----------|
+| hero-system.md | No greedy-plus-calls row; no one-thumb bot; gates that max out; "keeps the thumb busy" | Design Theory | Warning |
+| enemy-wave.md | Stale "hits 3 or more" Open Question; which play the stage length describes; heavies against the hairpin moment | Design Theory | Warning |
+| tower-system.md | Rule 6's attention cost never modelled; mixes tie with no second measure | Design Theory | Warning |
+| battle-hud.md | Log lacks share per wave and Wave-or-Intermission timing; criterion 33 copies | Both | Warning |
+| game-state-stage-flow.md | Overview "nothing carried over" | Consistency | Warning |
+| data-config-pipeline.md | No battle-hud.md row in Cross-References | Consistency | Warning |
+
+## Verdict: CONCERNS
+
+No blocking issue remains in either pass, on a run of both passes. The consistency warnings are three short edits. The design warnings are measurement and first-playable questions (a one-thumb bot, a second bot measure, per-wave share, which play the stage length describes, and two survey items), not contradictions that architecture would inherit. Architecture may begin; the design warnings belong in the Hero and Enemy & Wave stories and the first-playable test plan.
