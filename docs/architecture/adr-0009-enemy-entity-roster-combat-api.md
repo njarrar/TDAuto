@@ -55,16 +55,8 @@ Combat (Core) acts on enemies that Enemy & Wave (Feature) owns, with no upward d
 ### Problem Statement
 Tower and Hero name a victim and an amount, Enemy & Wave owns and moves the enemies, and Combat owns HP, slows and counters. The Combat GDD makes this ADR the prerequisite for its first story (object kind, attachment, spawn call, ownership, `list` typing, where `SourceKind` and `DamageEvent` live). ADR-0004 left `advance`'s argument here, ADR-0006 the `damage_applied` payload, the 2026-11-04 review the tick share, and QQ-08 two parts: the ProjectileSpawner cut and the stage geometry.
 
-### Constraints
-- **Layers** (rule 5): Core cannot name a Feature class; typed arrays are invariant (B1).
-- **ADR-0001**: no sim holds `Battle`, `AppRoot` or a `Node`; method Callables only; retry proved by weakrefs.
-- **ADR-0004**: six-step tick; `halted()` after every read, injected call and emit; `int` countdowns; scalar maths (L-VEC-1); 2.0 ms p95 per tick.
-- **ADR-0005**: one reused `ReadContext` per `Enemy`, weak live entity; `max_hp` seeds Health once.
-- **ADR-0006**: sync emit, commit then emit; Combat's signals are VIEW; `StringName` and `int` IDs.
-- **ADR-0007**: `push_error` claimed by `is_push_error(MSG)`; invariant `I` reads this ADR's queries.
-
-### Requirements
-The 17 TRs below; retry frees every enemy with no extra unwire; no hot-path allocation but `all_in_radius`; targeting fits a named share of the 2.0 ms tick.
+### Constraints and Requirements
+Rule 5 (Core cannot name a Feature class; typed arrays are invariant); ADR-0001 (no sim holds `Battle`, `AppRoot` or a `Node`; method Callables; weakref retry proof); ADR-0004 (six-step tick, `halted()` after every read, call and emit, `int` countdowns, scalar maths, 2.0 ms p95); ADR-0005 (one `ReadContext` per `Enemy`, weak); ADR-0006 (commit then emit, VIEW roles, ID types); ADR-0007 (`is_push_error`, invariant `I`). Requirements: the 17 TRs below; retry frees every enemy with no extra unwire; no hot-path allocation but `all_in_radius`.
 
 ## Decision
 
@@ -232,43 +224,18 @@ func got_through_by_type() -> Dictionary     # StringName -> int, view-only
 
 ## Alternatives Considered
 
-### Alternative 1: Flat HP and slow fields on `Targetable`
-- **Description / Pros**: `hp`, `slow_strength` and the rest on the base; fewer objects and one fewer lookup a check.
-- **Cons / Rejection Reason**: Combat state sits in a base EnemyWave also writes, so ownership rests on review alone. The saving is one read a check, which the shared pass claims anyway.
-
-### Alternative 2: Combat holds state in a `Dictionary` by `spawn_id`
-- **Cons / Rejection Reason**: a hash per check (384 a tick), entries to clean up, and a removed enemy's HP must stay answerable.
-
-### Alternative 3: Enemies as `Node2D`
-- **Rejection Reason**: a freed node cannot honour `removed`, `position` collides, ADR-0001 bans `Node` in sims, and tests need a tree.
-
-### Alternative 4: No base class, Combat typed on `Object`
-- **Rejection Reason**: no parse-time checks and slower dynamic reads; rule 5 chose the base class for this.
-
-### Alternative 5: Keep `DamageEvent` in the `damage_applied` payload
-- **Rejection Reason**: a view gets a live enemy and a reused event changes under it; plain values close a retry leak path.
-
-### Alternative 6: Keep `position: Vector2` on `Targetable`
-- **Description / Pros**: B0's proposal; matches the GDD wording and view code.
-- **Cons / Rejection Reason**: ADR-0004 L-VEC-1 keeps sim maths in scalars, so every read would unpack `.x` and `.y` from a 32-bit copy. 64-bit `x`, `y` feed the path maths with no conversion per read.
+1. **Flat HP and slow fields on `Targetable`**: fewer objects, but Combat state would sit in a base EnemyWave also writes. The one read a check it saves, the shared pass claims anyway.
+2. **Combat state in a `Dictionary` by `spawn_id`**: a hash per check, entries to clean up, and a removed enemy's HP must stay answerable.
+3. **Enemies as `Node2D`**: a freed node cannot honour `removed`, `position` collides, ADR-0001 bans `Node` in sims.
+4. **No base class, Combat typed on `Object`**: no parse-time checks, slower dynamic reads; rule 5 chose the base class for this.
+5. **`DamageEvent` in the `damage_applied` payload**: a view gets a live enemy and a reused event changes under it.
+6. **Keep `position: Vector2`** (B0's proposal, the GDD wording): ADR-0004 L-VEC-1 keeps sim maths in scalars, so each read would unpack a 32-bit copy; 64-bit `x`, `y` feed the path maths with no conversion per read.
 
 ## Consequences
 
-### Positive
-- One guarded HP path keeps hero share honest and invariant `I` true by construction.
-- Retry needs no extra teardown: the graph points one way and views get no objects.
-- Combat tests need no scene, catalogue or EnemyWave.
-- The tick budget has named shares, each with a desktop trigger.
-
-### Negative
-- Four objects per spawn, about 100 a stage.
-- Field ownership rests on lints and review; GDScript has no access control.
-- The new payload differs from Combat Rule 12 and ADR-0006's row until synced.
-- `all_in_radius` allocates one `Array` per splash or burst.
-- If the shared pass is built, Tower's per-tower read order changes.
-
-### Neutral
-- `origin` and `impact` stay `Vector2` as the GDD names them; a non-integer caller position rounds to 32-bit, deterministic per CPU.
+- **Positive**: one guarded HP path keeps hero share honest and `I` true; retry needs no extra teardown; Combat tests need no scene, catalogue or EnemyWave; each budget share has a desktop trigger.
+- **Negative**: four objects per spawn; field ownership rests on lints and review; the payload differs from Combat Rule 12 and ADR-0006 until synced; `all_in_radius` allocates per splash or burst; the shared pass, if built, changes Tower's read order.
+- **Neutral**: `origin` and `impact` stay `Vector2`; a non-integer caller position rounds to 32-bit, deterministic per CPU.
 
 ## Risks
 - **R1 Targeting on a phone.** Up to 1.9 ms at the design point on the naive path. Mitigation: P2 release run; the shared pass; V13.
