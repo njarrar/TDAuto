@@ -41,7 +41,7 @@ The catalogue of authored gameplay values needs a storage format, a loader, a va
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary (the `TextSource` seam, typed GDScript conventions, headless load rule) |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary (the `TextSource` seam, typed GDScript conventions, headless load rule); ADR-0002 App Lifecycle and Composition (fatal handler); ADR-0003 Fixed Tick, Time and Determinism (`SimTime.DT`) |
 | **Enables** | ADR-0005 (failure handler and `halted()` rule), ADR-0007 (Combat reads no data), ADR-0009, ADR-0010, ADR-0011, ADR-0013 (content test and snapshot) |
 | **Blocks** | Every story that reads a catalogue value; the Data & Config epic |
 | **Ordering Note** | ADR-0002 (App Lifecycle and Composition) owns the fatal handler that this ADR calls. ADR-0003 (Fixed Tick, Time and Determinism) owns `to_ticks`; this ADR validates the one-tick floor as a constant `1.0 / 60.0` taken from `SimTime.DT`. |
@@ -236,7 +236,7 @@ After validation the loader freezes the stat data: every nested `Dictionary` and
 
 ### Neutral
 - `architecture.md` needs these edits in its next revision (not made here): the `Catalogue.load` name becomes `from_manifest`; the API list gains the section 5 methods; `ReadContext` gains `entity`; `StageRecord` gains the missing Stage fields; `pin_exclusion` is `Array[PinExclusionShape]`, not `Array[Rect2]`, because the GDD defines each shape as two points, a radius and a hand.
-- The rename from `load` avoids an unanswered question: NOT SOURCEABLE: whether GDScript allows a static method named like the built-in `load` (`@GDScript.xml` documents `load` as a keyword-like built-in function).
+- `architecture.md` already uses `from_manifest`. The name avoids an unanswered question: NOT SOURCEABLE: whether GDScript allows a static method named like the built-in `load` (`@GDScript.xml` documents `load` as a keyword-like built-in function).
 
 ## Risks
 

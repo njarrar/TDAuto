@@ -37,11 +37,17 @@ Battle systems talk to each other through synchronous typed signals, and the she
 | **Post-Cutoff APIs Used** | None. The 4.7 rule that a typed-return override needs an explicit `return` applies to `Battle` and every `BattleReadModel` fake |
 | **Verification Required** | (1) Order in which one signal calls its listeners. (2) Whether `Object.get_signal_list()` lists script-declared signals on a `RefCounted`. (3) Whether an enum-typed signal parameter is enforced. (4) What happens when a listener connects or disconnects during an emit. (5) Reference counts drop to zero after `Battle.dispose()` |
 
+### NOT SOURCEABLE (blocks Acceptance)
+
+- Whether one signal calls its listeners in connection order (`Signal.xml`, `Object.xml` do not say). Run: headless desktop test on 4.7.2; the decision already avoids relying on it, so a failure changes only the test.
+- Whether enum-typed signal parameters are enforced. Run: headless desktop test. Payloads are typed `int` either way.
+- Whether `Object.get_signal_list()` on a `RefCounted` includes script-declared signals, which the wiring test needs. Run: headless desktop test before the wiring-test story.
+
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary (`HaltState`, plain-object rule, test seam that enumerates a battle's systems) |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary (`HaltState`, plain-object rule, test seam that enumerates a battle's systems); ADR-0002 App Lifecycle and Composition (`BattleBuilder`, teardown); ADR-0003 Fixed Tick, Time and Determinism (tick order) |
 | **Enables** | ADR-0007 Combat Data Model, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013 |
 | **Blocks** | Stories for FlowSim, EnemyWave, TowerSim, HeroSim, Combat signals, the wiring test, and every HUD story that listens |
 | **Ordering Note** | ADR-0002 owns `BattleBuilder`, which makes the connections this ADR specifies, and the teardown that calls `Battle.dispose()`. ADR-0003 owns the tick order that signals fire inside. |

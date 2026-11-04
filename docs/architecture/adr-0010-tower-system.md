@@ -39,7 +39,7 @@ Towers must run headless for bots yet need a real-time upgrade window that the s
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0005 Signal and Command Contracts; ADR-0006 Input Adapter and Resolver Integration; ADR-0007 Combat Data Model |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0005 Signal and Command Contracts; ADR-0006 Input Adapter and Resolver Integration; ADR-0007 Combat Data Model; ADR-0003 Fixed Tick, Time and Determinism; ADR-0004 Catalogue Format, Loader, Validator and Stat Accessor |
 | **Enables** | Tower stories; ADR-0013 Content Test and Bot Harness (tower content rules, bots) |
 | **Blocks** | Tower stories, in particular any TowerInput story |
 | **Ordering Note** | `Battle.build` and `Battle.upgrade` are declared in ADR-0005's command set; this ADR owns the behaviour behind them. ADR-0003 owns the clamp on the real-time feed. |

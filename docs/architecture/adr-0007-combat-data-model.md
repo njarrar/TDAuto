@@ -37,14 +37,18 @@ Combat needs a place for per-enemy Health and Status, an allocation rule for `Da
 | **Post-Cutoff APIs Used** | None |
 | **Verification Required** | (1) The 400-check targeting worst case stays near 2 ms on the low-end phone (TR-combat-007, QQ-08). (2) Whether `Vector2.distance_squared_to` computes in 32-bit or 64-bit internally (not needed by this design; scalar math is used instead). (3) Float results across x86 and ARM (QQ-09) |
 
+### NOT SOURCEABLE (blocks Acceptance)
+
+- The internal precision of `Vector2.distance_squared_to`. The decision avoids it by comparing on scalar `float`; a headless desktop test confirms the scalar path gives the expected exact results.
+
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary (plain objects, `HaltState`, shared types); ADR-0005 Signal and Command Contracts (`attack_fired`, `damage_applied`, emit rules, `DamageEvent` fields) |
-| **Enables** | ADR-0009 (roster and position cache), ADR-0010 (Tower), ADR-0011 (Hero), ADR-0013 (bots) |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary (plain objects, `HaltState`, shared types); ADR-0005 Signal and Command Contracts (`attack_fired`, `damage_applied`, emit rules, `DamageEvent` fields); ADR-0003 Fixed Tick, Time and Determinism (`SimTime.to_ticks`) |
+| **Enables** | ADR-0009 (roster and position cache, which builds on this ADR), ADR-0010 (Tower), ADR-0011 (Hero), ADR-0013 (bots) |
 | **Blocks** | Combat, Tower, Hero and Enemy & Wave stories that create or hit enemies |
-| **Ordering Note** | ADR-0003 supplies `SimTime.to_ticks`. ADR-0009 supplies the per-tick `EnemyState.position` and `spawn_id`. ADR-0004 guarantees Combat needs no catalogue (callers pass values in). |
+| **Ordering Note** | ADR-0003 supplies `SimTime.to_ticks`. ADR-0009, which depends on this ADR, fills the per-tick `EnemyState.position` and assigns `spawn_id`; this ADR only reads them. ADR-0004 guarantees Combat needs no catalogue (callers pass values in). |
 
 ## Context
 

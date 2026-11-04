@@ -108,11 +108,11 @@ class_name HumanLog extends RefCounted           # record_attempt, record_call
 class_name GestureLog extends RefCounted         # record(gesture)
 ```
 
-`HumanLog` and `GestureLog` are plain classes. They take a `LineWriter`, a `LogFormatter` and a clock `Callable` (so tests pass a fixed time). Only the real `LineWriter` touches `FileAccess`. The `LogFormatter` is the single place that depends on the JSON API, which is NOT SOURCEABLE here, so a change of API touches one class.
+`HumanLog` and `GestureLog` are plain classes. They take a `LineWriter`, a `LogFormatter` and a clock `Callable` (so tests pass a fixed time). Only the real `LineWriter` touches `FileAccess`. The `LogFormatter` is the single place that depends on the JSON API (`JSON.stringify`, sourced above), so a change of API touches one class.
 
 ### 2. Build gating
 
-`ShellBuilder` decides. In a release build it passes `NullLineWriter` (or no log object) and no log is created. The engine query that separates the build kinds is NOT SOURCEABLE; the ShellBuilder takes a `dev_logging: bool` input, set by `AppRoot` (ADR-0002), so tests set it directly. A release build must never create `user://run_log.jsonl`; a test with `dev_logging` false asserts that the fake writer received nothing.
+`ShellBuilder` decides. In a release build it passes `NullLineWriter` (or no log object) and no log is created. The engine query that separates the build kinds is `OS.is_debug_build()` (sourced above); the ShellBuilder takes a `dev_logging: bool` input, set by `AppRoot` (ADR-0002), so tests set it directly. A release build must never create `user://run_log.jsonl`; a test with `dev_logging` false asserts that the fake writer received nothing.
 
 ### 3. What writes when
 
@@ -120,14 +120,14 @@ class_name GestureLog extends RefCounted         # record(gesture)
 - Human log, attempt: one line when the attempt finishes (Won, Lost) or on Retry. A quit leaves no line. The fields are read from a `HudLogic` snapshot taken on the frame after the outcome, as the HUD already does for results.
 - Human log, call: the call is remembered at `call_early`, and the line is written at the next `wave_cleared` or outcome, with `lives lost in the called wave`.
 - Burst readiness comes from `BattleReadModel` (burst state), never through `TowerSim`.
-- Timestamps are real seconds in the shell. They use the injected clock `Callable`. Which time API backs it is NOT SOURCEABLE.
+- Timestamps are real seconds in the shell. They use the injected clock `Callable`. The `Time` candidates are sourced above; which one backs it is left to the story.
 
 ### 4. File handling
 
 - The real `LineWriter` opens the file once per launch, writes each line followed by a newline, and flushes after each line. Writing at event boundaries means a flush every few seconds at most, not every frame. That rate is an estimate from the event list above, not a measurement.
-- Open for append without truncating is required (a tester may run several attempts per launch, and the file survives across launches until sent). The mode that does this is NOT SOURCEABLE.
-- A failed open or a `false` from `write_line` switches the log to `NullLineWriter`, records one development warning, and the battle goes on. The log never calls the fatal handler. The 4.4 rule that `store_*` return `bool` is what makes the failure visible (second-hand, see Engine Compatibility).
-- Each record includes a launch ID and a build hash (the sources are NOT SOURCEABLE; the launch ID needs no sim randomness and must not touch the sim seed).
+- Open for append without truncating is required (a tester may run several attempts per launch, and the file survives across launches until sent). No mode appends: `READ_WRITE` does not truncate and starts at the beginning, and `seek_end()` moves to the end (sourced above). Whether `READ_WRITE` creates a missing file is NOT SOURCEABLE.
+- A failed open or a `false` from `write_line` switches the log to `NullLineWriter`, records one development warning, and the battle goes on. The log never calls the fatal handler. A failed open returns `null`, with the cause from `FileAccess.get_open_error()`, and `store_line` returns `bool` (sourced above); that is what makes the failure visible.
+- Each record includes a launch ID and a build hash (the sources are NOT SOURCEABLE; `Engine.get_version_info()["hash"]` is the engine's commit, not a game build hash; the launch ID needs no sim randomness and must not touch the sim seed).
 
 ### 5. Thread
 

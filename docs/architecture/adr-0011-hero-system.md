@@ -35,12 +35,16 @@ The hero must be drivable by bots with no resolver and by a thumb with an aim pr
 | **Post-Cutoff APIs Used** | None. The 4.7 override rule for typed returns applies to any base class. |
 | **Verification Required** | NOT SOURCEABLE: input path order and the `canceled` flag on touch events, which decide how `drag_cancelled` reaches HeroInput (ADR-0006). A device run is needed for the thumb offset and the aim ring. |
 
+### NOT SOURCEABLE (blocks Acceptance)
+
+- Input path order and when the `canceled` flag is set on touch events on Android and iOS, which decide how `drag_cancelled` reaches HeroInput. Run: the phone session owned by ADR-0006.
+
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0005 Signal and Command Contracts; ADR-0006 Input Adapter and Resolver Integration; ADR-0007 Combat Data Model |
-| **Enables** | Hero stories; ADR-0013 Content Test and Bot Harness (hero bots, share gate); ADR-0012 (kill preview drawing) |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0005 Signal and Command Contracts; ADR-0006 Input Adapter and Resolver Integration; ADR-0007 Combat Data Model; ADR-0003 Fixed Tick, Time and Determinism; ADR-0004 Catalogue Format, Loader, Validator and Stat Accessor |
+| **Enables** | Hero stories; ADR-0013 Content Test and Bot Harness (hero bots, share gate) |
 | **Blocks** | Hero stories, in particular any HeroInput story |
 | **Ordering Note** | Architecture.md assigns the kill preview (TR-hero-005) to ADR-0012. This ADR only provides `AimModel.preview_kills()`. |
 

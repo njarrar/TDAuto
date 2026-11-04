@@ -33,13 +33,13 @@ Content rules (layout, wave, tower and hero checks) and the balance gates (hero 
 | **Knowledge Risk** | HIGH for the version (VERSION.md). The harness calls no rendering, physics or audio API. |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`; `.claude/docs/coding-standards.md` (the CI command); `tests/README.md` (runner, exit codes); `addons/gdUnit4/plugin.cfg` (gdUnit4 6.2.0). The live 4.7.2 class reference was not fetched for this ADR. |
 | **Post-Cutoff APIs Used** | None known. |
-| **Verification Required** | NOT SOURCEABLE: how a scene file is tested for existence from GDScript (the content test must open each `scene_ref`); the API is not cited here. NOT SOURCEABLE: whether the headless run has a usable display server for a test that instantiates a scene. NOT SOURCEABLE: wall-clock time of the full bot table in CI. Run each once in CI before this ADR is Accepted. |
+| **Verification Required** | Scene existence uses `ResourceLoader.exists(path, type_hint="") -> bool` (doc/classes/ResourceLoader.xml@4.7.2-stable, `exists`); the CPU architecture for baselines comes from `Engine.get_architecture_name()` (doc/classes/Engine.xml@4.7.2-stable, `get_architecture_name`). NOT SOURCEABLE: whether the headless run has a usable display server for a test that instantiates a scene. NOT SOURCEABLE: wall-clock time of the full bot table in CI. Run each once in CI before this ADR is Accepted. |
 
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0003 Fixed Tick, Time and Determinism; ADR-0004 Catalogue Format, Loader, Validator and Stat Accessor; ADR-0005 Signal and Command Contracts; ADR-0010 Tower System; ADR-0011 Hero System |
 | **Enables** | The first bot story; Tower and Hero content rules; later stage content |
 | **Blocks** | The first bot story and the content test story |
 | **Ordering Note** | Needs ADR-0004 (Catalogue Format, Loader, Validator and Stat Accessor) for fixture records, ADR-0003 (Fixed Tick, Time and Determinism) for per-architecture baselines, and ADR-0010 and ADR-0011 for the tower and hero rules and bots. These are real inputs but not listed as dependencies because the harness shape here does not change with them. `architecture.md` has no layer-map row for a test harness; Feature is chosen because it is needed before the first bot story, not before coding starts. |
@@ -93,7 +93,7 @@ Rules and bots are game-side plain classes so that tests and a future in-editor 
 - The suite has four parts:
   1. Rule unit tests on fixtures, one per rule, including the boundary cases the GDD gives.
   2. The copies table (`enemy-wave.md` criterion 20): each broken copy of the real stage must report exactly its ID set, and the unbroken stage the empty set. A validator that reports every ID, the wrong one, or misses a second rule fails.
-  3. The real catalogue: every Stage's `scene_ref` exists (the existence call is NOT SOURCEABLE here), every record has a non-empty `rationale`, and every rule family reports the empty set.
+  3. The real catalogue: every Stage's `scene_ref` exists (checked with `ResourceLoader.exists`), every record has a non-empty `rationale`, and every rule family reports the empty set.
   4. A zero-input guard: if the catalogue holds no Stage record or no Tower record, the test fails with a message that says what was missing. Zero stages checked is not a pass.
 - Rule families join as their systems are built: layout and wave rules now (L1 to L9, L12 to L14, the wave rules); L10, L11, `intermission_min`, `peak_alive_ub` and the tower and hero rows in the Tower and Hero stories. Each new rule adds its broken copies to the table with exact ID sets.
 - Opening a `scene_ref` is the only file access. It sits behind the `TextSource` seam style of ADR-0001: a `SceneProbe` interface with a real and a fake implementation, so unit runs need no file I/O.

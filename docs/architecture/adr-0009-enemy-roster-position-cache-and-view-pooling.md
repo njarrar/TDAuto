@@ -35,14 +35,18 @@ Enemy & Wave must keep one roster, compute each enemy's position once per tick, 
 | **Post-Cutoff APIs Used** | None. Typed arrays and typed `Dictionary` are used as listed in `deprecated-apis.md` (as quoted in architecture.md). |
 | **Verification Required** | NOT SOURCEABLE: draw-call cost of 48 enemies in one `_draw` against the budget of 8 expected and 12 at most (decided in ADR-0012). NOT SOURCEABLE: `queue_free` against `free` timing, which matters only if ADR-0012 gives each enemy a Node. A device run is needed for both. |
 
+### NOT SOURCEABLE (blocks Acceptance)
+
+- Draw-call cost of 48 enemies in one `_draw`, against the budget of 8 expected and 12 at most. Run: the phone session owned by ADR-0012. Only the view-pool half of this ADR waits on it; the sim half does not.
+
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary; ADR-0003 Fixed Tick, Time and Determinism; ADR-0004 Catalogue Format, Loader, Validator and Stat Accessor; ADR-0005 Signal and Command Contracts; ADR-0007 Combat Data Model |
 | **Enables** | ADR-0012 Field and HUD Rendering and Performance Budget (uses the pool); the Vertical Slice splitter work |
 | **Blocks** | Enemy & Wave stories |
-| **Ordering Note** | QQ-06 (how `Health` and `Status` attach to `EnemyState`) is open between this ADR and ADR-0007 Combat Data Model. This ADR only requires that the attach call happens inside the add-enemy step. It does not decide the form. The `EnemyState` fields in architecture.md are the contract; ADR-0007 may change allocation, not these fields. |
+| **Ordering Note** | QQ-06 is decided in ADR-0007 Combat Data Model: `Health` and `Status` are fields on `EnemyState`, written only by Combat. The add-enemy step calls `Combat.register(enemy, max_hp)` after it builds the `EnemyState`, and the removal step calls `Combat.release(enemy)`. |
 
 ## Context
 

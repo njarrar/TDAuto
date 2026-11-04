@@ -44,8 +44,8 @@ The field and HUD are drawn from primitives on a low-end phone with a budget of 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 Simulation and Shell Boundary (views read `BattleReadModel`, never write). ADR-0002 App Lifecycle and Composition (ShellBuilder builds views; frame order). ADR-0008 Stretch Mode, Safe Area and the Field (draw space, insets, no mask cost) |
-| **Enables** | HUD stories; ADR-0009's view pool form (constrained here); ADR-0011's kill preview drawing |
+| **Depends On** | ADR-0001 Simulation and Shell Boundary (views read `BattleReadModel`, never write). ADR-0002 App Lifecycle and Composition (ShellBuilder builds views; frame order). ADR-0008 Stretch Mode, Safe Area and the Field (draw space, insets, no mask cost); ADR-0003 Fixed Tick, Time and Determinism; ADR-0009 Enemy Roster, Position Cache and View Pooling (pool data); ADR-0011 Hero System (`AimModel.preview_kills`) |
+| **Enables** | HUD stories |
 | **Blocks** | Battle HUD & Build UI stories; FieldView, TowerView, HeroView and CombatView stories |
 | **Ordering Note** | ADR-0003 owns the frame hook and `advance(ms)`; this ADR only places view refresh after the ticks in that frame |
 
