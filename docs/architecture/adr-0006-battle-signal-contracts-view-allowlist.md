@@ -1,7 +1,7 @@
 # ADR-0006: Battle Signal Contracts and View Allowlist
 
 ## Status
-Proposed
+Accepted
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation.
 
@@ -12,6 +12,7 @@ Proposed
 2026-11-04 (against `docs/engine-reference/godot/` for Godot 4.7.2, `architecture.md` v4, ADR-0001 to ADR-0005 as Accepted, `tr-registry.yaml`, `docs/registry/architecture.yaml` and the eight MVP GDDs; revised after godot-specialist and TD-ADR reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar), with the dated ADR-0001 and ADR-0004 amendments, the signal renames, and the Flow Rule 15 and HUD Rule 15 result change
 - Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`, 2026-11-04)
 - godot-specialist: CONCERNS. TD-ADR: CONCERNS. Findings resolved under Reviews; D7 and the `StageResult` choice made by the coordinator.
 - Acceptance: the user.
@@ -35,7 +36,7 @@ Battle systems talk through Godot signals, and the GDDs leave open how signals f
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted; amended, pending: `Wiring.pairs()`): `Wiring` records, method Callables, `halted()` after emits, `request_retry()` latch. ADR-0003 (Accepted): `lifecycle_paused`, `TapScreen.tapped`. ADR-0004 (Accepted; amended, pending: Decision 6, Guideline 7): tick order, `TickGuard`, commit order, clock poll. ADR-0005 (Accepted): no accessor read in a sim handler. |
+| **Depends On** | ADR-0001 (Accepted; amended 2026-11-04: `Wiring.pairs()`): `Wiring` records, method Callables, `halted()` after emits, `request_retry()` latch. ADR-0003 (Accepted): `lifecycle_paused`, `TapScreen.tapped`. ADR-0004 (Accepted; amended 2026-11-04: Decision 6, Guideline 7): tick order, `TickGuard`, commit order, clock poll. ADR-0005 (Accepted): no accessor read in a sim handler. |
 | **Enables** | ADR-0007 (listener-count test, recording fakes, lints L-SIG-1 to L-SIG-5; TR-state-013 is ADR-0007's, with Decision 8 as its contract), ADR-0008 (resolver signal names fixed here; payloads stay ADR-0008's), ADR-0009 (`damage_applied` payload), ADR-0010 (command guard, result codes, run counters, run log) |
 | **Blocks** | Every story that declares, emits or connects a battle signal. No epic or story exists yet, so none is blocked by path today. |
 | **Ordering Note** | Before ADR-0007 and ADR-0008. The two amendments and the GDD renames take effect with acceptance. |
@@ -280,7 +281,7 @@ Names are proposed; QQ-16 may add a class prefix (ADR-0007).
 
 ## Migration Plan
 No code exists. On acceptance:
-1. **Amendments** (dated, written 2026-11-04, pending the user's confirmation): ADR-0001 (`Wiring.pairs()`); ADR-0004 (Decision 6, Guideline 7).
+1. **Amendments** (dated 2026-11-04, confirmed by the user at acceptance): ADR-0001 (`Wiring.pairs()`); ADR-0004 (Decision 6, Guideline 7).
 2. **GDD renames** (the game-designer makes them): in the seven GDDs (`input-gesture-resolver`, `battle-hud`, `enemy-wave`, `game-state-stage-flow`, `tower-system`, `hero-system`, `data-config-pipeline`) and `systems-index.md`, rename every code form of `tap`, `ground_tap`, `idle`, `waves_complete` and `phase` (backticked names, calls such as `tap(T)`, and names in backticked test logs) to Decision 5's names. Plain English ("a tap", "idle") stays. Done when this returns no lines (107 on 2026-11-04):
    ```bash
    grep -nE '`(tap|ground_tap|idle|waves_complete|phase)(\(|`)|[(, ](tap|ground_tap|waves_complete)\(|, idle(`|,)' design/gdd/{input-gesture-resolver,battle-hud,enemy-wave,game-state-stage-flow,tower-system,hero-system,data-config-pipeline,systems-index}.md
@@ -338,5 +339,5 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 | D7 (coordinator) keep the guard | Decision 7; ADR-0004 amended; handler lint dropped |
 
 ## Related
-- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (pending confirmation). Enables ADR-0007 to ADR-0010.
+- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.
 - GDDs: the eight MVP GDDs; sync items in Migration 2 to 4.

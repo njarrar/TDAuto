@@ -345,7 +345,7 @@ interfaces:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
   - contract: result_snapshot
     status: active
     pattern: shared_resource
@@ -361,7 +361,7 @@ interfaces:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -548,7 +548,7 @@ api_decisions:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
   - purpose: command_reentry_guard
     status: active
     # was: guard shape and pause rule unstated (before godot-specialist and TD-ADR review)
@@ -561,7 +561,7 @@ api_decisions:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -708,7 +708,7 @@ forbidden_patterns:
     why: "Deferred calls land after _process when the tick has moved on; one-shot drops a connection behind the Wiring record"
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
   - pattern: view_listener_steers
     status: active
     # was: any mutating method, no resolver registry carve-out (before godot-specialist and TD-ADR review)
@@ -716,7 +716,7 @@ forbidden_patterns:
     why: "Views must not change a result; a battle with every view removed must match"
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
-    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0006 Accepted 2026-11-04; binding"
 
 # Example:
 #
