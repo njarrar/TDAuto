@@ -6,8 +6,16 @@ Proposed
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the
 > user's explicit confirmation. No other agent, and no skill on its own.
-> Do not accept this ADR until verification items V1 to V5 (Engine
-> Compatibility) have a recorded result in `docs/engine-reference/godot/`.
+> Acceptance preconditions are split, because stories that cite a `Proposed`
+> ADR are blocked and so cannot run checks that need them:
+> - **Before acceptance:** V1, V2 and V3, each run as a standalone headless
+>   script or throwaway project under `prototypes/` (not as a story), with the
+>   result recorded in `docs/engine-reference/godot/`. V4 from an Android
+>   export of the ADR-0003 device spike project, which needs no game code.
+> - **After acceptance:** V5, checked by the first AppRoot story and by the CI
+>   `[autoload]` check. Reopen trigger: if V1 to V3 are re-run inside the real
+>   code and disagree with the spike result, this ADR is amended before the
+>   next story closes (the Rollback plan names the change).
 
 ## Date
 

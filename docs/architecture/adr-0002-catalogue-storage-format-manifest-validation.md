@@ -8,8 +8,14 @@ Proposed
 > user's explicit confirmation. No other agent, and no skill on its own.
 > Acceptance preconditions: (1) the user confirms the format choice (JSON in
 > place of the GDD's recommended typed Resources; it was made in autonomous
-> mode); (2) W1 to W4 (Engine Compatibility) have a recorded result in
-> `docs/engine-reference/godot/`; (3) ADR-0001 is Accepted.
+> mode); (2) W1 and W3 have a recorded result in
+> `docs/engine-reference/godot/`, each run as a standalone headless script
+> under `prototypes/` (not as a story), and W2 from an Android export of a
+> throwaway project that reads one JSON file the same way (no game code
+> needed); (3) ADR-0001 is Accepted.
+> After acceptance: W4 (device load time) is measured at the first phone build
+> of the real catalogue. Reopen trigger: a median above 1000 ms starts a
+> load-time task under this ADR; it does not reject the format.
 > On acceptance, update: `architecture.md` B0 and the Foundation Catalogue row
 > (names, base class, no `ResourceLoader`, no `duplicate_deep()`), and the Data
 > & Config GDD's "Becomes an ADR" note and Open Questions row 1.
