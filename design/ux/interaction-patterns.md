@@ -242,6 +242,8 @@ accessibility notes match each pattern's accessibility line.
 
 **Description**: Tapping a free slot opens three tower discs in an arc above the slot. Tapping a disc builds that tower.
 
+**Screen-level source**: `design/ux/arc-and-chip.md` holds the full behaviour, geometry, text fit and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
+
 **Specification**:
 - Order is always triangle (Single), hexagon (Splash), square (Slow), left to right, on every slot and for both hands, for motor memory.
 - Arc sits above the slot, never below, where the thumb is, at radius `R` = 96 units from the slot. Each disc is a 56 px role polygon with a radius-36 hit disc; a panel above holds the word and the cost on two lines. Slots sit at x 156 to 384 so every disc stays clear of the edge margin.
@@ -267,6 +269,8 @@ accessibility notes match each pattern's accessibility line.
 **Status**: Draft
 
 **Description**: Tapping a level-1 tower shows a cost chip for 1.5 s. A tap on the chip, or a second tap on the tower, commits the upgrade.
+
+**Screen-level source**: `design/ux/arc-and-chip.md` holds the full behaviour, geometry, text fit and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
 
 **Specification**:
 - The chip is its own tap target (priority 300, radius 40, at the tower's x and y minus 76 units) so a tap on what the player sees works. `tap(chip)` is treated as a second `tap(tower)`.
