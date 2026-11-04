@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: ""
+last_updated: "2026-11-04"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -53,7 +53,47 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: ready_catalogue
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    interface: "Held by AppRoot for the session; passed to BattleBuilder.build as a parameter; never global"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - state: fatal_latch
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    interface: "Per-battle FatalLatch held by Battle; app-level FatalLatch held by AppRoot; reached only through the injected fatal(cause) Callable; first cause wins"
+    write_access: any-caller-via-fatal-callable
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - state: battle_helpers
+    status: active
+    owner_system: battle
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    interface: "Battle holds every sim, the battle FatalLatch and the one StatAccessor in strong typed fields; no sim refers back to Battle"
+    write_access: battle-builder-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - state: input_resolver_instance
+    status: active
+    owner_system: battle-wrapper
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    interface: "BattleWrapper holds the resolver and adapter in typed fields, per battle; injected into TowerInput, HudLogic and HeroInput"
+    write_access: battle-wrapper-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -81,7 +121,59 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: fatal_path
+    status: active
+    pattern: direct_call
+    producer: any-system
+    consumers:
+      - fatal-latch
+      - app-root
+      - flow
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    signal_signature: "fatal(cause: String) -> void, injected method Callable; FatalLatch.fatal_set(cause: String) signal to Flow"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - contract: halted_gate
+    status: active
+    pattern: direct_call
+    producer: battle
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    signal_signature: "halted() -> bool, injected method Callable; checked after every accessor read and every signal"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - contract: battle_build
+    status: active
+    pattern: direct_call
+    producer: app-root
+    consumers:
+      - battle-builder
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    signal_signature: "BattleBuilder.build(catalogue: Catalogue, stage_id: StringName, seed: int, fatal_handler: Callable) -> Battle (null on failure)"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - contract: retry_request
+    status: active
+    pattern: direct_call
+    producer: battle-hud
+    consumers:
+      - app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    signal_signature: "AppRoot.request_retry() -> void, idempotent latch acted on at the top of AppRoot._process"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -141,7 +233,27 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: battle_wrapper_teardown
+    status: active
+    api: "Node.remove_child() then Node.free(), at the top of AppRoot._process"
+    not: Node.queue_free()
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    reason: "4.7.2 desktop probe: queue_free keeps the old battle alive to frame end; free does not"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
+  - purpose: development_error_reporting
+    status: active
+    api: "injected dev_error(msg) wrapping push_error()"
+    not: assert()
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    reason: "assert is stripped from release builds; behaviour guards must survive release"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+    revised: ""
 
 # Example:
 #
@@ -167,7 +279,31 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_or_global_state
+    status: active
+    description: "No autoloads or globals; the [autoload] section of project.godot stays empty. Shared things arrive as injected values, Callables or signals."
+    why: "Globals leak state between retries, share one instance across tests and stop headless bots running battles side by side"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+  - pattern: lambda_or_bind_in_battle_wiring
+    status: active
+    description: "Injected callables and signal connections in a battle are plain method Callables; no lambda, no bind()"
+    why: "A capturing lambda keeps its target alive and can defeat teardown; bind() is unprobed"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+  - pattern: reset_in_place
+    status: active
+    description: "No system exposes reset(); retry rebuilds the whole battle"
+    why: "Hand-listed resets leak state between attempts (prototype: 22 fields)"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
+  - pattern: sim_targets_node
+    status: active
+    description: "A RefCounted sim never holds a Callable or connection that targets a Node; nodes connect to sim signals instead"
+    why: "Freed wrapper nodes must not be reachable from a sim emit"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-and-fatal-path.md
+    added: 2026-11-04
 
 # Example:
 #
