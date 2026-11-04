@@ -133,7 +133,7 @@ state_ownership:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -327,7 +327,7 @@ interfaces:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -503,7 +503,7 @@ api_decisions:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -628,21 +628,21 @@ forbidden_patterns:
     why: "A Vertical Slice modifier must reach live entities with no call-site change (TR-data-008)"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
   - pattern: stat_key_literal
     status: active
     description: "No String or &-literal key argument to stat_int or stat_float; keys come only from StatKeys constants (lint L-STAT-1)"
     why: "A literal skips the vocabulary and a String converts to StringName on every call"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
   - pattern: read_context_per_read
     status: active
     description: "No read path calls ReadContext.new(); each owner makes its contexts once and reuses them; a context holds its live entity only by WeakRef and never a Node"
     why: "Per-read contexts allocate in the hot path; a strong live entity forms a RefCounted cycle with the Enemy that owns the context"
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
-    notes: "ADR-0005 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0005 Accepted 2026-11-04; binding"
 
 # Example:
 #

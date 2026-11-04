@@ -1,7 +1,7 @@
 # ADR-0005: Stat Accessor and Read-Context Contract
 
 ## Status
-Proposed
+Accepted
 
 > Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation.
 
@@ -12,6 +12,7 @@ Proposed
 2026-11-04 (against `docs/engine-reference/godot/` for Godot 4.7.2, `architecture.md` v4, ADR-0001, ADR-0002 and ADR-0004 as Accepted, `tr-registry.yaml` and `docs/registry/architecture.yaml`; revised after godot-specialist and TD-ADR reviews)
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar), with the dated ADR-0001 amendment (public read-only stat_accessor and halt_gate)
 - Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`, 2026-11-04)
 - godot-specialist: CONCERNS. TD-ADR: CONCERNS. Findings resolved under Reviews.
 - Acceptance: the user.
