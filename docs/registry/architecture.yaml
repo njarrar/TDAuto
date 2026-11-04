@@ -328,6 +328,38 @@ interfaces:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0005 Accepted 2026-11-04; binding"
+  - contract: battle_signal_catalogue
+    status: active
+    pattern: signal
+    producer: battle-sims
+    consumers:
+      - flow
+      - tower-sim
+      - battle-wrapper
+      - hud-logic
+      - content-test
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "Roles: WIRING enemy_leaked(lives_cost: int), enemy_killed(bounty: int), wave_cleared(intermission_duration: float), waves_completed(), wave_called_early(seconds_left: float), latched(cause: String), each with exactly one Builder listener _on_<signal>; VIEW phase_changed(value: Flow.Phase), lives_changed(current: int), gold_changed(current: int), tower_built(slot_index: int, tower_id: StringName), tower_upgraded(slot_index: int, level: int), hero_pinned(position: Vector2), burst_started(aim_point: Vector2, telegraph_ticks: int), attack_fired, damage_applied, no sim listener; INPUT resolver pressed, tapped, ground_tapped, drag_started, drag_moved, drag_ended, drag_cancelled, became_idle; sync emit, commit before emit, flags 0; Wiring.pairs() read for the listener-count test"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+  - contract: result_snapshot
+    status: active
+    pattern: shared_resource
+    producer: battle
+    consumers:
+      - hud-logic
+      - run-log
+      - bots
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    signal_signature: "Battle.take_result_snapshot() -> ResultSnapshot (src/core/flow/result_snapshot.gd), plain read-only values, built once by the wrapper in the first frame step 3 that finds WON or LOST; the same instance feeds the result screen and the run log; Flow.result() -> StageResult holds outcome, last_wave_started, lives_left only"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -504,6 +536,29 @@ api_decisions:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0005 Accepted 2026-11-04; binding"
+  - purpose: signal_id_types
+    status: active
+    api: "Catalogue IDs (tower_id, source_id, def_id, burst_id, enemy type keys) are StringName in signals, queries and commands; runtime IDs (spawn_id, slot_index, resolver ids, level) are int"
+    not: "String or int-index catalogue IDs"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "Matches ADR-0002 record IDs and ADR-0005 keys; String drift is invisible to ==, so fakes check typeof()"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+  - purpose: command_reentry_guard
+    status: active
+    api: "Each command checks TickGuard.in_tick(), then holds TickGuard.enter()/exit() around a private body, so a command from any signal handler is refused with ERR_COMMAND_IN_TICK; needs a dated ADR-0004 Decision 6 amendment"
+    not: "Lint-only ban on commands in handlers"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "Signals fired by commands between ticks are not covered by the tick guard alone"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+    added: 2026-11-04
+    revised: ""
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
@@ -643,6 +698,20 @@ forbidden_patterns:
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
     notes: "ADR-0005 Accepted 2026-11-04; binding"
+  - pattern: deferred_or_one_shot_connection
+    status: active
+    description: "No CONNECT_DEFERRED or CONNECT_ONE_SHOT, no deferred emit, no emit_signal or string connect, no await on a battle signal in src/; every connection goes through Wiring.connect_recorded() with flags 0"
+    why: "Deferred calls land after _process when the tick has moved on; one-shot drops a connection behind the Wiring record"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
+  - pattern: view_listener_steers
+    status: active
+    description: "A handler of a WIRING or VIEW battle signal never calls a command, a mutating method or the stat accessor, never assigns a Battle member field, and never keeps a payload object or query list; the Builder never connects a sim to a VIEW or INPUT signal"
+    why: "Views must not change a result; a battle with every view removed must match"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-04
+    notes: "ADR-0006 Proposed 2026-11-04; not binding until Accepted"
 
 # Example:
 #
