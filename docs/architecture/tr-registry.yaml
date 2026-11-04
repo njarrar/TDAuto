@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 5
+version: 6
 last_updated: "2026-11-04"
 
 requirements:
@@ -128,9 +128,9 @@ requirements:
 - id: TR-data-013
   system: data
   gdd: design/gdd/data-config-pipeline.md
-  requirement: "A CI content test opens each Stage scene_ref, applies layout and wave rules, and checks rationale fields and owning-GDD balance ranges"
+  requirement: "A CI content test opens each Stage scene_ref, applies layout and wave rules, checks rationale fields and owning-GDD balance ranges, and fails a data file the manifest omits, a manifest path whose case differs from the file, and a key repeated inside one JSON object"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-data-014
   system: data
@@ -144,6 +144,13 @@ requirements:
   gdd: design/gdd/data-config-pipeline.md
   requirement: "Load-time targets: Loading to Ready median at most 1000 ms on an Adreno 5xx-class device; edit-to-in-game at most 10 s"
   created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-data-016
+  system: data
+  gdd: design/gdd/data-config-pipeline.md
+  requirement: "The load fails with record_count, at the type tier before record checks, unless the catalogue holds exactly one Input record and exactly one Hero record, since the builder selects neither"
+  created: 2026-11-04
   revised: ""
   status: active
 - id: TR-input-001
@@ -205,9 +212,9 @@ requirements:
 - id: TR-input-009
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Signal API pressed, tap, ground_tap, drag_started, drag_moved, drag_ended, drag_cancelled, idle; every exit to Idle emits idle() last"
+  requirement: "Signal API pressed, tapped, ground_tapped, drag_started, drag_moved, drag_ended, drag_cancelled, became_idle; every exit to Idle emits became_idle() last"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-input-010
   system: input
@@ -257,6 +264,13 @@ requirements:
   requirement: "Minimum 360 x 640 dp effective scale by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
   created: 2026-11-03
   revised: "2026-11-04"
+  status: active
+- id: TR-input-017
+  system: input
+  gdd: design/gdd/input-gesture-resolver.md
+  requirement: "cancel() has three callers: the adapter (away, back request, resize), Flow through an injected cancel_input() on Won, Lost, Paused and Fatal, and the app root at teardown; a stale release after a non-adapter cancel reaches the resolver in Idle and is dropped"
+  created: 2026-11-04
+  revised: ""
   status: active
 - id: TR-state-001
   system: state
@@ -765,9 +779,9 @@ requirements:
 - id: TR-hero-014
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "Content tests enforce hero and burst rules (leash, telegraph, intermission, reach, hero_start, pin_exclusion, one Hero record), each proven on a broken fixture"
+  requirement: "Content tests enforce hero and burst rules (leash, telegraph, intermission, reach, hero_start, pin_exclusion), each proven on a broken fixture; the one-Hero-record rule moved to the boot check (TR-data-016)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-04"
   status: active
 - id: TR-hero-015
   system: hero
@@ -849,9 +863,9 @@ requirements:
 - id: TR-hud-011
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Costs are read through the accessor on arc open and gold_changed, and the burst wedge reads Burst cooldown through the accessor at use time with the builder-injected Burst ID; a read that finds halted() is abandoned for the Fatal screen"
+  requirement: "Arc open and gold_changed only mark costs dirty; HudLogic reads costs through the accessor in the next view step (frame step 3), never in a sim signal handler, and the burst wedge reads Burst cooldown through the accessor at use time with the builder-injected Burst ID; a read that finds halted() is abandoned for the Fatal screen"
   created: 2026-11-03
-  revised: "2026-11-03"
+  revised: "2026-11-04"
   status: active
 - id: TR-hud-012
   system: hud
