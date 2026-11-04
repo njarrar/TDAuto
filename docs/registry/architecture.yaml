@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: ""
+last_updated: "2026-11-05"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -53,7 +53,27 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: session_catalogue
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "AppRoot holds the Ready Catalogue for the session and passes it to BattleBuilder.build(); no global, no reload; a retry reuses the same object"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - state: battle_helpers
+    status: active
+    owner_system: battle
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "Battle holds every helper build() creates in a strong typed field (each sim, FatalLatch, one StatAccessor, DevErrorSink); reads left_handed, hero_id, burst_id, dt, to_ticks(), in_build(), halted(), is_over(); no helper holds Battle back"
+    write_access: battle-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -81,7 +101,45 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: battle_composition
+    status: active
+    pattern: direct_call
+    producer: app-root
+    consumers:
+      - battle
+      - tests-and-bots
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "static BattleBuilder.build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fatal_handler: Callable) -> Battle (null after fatal_handler when the stage cannot be built; touches no node)"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - contract: fatal_path
+    status: active
+    pattern: direct_call
+    producer: any-battle-system
+    consumers:
+      - app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "fatal(p_cause: String) -> void on the injected FatalLatch: idempotent, keeps the first cause, forwards to AppRoot.fatal if is_valid(); every caller returns after it and checks halted() after each read and emit"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - contract: input_cancel
+    status: active
+    pattern: direct_call
+    producer: battle-wrapper
+    consumers:
+      - game-state-stage-flow
+      - app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "Battle.set_input_cancel(cancel: Callable) set once by the wrapper; Battle.cancel_input() -> void guarded with is_valid(), called by Flow on Won, Lost, Paused, Fatal and by AppRoot on retry"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -141,7 +199,37 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: battle_teardown
+    status: active
+    api: "remove_child() then free() on the wrapper, from AppRoot._process only"
+    not: "queue_free() on the wrapper or anything holding a Battle"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    reason: "queue_free() keeps the node and the old Battle alive to the frame's end (4.7.2 probe); the Retry row needs a null weakref in the same frame"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: defect_reporting
+    status: active
+    api: "injected DevErrorSink.report() (default push_error) for recoverable defects; injected fatal() for unrecoverable ones"
+    not: "assert()"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    reason: "assert does not survive a release build and cannot be replaced by a recording fake (TR-data-009)"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: scene_loading_from_app_root
+    status: active
+    api: "preload only the script-free fatal_screen.tscn; load() the wrapper and stage scenes at runtime with a null check into fatal()"
+    not: "preload of battle_wrapper.tscn or a stage scene on AppRoot"
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    reason: "a missing file under a preloaded scene fails AppRoot's own script and the fatal screen never appears; a broken script in a preloaded scene gives a script-less instance (4.7.2 probe)"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -167,7 +255,43 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_singleton
+    status: active
+    description: "project.godot has no [autoload] section; no script reaches state through /root/<Name>. The catalogue and the battle are passed down from AppRoot."
+    why: "Global state survives a retry and cannot be built headless (TR-data-011, TR-state-001)."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: capturing_callable_injection
+    status: active
+    description: "No lambda, bind() or bindv() result as an injected callable or signal target; method Callables only, on a target held by Battle, BattleWrapper or AppRoot. Bans every lambda under src/battle/."
+    why: "bind() holds its bound RefCounted arguments and a capturing lambda holds its captures, so the old battle survives a retry (4.7.2 probe)."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: refcounted_back_reference
+    status: active
+    description: "No object Battle holds stores a reference to Battle or to an object that holds it; no two sims hold each other. Reads go through method Callables such as battle.halted."
+    why: "A RefCounted cycle is never released and the weakref test sees only the objects it names (4.7.2 probe)."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: static_var_in_gameplay
+    status: active
+    description: "No static var under src/battle/."
+    why: "A static var persists across instances and so outlives a retry (4.7.2 probe)."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: node_in_gameplay_class
+    status: active
+    description: "Classes under src/battle/ extend RefCounted, never Node, and never reference Engine, Time, OS, SceneTree, a Timer or await."
+    why: "The battle must build and tick headless with no scene and no engine clock (TR-state-002)."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: wrapper_references_app_root
+    status: active
+    description: "Nothing under src/presentation/ or in the wrapper names AppRoot as a type; the wrapper receives AppRoot.request_retry as a Callable."
+    why: "A reference back to AppRoot is a preload cycle and couples the fatal path to presentation scripts."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
 
 # Example:
 #
