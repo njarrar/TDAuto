@@ -1,7 +1,7 @@
 # ADR-0002: Catalogue Storage Format, Manifest and Validation
 
 ## Status
-Proposed
+Proposed. Revised the same day after TD-ADR CONCERNS (no blockers) and godot-specialist review (no blockers). Names follow `architecture.md` B0; on acceptance, B0, Data Flow 4 and QQ-03 are amended as Key Interfaces states.
 
 ## Date
 2026-11-05
@@ -65,35 +65,37 @@ Every tunable number in the game lives in the catalogue (Data Rule 1), and Rule 
 ### 1. Format: JSON files of records
 Gameplay records live in JSON under `res://data/`, one file per record type: `towers.json`, `enemies.json`, `waves.json`, `stages.json`, `heroes.json`, `bursts.json`, `input.json`. Each file holds `{"records": [ ... ]}`, and each record is an object with `id`, `rationale` and the fields the Data GDD's record table lists. Stage scenes (the look) stay `.tscn` and are named by the Stage record's `scene_ref`, an asset reference stored as a `uid://` string so a moved scene does not break it.
 
-JSON is chosen because all three conditions are visible in the parsed data itself: a missing field is an absent key, an unknown property is an extra key, and a fractional integer is a number whose value is not whole. No second parser is needed.
+JSON is chosen because all three conditions are visible in the parsed data itself: a missing field is an absent key, an unknown property is an extra key, and a fractional integer is a number whose value is not whole. One thing is not: a key repeated inside one object, which a parser keeps only once. So the loader also scans each file's raw text for a repeated key within one object before parsing, and reports it as an error (Rule 8 allows no silent override). A small scanner over the raw text does this; it does not parse values.
+
+**Encodings.** A coordinate is a two-number array `[x, y]`; `pin_rect` is `{"min": [x, y], "max": [x, y]}`; a `pin_exclusion` shape is `{"a": [x, y], "b": [x, y], "radius": r, "hand": "right" | "left" | "both"}`; IDs and tags are strings; bools are JSON `true` or `false`; `scene_ref` is a string starting `uid://`. Any other shape is a wrong-type error.
 
 ### 2. Manifest
-`res://data/manifest.json` lists the data files by path: `{"files": ["res://data/towers.json", ...]}`. The loader reads exactly these and nothing else; it never lists a directory. Every path must be unique and non-empty. The export preset's non-resource include filter lists `data/*.json`, because a plain export packs only resources and would leave the JSON behind (probe Q1 confirms the filter and the paths on Android).
+`res://data/manifest.json` lists the data files by path: `{"files": ["res://data/towers.json", ...]}`. The loader reads exactly these and nothing else; it never lists a directory. Every path must be unique and non-empty. The export preset's filter for files with no import step lists `data/*.json` (a path relative to the project), because a plain export packs only resources and would leave the JSON behind. Stage scenes are reached only through `scene_ref` strings, so no resource depends on them; the preset must export all resources, or list the stage scenes. Probe Q1 confirms both on Android, and that `res://data/` paths are not rewritten in the pack.
 
 ### 3. Load and validate in tiers
 `Catalogue` is a `RefCounted` with the states Unloaded, Loading, Ready and Failed. `Catalogue.load_manifest(path) -> bool` runs synchronously in AppRoot's Boot:
 
-1. **Manifest and file tier.** Read the manifest and each listed file with `FileAccess.get_file_as_string()`; parse with a `JSON` instance so the error line is known. A missing, unreadable, empty or unparseable file, an empty or repeated path, or a record type with no records is one manifest-tier error, and record checks do not run (Rule 7).
-2. **Record tier, on raw Dictionaries.** A pure `CatalogueValidator.validate(raw) -> Array[CatalogueError]` applies Rule 7's checks with its precedence: a missing field gets no other check; a non-finite number gets no bounds check; an unknown tag suppresses that record's role checks. Integer fields: JSON numbers arrive as `float`, so an integer field must be finite and satisfy `x == floor(x)`, and is then converted with `int(x)`. Then IDs, duplicates across types, typed references, unknown properties (a key the record's own type does not declare), tags per type, role fields, non-empty lists, field domains (with `MIN_INTERVAL - 1e-6`), Stage geometry, and the Input cross-field check.
-3. **Build tier.** Only if the error list is empty: construct one typed record object per entry and index them by ID. On any error, the state is Failed, every error is reported (by file, record and field in development builds), and AppRoot takes the fatal path (ADR-0001).
+1. **Manifest and file tier.** Read the manifest and each listed file with `FileAccess.get_file_as_string()`, which returns an empty string on failure; `FileAccess.get_open_error()` tells a missing file from an empty one. Scan for repeated keys, then parse with a `JSON` instance so the error line is known. A missing, unreadable, empty or unparseable file, a repeated key, an empty or repeated path, or a record type with no records is one manifest-tier error, and record checks do not run (Rule 7).
+2. **Record tier, on raw Dictionaries.** A pure `CatalogueValidator.validate(raw) -> Array[ValidationError]` applies Rule 7's checks with this precedence, extending the GDD's: a missing field gets no other check; a value of the wrong JSON type (a string where a number belongs, a number where a bool belongs, a non-array where a list belongs, a malformed coordinate) gets no other check on that field; a non-finite number gets no bounds check; an unknown tag suppresses that record's role checks. Number fields must have `typeof(x) == TYPE_FLOAT`, since JSON numbers arrive as `float`. Integer fields must also be finite, within `±2^31`, and satisfy `x == floor(x)`, and are then converted with `int(x)`; a whole value such as `10.0` passes as `10`, by intent. Then IDs, duplicates across types, typed references, unknown properties (a key the record's own type does not declare), tags per type, role fields, non-empty lists, field domains (with `MIN_INTERVAL - 1e-6`), Stage geometry, and the Input cross-field check.
+3. **Build tier.** Only if the error list is empty: construct one typed record object per entry and index them by ID. Typed arrays are built typed from the start (`var errors: Array[ValidationError] = []`), since an untyped array returned where a typed one is declared fails at runtime. On any error, the state is Failed, every error is reported (by file, record and field in development builds), and AppRoot takes the fatal path (ADR-0001).
 
-`CatalogueError` is `{code: int, source: String, record_id: StringName, field: StringName}`; the code list is one enum, owned by the validator.
+`ValidationError` (B0) is `{code: StringName, source: String, record_id: StringName, field: StringName}`; the codes are one list of `StringName` constants owned by the validator, among them `&"missing_field"`, `&"wrong_type"`, `&"non_finite"`, `&"fractional_int"`, `&"out_of_bounds"`, `&"unknown_property"`, `&"unknown_tag"`, `&"duplicate_id"`, `&"duplicate_key"`, `&"bad_reference"`.
 
 ### 4. Typed, read-only records
-Each record type is a `class_name` extending `RefCounted` (for example `TowerDef`, `TowerLevelDef`, `EnemyDef`, `WaveDef`, `StageDef`, `HeroDef`, `BurstDef`, `InputDef`) with typed fields set once by its constructor from validated data. Arrays and Dictionaries inside a record are made read-only with `make_read_only()` after construction. There are no setters. Systems read stats through the accessor (ADR-0005) and structure and Stage fields directly (Data Rule 10).
+Each record type is a `class_name` extending `RefCounted` (B0's `TowerRecord`, `EnemyRecord`, `WaveRecord`, `StageRecord`, `HeroRecord`, `BurstRecord`, `InputRecord`, plus `TowerLevelRecord` and `WaveGroupRecord` for owned sub-data, under `src/foundation/data/records/`) with typed fields set once by its constructor from validated data. Arrays and Dictionaries inside a record are made read-only with `make_read_only()` after construction. There are no setters. `make_read_only()` is shallow and a blocked write prints an engine error rather than stopping the caller, so the snapshot test, not the engine, is the proof. Systems read stats through the accessor (ADR-0005) and structure and Stage fields directly (Data Rule 10).
 
 ### 5. Read-only proof
-A test-only `Catalogue.snapshot() -> String` serialises every record to canonical JSON (keys sorted). The deep-snapshot test takes it before and after a scripted battle and compares; a detector self-test changes one nested value and must see the comparison fail. Mutation of a typed field would also be caught here, since `make_read_only()` covers only arrays and dictionaries.
+A test-only `Catalogue.snapshot() -> String` serialises every record to canonical JSON (keys sorted); no `duplicate_deep()` is involved, since records are not Resources. The deep-snapshot test takes it before and after a scripted battle and compares; a detector self-test changes one nested value and must see the comparison fail. Mutation of a typed field would also be caught here, since `make_read_only()` covers only arrays and dictionaries.
 
 ### 6. Content test
-A gdUnit4 suite under `tests/integration/content/` loads the real manifest and runs every row of the Data GDD's content-test register: its own rows (non-empty `rationale`, each `scene_ref` loads, at least one Stage) and each owning GDD's content table (Enemy & Wave, Tower, Hero, Battle HUD), table-driven with a pass and a fail fixture per row and a row count. It runs in CI and by one local command (ADR-0007 names it), at both 30 and 60 ticks per second where a rule reads `to_ticks`.
+A gdUnit4 suite under `tests/integration/content/` loads the real manifest and runs every row of the Data GDD's content-test register: its own rows (non-empty `rationale`, each `scene_ref` loads, at least one Stage) and each owning GDD's content table (Enemy & Wave, Tower, Hero, Battle HUD), table-driven with a pass and a fail fixture per row and a row count. It runs in CI and by one local command (ADR-0007 names it), at both 30 and 60 ticks per second where a rule reads `to_ticks`. The `scene_ref` row also runs once against an exported build, since an editor load proves nothing about the pack.
 
 ### Architecture Diagram
 ```
 AppRoot (Boot)
   └─ Catalogue.load_manifest("res://data/manifest.json")
         1 manifest tier ── read files (FileAccess) ── parse (JSON) ──► raw Dictionaries
-        2 CatalogueValidator.validate(raw) ──► Array[CatalogueError]   (pure, unit-testable)
+        2 CatalogueValidator.validate(raw) ──► Array[ValidationError]   (pure, unit-testable)
         3 build typed records (RefCounted, read-only arrays) ──► Ready
            any error ─► Failed ─► fatal path (ADR-0001)
 Battle ◄─ StatAccessor (ADR-0005) ◄─ Catalogue (Ready, held by AppRoot)
@@ -103,23 +105,25 @@ Battle ◄─ StatAccessor (ADR-0005) ◄─ Catalogue (Ready, held by AppRoot)
 ```gdscript
 class_name Catalogue extends RefCounted
 enum State { UNLOADED, LOADING, READY, FAILED }
-func load_manifest(path: String) -> bool       # synchronous; false on any error
+func load_manifest(path: String) -> LoadResult  # synchronous; B0's LoadResult {ok, errors}
 func state() -> State
-func errors() -> Array[CatalogueError]
-func tower(id: StringName) -> TowerDef          # null for an unknown ID; is_tower() first
+func tower(id: StringName) -> TowerRecord       # null for an unknown ID; is_tower() first
 func is_tower(id: StringName) -> bool
 func level_count(def_id: StringName) -> int     # 0 for an unknown ID
 # enemy(), wave(), stage(), hero(), burst(), input_record() likewise
 static func from_raw(raw: Dictionary) -> Catalogue   # tests: build from in-code fixtures, no file I/O
 
 class_name CatalogueValidator extends RefCounted
-static func validate(raw: Dictionary) -> Array[CatalogueError]
+static func validate(raw: Dictionary) -> Array[ValidationError]
 ```
+The method is `load_manifest`, not `load`, which would shadow the global `load()` (ADR-0001 uses this name). On acceptance, `architecture.md` Data Flow 4 changes `Catalogue.load(manifest)` to `load_manifest`, B0's record row records `RefCounted`, and QQ-03 closes. The stat accessor's signature (`stat_int`, `stat_float`) and how its bad-call check survives release builds are ADR-0005's, as B1 states; this ADR only supplies the records it reads.
 
 ### Implementation Guidelines
 - Must store gameplay records only in JSON files listed in `res://data/manifest.json`; must never scan a directory.
 - Must validate raw Dictionaries before building any typed record, and must collect every error before failing.
-- Must treat every JSON number as `float` and check integer fields with `x == floor(x)` before converting.
+- Must check each value's JSON type before any other check on it, and must treat every JSON number as `float`, checking integer fields with `x == floor(x)` and a ±2^31 bound before converting.
+- Must scan raw text for a repeated key within one object and reject it.
+- Must build typed arrays typed from the start.
 - Must reject a key the record's own type does not declare.
 - Must never supply a default for a missing field, in any build.
 - Must make arrays and dictionaries in records read-only after construction, and give record classes no setters.
@@ -172,7 +176,7 @@ static func validate(raw: Dictionary) -> Array[CatalogueError]
 | data-config-pipeline.md | TR-data-001: typed read-only records by stable ID; typed references | Typed `RefCounted` record classes indexed by ID; references validated by type (Decision 3, 4) |
 | data-config-pipeline.md | TR-data-002: detect missing field, fractional integer, unknown property | JSON raw-Dictionary validation (Decision 1, 3) |
 | data-config-pipeline.md | TR-data-003: explicit manifest; Android export | `manifest.json`, include filter, probe Q1 (Decision 2) |
-| data-config-pipeline.md | TR-data-005: collect every error in tiers, with precedence and the cross-field check | Three tiers, `CatalogueError`, Rule 7 precedence (Decision 3) |
+| data-config-pipeline.md | TR-data-005: collect every error in tiers, with precedence and the cross-field check | Three tiers, `ValidationError`, Rule 7 precedence (Decision 3) |
 | data-config-pipeline.md | TR-data-007: read-only; deep-snapshot test | Read-only arrays, no setters, canonical snapshot test (Decision 4, 5) |
 | data-config-pipeline.md | TR-data-013: CI content test | `tests/integration/content/`, register-driven (Decision 6) |
 | data-config-pipeline.md | TR-data-015: load and tuning-loop targets | Synchronous load of small JSON; probe Q3; edit-save-run loop |
@@ -190,8 +194,9 @@ static func validate(raw: Dictionary) -> Array[CatalogueError]
 No catalogue exists yet. The prototypes' constants become starter fixtures by hand when the Data stories run; they are not balance values (Data GDD).
 
 ## Validation Criteria
-- The Data GDD's criteria 1 to 12 pass against `CatalogueValidator` and `Catalogue.from_raw`.
-- A schema-agreement test: each record class's fields equal the validator's field list for that type.
+- The Data GDD's criteria 1 to 5 and 8 to 11 pass against `CatalogueValidator` and `Catalogue.from_raw`; criteria 6, 7 and 12 test the accessor and belong to ADR-0005.
+- `test_record_schema_agreement`: each record class's fields equal the validator's field list for that type, both ways.
+- Fixtures for each wrong-type case, a malformed coordinate and a repeated key each give exactly one error.
 - The content test passes on the real data, and each row fails on its broken fixture.
 - Probes Q1 to Q4 pass.
 
@@ -204,7 +209,7 @@ No catalogue exists yet. The prototypes' constants become starter fixtures by ha
 
 | ID | Probe | Pass condition | Result |
 |---|---|---|---|
-| Q1 | Android export with `data/*.json` in the include filter; load the manifest and every file | All load; without the filter, the loader reports the missing file and takes the fatal path | Pending |
-| Q2 | `JSON.parse` on `NaN`, `Infinity`, `1e999`, a trailing comma and a duplicate key | Recorded: which parse and what they yield; the validator rejects any non-finite number and the duplicate-key case is documented | Pending |
+| Q1 | Android export with `data/*.json` in the include filter; load the manifest, every file and every `scene_ref` | All load; `res://data/` paths are unchanged in the pack; stage scenes are present; without the filter, the loader reports the missing file and takes the fatal path | Pending |
+| Q2 | `JSON.parse` on `NaN`, `Infinity`, `1e999`, a trailing comma and a duplicate key | Recorded: which parse and what they yield; the validator rejects any non-finite number, and the raw-text scan rejects the duplicate key whatever the parser does | Pending |
 | Q3 | Cold launch, Loading to Ready, five runs on an Adreno 5xx-class device | Median at most 1000 ms | Pending |
-| Q4 | `make_read_only()` on an Array and a Dictionary inside a record; then a write | The write fails with an error; nested containers are checked to see whether it is shallow | Pending |
+| Q4 | `make_read_only()` on an Array and a Dictionary inside a record; then a write | Recorded: the write is refused with an engine error and the caller continues; nested elements stay writable (shallow), which the snapshot test covers | Pending |

@@ -62,6 +62,7 @@ state_ownership:
     write_access: app-root-only
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-05
     revised: ""
 
@@ -164,7 +165,17 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: catalogue_storage
+    status: active
+    api: "JSON files under res://data/ listed in res://data/manifest.json, read with FileAccess.get_file_as_string and parsed with a JSON instance"
+    not: "Typed Resources (.tres) for gameplay records"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    reason: "JSON exposes a missing field, an unknown property and a fractional integer in the parsed data; Resources default and drop them silently"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -208,6 +219,18 @@ forbidden_patterns:
     description: "Checks that must hold in release use the injected fatal or dev_error sinks (push_error), never assert."
     why: "Export builds strip assert."
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: catalogue_directory_scan
+    status: active
+    description: "The catalogue loads only the files listed in its manifest; no runtime directory listing."
+    why: "Exported builds rename and pack files, so a scan finds different files than the editor."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-05
+  - pattern: silent_field_default
+    status: active
+    description: "No record field takes a default when missing, in any build; the validator reports it."
+    why: "A silent default corrupts balance and the hero-share metric (Data Rule 8)."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     added: 2026-11-05
 
 # Example:
