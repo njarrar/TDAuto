@@ -1,8 +1,8 @@
 # Data & Config Pipeline
 
-> **Status**: In Review (fifth design review 2026-11-04, full, NEEDS REVISION; its 5 blocking items applied the same day, re-review pending; see the review log)
+> **Status**: Approved 2026-11-05 (sixth design review, full, NEEDS REVISION on 4 items; fixed and spot-checked the same day; see the review log)
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-01
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (`visual_key` on Enemy and Hero, art bible mapping, Open Questions widened)
 > **Implements Pillar**: Enabling system for all four pillars (Pillar 1 and 3 most directly: growth and stage variety are data)
@@ -62,7 +62,7 @@ Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
 
 **Tower levels and cost.** Levels are numbered from 1. `cost` at level N is the price of reaching N from N-1, so level 1's `cost` is the build price. The Tower GDD confirms this, with two levels and no selling at MVP.
 
-**MVP tags.** The tag vocabulary is per record type. A tower has exactly one role tag from the table below. The Enemy vocabulary is empty at MVP, so any enemy tag is an unknown tag (Rule 7), and enemy `tags` must be empty; Hero, Burst, Wave and Stage carry no tags.
+**MVP tags.** The tag vocabulary is per record type. A tower has exactly one role tag from the table below. The Enemy vocabulary is empty at MVP, so any enemy tag is an unknown tag (Rule 7), and that one check is what keeps enemy `tags` empty; Hero, Burst, Wave and Stage carry no tags.
 
 | Tag | Applies to | Requires on every level |
 |---|---|---|
@@ -101,16 +101,15 @@ There is no separate economy record: gold values sit on the records that spend o
 10. **One stat accessor.** Any number a modifier could target (damage, range, cost, bounty, leash radius) is read through one accessor taking a **read context** and a stat key, and returning the type the stat-key table declares for that key. The context always holds `def_id`; for a Tower it also holds the level, since Towers are the only MVP record with levels. A level passed for an Enemy, Hero or Burst is a bad call. The context holds the live entity when one exists; a HUD cost preview has none and passes `def_id` and level alone. At MVP the accessor returns the base value for that context. The system also exposes each tower's level count as a non-fatal `level_count(def_id)`, so callers never ask past the maximum, and a non-fatal `is_tower(id)`, so a command can refuse a bad ID rather than reach the handler. The context allows a live entity, not just a definition, because the first cross-buff ("towers near the hero") depends on instance and position; a definition-only form would mean rewriting every call site at Vertical Slice. Callers read at use time and never cache at spawn: when a spy accessor changes its value between uses, the consumer's next use reflects it (checked in the Tower, Hero and HUD stories). Structural data (a wave's groups) and every Stage field (`scene_ref`, `wave_ids`, `starting_gold`, `starting_lives`, `early_call_seconds_per_gold`, `path_points`, `slot_positions`, `path_width`, `requires_bend`, `hero_start`, `pin_rect`, `pin_exclusion`) are read directly, not through the accessor: Stage has no stat-key row. A modifier that targets a stage start value ("+50 starting gold") is a Stat GDD question and would add a Stage row then. A bad call (unknown key, key inapplicable to that record, out-of-range or unexpected level, unresolved `def_id`) calls an injected failure handler, naming the cause. **The handler is the contract:** in the game it puts the app in a stopped state at once (Flow's failure path, which then shows the fatal screen), and tests replace it. A typed function must return on every path, so after a bad call the accessor returns a defined value, 0 for an int key and 0.0 for a float key, never NAN, which would poison later maths; callers may run on with it for the rest of that frame, and nothing they compute reaches play, since play has stopped. Whether the accessor is one function per declared type (`get_int`, `get_float`) or one float return is ADR-0002's choice. The check must survive release builds (mechanism in the ADR; the pinned engine reference does not cover assert behaviour).
 11. **Stat-key vocabulary.** This system owns the list of valid stat keys (the table above). An unknown key fails at the accessor (Rule 10) and, from Vertical Slice, in modifier validation.
 12. **Injection, not a global.** The app root (Game State & Stage Flow) holds the Ready catalogue across retries, and the battle builder hands it to consumers. Tests build small fixture catalogues in code with no file I/O; a separate integration suite validates the real data files.
-**Content-test register.** Every content rule, its owner, and what proves it. Boot accepts `cost` 0, `lives_cost` 0 and `damage` 0; whether a real stage may use them is the owner's content rule, and with no rule they are legal.
+**Content-test register.** Each owner's content table is the list of its rules, and this register names those tables rather than restating them, so the two cannot drift. Boot accepts `cost` 0, `lives_cost` 0 and `damage` 0; whether a real stage may use them is the owner's content rule, and with no rule they are legal.
 
-| Rules | Owner and source | Proved by |
+| Owner | Rules | Proved by |
 |---|---|---|
-| Non-empty `rationale`; each `scene_ref` exists; at least one Stage | This GDD, Rule 9 | AC10 |
-| Layout rules L1 to L14 | Enemy & Wave, "Layout rules, checked by the content test" | Enemy & Wave criteria 58 to 61 and its Deferred rows |
-| Wave rules: count × interval, intermission above 0 in a real stage, waves and lives minimums | Enemy & Wave, "Wave rules, checked by the content test" | Enemy & Wave criteria 58 to 61 and its Deferred rows |
-| Exactly two levels, `slow_strength` cap 0.6, `burst_spike`, `starting_gold` against level-1 costs | Tower, "Content rules, added to the content test" | Tower stories (Tower Deferred table) |
-| Burst `cooldown` and `telegraph_duration` bounds; intermission against cooldown plus telegraph | Hero, "Content rules, added to the content test" | Hero stories (Hero Deferred table) |
-| Tightened L1, arc and button clearances, bonus of one digit, waves and lives that fit | Battle HUD, "Content rules, added to the content test" | Battle HUD criterion 37 |
+| This GDD | Non-empty `rationale`; each `scene_ref` exists; at least one Stage checked | AC10 |
+| Enemy & Wave | Every row of "Layout rules, checked by the content test" and "Wave rules, checked by the content test" | Enemy & Wave criteria 58 to 61, and its Deferred row for L10, L11 and L14 |
+| Tower System | Every row of its "Content rules, added to the content test" | Tower criterion 59 |
+| Hero System | Every row of its "Content rules, added to the content test", `burst_spike` included | Hero criterion 29 |
+| Battle HUD | Every row of its "Content rules, added to the content test" | Battle HUD criterion 37 |
 
 13. **Tuning loop.** Edit a value, save, run: the new value is in the game within 10 seconds (proposed), with no code touched. Changes apply on the next run; there is no live reload.
 

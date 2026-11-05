@@ -162,3 +162,39 @@ Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d1444
 Applied in autonomous mode: all 5 blocking items (AC3 fixture at 20 / 20 with 21 passing; named non-empty lists with tags exempt; interval floor 1/30 s citing Flow's Tuning Knobs, decision taken on the creative director's recommendation, since every starter interval is at least 0.125 s; Input bools authored explicitly; Rule 7 precedence and AC2 fixtures) and recommended: field units throughout, Rule 3 scene_ref note, Rule 9 HUD cap and local content-test command, Rule 1 exempt constants, AC1 duplicate count, AC3 NaN exactly one error, level_count and is_tower on an unknown ID.
 Not done: positive minimums, extra cross-field checks, AC4/AC5/AC6/AC8/AC9 rewrites, intent notes, and every routed item.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: M
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 4 | Recommended: 20
+Summary: The five prior fixes held and the architecture stood through a sixth review. Four text faults remained: the interval floor written `1/30`, which GDScript reads as integer division, 0; Rule 10's accessor contract, which made a false claim about typed GDScript and left the value after a bad call unspecified; "above 0" floors with no positive minimum, so a walk_speed of 5e-324 divides by zero in Hero; and Rule 9's content-test promises with no owner or criterion, plus an ambiguous tag vocabulary. The creative director prescribed a spot-check of the changed lines rather than a seventh full review.
+Prior verdict resolved: Yes (all 5 prior blocking items)
+Findings:
+- [BLOCKING] Field domains: `1/30` is integer division in GDScript; named constant MIN_INTERVAL = 1.0 / 30.0 with a 1e-6 tolerance; to_ticks (round) named.
+- [BLOCKING] Rule 10: after a bad call the handler stops play and the accessor returns 0 or 0.0, never NAN; signature to ADR-0002.
+- [BLOCKING] Field domains: speeds, lengths and max_hp floor at 1, not "above 0".
+- [BLOCKING] Rule 9, Rule 7, AC2, AC10: a content-test register naming each owner's table and proof; per-type tag vocabulary, Enemy's empty; at least one Stage and non-empty rationale asserted.
+- [RECOMMENDED] combat-damage.md: slow_duration floor restated as one tick at 1/60 (routed, fixed in the same change).
+- [RECOMMENDED] Rule 6: make_read_only() is shallow, nothing on Resource properties (ADR-0002).
+- [RECOMMENDED] Rule 7: unknown property is a field its own record type does not declare; type and enum checks, hand enum, type rows for non-numeric fields.
+- [RECOMMENDED] Cross-References: Flow's 30 per second minimum; edge_reject_margin ceiling equals its starter value, so raising it is a HUD layout change first.
+- [RECOMMENDED] Intent notes for 0 values; "default" against "no fallbacks"; content test at 30 and 60 per second.
+- [RECOMMENDED] Acceptance Criteria (story-level, qa-lead): error code table and cause enum, multiset duplicates, two role tags, empty groups, table-driven AC3 and AC5, programmatic key iteration, unknown-ID cases, mutation isolation, AC9 fixture path, AC11 per category, release-build check in CI (ADR-0007), AC14 and AC15 timing, load once.
+- [RECOMMENDED] Routed to ADR-0002: accessor signature, fractional ints in .tres, release-build assert mechanism.
+- [RECOMMENDED] Disagreements: the creative director lifted only qa-lead's "at least one Stage" assertion to blocking and held the rest of the criteria list as story-level; game-designer and qa-lead both raised Rule 9 and were merged.
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md d6ed4447e34cf1dd88ee67ee9136c4f6dbc29db4
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/hero-system.md 22b23c09a786eb7b142e7e998c12cf1b7ff090ce
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/battle-hud.md c523e7d611336730edba829d7f4c8d8109fc0482
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 9d6ec8138446d49ffa36df14ddb9b3c9d9fa1ce7
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+Applied in autonomous mode: all 4 blocking items (MIN_INTERVAL constant and tolerance, to_ticks named; Rule 10 return value and handler stop, signature to ADR-0002, AC7 asserts it; floors of 1 for range, leash_radius, radius, reach, splash_radius, move_speed, walk_speed, max_hp and path_width, AC3 boundaries; per-type tag vocabulary, AC2 fixture; content-test register, AC10 extended) and recommended: Rule 6 make_read_only wording, Rule 7 unknown property per own type, Flow cross-reference row. Follow-on edits outside this GDD: combat-damage.md slow_duration floor, move_speed and radius ranges; enemy-wave.md spawn_interval, move_speed, v_slow and v_fast ranges; hero-system.md radius, move_speed and walk_speed ranges.
+A godot-specialist spot-check closed its three items and caught a Unicode minus in the code span; fixed. A systems-designer spot-check closed the floors, the interval and the tag fixture, and found the first register retold the owners' rules wrongly (rules filed under the wrong owner, rules no owner has, criteria pointers to stories). The register was rewritten to name each owner's content table and the criterion that proves it, all pointers confirmed by that check, and the stale "above 0" and 1/60 ranges in other GDDs were aligned.
+Verdict: APPROVED, on the creative director's ruling that a spot-check of the changed lines decides approval. Not done: every remaining recommended and routed item above.

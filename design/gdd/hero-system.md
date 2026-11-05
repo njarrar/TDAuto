@@ -198,8 +198,8 @@ The **burst_safe_distance** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `radius` | float, units | above 0 to 2,000 | data file via the accessor | Burst radius |
-| `move_speed` | float, units/s | above 0 to 2,000 | data file via the accessor | Enemy |
+| `radius` | float, units | 1 to 2,000 | data file via the accessor | Burst radius |
+| `move_speed` | float, units/s | 1 to 2,000 | data file via the accessor | Enemy |
 | `speed_factor` | float | above 0 to 1 | Combat | Slow |
 | `telegraph_duration` | float, seconds | 0–600 | data file via the accessor | Telegraph |
 
@@ -214,7 +214,7 @@ The **walk_ticks** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `distance` | float, units | 0 up to the `pin_rect` diagonal | calculated | Current position to the pin |
-| `walk_speed` | float, units/s | above 0 to 2,000 | data file via the accessor | Hero |
+| `walk_speed` | float, units/s | 1 to 2,000 | data file via the accessor | Hero |
 
 **Output Range:** 1 up to 211 ticks across the rect's diagonal of 841 at the starter `walk_speed` of 240, so even the smallest hop takes a tick and a bot cannot chain free moves.
 **Example:** 240 units: 60 ticks. The position along the line is `from + (pin − from) × (1 − float(walk_left) / float(walk_ticks))`, with the ratio in floats, and at `walk_left` 0 the position is assigned the pin directly.

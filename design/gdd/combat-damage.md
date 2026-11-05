@@ -125,7 +125,7 @@ The **speed_factor** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `slow_strength` | float | above 0, below 1 | data file via the caller | Fraction of speed removed |
-| `move_speed` | float, units/s | above 0, up to 2,000 | data file via the accessor | Enemy & Wave reads it at use time |
+| `move_speed` | float, units/s | 1 to 2,000 | data file via the accessor | Enemy & Wave reads it at use time |
 
 **Output Range:** above 0 and up to 1, so no slow stops an enemy by rule. A strength near 1 would in practice, so Tower's content test caps `slow_strength` at 0.6.
 **Example:** speed 60, strength 0.4: factor 0.6, speed 36.
@@ -138,7 +138,7 @@ The **in_radius** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `dx`, `dy` | float | any in the field | calculated | Enemy position minus impact point |
-| `radius` | float, field units | above 0, up to 2,000 | data file via the caller | Splash or burst radius |
+| `radius` | float, field units | 1 to 2,000 | data file via the caller | Splash or burst radius |
 
 **Output Range:** true or false, inclusive, so an enemy exactly on the edge is hit and a primary target at distance 0 always is.
 **Example:** radius 50, enemy at (30, 40): 2,500 ≤ 2,500, a hit.

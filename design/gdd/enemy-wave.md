@@ -190,7 +190,7 @@ The **spawn_tick** formula is defined as:
 |----------|------|-------|--------|-------------|
 | `i` | int | 0 to `count` − 1 | calculated | Member index |
 | `start_delay` | float, seconds | 0–600 | data file | Group offset from wave start |
-| `spawn_interval` | float, seconds | 1/60–600 | data file | Gap between members |
+| `spawn_interval` | float, seconds | `MIN_INTERVAL` (1/30) to 600 | data file | Gap between members |
 
 **Output Range:** 0 up to 18,000,000 at the domain's limits; the largest-gap check keeps real waves far below it. Error stays within half a tick and never accumulates. A member at tick 0 spawns on the wave's first slot.
 **Example:** interval 0.125 s gives 0, 8, 15, 23.
@@ -203,7 +203,7 @@ The **d_next** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `d` | float, units | 0 to `path_length` | calculated | Distance travelled |
-| `move_speed` | float, units/s | above 0, up to 2,000 | data file via the accessor | Read at use time |
+| `move_speed` | float, units/s | 1 to 2,000 | data file via the accessor | Read at use time |
 | `speed_factor` | float | `1 − max_slow` up to 1 | Combat | Slow. Slows do not stack (Combat Rule 7), so this is its floor, and `peak_alive_ub` relies on it. A `max_slow` near 1 would stall a wave, so Tower's content test caps `slow_strength` at 0.6 |
 | `path_length` | float, units | above 0 | calculated | Sum of segment lengths |
 
@@ -245,7 +245,7 @@ The **catch_up** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `v_slow`, `v_fast` | float, units/s | above 0, up to 2,000 | data file | Speeds, `v_fast` above `v_slow`; it applies only when the faster enemy spawns later |
+| `v_slow`, `v_fast` | float, units/s | 1 to 2,000 | data file | Speeds, `v_fast` above `v_slow`; it applies only when the faster enemy spawns later |
 | `delay` | float, seconds | 0–600 | data file | How much later the faster enemy spawns |
 
 **Output Range:** the distance where they meet. They never meet on this path if it exceeds `path_length`, and at equal speeds they never meet at all. Slows move this point, so re-derive it once towers exist.
@@ -272,7 +272,7 @@ The **peak_alive_ub** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `path_length` | float, units | above 0 | calculated | As above |
-| `move_speed` | float, units/s | above 0, up to 2,000 | data file | Per enemy |
+| `move_speed` | float, units/s | 1 to 2,000 | data file | Per enemy |
 | `max_slow` | float | 0 to below 1 | data file | Highest `slow_strength` in the catalogue |
 
 **Output Range:** 1 up to the wave's total count. It is pessimistic on purpose: no kills, always slowed. The tolerance is there because `ceil` would otherwise run a tick high on exact products (`to_ticks`). A wave whose total count is at most 48 passes outright, and waves cannot overlap at MVP, so the check is per wave.
