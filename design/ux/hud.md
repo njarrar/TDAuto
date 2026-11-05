@@ -46,7 +46,7 @@ Drawn from the UI Requirements sections of all 8 GDDs. Combat, Data & Config and
 | 11 | Hero field visuals (leash, pin ghost, reticle, radius preview, reach ring, kill preview, Ready ticks) | Hero | Hero (its own view) |
 | 12 | Enemy glyphs, danger chevrons, hit flashes | Enemy & Wave, Combat | Enemy & Wave, Combat |
 | 13 | First-time prompt (one line) | Hero, Tower | Battle HUD |
-| 14 | Ground-tap rejection ring | Input (`ground_tap`) | Battle HUD |
+| 14 | Ground-tap rejection ring | Input (`ground_tapped`) | Battle HUD |
 | 15 | Result: Won or Lost text, got-through glyphs (Lost only), damage by source | Flow, Combat, Enemy & Wave, Tower | Battle HUD |
 | 16 | Paused screen | Flow | Battle HUD |
 | 17 | Fatal screen | Flow | Flow (generic, catalogue-free) |
@@ -142,7 +142,7 @@ One row per element. "Pattern" refers to `design/ux/interaction-patterns.md`; "T
 | Upgrade chip | Contextual | Field, 76 above the tapped tower | Tower | Cost, level-2 glyph, draining bar | 76 x 44 panel, 16 dp cost, 20 px cyan polygon, neutral bar 3 units tall | Frame during its 1.5 s | Tap on a level-1 tower | Bar drains linearly | MUST KEEP while open | P-07 |
 | Range rings | Contextual | Field, around a tower | Tower, Data | Tower reach | Solid unfilled outlines: arc open, one per distinct level-1 range; chip open, current plus next at alpha 0.25; after build or upgrade, 400 ms then a 200 ms fade; level-2 tap, 1.5 s | Event | As listed | Fade only | CAN HIDE | none (drawn by HudField; Tower Visual Requirements) |
 | Prompt | Contextual | Below the band, centre (270, `I_top + 89`) | Hero, Tower (acts) | One of three lines | 14 dp, one line, on panel | Signals and the frame | First match of Rule 13; Build, Wave, Intermission | Hidden on its act, never on a timer | SHOULD KEEP | P-17 |
-| Ground ring | Contextual | Field, at the tap | Input (`ground_tap`) | Rejection cue | 2 px neutral ring, radius 16, alpha 0.35 | Event | First three `ground_tap`s of a battle | 150 ms fade in, 600 ms hold, 200 ms fade out | CAN HIDE | P-16 |
+| Ground ring | Contextual | Field, at the tap | Input (`ground_tapped`) | Rejection cue | 2 px neutral ring, radius 16, alpha 0.35 | Event | First three `ground_tapped`s of a battle | 150 ms fade in, 600 ms hold, 200 ms fade out | CAN HIDE | P-16 |
 | Result (Lost) | Contextual | Lost panel, x 48 to 492, y 200 to 752 | Flow, Combat, Enemy & Wave, Tower | "Broke on wave N of M", next-try line, "Got through" glyphs, Towers, Hero, Burst, Slowed, Retry | Plain 16 dp text, left-aligned, no headline; Retry the only filled shape, at alpha 0.5 until Armed, stepping to full, and lighter while a counting press is held so a slide-off shows | Once, on the first `advance` after the outcome | Lost | Text appears 400 ms after | MUST KEEP | P-11, P-08 |
 | Result (Won) | Contextual | Won panel, x 48 to 492, y 744 to 944 minus `B` | Flow, Combat, Enemy & Wave, Tower | "Stage clear", "Lives N of M" (left column); Towers, Hero, Burst, Slowed (right column); Play again. No "Got through" row: it needs about 270 units against a 198-unit column, so the log keeps it (user decision, 2026-11-04) | Compact two-column panel, board visible above it; Play again looks and arms like Retry | Once | Won | Text appears 400 ms after; brighten sequence cut | MUST KEEP | P-11, P-08 |
 | Paused | Contextual | Full screen | Flow | "Paused. Tap to resume" | 40% scrim, 300 x 64 panel | Instant | Focus loss | None | MUST KEEP | P-11 |
@@ -253,7 +253,7 @@ The HUD has no toasts or banners. The transient items are below. None queues: ea
 | Notification | Trigger | Position | Duration | Max at once | Priority | Queue behaviour |
 |---|---|---|---|---|---|---|
 | Prompt line | Rule 13 acts | Below the band, centre (270, `I_top + 89`) | Until the act, never on a timer | 1 | Low | First match only; the next match shows when its act is done. Prompt 2 also hides while an arc is open. Never queued |
-| Ground ring | `ground_tap`, first three per battle | At the tap | 150 ms in, holds 600 ms, fades out over 200 ms (accepted 2026-11-04, HQ-13) | 1 per tap | Lowest | After the third, none. Resets on retry. A dismiss tap (arc backdrop) draws none |
+| Ground ring | `ground_tapped`, first three per battle | At the tap | 150 ms in, holds 600 ms, fades out over 200 ms (accepted 2026-11-04, HQ-13) | 1 per tap | Lowest | After the third, none. Resets on retry. A dismiss tap (arc backdrop) draws none |
 | Refused-press nudge | `NO_GOLD` on a disc; a burst press while Locked | On the element | 120 ms | 1 per element | Medium | Dropped if another press arrives; skipped under Reduce Motion (**gap: needs a non-motion cue, P-12**) |
 | Range ring (inspect) | Tap a level-2 tower | Around the tower | 1.5 s | 1 | Low | Replaced by the next ring state |
 | Range ring (after build or upgrade) | `tower_built`, `tower_upgraded` | Around the tower | 400 ms hold, 200 ms fade | 1 per tower | Low | Replaced if a new state begins |

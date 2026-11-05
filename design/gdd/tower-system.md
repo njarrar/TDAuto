@@ -187,7 +187,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 | Enemy & Wave | listens, reads | `enemy_killed(bounty)`; `targets()`; `slot_positions` | Enemy & Wave |
 | Combat & Damage | calls | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack` | Combat (API); this system (when, whom, values) |
 | Game State & Stage Flow | built, listens | Builder makes TowerSim and ticks it in order; injects `halted()`; forwards `wave_called_early(seconds_left)` | Flow (order); this system (bonus) |
-| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tap`, `pressed` | Input (API); TowerInput (meaning, chip) |
+| Input & Gesture Resolver | registers, listens | TowerInput registers slots and towers as TAP 200, disables a slot once built; hears `tapped`, `pressed` | Input (API); TowerInput (meaning, chip) |
 | Battle HUD | listens, calls | The signals and reads of Rule 17; calls `build` from the arc | HUD (drawing) |
 | Hero System | none directly | Balanced against through bots | Bots |
 | Bots and tests | call | `build`, `upgrade`, `gold()` through the builder | Harness |
@@ -298,7 +298,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 - **If a splash tower's target is the only one in range but others stand beyond range inside the radius**: they are hit. Range picks the aim; the radius picks the victims.
 - **If a splash's impact lies near the field's edge**: only enemies in `targets()` can be hit.
 - **If the last target dies to an earlier tower this tick**: the later tower finds no target, holds at 0 and fires on the next tick with one.
-- **If Won is reached**: `waves_complete` makes Flow latch in the reap slot, and gold keeps whatever the reap paid first. Leftover gold is worth nothing at MVP.
+- **If Won is reached**: `waves_completed` makes Flow latch in the reap slot, and gold keeps whatever the reap paid first. Leftover gold is worth nothing at MVP.
 - **If a fatal leak ends the stage with a tower about to fire**: the tick is skipped (Flow Rule 15) and nothing fires.
 - **If the player calls with less than one rate's worth left**: the bonus is 0, no `gold_changed` fires, and the wave starts.
 - **If a stage has 0 bounty on every enemy**: only starting gold and the bonus exist. The `wave_income` floor fails it, since 8 is below the cheapest level-1 `cost`. A code-built fixture simply earns nothing.
@@ -317,7 +317,7 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Data & Config Pipeline | Tower levels through the accessor; `is_tower(id)`; `level_count(def_id)`; `starting_gold`, `slot_positions`, `early_call_seconds_per_gold` |
 | Enemy & Wave | `enemy_killed(bounty)`, `targets()`, `slot_positions`, `gold_upper_bound`, `to_ticks` |
 | Combat & Damage | `deliver`, `apply_slow`, `first_in`, `all_in_radius`, `speed_factor`, `report_attack`, tick slot |
-| Input & Gesture Resolver | Target registry, `tap`, `pressed` (TowerInput only) |
+| Input & Gesture Resolver | Target registry, `tapped`, `pressed` (TowerInput only) |
 | Game State & Stage Flow | Build, tick order, `halted()`, `wave_called_early(seconds_left)`, `phase_changed` for the chip |
 
 **Downstream, with their own GDDs:**

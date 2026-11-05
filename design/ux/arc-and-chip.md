@@ -58,15 +58,15 @@ It is context-dependent (only inside a battle, and only while no outcome or Fata
 
 | Entry Source | Trigger | Player carries this context |
 |---|---|---|
-| Free build slot | `tap` on the slot disc (TAP 200). TowerInput emits `slot_tapped(slot_index)` and the HUD opens the arc | Current gold, the slot's index and position, the three level-1 tower IDs and costs |
-| Level-1 tower | `tap` on the tower disc (TAP 200) while no chip is open for it. TowerInput opens the chip | Current gold, the tower's level (1), the level-2 cost |
+| Free build slot | `tapped` on the slot disc (TAP 200). TowerInput emits `slot_tapped(slot_index)` and the HUD opens the arc | Current gold, the slot's index and position, the three level-1 tower IDs and costs |
+| Level-1 tower | `tapped` on the tower disc (TAP 200) while no chip is open for it. TowerInput opens the chip | Current gold, the tower's level (1), the level-2 cost |
 | Level-1 tower with a different chip open | `pressed` naming another tower closes the first chip; that tower's own tap then opens its chip | As above |
-| Level-2 tower | `tap` on the tower | Nothing; opens the range ring and the "Max" label (UQ-03), not a chip |
+| Level-2 tower | `tapped` on the tower | Nothing; opens the range ring and the "Max" label (UQ-03), not a chip |
 
 | Exit Destination | Trigger | Notes |
 |---|---|---|
-| Battle (tower built) | `tap` on a disc at 200 ms or later, gold at least the cost | Irreversible: gold falls at once, no refund. The arc unregisters at once and the 120 ms collapse is art only |
-| Battle (arc dismissed) | `pressed` with a best tap that is not a disc (backdrop sink); `drag_started`; a disc press under 200 ms after opening | No purchase. The later `tap` of an id no longer live is ignored |
+| Battle (tower built) | `tapped` on a disc at 200 ms or later, gold at least the cost | Irreversible: gold falls at once, no refund. The arc unregisters at once and the 120 ms collapse is art only |
+| Battle (arc dismissed) | `pressed` with a best tap that is not a disc (backdrop sink); `drag_started`; a disc press under 200 ms after opening | No purchase. The later `tapped` of an id no longer live is ignored |
 | Battle (arc closed by the game) | Paused, Won, Lost or Fatal; `HALTED` from `build`; any other `build` result besides `OK` and `NO_GOLD` (also logs a development error) | `NO_GOLD` does not close the arc |
 | Battle (tower upgraded) | Same tower or the chip tapped when `200 <= elapsed < 1500` ms at release, gold at least the level-2 cost | Irreversible. Any result except `NO_GOLD` closes the chip |
 | Battle (chip expired) | 1,500 ms pass | Chip disc unregisters. A held press past expiry does nothing. A later tap on the tower opens a new chip and never commits |
@@ -191,7 +191,7 @@ Discovered rather than shown: tower stats, damage and range numbers (never shown
 | Chip expiring | The last frames before 1,500 ms | The bar reaches zero; the chip then closes |
 | Chip expired | 1,500 ms | **Proposal:** a 120 ms fade out (a fade, kept under Reduce Motion). The disc unregisters |
 | Chip committed | `upgrade` returns `OK` | Chip closes; the tower shows its level-2 inset on the first frame with the build overlay; range ring 400 ms then 200 ms fade |
-| Level-2 tower tapped | `tap` on a level-2 tower | `tower_inspected`: range ring 1.5 s, solid 2 px cyan, alpha 0.5, plus the "Max" label (proposal, UQ-03); no chip |
+| Level-2 tower tapped | `tapped` on a level-2 tower | `tower_inspected`: range ring 1.5 s, solid 2 px cyan, alpha 0.5, plus the "Max" label (proposal, UQ-03); no chip |
 | Max-level (explained) | Same | The label answers "why no chip" |
 | Overlay closed by game | Paused, Won, Lost, Fatal, `HALTED` | Closes at once. The resume tap reaches nothing beneath |
 | Reduce Motion | `reduce_motion` flag | No 2 px nudge, no scale 1.15 to 1 on the build overlay, arc collapse is a cut. Fades and the bar stay. The refusal cue is a brightness step, which stays (UQ-01) |
@@ -214,15 +214,15 @@ Mapping interactions for: **touch** (the desktop build's mouse stands in for it)
 | Arc disc | Tap whose **press** is at 200 ms or later after the arc opened | Tap, TAP 300 | Gold falls; tower appears on the first frame; arc collapses | `build(slot_index, tower_id)` returns `OK` |
 | Arc disc | Tap while unaffordable | Tap, TAP 300 | Nudge (unless Reduce Motion) plus the refusal cue; arc stays open | `build` returns `NO_GOLD`; nothing changes |
 | Arc disc | Tap whose **press** is under 200 ms after opening (released whenever) | Tap | Arc closes (a cut) | No `build` call |
-| Arc backdrop | Tap or press outside the discs | Tap, TAP 250 sink | Arc closes | Dismiss; the later `tap` is ignored |
+| Arc backdrop | Tap or press outside the discs | Tap, TAP 250 sink | Arc closes | Dismiss; the later `tapped` is ignored |
 | Arc | Drag | `drag_started` | Arc closes | Dismiss; the drag then goes to whichever owner it started on |
 | Level-1 tower | Tap | Tap, TAP 200 | Chip opens (guard look) | Chip state Open, window starts |
 | Tower or chip | Tap whose **release** falls at `200 <= elapsed < 1500` ms | Tap | Gold falls; level-2 inset on the first frame; chip closes | `upgrade(slot_index)` returns `OK` |
 | Tower or chip | Tap released under 200 ms | Tap | None | Ignored; the window keeps running |
 | Tower or chip | Tap, unaffordable | Tap | Refusal cue; chip stays open and dimmed | `upgrade` returns `NO_GOLD`; window does not restart |
-| Other tower | Tap while a chip is open | `pressed`, then `tap` | The first chip closes; that tower's own chip opens | Dismiss, then a new chip |
+| Other tower | Tap while a chip is open | `pressed`, then `tapped` | The first chip closes; that tower's own chip opens | Dismiss, then a new chip |
 | Empty field | Tap while an arc is open | `pressed` naming the backdrop | Arc closes; no ground ring, because the backdrop takes the tap (Battle HUD Rule 14) | Dismiss |
-| Empty field | Tap while a chip is open | `pressed` naming no target, then `ground_tap` | Chip closes; the ground ring draws if this is one of the first three ground taps of the battle | Dismiss |
+| Empty field | Tap while a chip is open | `pressed` naming no target, then `ground_tapped` | Chip closes; the ground ring draws if this is one of the first three ground taps of the battle | Dismiss |
 | Level-2 tower | Tap | Tap | Range ring 1.5 s plus the "Max" label | `tower_inspected`; no chip |
 | Start/Call | Press while an arc is open | `pressed` naming the backdrop | Ignored by Start/Call; the arc closes | Dismiss only, no command |
 

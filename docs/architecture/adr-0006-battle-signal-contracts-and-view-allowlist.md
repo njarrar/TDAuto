@@ -13,7 +13,7 @@ Proposed
 Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer. Reviewed 2026-11-05 by godot-specialist (2 BLOCKING, 8 MINOR, plus an 8-row engine probe) and technical-director (TD-ADR: CONCERNS, 3 blockers, 7 concerns, 6 advisories); all findings were applied in the same-day fix round, except where the Decision text records a different choice. A re-review of the revised text follows.
 
 ## Summary
-Battle systems talk through signals, and the GDDs, ADR-0004, ADR-0005 and ADR-0009 each leave open the same questions: when an emit is allowed, what the final names and payloads are, who may listen, and when Flow emits `phase_changed(FATAL)`. This ADR decides: every emit is synchronous over a direct connection with no flags, state is committed before the first `emit`, sim reactors and view observers are two classes of listener with different re-entrancy rights, the signal catalogue (with the QQ-07 renames `waves_completed`, `tapped`, `ground_tapped`, `became_idle`) and typed payloads, `StringName` record IDs and `int` instance IDs, one named view allowlist checked by a listener-count test, and a once-only `phase_changed(FATAL)` that Flow emits at the first of four named observation points.
+Battle systems talk through signals, and the GDDs, ADR-0004, ADR-0005 and ADR-0009 each leave open the same questions: when an emit is allowed, what the final names and payloads are, who may listen, and when Flow emits `phase_changed(FATAL)`. This ADR decides: every emit is synchronous over a direct connection with no flags, state is committed before the first `emit`, sim reactors and view observers are two classes of listener with different re-entrancy rights, the signal catalogue (with the QQ-07 renames `waves_completed`, `tapped`, `ground_tapped`, `became_idle`) and typed payloads, `StringName` record IDs and `int` instance IDs, one named view allowlist checked by a listener-count test, and a once-only `phase_changed(FATAL)` that Flow emits at the first of three named observation points.
 
 ## Engine Compatibility
 
@@ -136,8 +136,8 @@ Fatal overrides Won, Lost and Paused (Flow Rule 18): the replaced outcome's emit
    attack_fired, damage_applied --> Combat view (audio at Alpha)
  sim never connects to a view.   headless: only the build() edges exist.
 
- Fatal: latch set --(no emit)--> Flow.observe_fatal() at O1 own checks | O2 tick entry |
-        O3 slot boundary | O4 wrapper _process, before Clock  --> phase_changed(FATAL) once
+ Fatal: latch set --(no emit)--> Flow.observe_fatal() at 1 own post-emit checks | 2 every halted() check
+        in Battle.tick (entry gate, slot boundaries, after slot 6) | 3 wrapper _process, before Clock  --> phase_changed(FATAL) once
 ```
 
 ### Key Interfaces
@@ -219,7 +219,7 @@ Must:
 - Commit all state, including roster removal, gold, lives, phase and a built tower's level, before the first `emit` of a transition; emit in the Decision 4 order; check `halted()` after each emit as ADR-0001 requires.
 - Connect battle-internal signals only in `BattleBuilder.build()` and observers only in `BattleWrapper.setup()`, with `signal.connect(obj.method)` and no flags.
 - Declare every signal with typed parameters and the GDD's parameter names; type enums by owner; use `StringName` for record IDs and `int` for instance ids.
-- Call `Flow.observe_fatal()` at the four observation points and nowhere else; guard it with `_fatal_emitted`.
+- Call `Flow.observe_fatal()` at the three observation points and nowhere else; guard it with `_fatal_emitted`.
 - Make HudLogic's outcome handler set a flag; build the snapshot on the next `advance(ms)`.
 - Name every handler `on_<signal>` with `-> void`; keep a reactor's state commit before its own emit.
 - Add any new signal to `BattleSignals` and to the Decision 5 table in the same change.
@@ -329,6 +329,6 @@ Greenfield: `src/` holds no `.gd` file. Create `src/battle/battle_signals.gd` wi
 10. (Decision 10, TR-state-013, TR-hud-010) The listener-count test: headless counts equal `REACTED` and zero for `OBSERVED_ONLY`, each connection's target is a reactor; the full and the dev-flagged builds have at least one connection from every Observer-column class on its signals, none from a class outside the table, none with a flag set, the declared signals of each emitter (`get_script_signal_list()`) equal its `BattleSignals` set, and no console error in the run (duplicate connect).
 11. (TR-hud-012) With `phase_changed(WON)` delivered, no snapshot exists until the next `advance(ms)`; on `FATAL` none is built.
 12. (TR-data-014) A grep test finds no `signal` declaration under `src/data/` or on `Catalogue`.
-13. (Verification) The one probe script confirms rows 1 to 5; the results are written into Engine Compatibility before Accepted.
+13. (Verification) Rows 1 to 8 were observed on desktop (4.7.2 probe, 2026-11-05, prototypes/adr-0006-probe/); the same probe is repeated on a release export template, and the `get_global_name()` line added, before Accepted.
 14. (Lint, ADR-0007) No `CONNECT_*` flag name, no `await` on a battle signal, no signal named like a method, no `connect(func` under `src/presentation/` or `src/app/`, no `get_connections()` or `get_signal_connection_list()` under `src/`.
 15. (Performance, NOT SOURCEABLE cost) The per-emit argument-passing cost is measured with ADR-0004's device plan (its Verification 3) in the release export: p99 of a tick with the wave-6 emit load.

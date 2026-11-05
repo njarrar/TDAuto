@@ -205,7 +205,7 @@ requirements:
 - id: TR-input-009
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Signal API pressed, tap, ground_tap, drag_started, drag_moved, drag_ended, drag_cancelled, idle; every exit to Idle emits idle() last"
+  requirement: "Signal API pressed, tapped, ground_tapped, drag_started, drag_moved, drag_ended, drag_cancelled, became_idle; every exit to Idle emits became_idle() last"
   created: 2026-11-03
   revised: ""
   status: active
@@ -310,7 +310,7 @@ requirements:
 - id: TR-state-008
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow listens to synchronous wave_cleared, waves_complete and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
+  requirement: "Flow listens to synchronous wave_cleared, waves_completed and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
   created: 2026-11-03
   revised: ""
   status: active
@@ -492,7 +492,7 @@ requirements:
 - id: TR-enemy-004
   system: enemy
   gdd: design/gdd/enemy-wave.md
-  requirement: "enemy_leaked, enemy_killed, wave_cleared and waves_complete fire synchronously (no CONNECT_DEFERRED) in spawn_id order after commit; leaks come before the clear"
+  requirement: "enemy_leaked, enemy_killed, wave_cleared and waves_completed fire synchronously (no CONNECT_DEFERRED) in spawn_id order after commit; leaks come before the clear"
   created: 2026-11-03
   revised: ""
   status: active
