@@ -94,6 +94,26 @@ state_ownership:
       - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
     added: 2026-11-05
     revised: ""
+  - state: enemy_roster
+    status: active
+    owner_system: enemy-wave
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    interface: "EnemyWave solely owns the live Enemy objects (_live: Array[Enemy], spawn_id order); others read roster() and targets() (reused Array[Targetable] buffers valid for one slot); an enemy leaves the roster only by the leak step or the reap; spawn_id starts at 1 and is never reused in a battle"
+    write_access: enemy-wave-only
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+    revised: ""
+  - state: damage_by_source_counters
+    status: active
+    owner_system: combat
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    interface: "Combat adds the applied amount per source_id and per SourceKind inside deliver; read through dealt_by_id, dealt_by_kind, dealt_total and hero_share; never reset; Flow copies them into the stage result (ADR-0006)"
+    write_access: combat-only
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -284,6 +304,34 @@ interfaces:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
     added: 2026-11-05
     revised: ""
+  - contract: damage_delivery
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - tower-sim
+      - hero-sim
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    signal_signature: "Combat.deliver(event: DamageEvent) -> float (applied amount; guards in order null target, removed, bad amount, dead, zero; callers check halted() after); apply_slow(enemy, strength, seconds) stores max(1, to_ticks(seconds)); report_attack before the first deliver; victims computed once; DamageEvent(target, amount, source_kind, source_id) where source_id names who dealt and a grantor gets its own field"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+    revised: ""
+  - contract: targetable_contract
+    status: active
+    pattern: direct_call
+    producer: combat
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - stat-modifier-vs
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    signal_signature: "Targetable extends RefCounted (spawn_id, def_id, distance, position, removed, health, status; is_dead(), is_alive()); Enemy is the only MVP subclass; helpers take Array[Targetable] (first_in, nearest_in, all_in_radius with max_range); the hero is a source, not a target"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -353,6 +401,15 @@ performance_budgets:
     notes: "Unmeasured proposal (QQ-11)"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - system: combat_targeting
+    status: active
+    budget_ms: 2.0
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    notes: "About 400 range checks per tick (TR-combat-013), unmeasured until a phone build; pass condition MAX_TICKS_PER_FRAME (3) x p99 tick cost <= 4.0 ms inside ADR-0004's simulation slice; Combat.range_checks counter records the real figure"
+    referenced_by:
+      - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
     added: 2026-11-05
     revised: ""
 
@@ -727,6 +784,42 @@ forbidden_patterns:
     description: "No view or HUD duration is driven by a sim tick or sim signal; each is advance(view_dt) on the frame clock."
     why: "The clearance tail, Won's beat and view effects must run after the battle clock stops and freeze under Pause."
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+  - pattern: hp_change_outside_deliver
+    status: active
+    description: "No code writes Health.hp or a Status field except Combat.attach, deliver, apply_slow and tick_status; no damage by any other route."
+    why: "The per-source counters and hero share are exact only if every HP change passes deliver (TR-combat-003)."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+  - pattern: roster_removal_outside_leak_and_reap
+    status: active
+    description: "An enemy leaves the roster only in EnemyWave's leak step (slot 2) or reap step (slot 6); nothing else sets removed or erases from the owning list; both steps use an index loop with no advance after remove_at; spawn_id is never reused."
+    why: "Leaks resolve before fire and kills pay once in the reap; any other removal breaks the tick order and the clear check (ADR-0004)."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+  - pattern: roster_list_held_past_slot
+    status: active
+    description: "roster() and targets() return reused buffers; callers never store, mutate or sort them past the slot that read them."
+    why: "The buffers are refilled in place, so a held reference changes under the holder."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+  - pattern: targetable_as_node
+    status: active
+    description: "Targetable, Enemy, Health and Status extend RefCounted, never Node or Resource."
+    why: "A freed node cannot honour removed and a node's position collides with the cached one (TR-combat-002)."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+  - pattern: core_combat_names_feature_class
+    status: active
+    description: "combat.gd, targetable.gd, health.gd, status.gd and damage_event.gd never name Enemy, EnemyWave, TowerSim or HeroSim."
+    why: "Combat is Core and EnemyWave is Feature but both live in src/battle/, so a path lint cannot enforce the layer boundary."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+  - pattern: for_in_over_mutated_roster
+    status: active
+    description: "No for-in loop over the owning roster list while the body can remove from or append to it; use an index loop that does not advance after remove_at."
+    why: "4.7.2 probe: for-in with an erase in the body skips the next element silently, so adjacent leaks or kills slip a tick."
+    adr: docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
     added: 2026-11-05
 
 # Example:
