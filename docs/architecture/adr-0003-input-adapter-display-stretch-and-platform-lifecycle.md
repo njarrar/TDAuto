@@ -438,6 +438,12 @@ These are not covered by `docs/engine-reference/godot/`, the spike or the echo-o
 - NOT SOURCEABLE: the role of `get_canvas_transform()` under stretch (values not recorded), and when a lifecycle notification is dispatched relative to `_process`.
 
 ## GDD and Registry Sync at Acceptance
+
+Applied 2026-11-05 at acceptance; items not applied are listed below.
+
+- Not applied: `tr-registry.yaml` TR-input-002, -005, -006, -016 and TR-hud-002: held for the GDD and TR-registry pass (another owner).
+- Not applied: Input, Battle HUD, Enemy & Wave and Flow GDD items: held for the GDD pass (another owner).
+
 Apply when this ADR is Accepted. Each line is a clause change; no document is edited by this ADR while it is Proposed.
 - **`tr-registry.yaml`**: TR-input-002 add "HudModals calls the adapter's static `read_pointer`, so translation exists once". TR-input-005 add "non-left buttons emit no touch under emulation (4.7.2 probe)". TR-input-006 replace "via DisplayServer.get_display_safe_area()" with "from the platform safe area (source fixed by ADR-0003 D6; zero until then)". TR-input-016 replace "Minimum width 360 dp by runtime guard" with "field width in dp, min(width_dp, height_dp x 540/960), at least 360 by runtime guard". TR-hud-002 replace "that consume every event before the Input adapter sees it" with "that take every press before the Input adapter sees it (moves and releases of a gesture already under way still reach the adapter through `_input`)". Stamp `revised:` on each.
 - **Input GDD**: Rule 12 and the Edge Cases: "inside the margin" becomes "strictly inside (a press exactly on the bound is accepted)". The "Becomes an ADR" note (line 78) and the Open Questions row for the adapter path: answered by ADR-0003 Decisions 2 to 5, device run owed.

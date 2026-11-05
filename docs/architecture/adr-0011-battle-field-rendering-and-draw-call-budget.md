@@ -308,6 +308,13 @@ Greenfield. Order of stories: `HudQuantiser` and `HudRedrawKey` with the table t
 
 ## GDD and Registry Sync at Acceptance
 
+Applied 2026-11-05 at acceptance; items not applied are listed below.
+
+- Not applied: `tr-registry.yaml` TR-combat-011, TR-enemy-015, TR-hud-017: held for the TR-registry pass (another owner).
+- Not applied: `design/art/art-bible.md` (V7, V12, V13): routed to the art-director.
+- Not applied: `design/gdd/hero-system.md`, `design/gdd/enemy-wave.md` and `design/ux/hud.md` items: held for the GDD and UX pass (another owner).
+
+
 Edits owed when this ADR moves to Accepted (recorded 2026-11-05 from the drafting sync list; line numbers are as of that date):
 
 - docs/architecture/architecture.md:24 (Rendering risk row): "The 60 draw-call budget is a proposal, not measured." -> add "ADR-0011 targets 27 worst-case calls by type run (observed on a desktop Mobile renderer); the Android count is unmeasured (V1)"

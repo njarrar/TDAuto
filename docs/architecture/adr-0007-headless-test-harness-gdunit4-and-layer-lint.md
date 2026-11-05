@@ -238,6 +238,13 @@ Greenfield, except `.github/workflows/tests.yml`: it exists and uses `godot-gdun
 
 ## GDD and Registry Sync at Acceptance
 
+Applied 2026-11-05 at acceptance; items not applied are listed below.
+
+- Not applied: `tests/README.md` and `.github/workflows/tests.yml`: held for `/test-setup`.
+- Not applied: CLAUDE.md and `.claude/docs/coding-standards.md` CI command: held; needs the owner's explicit approval.
+- Not applied: adr-0004:53 applied in its settled form (L16 names ADR-0009's and ADR-0010's files), not as "needs the file name from ADR-0010".
+
+
 Edits owed when this ADR moves to Accepted (recorded 2026-11-05 from the drafting sync list; line numbers are as of that date). The CLAUDE.md CI-command edit needs the owner's explicit approval; acceptance does not cover it.
 
 

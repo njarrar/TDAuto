@@ -95,7 +95,7 @@ HeroSim.BurstResult    { OK = 0, HALTED, REENTERED, BUILD_PHASE, NOT_PINNED, NOT
 - **Amendment 2:** none of the GDD orders change; `MAX_LEVEL` stays before `NO_GOLD` (Tower edge case: a second `upgrade` is `MAX_LEVEL`). `HALTED` is also re-checked after the cost read (Tower Rule 5).
 - **State before geometry, refusal is inert.** A refusal returns before any mutation and emits nothing; no counter moves (`repins`, `slows_applied`). The enum lists the checks in order: `HALTED`, `REENTERED`, index and ID checks (non-fatal `is_tower`, `level_count`, Data Rule 10), occupancy, level, then the cost read, `HALTED` again, `NO_GOLD`, commit. Hero: `HALTED`, `REENTERED`, `BAD_POSITION`, `OUT_OF_BOUNDS`, `BUTTON_ZONE`; burst: `HALTED`, `REENTERED`, `BUILD_PHASE`, `NOT_PINNED`, `NOT_READY`, `BAD_POSITION`, `OFF_FIELD`, `OUT_OF_REACH`.
 - **Callers.** `HeroInput` and `TowerInput` treat any result other than `OK`, `HALTED` and (for the chip) `NO_GOLD` as a development error via `dev_error`; `REENTERED` is already reported by the sim, so the caller does not report it twice. Bots log every non-`OK` code into the recorded script. Flow's caller (the HUD, through HudLogic) treats `OK`, `HALTED`, `WRONG_PHASE` and `NOT_CALLABLE` as ordinary: a Start or Call tap can race the countdown's expiry or a second tap (Flow GDD edge cases), so those refusals are expected and report nothing.
-- **Flow's result enums (closes QQ-18 and V8).** Same rules as the sims (`OK = 0` first, qualified names, state before geometry, a refusal mutates and emits nothing, `_in_command` set only after the refusal checks and cleared on every return path):
+- **Flow's result enums (closes QQ-18 and V8).** Same rules as the sims (`OK = 0` first, qualified names, state before geometry, a refusal mutates and emits nothing, `_in_command` set only after the refusal checks and cleared at the single return):
 ```
 Flow.StartResult { OK = 0, HALTED, REENTERED, WRONG_PHASE }
 Flow.CallResult  { OK = 0, HALTED, REENTERED, WRONG_PHASE, NOT_CALLABLE }
@@ -338,6 +338,12 @@ Greenfield (`src/` is empty). Create the files of Decision 1; the builder constr
 | V11 | GDScript integer division warning (`to_ticks / to_ticks`) is not an error under the project warning settings | Run the parse check; expect pass, else use `@warning_ignore` |
 
 ## GDD and Registry Sync at Acceptance
+
+Applied 2026-11-05 at acceptance; items not applied are listed below.
+
+- Not applied: `design/gdd/tower-system.md`, `hero-system.md` and `battle-hud.md` items: held for the GDD pass (another owner).
+- Not applied: architecture.md HeroInput row: `update()` kept, because Decision 11 (Flush) and ADR-0004 step 2b still call `HeroInput.update()` (TR-hero-011).
+
 Applied at `/architecture-review`, not by this ADR. Format `file:line: old → new`.
 
 - docs/architecture/architecture.md:529: `enum BuildResult { OK, HALTED, BAD_SLOT, ... }` → `{ OK = 0, HALTED, REENTERED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD }`

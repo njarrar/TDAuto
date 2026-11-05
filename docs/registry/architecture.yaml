@@ -1743,7 +1743,14 @@ forbidden_patterns:
     path: src/battle/
     enforced_by: tools/ci/layer-lint.sh
   - pattern: L36
-    description: "No draw_colored_polygon, draw_arc or draw_circle in per-entity loops under src/presentation/field/ (ADR-0011 Decision 11)"
+    description: "No draw_colored_polygon, draw_arc, draw_circle or draw_polyline in per-entity loops under src/presentation/field/ (ADR-0011 Decisions 11 and 13; a guard, ADR-0011 V1 is the gate)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: []
+    status: active
+    path: src/presentation/field/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L37
+    description: "No material, z_index, add_child, draw_string or enemy_killed connection in field views under src/presentation/field/ (ADR-0011 Decisions 1, 2, 12)"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
     tr: []
     status: active
