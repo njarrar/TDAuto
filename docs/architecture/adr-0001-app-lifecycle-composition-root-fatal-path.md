@@ -1,7 +1,7 @@
 # ADR-0001: App Lifecycle, Composition Root and Fatal Path
 
 ## Status
-Proposed. Revised the same day after TD-ADR CONCERNS and godot-specialist review. Accepting it also records the user's acceptance of QQ-08's composition-root change (a scene-free builder instead of the battle scene's script), which the architecture leaves to that confirmation.
+Accepted 2026-11-05 by njarrar. Revised before acceptance after TD-ADR CONCERNS and godot-specialist review. Acceptance also records the user's approval of QQ-08's composition-root change (a scene-free builder instead of the battle scene's script). Appendix probes P1 to P7 remain pending; P1 and P4 must pass before any phone build.
 
 ## Date
 2026-11-05

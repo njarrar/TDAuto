@@ -166,7 +166,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 |---|---|---|---|---|
 | **AppRoot** (main scene, no autoload) | App states Boot, InStage, Fatal (Game State GDD). The Ready catalogue for the session. The app-level FatalLatch. The retry latch. | Starts the catalogue load; builds battles and drops them | Catalogue, FatalLatch | `Node`, `PackedScene`, `Object.free()` vs `queue_free()` timing for the wrapper on retry (**MEDIUM, NEEDS VERIFICATION**), `weakref()` (LOW) |
 | **Builder** (`build(catalogue, stage_id, stage_seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle`, or null after calling `fatal_handler` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4). The 4.7.2 editor probe answered the lifetime half: a Callable does not keep its target alive, so `Battle` holds every helper in a typed field (Flow Rule 2a). Export and phone **NEEDS VERIFICATION** (QQ-17) |
-| **BattleWrapper** (scene) | The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
+| **BattleWrapper** (scene) | `teardown()`, shared by retry and Fatal, safe on a part-built wrapper (ADR-0001). The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
 | **Fatal screen** (scene) | Catalogue-free, guaranteed to load. Shown by AppRoot. | None | AppRoot FatalLatch cause (development builds show it) | `PackedScene` (LOW) |
 
 ### Dependency diagram (MVP)
@@ -466,6 +466,13 @@ func tick(dt: float) -> void      # the ONLY way simulation time advances.
 func halted() -> bool             # flow outcome WON, LOST or FATAL, or fatal_latch set
 func set_input_cancel(cancel: Callable) -> void   # wrapper only; never set headless
 func cancel_input() -> void       # public, guarded with is_valid(); Flow and AppRoot both call it
+func fatal_cause() -> String      # the battle latch's first cause, or "" (tests read this; ADR-0001)
+
+class_name FatalLatch extends RefCounted   # ADR-0001
+signal latched(cause: String)     # once; the builder connects Flow's fatal entry to it
+func fatal(cause: String) -> void # the one injected fatal; keeps the first cause, calls the app handler
+func is_set() -> bool
+func cause() -> String            # the fatal screen reads the app latch's cause
 # Strong typed fields: every sim, the FatalLatch and the one per-battle StatAccessor (Flow Rule 2a)
 
 class_name BattleBuilder extends RefCounted
@@ -579,7 +586,7 @@ Invariants: commands run only between ticks. State is checked before geometry. A
 | `burst_id` | HeroSim, HeroInput, HudLogic | From the Hero record: HeroInput reads burst damage for the kill preview, and the HUD reads Burst `cooldown` for the wedge, through the accessor without naming Burst data. |
 | `wave_index() -> int` | Flow | EnemyWave's read, so Flow's result names the last wave started and Flow keeps no wave count (Flow Rule 15). |
 | `left_handed: bool` | HeroSim, HeroInput, HudLogic | From the Input record, fixed per battle (Hero Rule 2, TR-hero-004). |
-| `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
+| `fatal(cause: String) -> void` | Builder, accessor, all sims | The method Callable `FatalLatch.fatal` on the battle latch (ADR-0001). Sets the battle latch, calls AppRoot's handler, which sets the app latch, and emits `latched` once for Flow. Idempotent. |
 | `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
 | `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow, HudLogic | Rounds half away from zero; `dt` fixed at build. |
 | `dt: float` | HudLogic | The fixed tick, for `intermission_left × dt` on Tower's bonus read. |
@@ -700,7 +707,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |
 | QQ-07 | Signal names that still break the past-tense naming rule: `tap`, `ground_tap`, `pressed`, `idle` (Input GDD) and `waves_complete` (Enemy & Wave GDD). `phase` is already renamed `phase_changed` here. Rename (for example `tapped`, `ground_tapped`, `became_idle`, `waves_completed`) or record an exception, before ADR-0008 and before any test uses them, and update the GDDs to match. | Medium | ADR-0006, ADR-0008 |
-| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. | High | ADR-0001, ADR-0004, ADR-0009 |
+| QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. The composition-root change was accepted with ADR-0001 on 2026-11-05; the other three wait on ADR-0004 and ADR-0009. | High | ADR-0001 (done), ADR-0004, ADR-0009 |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | technical-artist, ADR-0011 |
 | QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004, ADR-0011, performance-analyst |
 | QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. | Medium | Mobile Platform GDD |
