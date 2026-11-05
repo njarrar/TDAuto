@@ -5,6 +5,7 @@
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
 > **Last Verified**: 2026-11-02
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
 ## Summary
@@ -16,6 +17,10 @@ The player's standing army and the money that buys it: three tower roles on a st
 ## Overview
 
 Towers are what holds the path while the hero decides fights. The player taps an empty slot and picks one of three roles from an arc, then later taps a tower and taps again to upgrade it. From then on towers fire by themselves at the first enemy along the path in range. Gold comes from starting gold, kills and calling a wave early, and it is always too little to fill the board before the last wave, so each purchase says what the player thinks is coming. There is no selling, so a tower is a commitment and growth stays on the field: each upgrade adds visible geometry. The system exists so the hero has something to complement: towers carry the steady damage, and no tower build may clear the stage comfortably without the hero (Pillar 2). It owns attack timing, gold, slots' build state and the two commands that spend gold. Combat applies the damage, and the HUD draws the arc and the chip.
+
+## Player Fantasy
+
+The player should feel that each purchase says what they think is coming. Gold never quite fills the board before the last wave, so the choice never closes, and with no selling each build is a commitment (Summary, Rule 4). A purchase lands on the first frame, and a new tower may fire at once (Game Feel, Rule 11). Each upgrade adds visible geometry, so growth stays on the field (Pillar 1, Growth You Can See). Towers tick along steadily and read as the machine working while the hero acts: towers keep the sustained damage, the hero keeps the spike, and no tower build clears the stage comfortably without the hero (Pillar 2, One Hero, Not an Army). Where to build and when to upgrade are the decisions, and filling every slot first must not be the answer (user, 2026-11-02). Gold funds one or two decisions per wave, so the board visibly changes each wave. The main MDA aesthetic is Challenge, through the choice of what to buy. No human has played this, so the feeling is unverified.
 
 ## Detailed Design
 
@@ -335,6 +340,25 @@ Combat Rule 6 is amended to match. Slow tightening a group raises `V_s` and `V_b
 | Skill Tree, Synergy Hook (Vertical Slice) | Tags and accessor context with the live tower |
 
 Per the bidirectional rule, each must list this one when authored. Data, Enemy & Wave, Combat, Input, Flow, Battle HUD and Hero already do.
+
+## Tuning Knobs
+
+Starter values are fixtures, not balance (Starter values). Every bound from this GDD's content-rule table is proposed, as that table says. A range marked "field domain" comes from the field-domain table in `design/gdd/data-config-pipeline.md`, which guards against typos and broken simulation, not balance. Visual sizes and timings sit in Visual/Audio Requirements and UI Requirements, and are not repeated here.
+
+| Knob | Current value | Safe range | What it changes | Owner | Source |
+|---|---|---|---|---|---|
+| `cost`, per level | Single 50, 60; splash 70, 80; slow 60, 70 (starter fixture) | At least 1 (proposed); every level-1 cost at most `starting_gold`; the two dearest different roles' level-1 costs together above `starting_gold`; `gold_before_last_wave` below the cheapest full board; the dearest full board above `max_final_gold` (all proposed); up to 100,000 (field domain) | Price of each build and upgrade, the full-board cost, and the first-buy choice | Tower | Starter values; content rules; `gold_before_wave` |
+| `damage`, per level | Single 12, 21; splash 20, 30; slow 0, 0 (starter fixture) | Exactly 0 on `slow`, above 0 otherwise; level 2 not lower (proposed); up to 1,000,000 (field domain) | Damage per victim, and so `tower_dps`, kills and gold | Tower | Single's level 2 rose from 18 to 21 (user, 2026-11-02): at 20 the hero share median fell to 24.8%, and at 24 single alone caught the best mixes |
+| `range`, per level | 150, 165 on every role (starter fixture) | Above 0 to 260; level 2 not lower (proposed); Enemy & Wave's L10 needs 200 of path per slot at the lowest level-1 range | Whom a tower may aim at, and path coverage | Tower | Content rules; L10 passes at 223 |
+| `attack_interval`, per level | Single 0.6, splash 1.0, slow 0.6, equal across levels (starter fixture) | At least 0.2 (proposed), up to 600 (field domain); level 2 not longer (proposed) | Fire cadence, and so `tower_dps` | Tower | Starter values; `tower_dps` |
+| `splash_radius`, per level | 55, 75 (starter fixture) | Above 0 to 2,000 (field domain); level 2 not lower; `burst_spike` at least 2 at every splash level (proposed) | Victims per splash, and how much splash takes from the burst | Tower | `burst_spike`: 5.78 at starter values |
+| `slow_strength`, per level | 0.4, 0.5 (starter fixture) | Above 0 to 0.6; level 2 not lower (proposed) | Enemy speed while slowed | Tower; meaning owned by Combat | Content rules |
+| `slow_duration`, per level | 2.0, 2.5 s (starter fixture) | One tick (1/60) to 600 (field domain); level 2 not lower (proposed) | How long a slow lasts | Tower | Starter values |
+| `early_call_seconds_per_gold` | 1.8 s (starter fixture) | One tick to 600 (field domain, boot-fatal); bonus share at most 10% of `max_final_gold` (proposed) | Bonus per second given up: 8 per call and 40 per stage at starter values | Tower (Stage field) | `early_call_bonus`; at 1.0 a lost towers-only build flipped to a win, and at 1.8 none flips (Starter values) |
+| Levels per tower | 2 | Exactly 2 at MVP (proposed) | Upgrade depth | Tower | Rule 2 |
+| Wave-income bounds | `wave_income` at least the cheapest level-1 `cost` from the second wave, at most twice the dearest `cost` (proposed) | range not set in this GDD | How many decisions each wave funds | Tower | Content rules; `wave_income` |
+| Chip window and bounce guard | 1,500 ms, 200 ms | range not set in this GDD | Time to confirm an upgrade, and the guard against a bounce | Tower (presentation constants) | Rule 8; Input Rule 8 |
+| Chip disc | Radius 40, at the tower's y − 76 | range not set in this GDD | Where the chip tap lands | Tower (TowerInput) | Rule 8 |
 
 ## Visual/Audio Requirements
 

@@ -5,6 +5,7 @@
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-03
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 > **Implements Pillar**: Pillar 3 (Every Stage Reads Differently); Pillar 2 (waves are tuned assuming the hero)
 
 ## Summary
@@ -16,6 +17,10 @@ The enemies and the stage they walk: one authored path, build slots, three enemy
 ## Overview
 
 Enemy & Wave is what the player defends against. It holds the stage's one path and build slots, sends authored waves down that path, moves each enemy, and reports every enemy that dies or leaks. Enemies never attack: they walk, and the only threat is reaching the exit. Players meet it as pressure with a shape. Fast enemies pull ahead and open a second front, heavy ones soak tower fire while they lead, then trail the followers that pass them, and packets catch up at points worth a burst. It exists so that wave shape, not hidden stat growth, is what gives the player's towers and hero something to decide. Waves are tuned with the hero in, so the hero stays needed (Pillar 2). It owns the path, the roster, spawning, movement, leaks and wave clearing. It does not own damage, lives, gold, the intermission clock, or who attacks whom.
+
+## Player Fantasy
+
+The player should feel pressure they can read. Enemies never attack, so the only threat is an enemy reaching the exit, and the player always knows what hurts. Waves grow through count, mix and overlap, never through hidden HP growth, so what the player sees is what they face (Rule 5). Fast enemies pull ahead and open a second front, heavies soak fire while they lead, and packets close up at points worth a burst. Pacing should breathe: a string to read, then a packet that makes the player look up and choose. A burst chance should form in plain view, never as a surprise: the target is the first burst-worthy packet in view at least 3 s before it reaches the hairpin (Game Feel). Waves are fixed, so a player can learn a stage, and a retry plays the same (Rule 6). The danger hold should feel urgent yet fixable. The main MDA aesthetic is Challenge. This serves Pillar 3 (Every Stage Reads Differently), since the path's shape sets the pressure, and Pillar 2 (One Hero, Not an Army), since waves are tuned with the hero in, so the player's own moves stay needed. No human has played these waves, so this feeling is unverified.
 
 ## Detailed Design
 
@@ -343,6 +348,30 @@ The **gold_upper_bound** formula is defined as:
 | Visual Feedback & VFX (VS) | Takes over the views below (soft) |
 
 Per the bidirectional rule, each of these GDDs must list this one when authored. Data, Combat, Game State, Tower, Hero and Battle HUD already do.
+
+## Tuning Knobs
+
+Starter values are fixtures, not balance (Starter values). Every bound from this GDD's layout and wave tables is proposed, as those tables say. A range marked "field domain" comes from the field-domain table in `design/gdd/data-config-pipeline.md`, which guards against typos and broken simulation, not balance. Visual sizes and timings sit in Visual/Audio Requirements and the art bible, and are not repeated here, except the danger rule.
+
+| Knob | Current value | Safe range | What it changes | Owner | Source |
+|---|---|---|---|---|---|
+| `max_hp`, per type | `normal` 125, `fast` 60, `heavy` 750 (starter fixture) | Above 0 to 1,000,000 (field domain) | HP each enemy brings, and so each wave's total HP, which rises 1.26 to 1.64 times per wave | Enemy & Wave | Starter values: HP rose about 3 times, since at the first values a hero alone and towers alone both won |
+| `move_speed`, per type | 60, 110, 38 (starter fixture) | `time_to_exit` 12 to 60 s (proposed), which caps a real stage near 143 units/s on the starter path; above 0 to 2,000 (field domain) | Time to leak, second fronts, where groups meet and packet spacing | Enemy & Wave | Wave rules; `d_next`, `catch_up`, `packet_length` |
+| `bounty`, per type | 4, 3, 16 (starter fixture) | 0 to 100,000 (field domain) | Gold per kill, and so `gold_upper_bound` | Enemy & Wave; the Tower GDD bounds the gold it yields | Starter values: a heavy bounty of 24 let single alone catch the best mixes, so it stays 16 |
+| `lives_cost`, per type | 1, 1, 3 (starter fixture) | 0 to `ceil(starting_lives / 3)` (proposed), 4 at 10 lives | Lives lost per leak, and so `lives_at_risk` | Enemy & Wave | A heavy costs 3 (user, 2026-11-02): at 2, skipping the heavies in waves 4 and 5 was cheap |
+| `count`, per group | As in the wave table | 1 to 500 (field domain); `peak_alive_ub` at most 48 (proposed); the first wave's `lives_at_risk` below `starting_lives`, every wave's at least 1, the stage total at least `starting_lives` (proposed) | Enemies per group, lives at risk, gold and pool load | Enemy & Wave | Wave rules; `lives_at_risk`, `peak_alive_ub` |
+| `spawn_interval`, per group | 0.4 to 4 s in the starter waves | One tick (1/60) to 600 (field domain); spawn ticks strictly increasing within a group (proposed) | Packet or string: at spacing of 70 or less, a burst hits 3 or more | Enemy & Wave | `spawn_tick`, `packet_length` |
+| `start_delay`, per group | 0 to 24 s in the starter waves | 0 to 600 (field domain); a wave's first spawn at most 2 s, and the largest gap between spawns at most 12 s (proposed) | When groups overlap and converge | Enemy & Wave | Wave rules; `catch_up` |
+| `intermission_duration` | 15 s on every wave | At least `cooldown + telegraph_duration`, 10.25 s at starter values (proposed); up to 600 (field domain) | Time between waves; waiting restores the burst | Enemy & Wave | Starter values (Hero System, Simulated results) |
+| `starting_lives` | 10 | At least 2 on a real stage (proposed); 1 to 1,000 (field domain) | Cushion against leaks, and the `lives_cost` cap | Enemy & Wave | Wave rules |
+| `starting_gold` | 120 | Buys the cheapest tower (Handed to owning GDDs); 0 to 100,000 (field domain); any other bound is the Tower GDD's | The opening build, and `gold_upper_bound` | Tower (bound); Stage record | `gold_upper_bound` |
+| `path_width` | 72 | Above 0 to 2,000 (field domain); L2, L6, L7 and L8 scale with it | Lane width, and the clearances of slots and the burst button | Enemy & Wave | Layout rules |
+| `path_points` | The starter list (Starter values) | L5, L6, L8, L9, L11, L13 and L14 (proposed) | Path length, time to leak and bends to burst | Enemy & Wave | Layout rules |
+| `slot_positions` | 5 slots (Starter values) | L1 to L4, L10 and L12 (proposed): 3 to 5 slots | Tower coverage, and the order towers fire in | Enemy & Wave | Layout rules; slot 1 stays at y 305, since y 310 took the hero share median to 24.4% in simulation |
+| `requires_bend` | Starter stage checked against L11 | Boolean | Whether L11 requires a bend to burst | Enemy & Wave | L11 |
+| Layout margins | L2 +40, L3 92, L4 72, L5 16, L7 +64, L8 +60, L9 800, L10 200, L11 2.5 × burst radius, L14 `leash_radius` (all proposed) | range not set in this GDD | How tight a stage may be | Enemy & Wave | Layout rules; L7's margin of 64 has no derivation |
+| Wave-rule bounds | First spawn 2 s, largest gap 12 s, `time_to_exit` 12 to 60 s, `peak_alive_ub` 48 (all proposed) | range not set in this GDD | Which waves pass the content test | Enemy & Wave | Wave rules: largest gap is Flow's cap on `start_delay`; 48 is art bible §8's enemy pool |
+| Danger line and hold | 240 units from the end, 1.5 s (proposed) | range not set in this GDD | When the exit strip warns: 2.2 s ahead of a fast enemy, 4 s of a normal, 6.3 s of a heavy | Enemy & Wave views | Visual/Audio Requirements |
 
 ## Visual/Audio Requirements
 

@@ -5,6 +5,7 @@
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-03
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 > **Implements Pillar**: Pillar 2 (One Hero, Not an Army); Pillar 4 (Thumb-First)
 
 ## Summary
@@ -16,6 +17,10 @@ The player's hands on the field: one hero pinned by a drag, fighting whatever en
 ## Overview
 
 The hero is the one thing the player steers. A drag from the hero sets its pin, and it walks there in a straight line and holds. It chips at whatever enters its leash, and that is minor by design. Its real weight is the burst: a drag from one large button aims a small, lethal hit, every 10 seconds, at a spot within reach of where the hero stands. So the pin decides which stretch of path can be burst, and aim decides how many die. It exists because towers alone must not be enough (Pillar 2) and because aiming a burst into a bunch and re-pinning to a leak were the prototype's best moments. An untouched hero does nothing at all. The hero cannot be hurt at MVP. It owns the pin, leash, walk, auto-attack, burst timing and aim. Combat applies the damage, and the HUD places the button.
+
+## Player Fantasy
+
+The player should feel that the hero is the deciding move. The hero is the one thing the player steers: a drag pins it, and it walks there and holds. Its auto-attack is minor by design. Its weight is the burst, a small, lethal hit every 10 s, aimed at a spot within reach of where the hero stands, so the pin decides which stretch of path can be burst, and aim decides how many die (Overview). A well-aimed burst kills most of what it touches (Summary, Rule 10). The pin commits on release: the ground ring lands first and the hero follows, so the decision feels instant even though the walk takes time. The ring and the preview closing at release turn the aim into the payoff, and spokes count the kills with sound off. The Ready ticks say the burst is back without a look at the corner (Game Feel). An untouched hero does nothing, so active play must clearly beat a hero left alone. This serves Pillar 2 (One Hero, Not an Army): towers hold ground, the hero decides fights, and hero plus burst targets 25% to 30% of stage damage. It serves Pillar 4 (Thumb-First): the pin and the aim are each one drag. Aiming a burst into a bunch and re-pinning to a leak were the prototype's best moments. The main MDA aesthetic is Challenge, through aim. All timings wait for the first phone test, so the feeling is unverified.
 
 ## Detailed Design
 
@@ -308,6 +313,29 @@ The **hero_share_bound** formula is defined as:
 | Visual Feedback & VFX (Vertical Slice) | `burst_started`, `attack_fired` |
 
 Per the bidirectional rule, each must list this one when authored. Data, Input, Combat, Enemy & Wave and Flow already do.
+
+## Tuning Knobs
+
+Starter values are fixtures, not balance (Starter values). Every bound from this GDD's content-rule table is proposed, as that table says. A range marked "field domain" comes from the field-domain table in `design/gdd/data-config-pipeline.md`, which guards against typos and broken simulation, not balance. Bot parameters belong to the simulation, and visual sizes and timings sit in Visual/Audio Requirements, so neither is repeated here.
+
+| Knob | Current value | Safe range | What it changes | Owner | Source |
+|---|---|---|---|---|---|
+| Hero `damage` | 4 (starter fixture) | 0 to 1,000,000 (field domain); Rule 5 keeps the auto-attack near 5% of stage damage, 8% at most | Auto-attack damage, and `hero_share_bound` | Hero | Rule 5: 4 per second against a level-1 single tower's 20 |
+| Hero `attack_interval` | 1.0 s (starter fixture) | One tick (1/60) to 600 (field domain) | Auto-attack cadence | Hero | Rule 5 |
+| `leash_radius` | 90 (starter fixture) | At least `path_width`, 72 (proposed); up to 2,000 (field domain) | What the hero itself can hit | Hero | Content rules; prototype leash 90 |
+| `walk_speed` | 240 (starter fixture) | Above 0 to 2,000 (field domain) | Cost of a re-pin: crossing the hairpin takes about 2 s | Hero | Rule 3; prototype walk 240 |
+| Burst `damage` | 130 (starter fixture) | At least the `max_hp` of `normal` and `fast`, 125 and 60 (proposed); up to 1,000,000 (field domain) | Kills per burst; a `heavy` loses about a sixth of its HP | Hero | Rule 10 |
+| Burst `radius` | 70 (starter fixture) | The fastest enemy's travel during the telegraph at most half of it, 27.5 against 35; `reach` at least `radius` (both proposed); up to 2,000 (field domain) | Victims per burst, and so hero share | Hero | Rule 10: at reach 160, 65 gave a share median of 24% and 75 gave 32%, both outside the band |
+| Burst `cooldown` | 10 s | Every `intermission_duration` but the last at least `cooldown + telegraph_duration` (proposed); one tick to 600 (field domain) | Bursts per stage, 10 to 11 simulated | Hero | User set 10 s (2026-11-02) |
+| `telegraph_duration` | 0.25 s (starter fixture) | The fastest enemy's `move_speed` × `max(1, to_ticks(telegraph_duration))` × `dt` at most half the `radius` (proposed); 0 to 600 (field domain), with a floor of one tick | Time an enemy has to walk out of the aim | Hero | Content rules; `burst_safe_distance` |
+| `reach` | 160 (starter fixture) | At least `radius`, at most 540 (proposed) | How far from the hero a burst may land, and so how much the pin matters | Hero | Rule 7: re-pinning is worth about 2 lives at 160, accepted by the user (2026-11-03) |
+| `hero_start` | (350, 800) | A valid pin; at least `path_width / 2 + 40` from the path and at least 92 from any slot (proposed) | Where the hero waits before the first pin | Hero (Stage field) | Content rules: 80 and 102 |
+| `pin_rect` | x 48 to 492, y 174 to 888 | x margin at least 36; top at least 174 (L6); bottom at most 888 (proposed) | Where a pin may land | Hero (Stage field) | Content rules |
+| `pin_exclusion` radius | 60 | Above the hero's grab radius 56 and the target's hit radius (proposed) | Room kept clear of pins around each button | Hero (Stage field); the HUD conforms | Rule 2: grab radius 56 plus 4 |
+| Hero grab (DRAG) radius | 56 | range not set in this GDD | How easily an occluded hero is grabbed | Hero | Rule 15 (user decision, 2026-11-02) |
+| Aim offset | (0, −100) | range not set in this GDD | Where the aim sits above the thumb | Hero (presentation constant) | Rule 12 |
+| `pin_offset` | 0 at MVP; a UX proposal of 105 waits for the phone test | range not set in this GDD | Where the pin sits above the thumb | Hero | Rule 14 |
+| Cancel hysteresis | Stops past 64 from the button's centre, resumes at 48 or less | range not set in this GDD | When an aim stops cancelling | Hero | Rule 13 |
 
 ## Visual/Audio Requirements
 

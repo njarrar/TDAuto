@@ -5,6 +5,7 @@
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-02
 > **Last Verified**: 2026-11-02
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
 ## Summary
@@ -16,6 +17,10 @@ Everything the player reads and taps that is not the battle itself: lives, gold,
 ## Overview
 
 The Battle HUD is how the player sees the battle's bookkeeping and spends gold. A thin top band shows lives, wave pips and gold. A tap on a slot opens three role discs above it, and a tap on a tower shows a cost chip. One button starts the first wave or calls the next early, showing the bonus against the burst's state. A short prompt names the next thing to try, and only until it is done. When a stage ends, a plain screen says what happened, one line for next time, and offers Retry. It exists because the player's thumb and eyes are both on the lane, so the HUD must answer at a glance and never ask to be read. It owns no game state: it shows values from Flow, Tower, Hero, Combat and Enemy & Wave, and sends their commands. It does not run headless, so nothing in the battle depends on it.
+
+## Player Fantasy
+
+The player should feel calm. Only what a decision needs is on screen, and nothing draws the eye off the lane (Summary). The thumb and the eyes are both on the lane, so the HUD answers at a glance and never asks to be read (Overview). A purchase, a tap and a press all answer on the next frame, and nothing bounces (Game Feel). Start/Call never hurries the player: once armed it shows the numbers, with no pulse, warning or advice (Rule 10). A prompt names the next thing to try and hides on the act, never on a timer (Rule 13). After a loss only Retry is filled, so a retry is one tap, and the next-try line reads as advice rather than blame. After a win the finished build stays in view above a compact panel (Pillar 1, Growth You Can See). The result shows damage by source as raw counts, with no ranking or percentage, because hero share is a balance metric, not a goal (Pillar 2, One Hero, Not an Army). Every action is one tap or one drag on a thumb-size target (Pillar 4, Thumb-First). All timings wait for the first phone test, so the feeling is unverified.
 
 ## Detailed Design
 
@@ -292,6 +297,30 @@ The **chip_bar** formula is defined as:
 | Mobile Platform (Vertical Slice) | Insets and stretch |
 
 Per the bidirectional rule, each must list this one when authored. Flow, Tower, Hero, Input, Enemy & Wave, Combat and Data already do.
+
+## Tuning Knobs
+
+Every value here is presentation, so none reaches the battle. Every bound from this GDD's content-rule table is proposed, as that table says. Colours, sizes and alphas sit in Visual/Audio Requirements and are not repeated here.
+
+| Knob | Current value | Safe range | What it changes | Owner | Source |
+|---|---|---|---|---|---|
+| Arc radius `R` | 76 | An arc disc at least 84 from the burst line and at least 16 clear of Start/Call's hit disc, rechecked if `R` grows (proposed) | Where the three role discs sit above a slot | Battle HUD | `arc_disc`: chords come to 76, so discs do not overlap |
+| Arc fan angles `a_k` | −60°, 0°, 60° | range not set in this GDD | Spread of the three discs | Battle HUD | `arc_disc` |
+| Arc disc guard | 200 ms | range not set in this GDD | Stops a double tap on a slot from buying a tower | Battle HUD | Rule 6 |
+| Arming time | 300 ms, clock clamped to 100 ms per frame | range not set in this GDD | When a new button accepts a press | Battle HUD | Rule 11 (Flow, Game Feel) |
+| Start/Call placement | (186, 800), rect 88 × 72, corner 24, hit radius 48 | At least 16 clear of any slot's hit disc, at least 48 from `hero_start`, rect clear of the path's edge (proposed) | Where the button sits for both hands | Battle HUD | Layout: clears the slot by 17.3 and `hero_start` by 60 |
+| Burst button placement | x 456, or 84 left-handed; y is `burst_y` | `burst_y` 816 to 888 | Where the button sits on each device | Battle HUD | `burst_y`; L3, L7 and `pin_exclusion` |
+| Band height | `I_top + 72` | At most 174 (L6) | Room for lives, pips and gold | Battle HUD | Layout |
+| Waves and starting lives shown | 6, 10 | At most 6 and at most 10 (proposed) | Pips and dashes that fit | Battle HUD | Content rules |
+| Next-wave line types | 3 | At most 3 at true size (proposed) | Width of the next-wave line | Battle HUD | Content rules |
+| Result text delay | 400 ms after Lost, 1,000 ms after Won | range not set in this GDD | Pause before the result reads | Battle HUD | Rule 15 |
+| Ground rings | 3 per battle | range not set in this GDD | Feedback for empty taps | Battle HUD | Rule 14 |
+| Range ring on a level-2 tap | 1.5 s | range not set in this GDD | How long the ring shows | Battle HUD | Rule 9 |
+| Chip window | 1.5 s | range not set in this GDD | How fast the chip bar drains | Tower | `chip_bar`; Tower Rule 8 |
+| `ticks_per_second` | 60 (proposed) | range not set in this GDD | Seconds shown by `display_seconds` | Flow (fixed tick) | `display_seconds` |
+| Motion timings | 120 ms for arc, presses and arming; 200 ms for dash and 12-unit panel slides | range not set in this GDD | How fast the HUD answers | Battle HUD | UI Requirements |
+| Text floor and hit targets | 14 dp, 48 dp | No target under 48 dp (Pillar 4); text floor range not set in this GDD | Legibility and thumb fit | Battle HUD | UI Requirements; `design/gdd/game-concept.md` Pillar 4 |
+| Draw budget | Expected 8, at most 12 of 60 draw calls; text at most 3 | At most 12 (unverified) | Render cost of the HUD | Battle HUD | UI Requirements |
 
 ## Visual/Audio Requirements
 
