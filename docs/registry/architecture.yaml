@@ -155,7 +155,7 @@ state_ownership:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
   - state: enemy_health_status
     status: active
     owner_system: combat
@@ -166,7 +166,7 @@ state_ownership:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
   - state: damage_counters
     status: active
     owner_system: combat
@@ -177,7 +177,7 @@ state_ownership:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -438,7 +438,7 @@ interfaces:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
   - contract: damage_applied_payload
     status: active
     pattern: signal
@@ -452,7 +452,7 @@ interfaces:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
     revised: ""
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
 
 # Example:
 #
@@ -503,7 +503,7 @@ performance_budgets:
     budget_ms: 0.8
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     # was: 0.5 ms share, trigger 0.05 ms (before godot-specialist and TD-ADR review)
-    notes: "Allocation of ADR-0004's 2.0 ms p95 tick, design point 384 checks (5 towers and hero holding, plus slow second pass and splash victims): targeting 0.8, Combat deliver/status/emit 0.1, EnemyWave 0.2, stat reads 0.7 (ADR-0005 P1), bookkeeping and halted() 0.2; desktop bench P2 triggers share / 15 (targeting 0.053 ms p95), debug and release export; fallback one shared pass per tick (Combat.first_in_each over PackedFloat64Array data); V13 times the whole tick only. ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "Allocation of ADR-0004's 2.0 ms p95 tick, design point 384 checks (5 towers and hero holding, plus slow second pass and splash victims): targeting 0.8, Combat deliver/status/emit 0.1, EnemyWave 0.2, stat reads 0.7 (ADR-0005 P1), bookkeeping and halted() 0.2; desktop bench P2 triggers share / 15 (targeting 0.053 ms p95), debug and release export; fallback one shared pass per tick (Combat.first_in_each over PackedFloat64Array data); V13 times the whole tick only. ADR-0009 Accepted 2026-11-04; binding"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
@@ -928,21 +928,21 @@ forbidden_patterns:
     why: "One HP path keeps the damage counters and hero share honest and invariant I true"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
   - pattern: targetable_write_outside_enemy_wave
     status: active
     description: "No code in src/ outside src/feature/enemy_wave/ assigns spawn_id, distance, x, y or removed on a Targetable, keeps a roster() or targets() list past its slot, or mutates one; callers get the same instance (lints L-COMBAT-2 and L-COMBAT-4, ADR-0007 amendment owed)"
     why: "EnemyWave is the sole roster owner; a kept list or a second writer breaks spawn_id order and retry freeing"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
   - pattern: damage_event_per_hit_or_kept
     status: active
     description: "No DamageEvent.new() outside tower_sim.gd and hero_sim.gd (one reused instance each); the caller nulls its target after the attack; no view payload carries a Targetable (lint L-COMBAT-3, ADR-0007 amendment owed)"
     why: "A new event per hit allocates in the tick; a kept target holds an enemy across ticks"
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
-    notes: "ADR-0009 Proposed 2026-11-04; not binding until Accepted"
+    notes: "ADR-0009 Accepted 2026-11-04; binding"
 
 # Example:
 #

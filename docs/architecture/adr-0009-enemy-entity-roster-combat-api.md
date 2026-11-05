@@ -1,7 +1,7 @@
 # ADR-0009: Enemy Entity, Roster and Combat API
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-04
@@ -10,6 +10,7 @@ Proposed
 2026-11-04, against `architecture.md` v6, `tr-registry.yaml` v6 (123 entries), the eight Accepted ADRs with their amendments, and probes B1 to B4 and X1 to X7 run on 4.7.2 by the godot-specialist review.
 
 ## Decision Makers
+- Accepted: 2026-11-04 by the user (njarrar), with both remaining QQ-08 parts (ProjectileSpawner cut; stage geometry on the Stage record), the plain-value damage_applied payload and the per-tick budget split
 Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`). Reviews: godot-specialist and TD-ADR, both CONCERNS, resolved below. Acceptance: the user.
 
 ## Summary
@@ -257,7 +258,7 @@ func got_through_by_type() -> Dictionary     # StringName -> int, view-only
 | tower-system.md | TR-tower-007: only through Combat; splash from `targets()` | 5 |
 | hero-system.md | TR-hero-007: HERO and BURST, `report_attack` first, helpers | 5 |
 
-Shared, not counted: TR-combat-010 (payload half; ADR-0006 owns the rest). Also settled, pending acceptance: QQ-08's two parts. QQ-10 goes to ADR-0011.
+Shared, not counted: TR-combat-010 (payload half; ADR-0006 owns the rest). Also settled and accepted by the user 2026-11-04: QQ-08's two parts. QQ-10 goes to ADR-0011.
 
 ## Performance Implications
 - **CPU**: 1.1 of the 2.0 ms tick is this ADR's code; reads keep 0.7 (Decision 8). **Memory**: four small objects per enemy, at most 48 alive. **Load Time**: one `PathTable`. **Network**: none.
