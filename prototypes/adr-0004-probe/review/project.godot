@@ -1,0 +1,5 @@
+config_version=5
+
+[application]
+config/name="probe-adr-0004-review"
+run/main_scene="res://main.tscn"

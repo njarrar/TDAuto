@@ -1,7 +1,7 @@
 # ADR-0001: App Lifecycle, Composition Root and Fatal Path
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction to close the open items; the Verification Required items stay open and are tracked by the Boot story)
 
 ## Date
 2026-11-05

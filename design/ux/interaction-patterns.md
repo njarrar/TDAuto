@@ -154,7 +154,7 @@ accessibility notes match each pattern's accessibility line.
 - At press the resolver freezes the best TAP winner and the best DRAG winner. A press with a tap target uses the larger tap slop before it can become a drag.
 - A drag latches once started and never turns back into a tap.
 - One pointer at a time. A second finger is ignored.
-- Every exit ends with `idle`.
+- Every exit ends with `became_idle`.
 - Accessibility: a tap never requires holding. A drag never requires a precise end point except the burst aim (P-10), whose cancel zone is generous (64 units).
 
 **When to Use**: automatic; all input goes through it.
@@ -273,7 +273,7 @@ accessibility notes match each pattern's accessibility line.
 **Screen-level source**: `design/ux/arc-and-chip.md` holds the full behaviour, geometry, text fit and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
 
 **Specification**:
-- The chip is its own tap target (priority 300, radius 40, at the tower's x and y minus 76 units) so a tap on what the player sees works. `tap(chip)` is treated as a second `tap(tower)`.
+- The chip is its own tap target (priority 300, radius 40, at the tower's x and y minus 76 units) so a tap on what the player sees works. `tapped(chip)` is treated as a second `tapped(tower)`.
 - It shows the cost, the level-2 glyph and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock.
 - A tap on a level-2 tower shows its range ring for 1.5 s and opens no chip, so the tap is not silent.
 - The chip closes on Paused, Won, Lost and Fatal, and is ignored while halted.
@@ -468,7 +468,7 @@ accessibility notes match each pattern's accessibility line.
 
 **Category**: Feedback
 **Used In**: empty field
-**Source**: art bible 7; Input `ground_tap`
+**Source**: art bible 7; Input `ground_tapped`
 **Status**: Draft
 
 **Specification**:
@@ -479,7 +479,7 @@ accessibility notes match each pattern's accessibility line.
 **When to Use**: A tap that hits no target, in the first three of a battle.
 **When NOT to Use**: After the third tap, or on any registered target.
 
-**Implementation**: HudLogic counts `ground_tap` signals per battle; HudField draws the ring.
+**Implementation**: HudLogic counts `ground_tapped` signals per battle; HudField draws the ring.
 
 ### P-17 First-Time Prompt
 

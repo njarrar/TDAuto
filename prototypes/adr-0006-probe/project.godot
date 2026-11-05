@@ -1,0 +1,6 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+config/name="probe-adr-0006"
+config/features=PackedStringArray("4.7")

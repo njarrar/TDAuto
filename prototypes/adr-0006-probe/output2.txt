@@ -1,0 +1,19 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+ERROR: Error calling from signal 'gold_changed' to callable: 'RefCounted(listener2.gd)::on_int': Cannot convert argument 1 from String to int.
+   at: emit_signalp (core/object/object.cpp:1311)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe2.gd:11)
+P9 after String into int (typed first, untyped second): ["untyped:String:bad"]
+P10 float 2.75 into int param: ["int:2", "untyped:float:2.75"]
+P11 enum-typed handler, FATAL then 99: ["phase:2", "phase:99"]
+ERROR: Error calling from signal 'gold_changed' to callable: 'RefCounted(listener2.gd)::on_two': Method expected 2 argument(s), but called with 1.
+   at: emit_signalp (core/object/object.cpp:1311)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe2.gd:24)
+P12 one arg into two-param handler: []
+ERROR: Error calling from signal 'gold_changed' to callable: 'RefCounted(listener2.gd)::on_untyped': Method expected 1 argument(s), but called with 2.
+   at: emit_signalp (core/object/object.cpp:1311)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe2.gd:28)
+P13 two args into one-param signal (untyped handler): []

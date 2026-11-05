@@ -1,0 +1,7 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+PROBE|is_finite nan=false inf=false -inf=false ok=true
+PROBE|is_nan float: true false is_inf: true is_finite float: false true
+PROBE|nan compare nan<=r2: false nan>=s2: false
+PROBE|dist exact edge: true false
+PROBE|10k squared usec=283 distance_to usec=249 hits=2720
