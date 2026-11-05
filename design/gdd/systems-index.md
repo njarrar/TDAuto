@@ -31,7 +31,7 @@ Relationship analysis: three systems are bottlenecks and must be designed first 
 | 5 | Enemy & Wave (incl. Stage & Path) | Gameplay | MVP | Approved | design/gdd/enemy-wave.md | Data & Config, Combat, Game State |
 | 6 | Tower System (incl. Gold Economy) | Gameplay | MVP | In Review | design/gdd/tower-system.md | Enemy & Wave, Combat, Input, Data & Config, Game State |
 | 7 | Hero System (incl. Burst Skill, Pin & Aim Feedback) | Gameplay | MVP | Approved | design/gdd/hero-system.md | Input, Combat, Enemy & Wave, Data & Config |
-| 8 | Battle HUD & Build UI (inferred) | UI | MVP | Designed | design/gdd/battle-hud.md | Game State, Tower, Hero, Input |
+| 8 | Battle HUD & Build UI (inferred) | UI | MVP | In Review | design/gdd/battle-hud.md | Game State, Tower, Hero, Input |
 | 9 | Stat & Modifier Resolution (inferred) | Core | Vertical Slice | Not Started | — | Data & Config |
 | 10 | Skill Point Economy (inferred) | Progression | Vertical Slice | Not Started | — | Stage Progression, Game State |
 | 11 | Skill Tree System | Progression | Vertical Slice | Not Started | — | Skill Point Economy, Stat & Modifier, Data & Config |
