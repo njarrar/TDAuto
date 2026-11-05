@@ -28,6 +28,23 @@ WAVES=[([('n',8,1.5,0)],15),([('n',6,.6,0),('n',6,.6,12)],15),([('n',12,.7,0),('
 ([('h',4,3,0),('n',12,.5,10),('f',10,.4,20),('n',8,.5,24)],15)]
 def tk(s): return int(math.floor(s/DT+.5))
 
+# Read the live values from assets/data so the sim matches the game (first playable,
+# 2026-11-05). The literals above are the pre-playtest values, kept as a fallback.
+import json,os
+_DATA=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','assets','data')
+def _load(name): return json.load(open(os.path.join(_DATA,name)))
+GOLD=120
+WAVE_HP=[1.0]*6
+try:
+    _short={'normal':'n','fast':'f','heavy':'h'}
+    EN={_short[e['id']]:(e['max_hp'],e['move_speed'],e['bounty'],e['lives_cost']) for e in _load('enemies.json')['enemy']}
+    WAVES=[([(_short[g['enemy_id']],g['count'],g['spawn_interval'],g['start_delay']) for g in w['groups']],w['intermission_duration']) for w in _load('waves.json')['wave']]
+    GOLD=_load('stages.json')['stage'][0]['starting_gold']
+    WAVE_HP=[float(w.get('hp_scale',1.0)) for w in _load('waves.json')['wave']]
+    LIVE_DATA=True
+except (OSError,KeyError,ValueError):
+    LIVE_DATA=False
+
 # pin_exclusion: (a, b, radius, hand). Only the active hand's burst line counts, and Start/Call ("both").
 SHAPES=[((456,816),(456,888),60.0,'right'),((84,816),(84,888),60.0,'left'),((186,800),(186,800),60.0,'both')]
 HAND='right'
@@ -90,7 +107,8 @@ def clamp_pin(f,eps=.01,hold=START):
     return hold if best is None else best[1]
 
 class E: pass
-def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,burst_cd=10.0,tele=.25,hero_dps=(4,1.0),log=False):
+def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=None,burst_d=130,burst_cd=10.0,tele=.25,hero_dps=(4,1.0),log=False):
+    if gold is None: gold=GOLD
     towers={}; sid=0; roster=[]; dealt={'t':0.,'h':0.,'b':0.}; q=list(order)
     bursts=[];
     def buy():
@@ -127,7 +145,7 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
         while True:
             # spawn, move, leak
             while si<len(sched) and sched[si][0]<=w:
-                e=E(); e.t=sched[si][1]; e.hp=float(EN[e.t][0]); e.d=0.; e.sl=0; e.sf=1.; e.id=sid; sid+=1; roster.append(e); si+=1
+                e=E(); e.t=sched[si][1]; e.hp=float(EN[e.t][0])*WAVE_HP[wi]; e.d=0.; e.sl=0; e.sf=1.; e.id=sid; sid+=1; roster.append(e); si+=1
             w+=1; tick+=1
             for e in list(roster):
                 e.d+=EN[e.t][1]*e.sf*DT; e.p=pos(e.d)
@@ -227,10 +245,24 @@ def L(c,dmg,rng,iv,**k): return dict(cost=c,dmg=dmg,range=rng,int=iv,**k)
 F={'single':[L(50,12,150,.6),L(60,21,165,.6)],
    'splash':[L(70,20,150,1,radius=55),L(80,30,165,1,radius=75)],
    'slow':[L(60,0,150,.6,str=.4,dur=2),L(70,0,165,.6,str=.5,dur=2.5)]}
+def _tower_levels():
+    out={}
+    for t in _load('towers.json')['tower']:
+        role={'tower_single':'single','tower_splash':'splash','tower_slow':'slow'}[t['id']]
+        lv=[]
+        for l in t['levels']:
+            k={}
+            if 'splash_radius' in l: k['radius']=l['splash_radius']
+            if 'slow_strength' in l: k['str']=l['slow_strength']; k['dur']=l['slow_duration']
+            lv.append(L(l['cost'],l['damage'],l['range'],l['attack_interval'],**k))
+        out[role]=lv
+    return out
+if LIVE_DATA: F=_tower_levels()
 NONE={r:[L(1,0,1,1)] for r in F}
 ORD=[1,0,2,3,4]
-def mono(r): return [('b',r,s_) for s_ in ORD]+[('u',s_) for s_ in ORD]
-def mix(a): return [('b',a[i],ORD[i]) for i in range(5)]+[('u',s_) for s_ in ORD]
+UP=max(len(v) for v in F.values())-1
+def mono(r): return [('b',r,s_) for s_ in ORD]+[('u',s_) for _ in range(UP) for s_ in ORD]
+def mix(a): return [('b',a[i],ORD[i]) for i in range(5)]+[('u',s_) for _ in range(UP) for s_ in ORD]
 MIXED={'3 single, 1 splash, 1 slow':mix(('single','splash','slow','single','single')),
  '2 single, 2 splash, 1 slow':mix(('splash','single','slow','single','splash')),
  '3 single, 2 splash':mix(('single','splash','single','single','splash')),

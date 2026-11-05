@@ -2,7 +2,7 @@
   "wave": [
     {
       "id": "wave_1",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "normal",
@@ -11,11 +11,12 @@
           "start_delay": 0.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 1.0
     },
     {
       "id": "wave_2",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "normal",
@@ -30,11 +31,12 @@
           "start_delay": 12.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 1.0
     },
     {
       "id": "wave_3",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "normal",
@@ -49,11 +51,12 @@
           "start_delay": 0.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 1.2
     },
     {
       "id": "wave_4",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "heavy",
@@ -68,11 +71,12 @@
           "start_delay": 8.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 1.6
     },
     {
       "id": "wave_5",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "fast",
@@ -99,11 +103,12 @@
           "start_delay": 16.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 2.0
     },
     {
       "id": "wave_6",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. hp_scale from the balance sim after playtest (2026-11-05): level-3 towers won with no hero.",
       "groups": [
         {
           "enemy_id": "heavy",
@@ -130,7 +135,8 @@
           "start_delay": 24.0
         }
       ],
-      "intermission_duration": 15.0
+      "intermission_duration": 15.0,
+      "hp_scale": 2.5
     }
   ]
 }
