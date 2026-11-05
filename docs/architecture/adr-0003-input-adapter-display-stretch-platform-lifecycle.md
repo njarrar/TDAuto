@@ -28,6 +28,10 @@ Proposed
 >    Confirmed by the user, 2026-11-04, as recommended (C1 to C4).
 > 3. ADR-0001 is Accepted.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 5: the 360 dp warning uses an injected `dev_error`; `attach` takes it. Decision 7:
+> burst button centre re-read on `display_changed`.)
+>
 > **Phone checks (user instruction, 2026-11-04):** phone testing is set aside
 > for now, and the future device is an iPhone. Every phone leg of SP0 to SP13
 > is after acceptance, run on the iPhone with the README's iPhone section; the
@@ -143,7 +147,7 @@ The eleven TRs in GDD Requirements Addressed: one engine-facing node in field un
 
 `InputAdapter` (`src/foundation/input/input_adapter.gd`, `extends Node`) is the only code in `src/` that overrides `_input` or `_unhandled_input`, reads touch or mouse events outside a Control's `_gui_input`, polls `Input` for pointers, or reads `DisplayServer` display metrics.
 
-The BattleWrapper creates it, sets `process_mode = PROCESS_MODE_ALWAYS`, and in its own `attach(battle, reduce_motion)` (ADR-0001 Decision 6) calls `adapter.attach(battle.resolver, battle.input_record.edge_reject_margin)`. **`Battle` gains a read-only member `input_record: InputRecord`**, set by the Builder from the record it already looks up (ADR-0005 Decision 8). It is the one path by which wrapper-built nodes (adapter, HeroInput, HUD) get the record; ADR-0005 Decision 8 is amended to match. `Battle.resolver` is the read-only member ADR-0008 Decision 2 names.
+The BattleWrapper creates it, sets `process_mode = PROCESS_MODE_ALWAYS`, and in its own `attach(battle, reduce_motion)` (ADR-0001 Decision 6) calls `adapter.attach(battle.resolver, battle.input_record.edge_reject_margin, battle.dev_error)` (`dev_error` added 2026-11-05). **`Battle` gains a read-only member `input_record: InputRecord`**, set by the Builder from the record it already looks up (ADR-0005 Decision 8). It is the one path by which wrapper-built nodes (adapter, HeroInput, HUD) get the record; ADR-0005 Decision 8 is amended to match. `Battle.resolver` is the read-only member ADR-0008 Decision 2 names.
 
 `detach()` (ADR-0001 Decision 6) disconnects, clears the queue and the forwarded set, and drops the resolver. A new adapter is built with each battle (Game State Rule 16), so a finger held across a retry belongs to no forwarded press.
 
@@ -216,7 +220,7 @@ Pure helpers, headless-testable: `src/foundation/input/field_mapping.gd` (`class
   Unit tests check exactly these expressions. Illustrative, unmeasured: a 1080x2400 px window gives `s = 2` and 240 px bars, so a 120 px cutout gives `top = 0`. The bars absorb typical insets on 9:20 phones; on 9:16-class phones the inset lies inside the field. `s <= 0` returns all zeros.
 - **Rejection.** `FieldMapping.press_allowed(pos, insets, edge_reject_margin) -> bool` is false when the press is outside `[0, F.x] x [0, F.y]` (letterbox bars and off-window, C2), within `edge_reject_margin + insets.left` of the left edge or `edge_reject_margin + insets.right` of the right edge, above `insets.top` or below `F.y - insets.bottom`. A rejected press is not forwarded, so its moves and release are ignored. A drag that began inside and moves into a zone stays valid (Input Rule 12). Android's back gesture starts in the side strips this already rejects; Godot has no system-gesture exclusion API (unsourced; the margin is the only guard).
 - **HUD.** The adapter exposes `field_insets() -> FieldInsets` and emits `display_changed()` when the insets or window size change. The wrapper passes the insets to the HUD at attach and on `display_changed()`; the HUD uses `insets.top` and `insets.bottom` as `I_top` and `I_bottom` (`burst_y = clamp(888 - I_bottom, 816, 888)`, TR-hud-014). The HUD never reads `DisplayServer`.
-- **360 dp guard.** At attach, on phones: `field_width_dp(window_size, px_per_dp) -> float` returns `F.x * s / px_per_dp`, with `px_per_dp = screen_get_dpi() / 160.0` on Android and `screen_get_scale()` on iOS (SP9). The check is `FieldMapping.width_supported(width_dp: int) -> bool`, true when `width_dp >= MIN_FIELD_WIDTH_DP` (360), called with `floori(field_width_dp(...))`. This follows the Input GDD Formulas rule (integers, floored first), so the boundary does not depend on float rounding; tests check true at 360 and false at 359. If false, the adapter calls `push_error` once with the width. It does not stop play: the store filter enforces the floor (Input GDD Edge Cases). `MIN_FIELD_WIDTH_DP` cites the Input GDD `target_ok` formula; it is a platform floor, not a tuning value.
+- **360 dp guard.** At attach, on phones: `field_width_dp(window_size, px_per_dp) -> float` returns `F.x * s / px_per_dp`, with `px_per_dp = screen_get_dpi() / 160.0` on Android and `screen_get_scale()` on iOS (SP9). The check is `FieldMapping.width_supported(width_dp: int) -> bool`, true when `width_dp >= MIN_FIELD_WIDTH_DP` (360), called with `floori(field_width_dp(...))`. This follows the Input GDD Formulas rule (integers, floored first), so the boundary does not depend on float rounding; tests check true at 360 and false at 359. If false, the adapter calls the injected `dev_error` once with the width (ADR-0001 Decision 4; amended 2026-11-05, it was `push_error`, which ADR-0009's exception does not cover). It does not stop play: the store filter enforces the floor (Input GDD Edge Cases). `MIN_FIELD_WIDTH_DP` cites the Input GDD `target_ok` formula; it is a platform floor, not a tuning value.
 - **Tablets.** A portrait tablet under `keep` is height-limited, so its scale is lower than its width suggests; no scale cap at MVP (answers the Input GDD open question for MVP).
 
 ### 6. Lifecycle: four triggers, one idempotent path
@@ -234,7 +238,7 @@ On a loss the adapter calls `cancel_all()`, then emits `lifecycle_paused()`. The
 
 ### 7. Resize
 
-The adapter connects `get_viewport().size_changed` to `_on_viewport_size_changed`. It compares `DisplayServer.window_get_size()` with the last size it saw. If the size changed, it calls `cancel_all()` (Input Edge Case: `press_pos` is never rescaled). Either way it recomputes the insets, and emits `display_changed()` if the size or the insets changed. A resize is not a pause. SP12 decides whether polling replaces the signal.
+The adapter connects `get_viewport().size_changed` to `_on_viewport_size_changed`. It compares `DisplayServer.window_get_size()` with the last size it saw. If the size changed, it calls `cancel_all()` (Input Edge Case: `press_pos` is never rescaled). Either way it recomputes the insets, and emits `display_changed()` if the size or the insets changed. On `display_changed` the wrapper also re-reads the burst button centre and moves HeroInput's discs (ADR-0010 Decision 8, TR-hud-018). A resize is not a pause. SP12 decides whether polling replaces the signal.
 
 ### 8. Battle Controls: only modal screens are tappable
 
@@ -285,7 +289,7 @@ class_name InputAdapter extends Node        # process_mode = PROCESS_MODE_ALWAYS
 const MOUSE_POINTER := 1000                 # pointer for touches emulated from the mouse (SP5)
 signal lifecycle_paused()                   # one per loss trigger; listeners are idempotent
 signal display_changed()                    # after a window-size or inset change
-func attach(resolver: InputResolver, edge_reject_margin: float) -> void
+func attach(resolver: InputResolver, edge_reject_margin: float, dev_error: Callable) -> void
 func detach() -> void                       # ADR-0001 teardown: disconnect, clear, drop resolver
 func flush() -> void                        # frame step 0: queued calls to the resolver, in order
 func cancel_all() -> void                   # empty queue, clear forwarded set, resolver.cancel()

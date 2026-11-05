@@ -42,6 +42,10 @@ Proposed
 > verification item is open; this ADR now waits only on ADR-0003 and ADR-0006 being Accepted
 > (item 1), with item 3 as recorded above.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Depends On: "The stat accessor is not used" replaces a false ADR-0005 edge. Decision 8:
+> `GestureLog` is made only when `dev_logs` is non-null.)
+>
 > **After acceptance:** the Input GDD's 37 Logic criteria become the resolver's unit tests. Reopen
 > trigger: any Validation Criterion that cannot pass as written, or a phone-test log (Pillar 4 gate
 > P1) showing a mis-fire the resolver caused, amends this ADR before the next input story closes.
@@ -270,7 +274,7 @@ func _enqueue(kind: int, pointer: int, pos: Vector2) -> void:
 
 **`GestureLog`** (`src/presentation/dev/gesture_log.gd`, `extends Node`), binding parts only:
 
-- Created by `BattleWrapper.attach` only when `OS.is_debug_build()` (V7). A view listener under ADR-0006 rule 2: reads only, no command, no sim write.
+- Created by `BattleWrapper.attach` only when `OS.is_debug_build()` (V7) and its `dev_logs` argument is non-null (ADR-0010 Decision 10; amended 2026-11-05). Headless tests and a null `dev_logs` make none. A view listener under ADR-0006 rule 2: reads only, no command, no sim write.
 - `attach(resolver, adapter, sink: Callable, chip_open: Callable = Callable())`. The wrapper connects `resolver.pressed`, `resolver.became_idle` and `tower_sim.tower_upgraded` (ADR-0006 P5) to it in `_connect_signals()`, undone in `detach()`. `chip_open` is `tower_input.is_chip_open` (ADR-0010 Decision 8). The sink is `dev_logs.gesture_sink.write_line`, writing `user://gesture_log.jsonl` (ADR-0010 Decision 10).
 - Timing: `Time.get_ticks_msec()` (sourced, ADR-0004 V8) in its `pressed` and `became_idle` handlers; frame-quantised, enough for Pillar 4. Not sim code and not a real-time model, so outside `engine_time_in_sim`; the lint excludes `src/presentation/dev/` (cascade).
 - Device from `OS.get_model_name()` (V7); insets and width from `adapter.field_insets()` and `field_width_dp()`.
@@ -415,7 +419,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Breaches go through `dev_error` (else `push_error`), never `assert` or `print`.
 - ADR-0006's eight signals only, emitted with `name.emit(...)`, connected by the wrapper with flags 0. No `static var`.
 - `last_gesture()` returns null before the first gesture, else a new copy; no caller keeps a record past its handler.
-- `GestureLog` exists only when `OS.is_debug_build()`; issues no command; writes no `Vector2`; reports a sink failure once, never fatal; a file sink follows V8.
+- `GestureLog` exists only when `OS.is_debug_build()` and `dev_logs` is non-null; issues no command; writes no `Vector2`; reports a sink failure once, never fatal; a file sink follows V8.
 - Fakes extending `InputResolver` give typed overrides an explicit `return` (4.7) and forward `_init` to `super(...)`.
 
 ## Alternatives Considered

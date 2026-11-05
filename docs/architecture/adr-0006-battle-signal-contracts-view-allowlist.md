@@ -45,6 +45,10 @@ Proposed
 > before-acceptance item except ADR-0001 and ADR-0004 being Accepted and
 > `/architecture-review`.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Depends On no longer names ADR-0008 (cycle cut). Decision 5: HudLogic joins P7. Decision 7
+> rule 1: Flow owns the wrong-phase wave event checks, TR-state-018.)
+>
 > **After acceptance:** the listener-count tests (Decision 8) are written by the ADR-0007
 > harness story and by the first story that builds `BattleWrapper`. Reopen trigger: if
 > the headless test, the wrapper test or the with-and-without-listeners run (Validation
@@ -227,7 +231,7 @@ Leaks precede the clear because W1 fires in tick step 2 and W3/W4 in step 6 (TR-
 | P4 | `TowerSim.tower_built(slot_index: int, tower_id: StringName)` | TowerInput (slot to tower disc, ADR-0010), RunLog (development builds); FieldBackdrop and TowerView poll (ADR-0011) | after P3 in `build` | yes |
 | P5 | `TowerSim.tower_upgraded(slot_index: int, level: int)` | gesture log (development builds) | after P3 in `upgrade` | no |
 | P6 | `HeroSim.hero_pinned(position: Vector2)` | RunLog (development builds, ADR-0010); HeroView polls (ADR-0011) | inside `pin()` after state set | no |
-| P7 | `HeroSim.burst_started(aim_point: Vector2, telegraph_ticks: int)` | CombatViewModel (clearance window, ADR-0011), RunLog (development builds, ADR-0010) | inside `burst()` after state set | yes |
+| P7 | `HeroSim.burst_started(aim_point: Vector2, telegraph_ticks: int)` | CombatViewModel (clearance window, ADR-0011), HudLogic (Battle HUD Rule 13, burst button state; amended 2026-11-05), RunLog (development builds, ADR-0010) | inside `burst()` after state set | yes |
 | P8 | `Combat.attack_fired(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` | CombatViewModel (ADR-0011) | inside `report_attack`, before the attacker's `deliver` calls | yes |
 | P9 | `Combat.damage_applied(source_kind: SourceKind, source_id: StringName, applied: float, position: Vector2, killed: bool, spawn_id: int)` | CombatViewModel (ADR-0011) | inside `deliver`, after HP, dead state and counters; never when `applied` is 0 | yes |
 | G1 | `InputResolver.pressed(best_tap: int, best_drag: int, p: Vector2)` | HeroInput, TowerInput, HudLogic | frame step 0 (`flush()`) | yes |
@@ -273,6 +277,7 @@ var dealt_total: float           # Combat.dealt_total()
 These rules bind `src/`; test code is exempt (Decision 2).
 
 1. **Wiring listeners** (W1 to W5) may change only their own system's state and emit their own signals. They never call a command, a tick entry, `deliver`, `apply_slow`, or another system's method.
+   **Flow owns the wrong-phase checks** (TR-state-018; amended 2026-11-05). `Flow.on_wave_cleared` (W3) and `Flow.on_waves_completed` (W4) check the phase first: outside WAVE they call the injected `dev_error` and change nothing. `Flow.on_enemy_leaked` (W1) in BUILD, PAUSED or after an outcome calls `dev_error` and changes nothing; in INTERMISSION it calls `dev_error` and still applies the leak. EnemyWave emits without checking Flow's phase. Flow takes `dev_error` in its constructor (default `Callable()`, `is_valid()` before use).
 2. **View listeners** (P1 to P9) hold presentation state only. They may read queries and set flags; they never call a command, a tick entry, `deliver`, a sim setter, `request_retry`, or `connect`/`disconnect`; they never emit a battle signal; they never keep an object reached through a query past the handler (ADR-0009's roster rule). Heavy work waits for frame step 4.
 3. **Gesture listeners** (G1 to G6) may issue commands, because those signals fire only from `flush()` in frame step 0, between ticks (Data Flow 1). **G7 and G8 listeners never issue a command**: they can fire inside a tick (an outcome's `cancel_input()`) or inside an engine callback. They only revert or hide presentation state (the hero's leash, an aim).
 4. **Listeners of P8 and P9 never read the `StatAccessor`**, so they cannot reach `fatal` and Combat needs no `halted()` (ADR-0009 Decision 4).
@@ -352,7 +357,7 @@ func result() -> StageResult                     # null before the outcome
 func on_enemy_leaked(lives_cost: int) -> void    # W1 only
 func on_wave_cleared(intermission_duration: float) -> void   # W3 only
 func on_waves_completed() -> void                # W4 only
-# injected by the Builder: wave_index, dealt_by_kind, dealt_total (method Callables)
+# injected by the Builder: wave_index, dealt_by_kind, dealt_total (method Callables), dev_error (wrong-phase W1, W3, W4; Decision 7 rule 1)
 
 # src/feature/enemy_wave/enemy_wave.gd (B7, renamed)
 signal enemy_leaked(lives_cost: int)
@@ -519,7 +524,7 @@ For `/create-control-manifest` and `/dev-story`:
 | tower-system.md | TR-tower-012: typed signatures (`tower_id` type undecided); gameplay may not depend on them; results match with or without listeners | Decision 4 (`tower_id: StringName`, all parameters typed); Decision 7 rules 5 and 8 |
 | hero-system.md | TR-hero-008: `hero_pinned` and `burst_started` emit after state is set and are on the view allowlist; handlers never issue commands | Decision 5 P6, P7; Decision 7 rule 2; Decision 8 `VIEW_ALLOWLIST` |
 | battle-hud.md | TR-hud-004: the HUD holds presentation state only and no reset path; full sim state is identical with or without the HUD | Decision 7 rules 2, 5 and 8 (with and without listeners test); HUD connections only in `attach`, undone in `detach` |
-| battle-hud.md | TR-hud-010: the HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries; `phase_changed` and `lives_changed` join the view allowlist | Decision 5 P1, P2, P3, G1 to G4, G8 (HudLogic listeners); Decision 8 allowlist. The new view-only queries are ADR-0010's |
+| battle-hud.md | TR-hud-010: the HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries; `phase_changed` and `lives_changed` join the view allowlist | Decision 5 P1, P2, P3, P7, G1 to G4, G8 (HudLogic listeners); Decision 8 allowlist. The new view-only queries are ADR-0010's |
 | battle-hud.md | TR-hud-012: the result screen and log come from one snapshot built the frame after the outcome | Decision 6 (`StageResult` at commit; HUD snapshot in the first `advance` after the outcome, frame step 1 of the next frame) |
 | game-state-stage-flow.md | TR-state-013 (ADR-0007's): tests fail when any battle signal has no listener, views on an allowlist | Contract only: Decision 8 (allowlist, `Battle.emitters()`, both tests). ADR-0007 owns the harness |
 | input-gesture-resolver.md | TR-input-009 (ADR-0008's): the resolver's signal API | Names and payload types only: Decision 3 and Decision 5 G1 to G8 |

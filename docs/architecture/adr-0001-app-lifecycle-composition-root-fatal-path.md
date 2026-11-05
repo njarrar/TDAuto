@@ -29,6 +29,10 @@ Proposed
 >   before the next story in its area closes. Reopen trigger: if V1 to V3 are re-run inside the real
 >   code and disagree with the spike result, this ADR is amended before the
 >   next story closes (the Rollback plan names the change).
+>
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 7: Retry is a modal Result-screen tap, not a HUD button; teardown calls
+> `battle.cancel_input()`, not `resolver.cancel()`.)
 
 ## Date
 
@@ -221,11 +225,11 @@ The injected callable list is the one in `architecture.md` B9 (`halted`, `in_bui
 
 ### 7. Retry and teardown
 
-`Retry` (a HUD button inside the wrapper) calls `AppRoot.request_retry()`, which only sets `_retry_requested = true`. It never frees its caller and is idempotent. On `AppRoot`'s next `_process`:
+`Retry` (a tap target on the modal Result screen inside the wrapper, read in its `_gui_input`; not a `Button` type, which ADR-0003 Decision 8 bans in battle code) calls `AppRoot.request_retry()`, which only sets `_retry_requested = true`. It never frees its caller and is idempotent. On `AppRoot`'s next `_process`:
 
 1. If `_app_latch.is_fatal()`: show the fatal screen and stop (fatal wins over retry).
 2. If `_retry_requested`: clear it. If `battle.is_over()` is false (phase not WON or LOST), ignore it (Game State edge case).
-3. Stop the Clock. `resolver.cancel()`.
+3. Stop the Clock. `battle.cancel_input()`: the canceller set by `Battle.set_input_canceller` (`adapter.cancel_all`, which empties the adapter queue and calls `resolver.cancel()`; ADR-0003 Decision 9). Headless it is a no-op.
 4. `wrapper.detach()`, `remove_child(wrapper)`, `wrapper.queue_free()`. Never `free()`: the request began inside the wrapper's own signal chain, and `queue_free()` defers deletion to a safe point.
 5. `_battle = null`, `_wrapper = null`. Because `detach()` cleared every reference in the wrapper subtree, these were the last strong references, so the old `Battle`, its sims and the resolver are released at once, without waiting for the wrapper nodes to be deleted. Weakrefs to the old `Battle`, each sim and the resolver must read null (TR-state-009, TR-tower-013). A non-null weakref means a cycle or a missed `detach()` and is a defect.
 6. `BattleBuilder.build(_catalogue, stage_id, _rng_seed, on_fatal)` again with the same catalogue, then a new wrapper.
@@ -254,7 +258,7 @@ Retry resets nothing in place. A retried battle opens in Build. A finger held ac
                            │ attach(battle, reduce_motion) / detach()
         BattleWrapper (scene): InputAdapter, Clock, HUD, field views
 
- Retry:  Retry button ─► AppRoot.request_retry() sets latch
+ Retry:  Retry tap    ─► AppRoot.request_retry() sets latch
          next frame: fatal first; is_over()? stop clock, cancel, detach (whole subtree),
                      remove_child, queue_free, drop refs, weakrefs(old battle, sims,
                      resolver) == null, build again with the SAME catalogue

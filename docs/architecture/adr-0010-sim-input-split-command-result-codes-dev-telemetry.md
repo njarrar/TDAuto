@@ -22,6 +22,8 @@ Verification progress, 2026-11-04 (macOS arm64, headless, Godot 4.7.2 editor bin
 
 Phone checks (user instruction, 2026-11-04): phone testing is set aside for now, and the future device is an iPhone. The V2 release half follows ADR-0001 V4, which moved after acceptance (iOS release export on the iPhone, Xcode console). V3 phone runs on the iPhone after acceptance. A phone result that contradicts this ADR reopens it before the next story in its area closes. Edit from this run: the `InertHeroSim` rule (Decision 9) now names lint INIT-1, because ADR-0009 V7 showed the engine does not enforce `super(...)`.
 
+Amended 2026-11-05 after /architecture-review. (Decision 8: burst button centre re-read on inset change. Decision 11: per-source damage in `ResultSnapshot`. Amends row: the ADR-0004 `Time.*` exception for `dev_logs.gd`.)
+
 **Reopen trigger.** If a bot needs a mutation path the eight commands lack, or the equivalence test needs a test-only branch in production code, this ADR is amended before the next Tower or Hero story closes. Owner: technical-director.
 
 ## Date
@@ -81,7 +83,7 @@ Not relied on: `Dictionary` order, sibling `_process` order, engine timers.
 | **Depends On** | ADR-0004 (between-ticks rule, `between_ticks()`, `ticks_run()`, frame order, `to_ticks`, float policy), ADR-0008 (resolver API, registry, `GestureLog`), ADR-0009 (float scalar sim positions, Combat helpers, `targets()`). Binding, also Proposed: ADR-0001 (Builder, injected method Callables, `halted()`, `fatal`, `dev_error`, retry teardown), ADR-0002 (records, `PackedFloat64Array` geometry), ADR-0005 (accessor, `is_tower`, `level_count`, read before mutate), ADR-0006 (signal names, payloads, allowlist, `StageResult`, listener rules), ADR-0007 (battle runner, digest, recording fakes, lint) |
 | **Enables** | ADR-0011 (views read the queries fixed here). Every Tower, Hero, Battle HUD and bot story |
 | **Blocks** | Every Tower System, Hero System and Battle HUD story; the bot balance gates (Hero Deferred criteria); the Pillar 4 gesture-log harness story's sink choice |
-| **Amends** | ADR-0006 Decision 5 table: TowerInput joins P1 and P4, RunLog (development builds only) joins P1, P4, P6, P7, and P4 becomes required (Decision 8). ADR-0001: `BattleWrapper.attach` gains optional `dev_logs`. ADR-0004 Decision 5: the between-ticks check runs in every build, not only development builds (Decision 2). ADR-0008 Decision 8: fills its delegated `chip_open` and sink slots. `architecture.md` B9: new `between_ticks` row; `halted` also injected into the input classes. All as exact edits in the cascade notes |
+| **Amends** | ADR-0006 Decision 5 table: TowerInput joins P1 and P4, RunLog (development builds only) joins P1, P4, P6, P7, and P4 becomes required (Decision 8). ADR-0001: `BattleWrapper.attach` gains optional `dev_logs`. ADR-0004 Decision 5: the between-ticks check runs in every build, not only development builds (Decision 2). ADR-0008 Decision 8: fills its delegated `chip_open` and sink slots. ADR-0004 Implementation Guidelines: `Time.get_unix_time_from_system` in `src/root/dev_logs.gd` joins the `Time.*` exceptions (Decision 10; lint TIME-3 already allows it). `architecture.md` B9: new `between_ticks` row; `halted` also injected into the input classes. All as exact edits in the cascade notes |
 | **Ordering Note** | Write after ADR-0009. ADR-0011 follows. Accept only after ADR-0004, ADR-0007, ADR-0008 and ADR-0009 are Accepted. The amendments above and the GDD edits land with acceptance |
 
 ## Context
@@ -228,7 +230,8 @@ Flow, EnemyWave and Combat reads are B5, B7 and B6 unchanged.
 
 **HeroInput** (Hero Rules 11 to 15). `attach(resolver, hero_sim, accessor, halted: Callable, in_build: Callable, left_handed: bool, stage: StageRecord, burst_button_centre: Vector2, dev_error: Callable)`.
 
-- `burst_button_centre` is a value, read once by the wrapper from `hud_logic.burst_button_centre()` and passed in; tests pass any point (TR-hero-015). It sets the button and sink disc centres and the cancel ring's 64 and 48.
+- `burst_button_centre` is a value, read by the wrapper from `hud_logic.burst_button_centre()` and passed in; tests pass any point (TR-hero-015). It sets the button and sink disc centres and the cancel ring's 64 and 48.
+- **Re-read on inset change** (TR-hud-018; ADR-0003 Decisions 5 and 7; amended 2026-11-05). Insets can move the button mid-battle. On `display_changed` (A2) the wrapper calls `hud_logic.set_insets(insets)`, then re-reads `hud_logic.burst_button_centre()` and calls `hero_input.set_button_centre(c: Vector2)`, which moves the button and sink discs with `resolver.set_centre` (legal at any time, ADR-0008) and the cancel ring. An aim in progress keeps its state; the next press uses the new discs.
 - Registers hero (DRAG 200, r 56), button (DRAG 100, r 48), sink (TAP 400, r 48). `update()` (frame step 4) calls `set_centre` for the hero from `position()`, re-clamps the aim and refreshes the digit.
 - Reads Burst `REACH` through its own burst context (made in `attach`) when it clamps an aim, with `halted()` after the read; a halted read ends the aim.
 - Issues `pin` on `drag_ended` of a hero drag, with `PinGeometry.clamp_point` of the offset finger; issues `burst` on `drag_ended` of a Live aim. `drag_cancelled` and `became_idle` clear state and never issue a command.
@@ -259,7 +262,7 @@ Flow, EnemyWave and Combat reads are B5, B7 and B6 unchanged.
 
 ### 11. The HUD result snapshot
 
-`ResultSnapshot` (`src/presentation/hud/result_snapshot.gd`, `RefCounted`, values only, no signal) is built by HudLogic at the moment ADR-0006 Decision 6 fixed (first `advance` after `phase_changed(WON)` or `(LOST)`). Fields: `result: StageResult`; `stage_id: StringName`; `rng_seed: int`; `ticks_run: int`; `got_through: Dictionary` (a copy); `slows_applied: int`; `towers_built: int` (built slots counted from slot reads); `hero_pinned_ever: bool` (`pin_state() != UNPINNED`); `hero_share: float`; the ten Hero counters (arrays copied). It references no sim object, so a view may keep it after the battle is dropped. The Next-try line (Battle HUD Rule 16) and the result rows read only it.
+`ResultSnapshot` (`src/presentation/hud/result_snapshot.gd`, `RefCounted`, values only, no signal) is built by HudLogic at the moment ADR-0006 Decision 6 fixed (first `advance` after `phase_changed(WON)` or `(LOST)`). Fields: `result: StageResult`; `stage_id: StringName`; `rng_seed: int`; `ticks_run: int`; `got_through: Dictionary` (a copy); `slows_applied: int`; `towers_built: int` (built slots counted from slot reads); `hero_pinned_ever: bool` (`pin_state() != UNPINNED`); `hero_share: float`; `dealt_by_source: Dictionary` (amended 2026-11-05, TR-hud-013: `StringName` source id to damage `float`, one entry per tower id built this battle in slot order, then the hero id and the burst id, each from `combat.dealt_by_id`; readers iterate in that stored order through `dealt_sources: Array[StringName]`, never the `Dictionary`); the per-kind totals (`dealt_by_kind`, three floats); the ten Hero counters (arrays copied). It references no sim object, so a view may keep it after the battle is dropped. The Next-try line (Battle HUD Rule 16) and the result rows read only it.
 
 ### 12. Choices made in autonomous mode
 
