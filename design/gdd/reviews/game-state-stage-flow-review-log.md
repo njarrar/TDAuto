@@ -120,3 +120,33 @@ Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5
 Applied in autonomous mode: all eight conditions (Rule 4 floor wording; the extra-leak edge case and a pointer in Rule 14; Rule 15 stale-payload definition; Rule 16 and architecture Data Flow 5 clear the cancel before release; the cancel counter renamed X; the fake's start raises wave_index; AC18 and AC21 recorder order and phase() == FATAL; AC19 external counter and assert_error) and recommended: Start arms when Build opens after a retry (Game Feel), retry and Play again use the same seed (Rule 16), phase as the architecture's phase_changed (Rule 15).
 Not done: the other recommended and routed items.
 The creative director judged a spot-check of the changed lines enough to approve; that choice is left to the user, as for the Hero GDD's lighter exit.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 1 | Recommended: 18
+Summary: Fourth pass, run as a full review at the user's choice. All four specialists confirmed the third review's eight conditions were applied with no new contradiction; three found no blocker. The one blocker was criterion 19, which could not fail: it released the fake before calling, so a missing clear and a present one gave the same count. The creative director kept that alone, with a spot-check of the fix as the route to approval.
+Prior verdict resolved: Yes (all 8 conditions of the third review)
+Findings:
+- [BLOCKING] Acceptance Criteria AC19: cannot fail on the clear it guards; test with the fake alive, prove the wiring first, hedge the gdUnit4 error assertion (ADR-0007), leave the released target to ADR-0001.
+- [RECOMMENDED] Edge Cases: the mid-emit case's wording ("dropped", "follows") disagreed with Rule 15.
+- [RECOMMENDED] To ADR-0001: a cause() read on FatalLatch (AC13 reads it); a wrapper.teardown() that clears the cancel and stops processing, used by retry and Fatal (Rule 18); B4's is_valid() caveat; whether "GDScript cannot stop them" overclaims.
+- [RECOMMENDED] To stories: AC6 sink entry for the extra leak; AC7 and "same tick" for the fake E; Rule 14's tie for a same-tick wave_cleared; AC17 "wave_index() 2" now that a start raises it; "of 6" read from data; who picks the first seed, and "replays exactly" meaning stage content; an intermission shorter than the 0.3 s arming; Battle HUD Rule 18 pointing to Flow Rule 16; a test of the stale-payload rule.
+- [RECOMMENDED] Backlog: second focus loss while Paused; in_build() after Fatal from Paused-from-Build; qa-lead's carried AC8, AC9, AC11, AC12, AC13, AC17 items, untested Rule 5, Retry twice and a finger before Paused; "Play again" vs "Retry"; fixture wave_index start, AC6 boundary 1,000, ±1 frame on the Manual beat.
+- [RECOMMENDED] Closed: game-designer's unarmed-Start point, answered by Battle HUD Rule 11.
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 79e1779d43288077e7979d15c76a9923384cbd24
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/hero-system.md c33a93e052ee88976c0bb5baab4ce8d475530a84
+Reviewed-Content-Hash: docs/architecture/architecture.md e5789af6280a4ef899684a2d0ec4dd50f1982d7f
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+AC19 rewritten (live fake, count 1 before the clear and still 1 after, "never set" case kept, a gdUnit4 error assertion with its mechanism left to ADR-0007 and watched failing once, the released target left to ADR-0001), and the mid-emit Edge Case reworded to match Rule 15. One reader (qa-lead) checked only those two passages: both PASS, with one tightening applied ("same assertion" in the never-set case). As the creative director prescribed, the GDD is marked Approved with no further review. The recommended items above are carried, not done. The receipt below stamps the approved text.
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43

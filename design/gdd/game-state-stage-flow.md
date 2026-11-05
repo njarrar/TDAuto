@@ -1,9 +1,9 @@
 # Game State & Stage Flow
 
-> **Status**: In Review (third design review 2026-11-04, full, NEEDS REVISION with eight conditions for approval, all applied; the creative director judged a spot-check of the changed lines enough, pending the user's choice; see the review log)
+> **Status**: Approved 2026-11-05 (fourth design review, full, NEEDS REVISION on criterion 19 alone; fixed, and a spot-check of criterion 19 and the mid-emit edge case passed, as the creative director prescribed; see the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 
@@ -161,7 +161,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If focus is lost in Won, Lost or Fatal**: no state change.
 - **If the failure handler fires in Won, Lost or Paused**: Fatal replaces the screen (Rule 18). A bad read while the HUD builds its result can do this.
 - **If a stage is doomed**: the only way out is to lose it, or relaunch. Retry on the Paused screen is deferred (user decision, 2026-11-04), since Paused comes only from focus loss.
-- **If a listener fires the failure handler during an emit**: the rest of that transition's signals are dropped, and `phase(Fatal)` follows.
+- **If a listener fires the failure handler during an emit**: `phase(Fatal)` goes out at once, inside that emit; Flow emits none of the transition's remaining signals, and later listeners of the emit in progress still receive its stale payload, which they ignore once `phase()` reads Fatal (Rule 15).
 - **If `build` cannot find its stage**: the handler fires, `build` returns null and there is no battle to discard.
 - **If focus is lost and the OS kills the app**: the stage is lost and the next launch boots cold.
 - **If a finger is held across a retry**: the new adapter never saw its press, so its moves are dropped and it must lift first.
@@ -274,7 +274,7 @@ A recording fake logs every Flow signal. The log is cleared when GIVEN ends, and
 16. (Rule 15) **GIVEN** Wave, **WHEN** Lost, Won, Fatal or Paused commits, **THEN** at the emit the listener reads that phase and `X` 1, with `halted()` true except in Paused.
 17. (Rule 15) **GIVEN** Wave with `wave_index()` 2, **WHEN** Lost, **THEN** the result reads Lost, 2 and 0 lives. `in_build()` is true only in Build and in Paused from Build; `halted()` only in Won, Lost and Fatal.
 18. (Rule 15) **GIVEN** Intermission after 2 ticks and a listener that fires the handler on `wave_called_early`, **WHEN** call, **THEN** `wave_called_early(0.5), phase(Fatal)`, with no `phase(Wave)`, and 2 starts, since the start ran before the emit. The recorder connects before the listener that fires the handler, and `phase()` then reads FATAL.
-19. (Rule 15) **GIVEN** a battle whose cancel is a method on a fake resolver, **WHEN** the cancel is cleared with `set_input_cancel(Callable())`, the resolver released, and `cancel_input()` called, **THEN** no script error, caught by gdUnit4's error monitor (`assert_error`), and an external call counter shared with the fake stays 0; **GIVEN** no cancel ever set, **THEN** the same.
+19. (Rule 15) **GIVEN** a battle whose cancel is a method on a live fake resolver that counts its calls, **WHEN** `cancel_input()` is called, **THEN** the count is 1, so the wiring works; **WHEN** the cancel is then cleared with `set_input_cancel(Callable())` and `cancel_input()` called again, the fake still alive, **THEN** the count stays 1 and no script error is raised, checked with a gdUnit4 error assertion (mechanism: ADR-0007) watched failing once. **GIVEN** no cancel ever set, **WHEN** `cancel_input()` is called, **THEN** nothing happens and no error is raised (same assertion). What a call on a released target does is ADR-0001's engine probe, not this criterion.
 20. (Formulas) **GIVEN** wave 1, **WHEN** `E` emits `wave_cleared(1.0)` from inside its own tick, **THEN** `phase(Intermission)`, and exactly 4 more ticks give `phase(Wave)`, since the entering tick does not decrement.
 21. (Rule 18, Edge Cases) **GIVEN** a `phase` listener that fires the handler on `phase(Lost)`, **WHEN** a fatal leak, **THEN** `lives_changed(0), phase(Lost), phase(Fatal)`, with the recorder connected before that listener, and `phase()` then reads FATAL.
 
