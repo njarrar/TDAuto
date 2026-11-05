@@ -130,7 +130,7 @@ The GDDs require a battle that is a pure function of `(catalogue, stage_id, seed
 | Slice | Budget at 60 fps | Status |
 |---|---|---|
 | Input, resolver, commands | 0.5 ms | unmeasured |
-| Simulation ticks | 4.0 ms total; normal frame one tick; at the cap two | unmeasured; Combat worst case about 400 range checks per tick estimated under 2 ms |
+| Simulation ticks | 4.0 ms total; normal frame one tick; at the cap three, so the test is `MAX_TICKS_PER_FRAME` x p99 tick cost at most 4.0 ms | unmeasured; Combat worst case about 400 range checks per tick estimated under 2 ms |
 | Views and HUD | 3.0 ms | unmeasured |
 | Engine, rendering submit, OS | 7.0 ms | unmeasured |
 | Headroom | 2.1 ms | unmeasured |
