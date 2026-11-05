@@ -48,12 +48,12 @@ Presentation leaves open how the battle field is drawn, how many draw calls it m
 | **Delegates To** | ADR-0007 (lints named in Decision 13; test runner for the pure units); ADR-0010 (the sims' read methods exist as named; input; commands); ADR-0004 (clock, ticks); `technical-artist` / `art-director` (the ring width bias, glyph shapes, tint wording, V3 and V7); `ui-programmer` (HudTopBand Controls) |
 | **Enables** | Every Presentation story: HudField, field views, Combat view, hero view, outcome presentation; ADR-0007's evidence items |
 | **Blocks** | The first HudField or Combat-view story (architecture.md Required ADRs). Only Decision 11's numbers stay provisional |
-| **Ordering Note** | `architecture.md` edits at `/architecture-review` are in the closing sync section. TR-combat-015 and TR-hero-016 are provisional ("registered at /architecture-review") |
+| **Ordering Note** | `architecture.md` edits at `/architecture-review` are in the closing sync section. TR-combat-015 and TR-hero-016 were registered at `/architecture-review` on 2026-11-05 |
 
 ## Context
 
 ### Problem Statement
-Eight requirements are waiting on one rendering decision: TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015, TR-hud-017, and the provisional TR-combat-015 (clearance) and TR-hero-016 (view clause). Four ADRs delegate here: view classes and handlers (ADR-0006), the frame-clock rule (ADR-0004), judder (ADR-0004), screenshot evidence (ADR-0007). The owner decided on 2026-11-05 that the Defeat and Victory field shifts are in MVP as one tint (hero-system.md:473).
+Eight requirements are waiting on one rendering decision: TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015, TR-hud-017, and TR-combat-015 (clearance) and TR-hero-016 (view clause). Four ADRs delegate here: view classes and handlers (ADR-0006), the frame-clock rule (ADR-0004), judder (ADR-0004), screenshot evidence (ADR-0007). The owner decided on 2026-11-05 that the Defeat and Victory field shifts are in MVP as one tint (hero-system.md:473).
 
 ### Constraints
 - The battle is a pure function of (catalogue, stage_id, seed, command script). `src/battle/` is `RefCounted` only; views live in `src/presentation/`. No autoloads. Views observe, never steer.
@@ -80,7 +80,7 @@ Eight requirements are waiting on one rendering decision: TR-combat-011, TR-enem
 
 **5. Hit flash (QQ-10): none, no shader.** The flash is a polygon that `CombatView` draws, not a `modulate` or a shader on a pooled node, because no enemy node exists (Decision 1). This removes the hit-flash shader from art bible §8's three-shader allowance; the other two (chevron pulse, outline) stay allowed but this ADR uses neither, so the MVP scene has **zero** shaders. Closes QQ-10; the Combat GDD already uses none. A marker beside the body versus the body drawn in the flash colour (no extra call, since the body is already a `draw_primitive` run) is an art-director call (V13).
 
-**6. `ClearanceWindow` (TR-combat-015, provisional).** A `RefCounted` in `src/presentation/combat_view/`, advanced by `advance(view_dt)` from the wrapper (ADR-0004 step b). Rules: `burst_started` opens it (open, no tail yet). The next BURST `attack_fired` (it fires even for an empty burst) is the release and starts a tail of `CLEARANCE_TAIL_SECONDS` (data, 0.15, owned by Hero's Visual Requirements). `advance` runs the tail down and closes at 0. If a `phase_changed` to WON, LOST or FATAL arrives while open and not released, the window closes at once; a `phase_changed` to anything else, **Paused included**, is ignored; once released, an outcome does not stop the tail (frame clock). Paused freezes the tail because `view_dt` is 0. While `is_open()`, `CombatView` suppresses tower flashes and splash rings and draws no other gold, glow or expanding ring (the burst stays the brightest thing).
+**6. `ClearanceWindow` (TR-combat-015).** A `RefCounted` in `src/presentation/combat_view/`, advanced by `advance(view_dt)` from the wrapper (ADR-0004 step b). Rules: `burst_started` opens it (open, no tail yet). The next BURST `attack_fired` (it fires even for an empty burst) is the release and starts a tail of `CLEARANCE_TAIL_SECONDS` (data, 0.15, owned by Hero's Visual Requirements). `advance` runs the tail down and closes at 0. If a `phase_changed` to WON, LOST or FATAL arrives while open and not released, the window closes at once; a `phase_changed` to anything else, **Paused included**, is ignored; once released, an outcome does not stop the tail (frame clock). Paused freezes the tail because `view_dt` is 0. While `is_open()`, `CombatView` suppresses tower flashes and splash rings and draws no other gold, glow or expanding ring (the burst stays the brightest thing).
 
 **7. Frame order inside `BattleWrapper._process`** (ADR-0004 fixes the slots; this ADR places the rest):
 ```
@@ -260,10 +260,10 @@ func mark_killed(spawn_id: int) -> void                        # from damage_app
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
 | combat-damage.md | TR-combat-011: one `_draw` per kind, no shaders or particles, 16-marker flash pool on the frame clock | Decisions 1, 4, 5 |
-| combat-damage.md | TR-combat-015 (provisional): burst clearance from `burst_started` to 0.15 s after release | Decision 6 |
+| combat-damage.md | TR-combat-015: burst clearance from `burst_started` to 0.15 s after release | Decision 6 |
 | enemy-wave.md | TR-enemy-015: roster and path read each frame, fixed three-pass order, pool of at least 48 growing with a dev error, Reduce Motion | Decisions 2, 3 |
 | tower-system.md | TR-tower-015: one `_draw` node, primitive polygons, level inset, cooldown ring, Reduce Motion fallbacks | Decisions 1, 13 |
-| hero-system.md | TR-hero-016 (provisional): view clause, outcome rows on the frame clock; hero-system.md:473 field shift | Decisions 9, 10 |
+| hero-system.md | TR-hero-016: view clause, outcome rows on the frame clock; hero-system.md:473 field shift | Decisions 9, 10 |
 | battle-hud.md | TR-hud-001: HudField one `_draw`, HudTopBand display-only, HudModals built once | Decisions 1, 2, 10 |
 | battle-hud.md | TR-hud-015: about 8 (max 12) of 60 draw calls, at most 3 text draws, modals inside (L372, L450) | Decisions 11, 12 |
 | enemy-wave.md | Criterion 57: danger rule, 240 units, 1.5 s, `now` injected, ends on Won or Lost | Decision 16 |
@@ -315,7 +315,7 @@ Edits owed when this ADR moves to Accepted (recorded 2026-11-05 from the draftin
 - docs/architecture/architecture.md:337-348 (Frame budget): add "27 worst-case calls by node (ADR-0011 Decision 11), HUD at the 12 cap, provisional"
 - docs/architecture/architecture.md:593 (TR-hud-017 row): add "key type `PackedInt32Array`; `HudRedrawKey.merge`; table test (ADR-0011 Decision 8)"
 - docs/architecture/architecture.md:660-670 (ADR-0011 entry) and :696 (QQ-10): entry "Decides ..." -> "Decided; Status Proposed"; QQ-10 -> "Closed: no shader, polygon markers (ADR-0011 Decision 5; art-director V13)"
-- docs/architecture/architecture.md:10 (TR counts): register TR-combat-015 and TR-hero-016 at /architecture-review, with the Decision 6 and 10 text
+- docs/architecture/architecture.md:10 (TR counts; applied 2026-11-05): register TR-combat-015 and TR-hero-016 at /architecture-review, with the Decision 6 and 10 text
 - docs/architecture/tr-registry.yaml:446 (TR-combat-011), :572 (TR-enemy-015), :915 (TR-hud-017): "a 16-marker flash pool" -> "a 16-marker flash pool drawn by the Combat view, no shader"; "a view pool of at least 48" -> "a slot array of at least 48 inside the single enemy `_draw`"; "a quantised view-model key" -> "a quantised `PackedInt32Array` key from `HudRedrawKey.merge`"
 - design/art/art-bible.md:192 and :194 (route to art-director, not a direct edit): "Max 3 distinct CanvasItem shaders per scene (hit flash, chevron pulse, outline)" -> "MVP uses none; the hit flash is a polygon marker (ADR-0011 Decision 5)"; "Pool ... 48 enemies, 16 hit-flash markers" -> "slot arrays in single-draw nodes"; also route V12 and V13, and the §2 wording of the ±4% as a field-base Value offset (V7)
 - design/gdd/hero-system.md:473 (open question): "ADR-0011 carries the tint as a view value" -> "carried by ADR-0011 Decision 9"

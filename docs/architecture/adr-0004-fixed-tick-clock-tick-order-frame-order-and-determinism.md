@@ -99,7 +99,7 @@ The GDDs require a battle that is a pure function of `(catalogue, stage_id, seed
 | 5 | HeroSim `tick` | walk, attack, cooldown, telegraph, release; burst after hero |
 | 6 | EnemyWave `reap` | remove corpses, emit `enemy_killed(bounty)` once each |
 
-`halted()` is checked before slot 1 and after every slot, and each sim checks it after every accessor read and emit (TR-state-007, TR-enemy-005, TR-tower-006); once true the tick returns and later slots do not run. There is no seventh slot: an outcome commits inside the slot that causes it (a leak in slot 2, the last kill's `waves_completed` in slot 6) and Flow's transition rules (commit, act, emit, check the latch) run from there. Because the Hero slot (5) precedes the reap (6), a burst that kills the last enemy releases on the tick the stage is won, and its BURST `attack_fired` precedes `phase_changed(Won)`; a latched outcome (a fatal leak in slot 2, or Fatal) stops later releases because slot 5 sees `halted()` (TR-hero-016, provisional; its last clause is ADR-0011's). Waves use no randomness, so no slot draws from the RNG at MVP (Decision 10). This is the order Flow Rule 5, Combat Rule 11, Enemy & Wave Rule 12 and Tower Rule 9 cite; they restate it and do not define it.
+`halted()` is checked before slot 1 and after every slot, and each sim checks it after every accessor read and emit (TR-state-007, TR-enemy-005, TR-tower-006); once true the tick returns and later slots do not run. There is no seventh slot: an outcome commits inside the slot that causes it (a leak in slot 2, the last kill's `waves_completed` in slot 6) and Flow's transition rules (commit, act, emit, check the latch) run from there. Because the Hero slot (5) precedes the reap (6), a burst that kills the last enemy releases on the tick the stage is won, and its BURST `attack_fired` precedes `phase_changed(Won)`; a latched outcome (a fatal leak in slot 2, or Fatal) stops later releases because slot 5 sees `halted()` (TR-hero-016; its last clause is ADR-0011's). Waves use no randomness, so no slot draws from the RNG at MVP (Decision 10). This is the order Flow Rule 5, Combat Rule 11, Enemy & Wave Rule 12 and Tower Rule 9 cite; they restate it and do not define it.
 
 **7. Frame order and commands between ticks.** Per frame:
 
@@ -301,7 +301,7 @@ func retry(attempt: int) -> int                   # base + attempt, attempt >= 1
 | hero-system.md | TR-hero-006: PinGeometry in float scalars, no `Vector2` methods | Decision 12 (QQ-05 decided) |
 | hero-system.md | TR-hero-011: HeroInput advances through an explicit `update()` | Decision 7 (step 2b) |
 | hero-system.md | TR-hero-013: Pause stops the clock so walk and telegraph resume exactly; Build runs no ticks; Intermission ticks | Decisions 3, 5 and 9 |
-| hero-system.md | TR-hero-016 (provisional, not yet in `tr-registry.yaml`): the Hero slot precedes the reap, so a last-enemy burst releases on the Won tick and a latched outcome stops later releases; the hero view's outcome rows run on the frame clock | Decision 6 covers the slot order and the halt; the frame-clock clause is delegated to ADR-0011, with Decision 8's rule |
+| hero-system.md | TR-hero-016 (registered 2026-11-05): the Hero slot precedes the reap, so a last-enemy burst releases on the Won tick and a latched outcome stops later releases; the hero view's outcome rows run on the frame clock | Decision 6 covers the slot order and the halt; the frame-clock clause is delegated to ADR-0011, with Decision 8's rule |
 | battle-hud.md | TR-hud-005: each frame runs commands, then real-time models, then ticks, then views | Decision 7, with the condition that the Call bonus and seconds-left are read after the ticks, never cached in `advance` |
 | battle-hud.md | TR-hud-007: armed buttons on a real-time `advance(ms)` clock, clamped to 100 ms, frozen while Paused | Decisions 7 and 8 (`view_dt` is 0 under Pause; the clamp is HudLogic's) |
 
@@ -345,7 +345,7 @@ Not covered by `docs/engine-reference/godot/`; seven items, each mapped to a Ver
 
 ## GDD and Registry Sync at Acceptance
 - Flow GDD: the Clock deferred row gets the cap (3, provisional, floor 2); the open clamp question closes; the Full determinism row cites Decision 12.
-- `tr-registry.yaml`: add TR-hero-016 (provisional) at `/architecture-review`.
+- `tr-registry.yaml`: TR-hero-016 was registered by `/architecture-review` on 2026-11-05 (done).
 - `architecture.md`: Data Flow 1 order (real-time models before ticks) is confirmed; QQ-01 and QQ-05 close; QQ-11 stays open; QQ-22 stays open until the device run.
 - Registry stances appended to `docs/registry/architecture.yaml` when this ADR is Accepted:
   - Interface contracts: `tick_entry` (Clock.advance drives `Battle.tick(DT)` from the wrapper's `_process` only; the gate; the six-slot order with `halted()` between slots); `commands_between_ticks` (applied synchronously from the input call stack, never queued; the `Battle.in_tick()` guard); `view_clock` (`view_dt` = 0 under Pause else the delta clamped to 0.1 s, to every frame-clock consumer, never a sim tick; the Call bonus read after the ticks); `flow_phase_fatal` (`Flow.phase()` reads FATAL whenever the latch is set, via `Battle.is_fatal`).

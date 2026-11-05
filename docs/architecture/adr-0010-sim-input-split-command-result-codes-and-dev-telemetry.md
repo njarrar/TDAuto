@@ -46,7 +46,7 @@ Tower and Hero each split into a headless `RefCounted` sim (`TowerSim`, `HeroSim
 | **Delegates To** | ADR-0007: the lint rows named in Decision 12 and the baseline runner using `bot_id`; ADR-0011: rendering of arc, chip, ring, field tint and the view clock; Flow GDD / ADR-0006: Flow's own command result codes (`start_wave`, `call_early`, `pause`, `resume`), see Verification V8 |
 | **Enables** | ADR-0007 lint L16 (named files), baseline file names, ADR-0011 views reading `chip_state()`, `aim_state()`, `tower_at()` |
 | **Blocks** | Every TowerSim, HeroSim, TowerInput, HeroInput and RunLog story; the bot baselines |
-| **Ordering Note** | `architecture.md` B8, B10, Data Flow 9 and the TR-hud-018 row change at `/architecture-review` (see Sync section). TR-hud-018 is provisional and registered at that review |
+| **Ordering Note** | `architecture.md` B8, B10, Data Flow 9 and the TR-hud-018 row change at `/architecture-review` (see Sync section). TR-hud-018 was registered at that review (2026-11-05) |
 
 ## Context
 
@@ -60,7 +60,7 @@ Tower and Hero both say "two pieces" and defer to an ADR for: the command result
 - Telemetry listens only and cannot change a result; release builds never write it.
 
 ### Requirements
-- TR-tower-001, 002, 006, 008, 009; TR-hero-001, 002, 009, 010, 012, 015; TR-hud-013 and TR-hud-018 (provisional); TR-input-012 (radii), TR-input-015 (gesture log).
+- TR-tower-001, 002, 006, 008, 009; TR-hero-001, 002, 009, 010, 012, 015; TR-hud-013 and TR-hud-018; TR-input-012 (radii), TR-input-015 (gesture log).
 - A fake sink, fake sims and fake resolver must be enough to test every class here without an engine scene.
 
 ## Decision
@@ -159,7 +159,7 @@ The flag is set only after every refusal check and cleared at the single return 
 - **Flush.** Events append a finished JSON line to a `PackedStringArray` buffer. The wrapper calls `run_log.advance(view_dt)` (seconds, the same `view_dt` it gives `TowerInput.advance` in ms) and `run_log.flush()` once per frame, next to `TowerInput.advance`; `HudLogic` is unaware of `RunLog`; `flush()` does nothing if the buffer is empty, drops the whole buffer if the injected `is_fatal()` is true, else passes the buffer to the sink in one call. Fatal drops everything buffered in the current frame: the fatal frame's call record and GestureLog lines are lost too, which matches TR-hud-018's "Fatal drops it"; earlier frames were already written. A write returning `false` drops that frame's remaining lines, increments `write_failures` and issues one `push_warning` (injected `warn` Callable); it never fatals, never retries and never grows the buffer. Release builds hold no `RunLog` at all, so they are silent.
 - **Order.** A pending call record is appended before the attempt record on the same flush; both come from `phase_changed(WON|LOST)`. A call record is written at the next `wave_cleared` or outcome.
 - **Fatal overrides Won.** If the latch sets in the same tick after `phase_changed(WON)` has buffered the attempt record, `flush()` sees `is_fatal()` and drops both. Test: fake Flow emits WON, fake `is_fatal` flips, `advance` runs, sink received 0 lines; control: not fatal, sink received call then attempt.
-- **Attempt record (TR-hud-018, provisional).** One JSON object per line, `"k":"attempt"`: `launch` (the `SeedSource` base) and `seed` are written as decimal `String`s, because JSON turns 64-bit ints into floats and loses low digits (ADR-0004 line 124 probe), which would defeat reproducing the run; `launch`, `build_id` (string, injected, V4), `stage`, `attempt` (AppRoot's counter n), `outcome`, `towers` (IDs in build order), `lives`, `last_wave`, `dmg_by_id`, `dmg_by_kind` (`tower`, `hero`, `burst`), `hero_share`, `slows`, `repins`, `repins_w1` (captured at the first WAVE phase), `bursts`, `bursts_hit_0`, `kills_per_burst` (array), `best_victims`, `through` (by enemy type), `t_first_pin`, `t_first_build`, `t_first_burst` (frame-clock seconds from the first frame, -1.0 if never; the frame clock freezes under Pause, so these exclude paused time, unlike the GDD's "real seconds"). Events are stamped with the battle's tick counter (ADR-0004's `tick` member on `Battle`, read at record time; ADR-0009 line 120). Call record, `"k":"call"`: `attempt`, `seconds_left`, `burst_state`, `pin_state` (both sampled from `HeroSim` at `wave_called_early`, never through Tower), `lives_lost` (lives at the call minus lives at the next `wave_cleared` or outcome). A quit leaves no record.
+- **Attempt record (TR-hud-018).** One JSON object per line, `"k":"attempt"`: `launch` (the `SeedSource` base) and `seed` are written as decimal `String`s, because JSON turns 64-bit ints into floats and loses low digits (ADR-0004 line 124 probe), which would defeat reproducing the run; `launch`, `build_id` (string, injected, V4), `stage`, `attempt` (AppRoot's counter n), `outcome`, `towers` (IDs in build order), `lives`, `last_wave`, `dmg_by_id`, `dmg_by_kind` (`tower`, `hero`, `burst`), `hero_share`, `slows`, `repins`, `repins_w1` (captured at the first WAVE phase), `bursts`, `bursts_hit_0`, `kills_per_burst` (array), `best_victims`, `through` (by enemy type), `t_first_pin`, `t_first_build`, `t_first_burst` (frame-clock seconds from the first frame, -1.0 if never; the frame clock freezes under Pause, so these exclude paused time, unlike the GDD's "real seconds"). Events are stamped with the battle's tick counter (ADR-0004's `tick` member on `Battle`, read at record time; ADR-0009 line 120). Call record, `"k":"call"`: `attempt`, `seconds_left`, `burst_state`, `pin_state` (both sampled from `HeroSim` at `wave_called_early`, never through Tower), `lives_lost` (lives at the call minus lives at the next `wave_cleared` or outcome). A quit leaves no record.
 - **GestureLog** (ADR-0008 delegation, TR-input-015) is a second dev-only observer that appends `"k":"gesture"` lines through the same buffer: resolver transitions (`recent_transitions()`), `tower_upgraded`, `chip_state()` at prompts and `burst_started`. Its field list is fixed by the Pillar 4 phone-test story (V7).
 
 ### Architecture Diagram
@@ -293,7 +293,7 @@ B8's `Vector2` argument types are kept; the precision rule is in Decision 4. The
 | hero-system.md | TR-hero-015 `burst_button_centre()` read once | Decision 8 |
 | battle-hud.md | TR-hud-008 arc registers and unregisters, disables Start/Call, closes on outcome, Paused or Fatal | Decision 8 (HudLogic reacts to `phase_changed`) |
 | battle-hud.md | TR-hud-013 injectable sink, non-fatal, release never | Decision 13 |
-| battle-hud.md | TR-hud-018 (provisional, registered at /architecture-review) run-log schema | Decision 13 |
+| battle-hud.md | TR-hud-018 (registered 2026-11-05) run-log schema | Decision 13 |
 | input-gesture-resolver.md | TR-input-012 radii on input objects; TR-input-015 gesture log | Decisions 8 and 13 |
 
 ## Performance Implications
@@ -340,8 +340,8 @@ Applied at `/architecture-review`, not by this ADR. Format `file:line: old → n
 - docs/architecture/architecture.md:549: Invariants line → add "`REENTERED` is checked second; `_in_command` is set after the refusal checks and cleared at the wrapper's single return; `HALTED` is also re-checked after the cost read"
 - docs/architecture/architecture.md:573: B10 HUD read surface → add `HeroSim.repins()`, `bursts()`, `bursts_hit_0()`, `kills_per_burst()`, `best_victims()`, `burst_state()`, `pin_state()` and `TowerSim.tower_at()`
 - docs/architecture/architecture.md:335: Data Flow 9 "Development builds only." → "RunLog and GestureLog are built by the wrapper only when `OS.is_debug_build()`; events buffer, the wrapper flushes once per frame through the sink; the buffer is dropped when the latch is set (ADR-0010 Decision 13)"
-- docs/architecture/architecture.md:594: TR-hud-018 (provisional) → registered; schema per ADR-0010 Decision 13; add "Fatal drops both records, including a Won record buffered in the same tick"
-- docs/architecture/tr-registry.yaml:912 (append after TR-hud-017): add TR-hud-018 from architecture.md:594 text, `status: active`, created 2026-11-05
+- docs/architecture/architecture.md:594 (applied 2026-11-05): TR-hud-018 (provisional) → registered; schema per ADR-0010 Decision 13; add "Fatal drops both records, including a Won record buffered in the same tick"
+- docs/architecture/tr-registry.yaml:912 (applied 2026-11-05; append after TR-hud-017): add TR-hud-018 from architecture.md:594 text, `status: active`, created 2026-11-05
 - design/gdd/tower-system.md:55: result table row `HALTED | halted() is true | 1st, and again after the cost read` → add a new row after it: `REENTERED | in_dispatch() is true; the command refuses and reports through dev_error | 2nd`
 - design/gdd/tower-system.md (Rule 8, the chip window sentence, "fed by the wrapper to a pure ChipWindow with advance(ms)") → "fed each frame by the wrapper's view_dt in ms through TowerInput.advance"
 - design/gdd/hero-system.md:36: pin returns `HALTED`, `BAD_POSITION`, ... → insert `REENTERED` after `HALTED`
