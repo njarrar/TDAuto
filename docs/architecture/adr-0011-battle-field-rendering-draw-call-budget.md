@@ -7,7 +7,7 @@ Accepted
 2026-11-05
 
 ## Last Verified
-2026-11-05, against `architecture.md` v7, `tr-registry.yaml` (123 entries), ADR-0001 to ADR-0010 (all Accepted) with their amendments, and probes R1 to R7, R13 to R18 and R20 run on 4.7.2 headless (below). R8 to R12 and R19 have no recorded result (not run).
+2026-11-05, against `architecture.md` v10, `tr-registry.yaml` (123 entries), ADR-0001 to ADR-0010 (all Accepted) with their amendments, and probes R1 to R7, R13 to R18 and R20 run on 4.7.2 headless (below). R8 to R12 and R19 have no recorded result (not run).
 
 ## Decision Makers
 - Accepted: 2026-11-05 by the user (njarrar), with the dated ADR-0009 and ADR-0010 amendments and the HUD, Enemy and art bible syncs
@@ -25,7 +25,7 @@ The battle field and HUD must draw up to 48 enemies, the towers, the hero, comba
 | **Layer** | Presentation |
 | **Knowledge Risk** | MEDIUM: 4.7 removed the line feather; RD 2D batching across CanvasItems and the 2D draw-call count are not in the pinned reference |
 | **References Consulted** | `VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `modules/rendering.md`, `modules/ui.md`, `probe-results.md` (ADR-0004 E2, E7, E8; ADR-0003 S9) |
-| **Post-Cutoff APIs Used** | `draw_circle(..., filled, width, antialiased)` (4.4, R3); `Control.accessibility_name`, `accessibility_live` (4.5, R18; in 4.7 `accessibility_live` takes `AccessibilityServer.AccessibilityLiveMode`, not `DisplayServer.AccessibilityLiveMode`). Relied-on change: no line feather (4.7) |
+| **Post-Cutoff APIs Used** | `draw_circle(..., filled, width, antialiased)` (4.4, R3); `Control.accessibility_name`, `accessibility_live` (4.5, R18; in 4.7 `accessibility_live` takes `AccessibilityServer.AccessibilityLiveMode`; `AccessibilityServer.LIVE_POLITE` verified 4.7.2 headless). Relied-on change: no line feather (4.7) |
 | **Verification Required** | R1 to R7, R13 to R18 and R20 verified 4.7.2 headless. R8 to R12 and R19 have no recorded result (not run). Needs a GPU: draw calls and batching across nodes (M9a desktop windowed, M9b phone), frame time (M9b), the MultiMesh layout and per-instance colour (F1), text sharpness and disc edges (M3), 90 and 120 Hz pacing (ADR-0004 V13) |
 
 Each row below is verified 4.7.2 headless (Linux x86_64, 4 cores, editor binary, debug). R8 to R12 and R19 have no row:
@@ -66,7 +66,7 @@ TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015; Data Flow 10 
 ## Decision
 
 ### 1. One `_draw` node per view family, tree order is draw order
-The wrapper builds one `FieldViews` `Node2D`. Its children draw in this order, each from one `_draw` (R20):
+The wrapper builds one `FieldViews` `Node2D` (nodes 1 to 7) and, after it as a sibling, one `HudLayer` `CanvasLayer` at layer 1 (nodes 8 and 9). Layer 1 draws after layer 0, so the nodes draw in this order, each from one `_draw` (R20):
 
 | # | Node | Draws | Redraws |
 |---|---|---|---|
@@ -77,14 +77,15 @@ The wrapper builds one `FieldViews` `Node2D`. Its children draw in this order, e
 | 5 | `EnemyView` | Enemies in three passes, then state cues, then all slow drag lines in one `draw_multiline` | With a non-empty roster |
 | 6 | `CombatView` | Splash rings, tracers, hit flashes, death discs, in that order | With a live entry |
 | 7 | `HeroView` | Leash, reach ring, ground ring, unpinned ring, ghost; halo texture, kite, Ready ticks, burst ring, spokes, reticle, preview, kill contours | In Wave and Intermission |
-| 8 | `HudTopBand` (`Control`) | Band panel, lives dashes, pips; no text | On change |
-| 9 | `HudField` | Arc, chip, Start/Call, burst button, prompt panel, ground-tap ring, refusal cues, then all HUD text (Decision 6) | When a HUD element animates or changes |
+| 8 | `HudTopBand` (`Control`, under `HudLayer`) | Band panel, lives dashes, pips; no text | On change |
+| 9 | `HudField` (under `HudLayer`) | Arc, chip, Start/Call, burst button, prompt panel, ground-tap ring, refusal cues, then all HUD text (Decision 6) | When a HUD element animates or changes |
 
 - **No node per entity**; views hold plain records. "One `_draw` per kind" (TR-combat-011) reads as one node per view family, one pass per kind inside; both readings ban a node per instance.
 - Hero zones now draw above enemies (TD trim). They are thin and unfilled, so they hide nothing.
 - **Range rings sit under entities** (Tower Visual table), so the HUD owns `RangeRingView` under and `HudField` over. HudField keeps one `_draw` for all it shows above the field (TR-hud-001).
-- **Origin**: `FieldViews` and `HudTopBand` stay at the canvas origin with no transform, so field units are local units. Code that must work elsewhere converts with `get_global_transform()`.
-- **Batching hygiene**: no `z_index`, `CanvasLayer`, material, `Light2D` or `CanvasModulate` in nodes 1 to 9; untextured shapes first, then textures (the halo apart, which sits under the kite), then text; `modulate` is free. Modals sit after node 9.
+- **Why `HudLayer`**: a `Control` under a `Node2D` has no parent area. With `PRESET_TOP_WIDE` it got `get_parent_area_size()` (0, 0) and size (0, 80), and took the `Node2D`'s offset (verified 4.7.2 headless). Under `HudLayer`, `HudTopBand` anchors `PRESET_TOP_WIDE` to the 540x960 viewport, so it is 540 wide. `HudField` moves with it, so HUD text still draws over the band. The layer is a batching boundary; M9a checks its cost.
+- **Origin**: `FieldViews` and `HudLayer` stay at the canvas origin with no transform (`HudLayer` offset (0, 0), scale 1), so field units are local units. Code that must work elsewhere converts with `get_global_transform()`.
+- **Batching hygiene**: no `z_index`, `CanvasLayer` (the wrapper's one `HudLayer` apart), material, `Light2D` or `CanvasModulate` in nodes 1 to 9; untextured shapes first, then textures (the halo apart, which sits under the kite), then text; `modulate` is free. Modals sit after node 9, so they must draw above `HudLayer`.
 - **Redraw only on change**: `queue_redraw()` in step 3 only when a model changed or animates; a node not queued keeps its commands (R20), so a static `BackdropView` costs no CPU.
 - **Lines**: every line command passes a width of at least 2.0 from `ViewStyle`, dashed rings and drag lines included, and `antialiased = false`. Width -1.0 is a thin primitive (R14) and is never used. Keylines are a disc 1 unit larger. The device review may add 1 px; `msaa_2d` stays off unless M9b shows it is free.
 
@@ -117,7 +118,7 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 ### 6. Text
 - **No `Label` in the battle HUD.** `HudField` draws every HUD string in one final pass after its primitives, grouped by size: 21 units (14 dp), 24 (16 dp), 36 (24 dp, the burst digit). One atlas per size is expected, not guaranteed, so this is at most 3 text batches if it holds; M9a counts them.
 - **Gold digits** (MVP): `HudTopBand` owns the gold layout and string as a plain record; `HudField` only draws it there (V2 checks). If M9a shows text batches merge across nodes, the digits go back to `HudTopBand`.
-- **Accessibility**: drawn text has no AccessKit node, so `HudTopBand` (a `Control`, R18) sets `accessibility_name` and `accessibility_live` (an `AccessibilityServer.AccessibilityLiveMode` value in 4.7) for gold and lives on change.
+- **Accessibility**: drawn text has no AccessKit node, so `HudTopBand` (a `Control`, R18) sets `accessibility_name` and `accessibility_live = AccessibilityServer.LIVE_POLITE` (verified 4.7.2 headless) for gold and lives on change.
 - **Fonts**: the wrapper loads one font once (the chosen font, or `ThemeDB.fallback_font`, R15). Tabular numerals need a `FontVariation` with `tnum` in `opentype_features`; the fallback may not honour it. Each text slot caches one `TextLine`, re-shaped only when its string or size changes, drawn with `TextLine.draw(get_canvas_item(), pos, colour)`.
 - **Larger text (AR-V-03, Alpha)**: the 125% step scales the three sizes, still 3 batches. Wrapping uses `TextParagraph` or the UX spec's shortening rule.
 - Modal TapScreens may use `Label`s (about 4 draw calls). The rule: no `Label` in `src/presentation/field/` or the battle HUD folder `src/presentation/hud/` (L-VIEW-1); ResultScreen, PausedScreen and `tap_screen.gd` sit outside both, so L-VIEW-1 does not reach them.
@@ -143,7 +144,7 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 
 | Part | Share |
 |---|---|
-| HUD, nodes 8 and 9 (expected 8) | At most 12, text batches at most 3 |
+| HUD, nodes 8 and 9 under `HudLayer` (expected 8) | At most 12, text batches at most 3; the layer boundary counts here |
 | Engine (clear, letterbox, blit) | 4 |
 | Spare (no modal shows during play; a modal's about 4 come from here) | 8 |
 | Field views, nodes 1 to 7 | What is left: 36 |
@@ -152,7 +153,7 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 
 - **P-V1 `bench_views`** (`tests/performance/`, headless, R6): times step 3 and each `_draw` at the design point. **Trigger**: 3.0 / 15 = **0.2 ms p95 in a release export** (ADR-0009's factor). About 227 commands (the old 6-tower count of 230, less one tower's body, inset and ring) at 2.2 µs (R13) is still about 0.5 ms p50 and 0.8 ms p95 in debug, so debug fails the trigger by 2.5 to 4 times. **F1 is the likely path.** The first `EnemyView` story runs P-V1 in a release export before it builds the per-disc path. A cheaper first cut: drop the keyline disc under 22 px.
 - **F1 MultiMesh**: one `MultiMeshInstance2D` per pass (heavy, normal, fast), children of `EnemyView` with `show_behind_parent`, so they take its slot and the cues still draw on top. The mesh is a disc `ArrayMesh` fan whose rim vertices are dark and centre white, so each instance draws its own keyline and the overlap order stays per enemy; only cues move after all bodies, which is acceptable. `use_colors = true` before `instance_count`; the buffer is one `PackedFloat32Array` a frame, believed 12 floats an instance (8 transform, 4 colour; unverified, check windowed). Flashes use one more. This cuts about 100 commands.
-- **M9a, desktop windowed** (Vulkan, Mobile renderer): a debug-only `RenderBudgetProbe` logs `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` through the design-point scene in two runs, all views then HUD only. If it reads 0 for 2D, count from a RenderDoc capture. Batching across separate CanvasItems is unverified; M9a is where it is seen.
+- **M9a, desktop windowed** (Vulkan, Mobile renderer): a debug-only `RenderBudgetProbe` logs `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` through the design-point scene in two runs, all views then HUD only. If it reads 0 for 2D, count from a RenderDoc capture. Batching across separate CanvasItems is unverified; M9a is where it is seen, and where the `HudLayer` boundary is checked.
 - **M9b, phone** (ADR-0007 M9): the same two runs on the Adreno phone, plus p95 of step 3, `_draw` and `TIME_PROCESS`, retained in `production/qa/evidence/`.
 
 ### 11. View interpolation: deferred
@@ -196,6 +197,7 @@ var edge: Array[PackedVector2Array]; var body: Array[PackedVector2Array]; var fa
 10. A node must call `queue_redraw()` only when its model changed or it animates.
 11. Pools must be sized per Decision 5; only the enemy buffers grow, with one dev error per battle.
 12. Every pixel-only value must come from `ViewStyle`; gameplay values never live there.
+13. The wrapper must build `HudTopBand` and `HudField` under one `HudLayer` (`CanvasLayer`, layer 1) beside `FieldViews`; a `Control` is never a child of a `Node2D`.
 
 ## Alternatives Considered
 1. **A node per entity** (art bible §8 ideal): each entity redraws alone, but 48 to 120 nodes to pool and tear down, and three TRs ask for one node. Rejected.
@@ -295,3 +297,4 @@ GDD sync (5 GDDs checked): no renamed names; content sync items in Migration 4 t
 
 ## Amendments
 - **2026-11-05, from the fourth architecture review; Status stays Accepted** (`architecture-review-2026-11-05.md`, Conflict 2 and Should fix 4 to 6). Decision 10's design point is 5 towers and the hero, the same scene as ADR-0009 Decision 8 (a stage has at most 5 slots, Enemy & Wave L12); the P-V1 estimate becomes about 227 commands, still about 0.5 ms p50 and 0.8 ms p95 in debug, and the 60 draw calls and their split do not change. Last Verified, Verification Required and the probe table say R8 to R12 and R19 have no recorded result (not run). Post-Cutoff APIs Used and Decision 6 name the 4.7 enum for `accessibility_live`: `AccessibilityServer.AccessibilityLiveMode`. Depends On and Related add ADR-0007. The TR-enemy-015 and TR-tower-015 rows drop "Full once": both syncs have landed. The TR-hud-001 row uses the registry wording of 2026-11-05. Decision 6 and Migration item 2 name the battle HUD folder, `src/presentation/hud/`; modal TapScreens sit outside it and may use `Label`. Nothing else in this ADR changes.
+- **2026-11-05, from the engine consultation of the fourth review; Status stays Accepted.** A `Control` under a `Node2D` got no parent area (size (0, 80) with `PRESET_TOP_WIDE`, verified 4.7.2 headless), so `HudTopBand` and `HudField` move from `FieldViews` to `HudLayer`, a `CanvasLayer` at layer 1 beside it; the draw order 1 to 9 holds, modals draw above it, and M9a checks the batching boundary. `accessibility_live` uses `AccessibilityServer.LIVE_POLITE`. Decision 1, Decision 6, Decision 10, Guideline 13 and Last Verified (`architecture.md` v10) change. Nothing else in this ADR changes.

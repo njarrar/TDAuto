@@ -5,7 +5,7 @@
 | **Date** | 2026-11-04 |
 | **Engine** | 4.7.2.stable.official.ed1daf0bf (official Linux build, SHA512 checked against the release's `SHA512-SUMS.txt`) |
 | **Platform** | Linux x86_64, `--headless` (DisplayServer `headless`), debug build (`OS.is_debug_build()` true) |
-| **gdUnit4** | Not used in this run |
+| **gdUnit4** | Not used in the 2026-11-04 run; 6.2.0 in the 2026-11-05 run (see "gdUnit4 6.2.0 on 4.7.2") |
 
 ## How these probes were run
 
@@ -128,7 +128,8 @@ Status key: **verified 4.7.2 headless** means the answer below came from a run. 
 | ADR-0007-CLASH-script | Two scripts with one `class_name` | `--import` reports no error. At parse, one of the two fails (`hides a global script class`); the other, and a script that uses the name, load fine. | Yes | So L-NAME-1 is still needed for script clashes. verified 4.7.2 headless |
 | ADR-0007-H8 | Do scripts under a hidden folder load? | Yes: `-s res://.claude/scripts/...` runs, `load()` is not null, `ResourceLoader.exists()` true. | Yes | No copy to `tools/ci/` needed. verified 4.7.2 headless |
 | ADR-0007-H7 | Linux archive name and SHA512 | `Godot_v4.7.2-stable_linux.x86_64.zip`, SHA512 `9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65` (matches the downloaded zip). | Partly | Download URL is for the CI story to copy from the release page. verified 4.7.2 headless (name and hash) |
-| ADR-0007-H1, H2, H3, H6, H9 | gdUnit4 exit codes, push_error reporting, orphans, fresh clone, un-awaited `is_push_error` | Not run | n/a | not run (needs gdUnit4) |
+| ADR-0007-H1, H2 (c) | gdUnit4 exit codes, unclaimed push_error | See "gdUnit4 6.2.0 on 4.7.2" | Yes | verified 4.7.2 headless on 6.2.0 |
+| ADR-0007-H2 (a), (b), (d), (e), H3, H6, H9 | Other push_error cases, orphans, fresh clone, un-awaited `is_push_error` | Not run | n/a | not run (needs gdUnit4) |
 
 ## ADR-0008: Input resolver core
 
@@ -195,6 +196,27 @@ Copied from ADR-0011's probe table (run 2026-11-05; Linux x86_64, 4 cores, edito
 | ADR-0011-R17 | Does `MultiMeshInstance2D` exist? | Yes, with `texture`. Per-instance colour cannot be checked headless. | Yes | F1 layout needs a windowed check. verified 4.7.2 headless |
 | ADR-0011-R18 | Which nodes carry AccessKit properties? | `Control` has `accessibility_name`, `accessibility_description`, `accessibility_live`; `Node` has none. | Yes | verified 4.7.2 headless |
 | ADR-0011-M9a, M9b, F1, M3 | Draw calls and batching across nodes, frame time, MultiMesh layout and per-instance colour, text and disc edges | Not run | n/a | not run (needs a GPU: M9a desktop windowed, M9b phone) |
+
+## gdUnit4 6.2.0 on 4.7.2
+
+Run 2026-11-05 by the godot-specialist in the engine consultation of the fourth review: official Linux build of 4.7.2, `--headless`, the committed `addons/gdUnit4` 6.2.0. ADR-0007 reruns H1 and H2 after the 6.2.2 upgrade.
+
+| Probe ID | Question | Result | Matches the ADR's expectation? | Note |
+|---|---|---|---|---|
+| GD-VER | Which gdUnit4 is committed? | `addons/gdUnit4` is 6.2.0. | n/a | ADR-0007 still upgrades to 6.2.2 (Migration 0). verified 4.7.2 headless |
+| GD-IMPORT | Does `--headless --import` exit 0 with the addon? | Yes, exit 0. | Yes | verified 4.7.2 headless |
+| ADR-0007-H1 pass | Exit code of a passing run | A suite of 2 passing tests exits 0: `Overall Summary: 2 test cases \| 0 errors \| 0 failures \| 0 flaky \| 0 skipped \| 0 orphans \|`. | Yes | verified 4.7.2 headless |
+| ADR-0007-H1 fail | Exit code of a failing run | A deliberate failure exits 100. The CI form (`-d --remote-debug tcp://127.0.0.1:0`, stdin closed) also exits 100 on failures. | Yes | verified 4.7.2 headless |
+| ADR-0007-H1 cache | Run with no class cache (no `.godot/`) | Exit 1, `Could not find type GdUnitTestCIRunner`. | Yes | Step 1 (`--import`) rebuilds it. verified 4.7.2 headless |
+| ADR-0007-H1 empty | Run with no test cases | Exit 0, `No test cases found, abort test run!`. | Yes | The script maps it to 113 from `results.xml`. verified 4.7.2 headless |
+| ADR-0007-H2c | Does an unclaimed `push_error` fail a test? | Only with `[gdunit4] report/godot/push_error=true` in `project.godot`: then exit 100. By default it passes (`GdUnitSettings.gd:135` defaults the setting to false). | Yes | The CI story commits the setting. H2 (b) is the setting-off case. verified 4.7.2 headless |
+| GD-FAILFAST | What does a run without `-c` do after a failure? | Fail-fast is on (`GdUnitTestCIRunner.gd:107`): a suite stops at its first failed test; the rest are left out of the count and not reported as skipped. | n/a | `-c` keeps every test running and counted. verified 4.7.2 headless |
+| GD-REMOTE | What does `--remote-debug tcp://127.0.0.1:0` print? | `ERROR: The remote port number must be between 1 and 65535` and `Unable to connect to host`. With `-d`, a script error opens a `debug>` prompt; stdin closed avoids it. | n/a | `run_tests.sh` drops the flag and closes stdin (`</dev/null`). verified 4.7.2 headless |
+| ADR-0007-H10 file | Do `mock()`, `do_return()`, `spy()`, `verify()` work on a `class_name` file class with a typed `-> int` method? | Yes, all pass. | n/a | verified 4.7.2 headless |
+| ADR-0007-H10 inner | Does `mock()` work on a class declared inside the test suite? | No: `Could not find base class` (MockBuilder error). | n/a | Doubles only of `class_name` file classes, or hand-written fakes. verified 4.7.2 headless |
+| GD-PASSED | Does the per-suite `PASSED` label mean no failures? | No: it prints even when failures are counted. | n/a | The harness reads the exit code and `results.xml`, never that text. verified 4.7.2 headless |
+| ADR-0011-HUD1 | What does a `Control` with `PRESET_TOP_WIDE` under a `Node2D` get? | `get_parent_area_size()` is (0, 0), size (0, 80), and it takes the `Node2D`'s offset. | No | ADR-0011 moves `HudTopBand` and `HudField` to a `CanvasLayer` (layer 1). verified 4.7.2 headless |
+| ADR-0011-A11Y | Does `AccessibilityServer` hold the live-mode constants? | Yes: `LIVE_OFF`, `LIVE_POLITE`, `LIVE_ASSERTIVE` (also still on `DisplayServer`). `accessibility_live = AccessibilityServer.LIVE_POLITE` works. | Yes | verified 4.7.2 headless |
 
 ## Side findings (no ADR probe)
 

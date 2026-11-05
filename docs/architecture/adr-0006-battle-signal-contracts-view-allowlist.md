@@ -37,7 +37,7 @@ Battle systems talk through Godot signals, and the GDDs leave open how signals f
 | Field | Value |
 |-------|-------|
 | **Depends On** | ADR-0001 (Accepted; amended 2026-11-04: `Wiring.pairs()`): `Wiring` records, method Callables, `halted()` after emits, `request_retry()` latch. ADR-0003 (Accepted): `lifecycle_paused`, `TapScreen.tapped`. ADR-0004 (Accepted; amended 2026-11-04: Decision 6, Guideline 7): tick order, `TickGuard`, commit order, clock poll. ADR-0005 (Accepted): no accessor read in a sim handler. |
-| **Enables** | ADR-0007 (listener-count test, recording fakes, lints L-SIG-1 to L-SIG-5; TR-state-013 is ADR-0007's, with Decision 8 as its contract), ADR-0008 (resolver signal names fixed here; payloads stay ADR-0008's), ADR-0009 (`damage_applied` payload), ADR-0010 (command guard, result codes, run counters, run log) |
+| **Enables** | ADR-0007 (listener-count test, recording fakes, lints L-SIG-1 to L-SIG-5; TR-state-013 is ADR-0007's, with Decision 8 as its contract), ADR-0008 (resolver signal names fixed here; payloads stay ADR-0008's), ADR-0009 (`damage_applied` payload), ADR-0010 (command guard, result codes, run counters, run log), ADR-0011 (VIEW listeners through `view_wiring`; views never command or keep payloads) |
 | **Blocks** | Every story that declares, emits or connects a battle signal. No epic or story exists yet, so none is blocked by path today. |
 | **Ordering Note** | Before ADR-0007 and ADR-0008. The two amendments and the GDD renames take effect with acceptance. |
 
@@ -344,7 +344,8 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). The Knowledge Risk line now agrees with Verification Required: probes E1 to E6 are verified 4.7.2 headless. Nothing else in this ADR changes.
 - **2026-11-04, with ADR-0009** (confirmed by the user at ADR-0009 acceptance); Status stays Accepted. Decision 4, Combat `damage_applied` row: the payload is now plain values, `(source_kind, source_id, applied, hit_position, killed, spawn_id)`, as ADR-0009 Decision 6 sets. The `event: DamageEvent` argument is gone, so no VIEW payload holds an object. Combat Rule 12 and the registry `battle_signal_catalogue` entry change with it.
 - **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Decision 7 and V5: the refusal value is `BUSY`; the dev-error text stays `ERR_COMMAND_IN_TICK`. Decision 9: `ResultSnapshot` gains `towers_built` and every `HeroCounters` field (`ever_pinned`, `repins`, `bursts_fired`, `bursts_hit_0`, `bursts_hit_3`, `bursts_hit_5`, `burst_victims`, `burst_kills`, `kills_per_burst`, `kills_on_hit_3`) as plain copies, each array read-only. Nothing else in this ADR changes.
+- **2026-11-05, from the engine consultation of the fourth review; Status stays Accepted.** Enables and Related add ADR-0011, which depends on this ADR. Nothing else changes.
 
 ## Related
-- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.
+- Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0011.
 - GDDs: the eight MVP GDDs; sync items in Migration 2 to 4.

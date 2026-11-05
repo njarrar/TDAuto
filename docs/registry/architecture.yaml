@@ -749,14 +749,15 @@ api_decisions:
   - purpose: headless_test_runner
     status: active
     # was: retry on 139 only, -a res://tests, empty run by console text, gdUnit4 6.2.0 pinned (before godot-specialist and TD-ADR review)
-    api: "tools/ci/run_tests.sh only (commands.test, CI and desktops), every step under timeout: --import (one retry on any non-zero), godot-parse-check.gd, tools/ci/lint/lint_main.gd, GdUnitCmdTool.gd --path . -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c; 0 passes only if results.xml counts a test case; 101 fails with the orphan report; own codes 110 import, 111 parse, 112 lint, 113 empty, 124 timeout; gdUnit4 6.2.2 (upgrade pending user confirmation)"
+    # was: GdUnitCmdTool.gd with the coding-standards --remote-debug tcp://127.0.0.1:0 and stdin open; "gdUnit4 6.2.2 (upgrade pending user confirmation)" (before the engine consultation of the fourth review, 2026-11-05)
+    api: "tools/ci/run_tests.sh only (commands.test, CI and desktops), every step under timeout: --import (one retry on any non-zero), godot-parse-check.gd, tools/ci/lint/lint_main.gd, GdUnitCmdTool.gd --path . -d -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c with no --remote-debug and stdin closed (</dev/null); 0 passes only if results.xml counts a test case; the harness reads exit codes and results.xml only, never console text (the per-suite PASSED label prints even with failures); 101 fails with the orphan report; own codes 110 import, 111 parse, 112 lint, 113 empty, 124 timeout; gdUnit4 6.2.2 (confirmed by the user 2026-11-04; 6.2.0 verified on 4.7.2)"
     not: "gdUnit4-action as the test step; --check-only as a parse check; exit 101 as a pass"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
-    reason: "One pass rule the project owns; an orphan node is a leak the retry design guards against"
+    reason: "One pass rule the project owns; an orphan node is a leak the retry design guards against; H1 verified on gdUnit4 6.2.0 and 4.7.2 headless: pass 0, failure 100, no class cache 1, no test cases 0; without -c fail-fast leaves later tests uncounted; --remote-debug tcp://127.0.0.1:0 prints two ERROR lines"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0007 Accepted 2026-11-04; binding"
   - purpose: project_lint
     status: active
@@ -778,14 +779,15 @@ api_decisions:
   - purpose: test_push_error_reporting
     status: active
     # was: setting decides whether is_push_error sees errors; push_error only (before godot-specialist review)
-    api: "gdunit4/report/godot/push_error=true: any unclaimed push_error, push_warning, engine error or warning, or runtime script error fails the test; claim with await assert_error(callable).is_push_error(msg) or is_push_warning(msg), always awaited; counts across calls use a recording DevErrorSink"
+    # was: api began "gdunit4/report/godot/push_error=true:" with no commit owner or default named; reason "proved by probe H2" (before the engine consultation of the fourth review, 2026-11-05)
+    api: "[gdunit4] report/godot/push_error=true committed in project.godot by the CI story (default false): any unclaimed push_error, push_warning, engine error or warning, or runtime script error fails the test; claim with await assert_error(callable).is_push_error(msg) or is_push_warning(msg), always awaited; counts across calls use a recording DevErrorSink"
     not: "Reporting off (unclaimed errors pass silently); un-awaited assert_error; assert in src/"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
-    reason: "TR-combat-012 needs exactly-one error checks; an assert_error records in its own logger whatever the setting; read from gdUnit4 6.2.0 source, proved by probe H2"
+    reason: "TR-combat-012 needs exactly-one error checks; an assert_error records in its own logger whatever the setting; read from gdUnit4 6.2.0 source; H2 (c) verified on 6.2.0 and 4.7.2 headless: an unclaimed push_error exits 100 only with the setting on (GdUnitSettings.gd:135 defaults it to false), so with it off a fatal path in a test goes green"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0007 Accepted 2026-11-04; binding"
   - purpose: input_resolver_construction
     status: active
@@ -826,10 +828,11 @@ api_decisions:
   - purpose: battle_field_drawing
     status: active
     # was: ten nodes with a separate HeroZones (before godot-specialist and TD-ADR review)
-    api: "One _draw node per view family under one FieldViews Node2D at the canvas origin, tree order is draw order (Backdrop, ExitStrip, RangeRings, Towers, Enemies, Combat, Hero, HudTopBand, HudField); enemies in three passes by size in spawn_id order; Vector2(t.x, t.y) built only at the draw command; queue_redraw only on change; every line command width at least 2.0 from ViewStyle and antialiased false; pixel-only values in ViewStyle, gameplay values never"
-    not: "a node per enemy, tower or effect; z_index, CanvasLayer or materials between field views"
+    # was: all nine nodes under FieldViews, HudTopBand a Control child of the Node2D (before the engine consultation of the fourth review, 2026-11-05)
+    api: "One _draw node per view family, nodes 1 to 7 under one FieldViews Node2D at the canvas origin, HudTopBand and HudField under one HudLayer CanvasLayer (layer 1, built by the wrapper) beside it; layer then tree order is draw order (Backdrop, ExitStrip, RangeRings, Towers, Enemies, Combat, Hero, HudTopBand, HudField); HudTopBand anchored PRESET_TOP_WIDE to the 540x960 viewport; enemies in three passes by size in spawn_id order; Vector2(t.x, t.y) built only at the draw command; queue_redraw only on change; every line command width at least 2.0 from ViewStyle and antialiased false; pixel-only values in ViewStyle, gameplay values never"
+    not: "a node per enemy, tower or effect; z_index, CanvasLayer (HudLayer apart) or materials between field views; a Control as a child of a Node2D"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
-    reason: "TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001; fewest batch breaks; probes R6 and R20: _draw runs headless, siblings in tree order, an unqueued node keeps its commands; R14: width -1.0 is a thin primitive"
+    reason: "TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001; fewest batch breaks; probes R6 and R20: _draw runs headless, siblings in tree order, an unqueued node keeps its commands; R14: width -1.0 is a thin primitive; a Control with PRESET_TOP_WIDE under a Node2D gets parent area (0, 0) and size (0, 80), verified 4.7.2 headless; M9a checks the HudLayer batching boundary"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
@@ -851,7 +854,8 @@ api_decisions:
     status: active
     # was: no gold-record, AccessKit or tnum conditions (before godot-specialist and TD-ADR review)
     # was: no accessibility_live enum named; not: "Label nodes in the battle HUD (modal TapScreens may use them)" (before the fourth architecture review, 2026-11-05)
-    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); gold layout and string owned by HudTopBand as a plain record; HudTopBand sets accessibility_name and accessibility_live (an AccessibilityServer.AccessibilityLiveMode value in 4.7, not DisplayServer) for gold and lives; one font loaded once by the wrapper, ThemeDB.fallback_font until chosen; tabular numerals through a FontVariation with tnum"
+    # was: accessibility_live "an AccessibilityServer.AccessibilityLiveMode value in 4.7, not DisplayServer" (before the engine consultation of the fourth review, 2026-11-05)
+    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); gold layout and string owned by HudTopBand as a plain record; HudTopBand sets accessibility_name and accessibility_live = AccessibilityServer.LIVE_POLITE (verified 4.7.2 headless) for gold and lives; one font loaded once by the wrapper, ThemeDB.fallback_font until chosen; tabular numerals through a FontVariation with tnum"
     not: "Label nodes in the battle HUD folder src/presentation/hud/ or in src/presentation/field/ (modal TapScreens sit outside both and may use them)"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     reason: "Aims at TR-hud-015's at most 3 text batches (one atlas per size expected, counted in M9a; digits return to HudTopBand if batches merge across nodes); probes R3, R15, R18"
@@ -1019,7 +1023,8 @@ forbidden_patterns:
     notes: "ADR-0006 Accepted 2026-11-04; binding"
   - pattern: signal_assert_or_generated_double_in_tests
     status: active
-    description: "Tests never use gdUnit4 assert_signal, monitor_signals, mock() or spy(); signals are recorded by hand-written fakes into one EventLog that checks count, typeof() and class per argument (lint L-TEST-1)"
+    # was: no rule on what a double may be made of (before the engine consultation of the fourth review, 2026-11-05)
+    description: "Tests never use gdUnit4 assert_signal, monitor_signals, mock() or spy(); signals are recorded by hand-written fakes into one EventLog that checks count, typeof() and class per argument (lint L-TEST-1); if an ADR change ever allows a gdUnit4 double, it doubles only a class_name file class, never an inner class (mock() of an inner class fails on 6.2.0, ADR-0007 H10)"
     why: "assert_signal awaits and is timing-dependent (TR-input-014); generated doubles do not check payload types"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04

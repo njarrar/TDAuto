@@ -7,7 +7,7 @@ Accepted
 2026-11-04
 
 ## Last Verified
-2026-11-04, against `architecture.md` v6, `tr-registry.yaml` v6 (123 entries), the eight Accepted ADRs with their amendments, and probes B1 to B4 and X1 to X7 run on 4.7.2 by the godot-specialist review.
+2026-11-04, against `architecture.md` v6; rechecked 2026-11-05 against `architecture.md` v10, `tr-registry.yaml` v6 (123 entries), the eight Accepted ADRs with their amendments, and probes B1 to B4 and X1 to X7 run on 4.7.2 by the godot-specialist review.
 
 ## Decision Makers
 - Accepted: 2026-11-04 by the user (njarrar), with both remaining QQ-08 parts (ProjectileSpawner cut; stage geometry on the Stage record), the plain-value damage_applied payload and the per-tick budget split
@@ -314,3 +314,4 @@ GDD sync (4 GDDs checked): combat-damage.md (Rules 3, 10, 11, 12, Core Rules), e
 ## Amendments
 - **2026-11-05, with ADR-0011 (confirmed by the user 2026-11-05 at ADR-0011 acceptance); Status stays Accepted.** Combat gains `func hp_ratio(enemy: Targetable) -> float`, a view-only read: `hp / max_hp` from the enemy's `Health`, which already holds `max_hp`, and 1.0 for an unattached enemy. Decision 1's list of `Health` reads outside `src/core/combat/` becomes `hp_left`, `is_dead`, `speed_factor`, `hp_ratio`. It changes no state, reports nothing and is not called by the sim. Nothing else in this ADR changes.
 - **2026-11-05, from the fourth architecture review; Status stays Accepted** (`architecture-review-2026-11-05.md`, Should fix 5). Decisions 4 and 7 now say each QQ-08 part was accepted by the user 2026-11-04, as Decision Makers records, in place of "pending the user's acceptance". Nothing else in this ADR changes.
+- **2026-11-05, from the engine consultation of the fourth review; Status stays Accepted.** Last Verified cites `architecture.md` v10. Nothing else changes.

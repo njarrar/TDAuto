@@ -3,13 +3,11 @@
 ## Status
 Accepted
 
-> Who may move this to `Accepted`: the user, or `technical-director` on the user's explicit confirmation. Route: `/architecture-decision accept ADR-0007`.
-
 ## Date
 2026-11-04
 
 ## Last Verified
-2026-11-04 (engine reference of 2026-10-17 and gdUnit4 6.2.0 source). Probes H4, H5, H7 (name and hash) and H8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`). H1, H2, H3, H6 and H9 still need gdUnit4 and have not run.
+2026-11-05 (gdUnit4 6.2.0 run on 4.7.2 headless). Verified (`docs/engine-reference/godot/probe-results.md`): H1, H2 (c), H4, H5, H7 (name and hash), H8, H10. Not run: H2 (a), (b), (d), (e), H3, H6, H9. 6.2.2 reruns H1 and H2.
 
 ## Decision Makers
 - Accepted: 2026-11-04 by the user (njarrar), with the gdUnit4 6.2.2 upgrade, the dated ADR-0003 amendment (is_mobile) and exit 101 as a failure
@@ -18,7 +16,7 @@ Accepted
 - Acceptance: the user
 
 ## Summary
-ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, a recording spy, recording fakes, a listener-count test, ten lint IDs and about 20 lint rules stated in prose; GDScript itself has no module walls. This ADR fixes one headless harness: gdUnit4 run by one shell script in CI and on desktops, code-built fixtures and hand-written fakes under `tests/helpers/`, push_error reporting on, a token lint in GDScript run by Godot headless (rules handed over: L-APP, L-DATA, L-INPUT, L-PROJ, L-TIME, L-RNG, L-VEC, L-STAT-1 to 3, L-SIG; derived here: L-LAYER, L-NAME, L-GD, L-STAT-4, L-TEST), an engine probe suite, and a fixed manual-evidence list.
+ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, a recording spy, recording fakes, a listener-count test, ten lint IDs and about 20 lint rules stated in prose; GDScript itself has no module walls. This ADR fixes one headless harness: gdUnit4 run by one shell script in CI and on desktops, code-built fixtures and hand-written fakes under `tests/helpers/`, push_error reporting on, a token lint in GDScript run by Godot headless (Decision 6), an engine probe suite, and a fixed manual-evidence list.
 
 ## Engine Compatibility
 
@@ -30,7 +28,7 @@ ADR-0001 to ADR-0006 hand this ADR over 60 named tests, five engine probe sets, 
 | **Knowledge Risk** | MEDIUM: runner behaviour and GDScript rules are post-cutoff (4.5 rest parameters, `@abstract`; 4.7 typed-override return, packed-array setter); gdUnit4 6.2.x lists Godot up to 4.7.1 |
 | **References Consulted** | Engine reference (`VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`); gdUnit4 6.2.0 source; `architecture.md` v4; `tr-registry.yaml`; ADR-0001 to ADR-0006; the registry; project test docs and CI files |
 | **Post-Cutoff APIs Used** | gdUnit4 on 4.7.2; its error monitor's `Logger` subclass with `ScriptBacktrace` (4.5); `...args` rest parameters (4.5); `@abstract` (4.5); typed-override return (4.7) |
-| **Verification Required** | H1 to H9 (Validation Criteria). H1, H2 and H7 gate the CI story. H4, H5, H7 (name and hash) and H8 are verified 4.7.2 headless (`docs/engine-reference/godot/probe-results.md`); H1, H2, H3, H6 and H9 need gdUnit4 |
+| **Verification Required** | H1 to H10 (Validation Criteria). H1, H2 and H7 gate the CI story. Verified ones: Last Verified |
 
 ## ADR Dependencies
 
@@ -72,17 +70,17 @@ Six Accepted ADRs say "ADR-0007 places them" for tests (ADR-0001 V1 to V8, ADR-0
 ## Decision
 
 ### 1. Runner and CI job (QQ-13)
-- **gdUnit4 moves to 6.2.2** (Migration 0), the only version the reference saw on 4.7.2. The godot reviewer found no source reason 6.2.0 would differ; H1 and H2 run after the upgrade either way. Confirmed by the user 2026-11-04.
+- **gdUnit4 moves to 6.2.2** (Migration 0), the only version the reference saw on 4.7.2; 6.2.0 passed H1 and H2 (c) there too, and both rerun after the upgrade. Confirmed by the user 2026-11-04.
 - **`tools/ci/run_tests.sh` is the only test entry.** It `cd`s to the repo root. `GODOT` names the binary (CI: the pinned download; desktops: `engine.path` from `project.yaml`). Each step runs under `timeout` (`gtimeout` on macOS, the tool `.claude/scripts/test-run.sh` also picks) and stops the run on failure:
   1. **Import**: `"$GODOT" --headless --path . --import`, every run. Any non-zero exit gets one retry, with the code logged (the reference saw exit 139 in 3 of 17 fresh imports on 4.7.x). The import is not a parse check: it exits 0 on a parse error.
   2. **Parse check**: `"$GODOT" --headless --path . -s res://.claude/scripts/godot-parse-check.gd -- <every .gd in src/, tests/, tools/ci/ except tools/ci/selftest/>`. Never `--check-only`.
   3. **Lint**: `"$GODOT" --headless --path . -s res://tools/ci/lint/lint_main.gd`: 0 clean, 1 hits, 2 lint crash (a failed `load()` gives 2, never a hang).
-  4. **Tests**: the coding-standards CI command plus `--path .` and `-c`, with `-a` narrowed so benches stay out: `"$GODOT" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c`. Reports go to `res://reports/`.
-  5. **Exit map**: 0 passes only if `results.xml` under `reports/` counts at least one test case once a suite exists (console text is not read). **101 fails**, and the script prints gdUnit4's orphan report. 101 covers orphan `Node`s only; `RefCounted` leaks are the weakref tests' job (ADR-0001 V2). A non-zero gdUnit4 code passes through; the script's own codes are 110 import, 111 parse, 112 lint, 113 empty run, 124 timeout.
+  4. **Tests**: the coding-standards CI command plus `--path .`, `-a` narrowed so benches stay out, no `--remote-debug` (port 0 prints two `ERROR` lines H2 (d) would count), stdin closed (`-d` opens a `debug>` prompt on a script error): `"$GODOT" --headless --path . -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests/unit -a res://tests/integration --ignoreHeadlessMode -c </dev/null`. `-c` keeps fail-fast off, so every test runs and counts. Reports go to `res://reports/`.
+  5. **Exit map**: 0 passes only if `results.xml` under `reports/` counts at least one test case once a suite exists (console text is not read; the per-suite `PASSED` label prints even with failures). **101 fails**, and the script prints gdUnit4's orphan report. 101 covers orphan `Node`s only; `RefCounted` leaks are the weakref tests' job (ADR-0001 V2). A non-zero gdUnit4 code passes through; the script's own codes are 110 import, 111 parse, 112 lint, 113 empty run, 124 timeout.
 - **Flags**: `--harness-selftest` runs `tools/ci/selftest/<case>/` (H1, H2, H3); `--perf` runs `tests/performance/` (ADR-0005 P1 and E5 benches), on demand, never in CI.
 - **CI** (`tests.yml`, job `Run GdUnit4 Tests`, `timeout-minutes: 20`, `permissions: contents: read`): checkout; download the Godot 4.7.2 Linux editor from a URL pinned in the file and check it against a SHA512 pinned in the file, both copied from the release page by the CI story (archive name and SHA512 confirmed, H7; the CI story still copies the URL); never trust a sums file fetched at run time; run the script; upload `reports/` with `if: always()`. The gdUnit4 action goes: its 101 handling and install cannot be checked offline, and CI would differ from desktops.
 - **Class cache leaves git** (Migration 3). Step 1 rebuilds it each run, so the old fresh-clone warning no longer applies to the script.
-- **Settings**: `project.godot` sets `gdunit4/report/godot/push_error=true`, keeps `script_error` at default `true`, and keeps the gdUnit4 editor plugin off (an autoload it adds would fail the settings suite).
+- **Settings**: the CI story commits `[gdunit4] report/godot/push_error=true` to `project.godot` (default false, `GdUnitSettings.gd:135`; off, a fatal path in a test goes green), keeps `script_error` at default `true`, and keeps the gdUnit4 editor plugin off (an autoload it adds would fail the settings suite).
 
 ### 2. Test tree and naming
 ```
@@ -261,15 +259,14 @@ static func build(docs: Array[Dictionary] = [], stage_id: StringName = &"fixture
 Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signatures; the other contracts are the Decision 4 table.
 
 ### Implementation Guidelines
-1. Tests must run only through `tools/ci/run_tests.sh`. A run must fail on any non-zero step, on 101, and on an empty `results.xml` once suites exist; `--import` must run first every time, with one retry.
+1. Tests must run only through `tools/ci/run_tests.sh` (Decision 1); the harness must read only exit codes and `results.xml`, never console text.
 2. Unit tests must never read a file, load a scene, call `get_tree()`, draw a random number or assert a time; they must build catalogues only through `catalogue_fixtures.gd`.
 3. Tests must record signals only into an `EventLog` through the Decision 4 fakes, never `assert_signal`, `monitor_signals`, `mock()` or `spy()`; a THEN must compare the entire log in order with no `type_errors()`.
-4. Every expected error or warning must be claimed with an awaited `assert_error(...).is_push_error(msg)` or `is_push_warning(msg)`; `gdunit4/report/godot/push_error` must stay `true`.
+4. Every expected error or warning must be claimed with an awaited `assert_error(...).is_push_error(msg)` or `is_push_warning(msg)`; `project.godot` must keep `[gdunit4] report/godot/push_error=true`.
 5. A test must hold its spy, handler and sink for its whole run, must not pass a battle or sim object to an assert before its weakref check, and must free every `Node` it makes.
 6. Fakes overriding typed methods must keep the parameter list and return a typed value on every path; `tests/` and `tools/` must hold no `class_name`, and helpers must load by `preload`.
-7. Every lint row must have a hitting and a clean planted sample; scopes and exempt files must live only in `scopes.gd`.
-8. Probes must print `PROBE <id> <answer>`, assert only must-pass cases, and be recorded in `probe-results.md`.
-9. Manual evidence must sit in `production/qa/evidence/<story-slug>/` with `stamp.txt`.
+7. Lints, probes and manual evidence must follow Decisions 6 to 8.
+8. Tests must use hand-written fakes; if an ADR change ever allows a gdUnit4 double (`mock`, `spy`), it must double only a `class_name` file class, never an inner class (H10).
 
 ## Alternatives Considered
 
@@ -294,7 +291,7 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 ### Alternative 4: gdUnit4 mocks, spies and `assert_signal`
 - **Description**: Generated doubles and signal asserts.
 - **Pros**: Less code.
-- **Cons**: `assert_signal` awaits (TR-input-014 bans it); doubles override typed methods (a 4.7 risk); no `typeof()` per argument.
+- **Cons**: `assert_signal` awaits (TR-input-014 bans it); doubles of inner classes fail (H10); no `typeof()` per argument.
 - **Rejection Reason**: The GDDs require whole-log, typed, synchronous logs.
 
 ### Alternative 5: Prefix every `class_name`
@@ -325,11 +322,11 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 - Strict error reporting fails tests on engine warnings a looser setting would let pass; each must be claimed or fixed.
 
 ## Risks
-- **6.2.2 exits or error handling differ from the reference** (H1, H2). Mitigation: both run after the upgrade, before the CI story closes.
+- **gdUnit4 on 4.7.2** (H1, H2): MEDIUM, was HIGH; 6.2.0 passed H1 and H2 (c). Mitigation: 6.2.2 reruns both before the CI story closes.
 - **Import fails twice**. Mitigation: exit 110 names it; rerun the job.
 - **Lint false hits**. Mitigation: typed-receiver matching for L-DATA-2 and L-STAT-2; a real exception moves into `scopes.gd` by an ADR change.
 - **`DisplayServer` in wrapper build blocks ADR-0006 V2 headless**. Mitigation: inject the value.
-- **Hidden folder** (H8): if `res://.claude/` scripts do not load on Linux, copy the parse check to `tools/ci/`. H8 passed, so no copy is needed.
+- **Hidden folder** (H8): if `res://.claude/` scripts do not load on Linux, copy the parse check to `tools/ci/`. H8 passed: no copy.
 - **Other tools call Godot directly** (`.claude/scripts/test-run.sh`, `/smoke-check`, `/dev-story`, `/test-setup`) and skip import and lint. Mitigation: `commands.test` points at the script (Migration 4).
 
 ## GDD Requirements Addressed
@@ -352,9 +349,9 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 ## Migration Plan
 0. Upgrade `addons/gdUnit4/` to 6.2.2 (confirmed by the user 2026-11-04).
 1. Write `tools/ci/run_tests.sh` and `tools/ci/selftest/`; run H1, H2, H3, H7, H8.
-2. Set `gdunit4/report/godot/push_error=true`; write `harness_probe_test.gd`; watch H2 (c) fail.
+2. Commit `[gdunit4] report/godot/push_error=true` in `project.godot`; write `harness_probe_test.gd`; watch H2 (c) fail.
 3. Remove the `!**/.godot/global_script_class_cache.cfg` line and its comment from `.gitignore`, then `git rm --cached .godot/global_script_class_cache.cfg`. Rewrite `tests/README.md`; close QQ-13.
-4. Set `project.yaml` `commands.test` to `bash tools/ci/run_tests.sh` with `GODOT` from `engine.path`, so `/smoke-check`, `/story-done` and `/dev-story` use it. `coding-standards.md` stays as is.
+4. Set `project.yaml` `commands.test` to `bash tools/ci/run_tests.sh` with `GODOT` from `engine.path`, so `/smoke-check`, `/story-done` and `/dev-story` use it. `coding-standards.md` gains `-c` (2026-11-05).
 5. Replace the action in `tests.yml` with the pinned download, checksum, script and upload.
 6. Write `gd_tokens.gd`, `lint_main.gd`, `scopes.gd`, `token_rules.gd` and the settings suite, then rules by the When column.
 7. Write the helpers with the first story that needs each; create `probe-results.md` with the first probe run.
@@ -362,8 +359,8 @@ Names are proposed. The spy copies ADR-0005's `stat_int` and `stat_float` signat
 
 ## Validation Criteria
 Harness probes and self-tests; results to `probe-results.md`:
-- **H1** (`--harness-selftest`): a run with no class cache exits 1; a run with no test cases exits 0 and the script maps it to 113 from `results.xml`. Record whether 101 ever means anything but orphans.
-- **H2** setting on unless noted: (a) one claimed `push_error` passes; (b) one claimed `push_error` passes with the setting off; (c) one unclaimed fails; (d) an unclaimed `push_warning` fails, and an engine `ERR_*` and a runtime script error are each counted; (e) two identical, one claimed, fails. (a), (b) in `harness_probe_test.gd`; (c) to (e) in `tools/ci/selftest/`, which must exit 100.
+- **H1** (`--harness-selftest`): no class cache exits 1; no test cases exits 0, which the script maps to 113 from `results.xml`; a failure exits 100; a pass exits 0 and the `results.xml` test count matches the planted cases. Record whether 101 ever means anything but orphans. Verified on 6.2.0.
+- **H2** setting on unless noted: (a) one claimed `push_error` passes; (b) setting off: a claimed and an unclaimed `push_error` both pass; (c) one unclaimed fails (verified 6.2.0, exit 100); (d) an unclaimed `push_warning` fails, and an engine `ERR_*` and a runtime script error are each counted; (e) two identical, one claimed, fails. (a), (b) in `harness_probe_test.gd`; (c) to (e) in `tools/ci/selftest/`, which must exit 100.
 - **H3** (`--harness-selftest`): a leaked `Node` makes the script fail on 101 and print the orphan report.
 - **H4** (once): confirm that a typed override with no `return` fails the parse check; the reference says it is an error. It fails; verified 4.7.2 headless, see probe-results.md.
 - **H5**: whether `debug/gdscript/warnings/confusable_capture_reassignment` exists on 4.7.2 (`ProjectSettings.has_setting()`). It exists, default 1 (warn); verified 4.7.2 headless, see probe-results.md.
@@ -371,6 +368,7 @@ Harness probes and self-tests; results to `probe-results.md`:
 - **H7**: archive `Godot_v4.7.2-stable_linux.x86_64.zip`, SHA512 `9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65`, confirmed (verified 4.7.2 headless, see probe-results.md). The CI story still copies the URL from the release page.
 - **H8**: `load("res://.claude/scripts/godot-parse-check.gd")` is not null headless on Linux. It loads; verified 4.7.2 headless, see probe-results.md.
 - **H9** (print only): what an un-awaited `is_push_error` reports; tests always `await` either way.
+- **H10**: `mock()`, `do_return()`, `spy()`, `verify()` work on a `class_name` file class with a typed `-> int` method; `mock()` of a suite's inner class fails (`Could not find base class`). Verified on 6.2.0.
 
 Harness tests:
 - **T1** `tests/unit/lint/`: every T row and C rule has a hitting and a clean sample (ADR-0006 V8).
@@ -417,9 +415,9 @@ Harness tests:
 - **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Lint rows L-CMD-1 (keyed on the receiver), L-CMD-2 (scoped to the three caller files and the bots), L-DEV-1 (scoped to `src/presentation/dev/`, plus sim folders never name `FileAccess`; the full list waits for the save ADR) and L-HERO-1 (ADR-0010 Migration 4). L-STAT-4's owner list adds `hero_input.gd`. `scopes.gd` names `run_measures.gd` as a VIEW scope.
 - **2026-11-05, with ADR-0011 (confirmed by the user at ADR-0011 acceptance); Status stays Accepted.** Lint rows L-VIEW-1 and L-VIEW-2 (ADR-0011 Migration 2). M9 splits into M9a (desktop) and M9b (phone).
 - **2026-11-05, from the fourth architecture review; Status stays Accepted.** L-HERO-1 exempts `battle_wrapper.gd` (it builds HeroInput); only `battle.gd` ticks `hero_sim`. L-VIEW-1, 2: HUD is `src/presentation/hud/`; TapScreens sit outside, may use `Label`.
+- **2026-11-05, from the engine consultation of the fourth review; Status stays Accepted.** gdUnit4 6.2.0 on 4.7.2 headless: H1, H2 (c), new H10 verified; risk MEDIUM until 6.2.2 reruns them. Step 4: no `--remote-debug`, stdin closed. The CI story commits the push_error line. Guidelines 1, 7, 8 rewritten.
 
 ## Related
-- Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.
-- Sync items, not made here: ADR-0002 and ADR-0006 rename `test_content_real_data.gd` and `test_signal_probes.gd` at their next revision; `architecture.md` moves `PresentationSettings`' file to `src/presentation/` (Composition Root row), adds "Shared, not counted: TR-input-014 bot part" to ADR-0010's entry, and closes QQ-13, QQ-15, QQ-16; `.claude/scripts/test-run.sh` learns codes 110 to 113 and 101 as a failure.
+- Sync items, not made here: ADR-0002 and ADR-0006 rename `test_content_real_data.gd` and `test_signal_probes.gd` at their next revision; `.claude/scripts/test-run.sh` learns codes 110 to 113 and 101 as a failure.
 - GDDs: `design/gdd/data-config-pipeline.md`, `input-gesture-resolver.md`, `game-state-stage-flow.md`, `combat-damage.md`, `enemy-wave.md`, `tower-system.md`.
 - `.claude/docs/coding-standards.md`, `.claude/rules/test-standards.md`, `.claude/docs/run-and-observe.md`.

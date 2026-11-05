@@ -36,7 +36,7 @@ with the "Use Instead" column.
 | `AnimationPlayer.playback_active` | `AnimationMixer.active` | 4.3 | Moved to base class |
 | `RichTextLabel.ImageUpdateMask.UPDATE_WIDTH_IN_PERCENT` | `ImageUpdateMask.UPDATE_WIDTH_UNIT` | 4.7 | Renamed; GDScript using the old name breaks |
 | `add_image()` / `update_image()` `width_in_percent`, `height_in_percent` (`bool`) | `width_unit`, `height_unit` (`RichTextLabel.ImageUnit`) | 4.7 | Renamed and retyped |
-| `DisplayServer.AccessibilityLiveMode` for `Control.accessibility_live` | `AccessibilityServer.AccessibilityLiveMode` | 4.7 | Enum moved to `AccessibilityServer` |
+| `DisplayServer.AccessibilityLiveMode` for `Control.accessibility_live` | `AccessibilityServer.AccessibilityLiveMode` | 4.7 | Enum moved to `AccessibilityServer`. Not a break: the old `DisplayServer` live constants (`LIVE_OFF`, `LIVE_POLITE`, `LIVE_ASSERTIVE`) still exist in 4.7.2 (verified 4.7.2 headless, `probe-results.md`); write `AccessibilityServer.LIVE_POLITE` |
 | `AudioEffectSpectrumAnalyzer.tap_back_pos` | — | 4.7 | Removed |
 | `EditorSceneFormatImporter.IMPORT_*` constants | `EditorSceneFormatImporter.ImportFlags` enum | 4.7 | Same names, now in an enum |
 

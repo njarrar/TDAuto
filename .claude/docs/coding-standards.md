@@ -93,6 +93,6 @@ falling back to the defaults above when it is absent.
 - No merge if tests fail — tests are a blocking gate in CI
 - Never disable or skip failing tests to make CI pass — fix the underlying issue
 - Engine-specific CI commands:
-  - **Godot**: `godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode`
+  - **Godot**: `godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c </dev/null` (`--remote-debug tcp://127.0.0.1:0` is rejected on 4.7.2; stdin closed so `-d` cannot block on a debug prompt)
   - **Unity**: `game-ci/unity-test-runner@v4` (GitHub Actions)
   - **Unreal**: headless runner with `-nullrhi` flag

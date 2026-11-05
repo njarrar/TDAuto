@@ -7,7 +7,7 @@ Accepted
 2026-11-05
 
 ## Last Verified
-2026-11-05, against `architecture.md` v7, `tr-registry.yaml` v6 (123 entries), ADR-0001 to ADR-0009 (all Accepted) with their amendments, and the 4.7.2 headless probes below.
+2026-11-05, against `architecture.md` v10, `tr-registry.yaml` v6 (123 entries), ADR-0001 to ADR-0009 (all Accepted) with their amendments, and the 4.7.2 headless probes below.
 
 ## Decision Makers
 - Accepted: 2026-11-05 by the user (njarrar), with its amendments to ADR-0004 to ADR-0008, the Hero AC 28 and HUD Rule 19 GDD changes, and the 8 MiB dev log cap
@@ -309,3 +309,4 @@ No code exists. Sync items, none made here:
 ## Amendments
 - **2026-11-05, with ADR-0011 (confirmed by the user 2026-11-05 at ADR-0011 acceptance); Status stays Accepted.** `SlotState` gains `cooldown_full: int`: the tick count the tower set `cooldown_left` to at its last attack, 0 when empty or not yet fired, and unchanged on upgrade, as the timer is. `architecture.md` B10's Combat row (Decision 6's table has none) also reads `speed_factor(enemy)` and `hp_ratio(enemy)` (ADR-0009 amendment of the same date), for the slow drag lines and the damaged core. Views use them to draw the Cooling ring and the enemy state cues without reading a stat. Nothing else in this ADR changes.
 - **2026-11-05, from the fourth architecture review; Status stays Accepted** (`architecture-review-2026-11-05.md`, Conflict 1 and Should fix 5). Decision 7: L-HERO-1 also exempts `src/root/battle_wrapper.gd`, which builds HeroInput with `hero_sim` and passes HeroSim to the views and RunMeasures; the intent stays that no tick-path file but `battle.gd` reaches `hero_sim` (ADR-0007 takes the same row change). The amendment above now names `architecture.md` B10's Combat row, since Decision 6's table has no Combat row. The TR-hero-012 row drops "Full only once": both syncs have landed. Nothing else in this ADR changes.
+- **2026-11-05, from the engine consultation of the fourth review; Status stays Accepted.** Last Verified cites `architecture.md` v10. Nothing else changes.
