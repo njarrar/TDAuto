@@ -496,6 +496,83 @@ interfaces:
     status_note: Proposed
     added: 2026-11-05
     revised: ""
+  - contract: test_runner
+    status: active
+    pattern: script
+    producer: ci
+    consumers: [ci]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-enemy-014, TR-tower-014]
+    signal_signature: "run-tests.sh <dir>: fails on exit != 0, 'No test cases found', or an unparseable count; SCRIPT ERROR gate only in the import and parse steps"
+    path: tools/ci/run-tests.sh
+    added: 2026-11-05
+    revised: ""
+  - contract: parse_check
+    status: active
+    pattern: script
+    producer: ci
+    consumers: [ci]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012]
+    signal_signature: "godot-parse-check.sh wraps godot-parse-check.gd: load() each .gd, fail when null or can_instantiate() false; .tscn ext_resource paths checked with ResourceLoader.exists(); class_name collision check; fails on empty global class list"
+    path: tools/ci/godot-parse-check.gd
+    added: 2026-11-05
+    revised: ""
+  - contract: wiring_test
+    status: active
+    pattern: test
+    producer: tests
+    consumers: [ci]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    signal_signature: "battle_wiring_test.gd with WiringProbe.connections(sig) -> Array[Dictionary]{target_class, method, flags}"
+    path: tests/integration/battle/battle_wiring_test.gd
+    added: 2026-11-05
+    revised: ""
+  - contract: baseline_runner
+    status: active
+    pattern: test-support
+    producer: tests
+    consumers: [ci]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    signal_signature: "BaselineRunner.compare(stage_id, bot_id, snapshot) -> Array[String]; BASELINE_CANDIDATE_DIR writes candidates, never overwrites"
+    path: tests/support/baseline_runner.gd
+    added: 2026-11-05
+    revised: ""
+  - contract: recording_fake
+    status: active
+    pattern: test-support
+    producer: tests
+    consumers: [tests]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-input-014, TR-tower-014]
+    signal_signature: "SignalRecorder: untyped handlers asserting argument count, typeof and enum range"
+    path: tests/support/signal_recorder.gd
+    added: 2026-11-05
+    revised: ""
+  - contract: lint_runner
+    status: active
+    pattern: script
+    producer: ci
+    consumers: [ci]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    signal_signature: "layer-lint.sh reads tools/ci/layer-lint-rules.tsv (id, kind grep|grep-not|script, scope, exclude, pattern-or-script, source); allowlist lines Lnn|path|fixed string|ADR-or-story-id|reason; SKIPPED fails unless an owed: entry"
+    path: tools/ci/layer-lint.sh
+    added: 2026-11-05
+    revised: ""
+  - contract: test_factories
+    status: active
+    pattern: test-support
+    producer: tests
+    consumers: [tests]
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-tower-014, TR-enemy-014]
+    signal_signature: "make_catalogue(overrides: Dictionary) -> Catalogue; make_command_script(steps: Array) -> Array; make_targetable(distance: float, max_hp: int) -> Targetable; dev_error_spy.gd; targetable_factory.gd"
+    path: tests/support/targetable_factory.gd
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -845,6 +922,36 @@ api_decisions:
     referenced_by:
       - docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
     added: 2026-11-05
+  - purpose: test_framework
+    description: "gdUnit4 6.2.0, --import before every CI run, class cache tracked"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-state-013]
+    status: active
+    path: addons/gdUnit4/plugin.cfg
+  - purpose: test_layout
+    description: "tests/unit, integration, smoke, fixtures, support, baselines"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-state-013]
+    status: active
+    path: tests/
+  - purpose: baseline_file_name
+    description: "<stage_id>_<bot_id>_<os>_<arch>_<major.minor.patch>.txt; missing fails; arm32 unsupported"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-state-013]
+    status: active
+    path: tests/baselines/
+  - purpose: ci_order
+    description: "import, parse, lint, lint selftest, json keys, unit, integration, wiring, baselines, smoke; all block"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-state-013]
+    status: active
+    path: tools/ci/ and .github/workflows/tests.yml
+  - purpose: class_name_policy
+    description: "no prefix; collision lint and reserved list"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-data-012, TR-state-013]
+    status: active
+    path: tools/ci/reserved-names.txt
 
 # Example:
 #
@@ -1099,6 +1206,223 @@ forbidden_patterns:
     tr: [TR-input-007]
     rule: "Target ids must never be reused or lowered; the hit-test tie-break must iterate the ascending id array and never rely on Dictionary iteration order"
     added: 2026-11-05
+  - pattern: L01
+    description: "no [autoload] section in project.godot"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: project.godot
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L02
+    description: "src/battle holds RefCounted subclasses only"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L03
+    description: "no lambda, bind, bindv or static var in src/battle"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L04
+    description: "no assert( under src"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L05
+    description: "no connect(func or bind under src/presentation and src/app"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/presentation/, src/app/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L06
+    description: ".deliver( only inside src/battle"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L07
+    description: "connection introspection only in tests"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L08
+    description: "no CONNECT_ flags; no await in src/battle"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L09
+    description: "signal never named like a method in one file"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L10
+    description: "combat-side files never name Enemy-side classes"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L11
+    description: "no _physics_process, no Engine time or physics settings"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L12
+    description: "no physics/common keys in project.godot"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: project.godot
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L13
+    description: "no global random call under src"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L14
+    description: "no transcendental call or randfn in src/battle"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L15
+    description: "no Time, Engine or OS in src/battle"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L16
+    description: "no Vector2 method in PinGeometry or range helpers"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L17
+    description: "no absolute paths"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/, tests/, tools/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L18
+    description: "read_context and stat_keys: no static var or Callable"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/data/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L19
+    description: "no string-literal key at stat_int or stat_float"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L20
+    description: "load_from only in app_root"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L21
+    description: "roster() and targets() results never stored in a field"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L22
+    description: "single-writer fields of the roster, Combat and records"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L23
+    description: "six display and input keys in project.godot"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: project.godot
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L24
+    description: "src never names tests or gdUnit4"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L25
+    description: "no func( under src/presentation/input"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/presentation/input/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L26
+    description: "class_name set equals the tracked class cache"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: .godot/global_script_class_cache.cfg
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L27
+    description: "scene lint: Camera2D, mouse_filter, HUD ancestors"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/presentation/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L28
+    description: "no repeated key in one JSON object"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: assets/data/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L29
+    description: "no class_name collision with native, project or addon class"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/, tests/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L30
+    description: "src/data is RefCounted-only: no Node-derived extends, no static var"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-state-013]
+    status: active
+    path: src/data/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L31
+    description: "input_resolver.gd names no InputEvent type and calls no Time function (ADR-0008 Validation 5)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-input-014]
+    status: active
+    path: src/presentation/input/input_resolver.gd
+    enforced_by: tools/ci/layer-lint.sh
 
 # Example:
 #

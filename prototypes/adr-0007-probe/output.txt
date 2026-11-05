@@ -1,0 +1,47 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Expected parameter name.
+          at: GDScript::reload (res://bad.gd:1)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://probe.gd:3)
+ERROR: Failed to load script "res://bad.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe.gd:3)
+PROBE load bad.gd -> (res://bad.gd):<GDScript#-9223372010413881911>
+PROBE load good.gd -> (res://good.gd):<GDScript#-9223372010078337590>
+exit=0
+--- GdUnitCmdTool, empty dir
+(eval):8: command not found: timeout
+exit=127
+--- probe2
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+SCRIPT ERROR: Parse Error: Expected parameter name.
+          at: GDScript::reload (res://bad.gd:1)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://probe2.gd:4)
+ERROR: Failed to load script "res://bad.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe2.gd:4)
+SCRIPT ERROR: Parse Error: Expected parameter name.
+          at: GDScript::reload (res://bad.gd:1)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://probe2.gd:5)
+PROBE2 res://bad.gd can_instantiate=false reload=43
+PROBE2 res://good.gd can_instantiate=true reload=-
+exit=0
+--- GdUnitCmdTool, empty dir
+ERROR: The remote port number must be between 1 and 65535 (inclusive).
+   at: connect_to_host (core/io/stream_peer_tcp.cpp:69)
+ERROR: Remote Debugger: Unable to connect to host '127.0.0.1:0'.
+   at: create_tcp (core/debugger/remote_debugger_peer.cpp:247)
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Could not find type "GdUnitTestCIRunner" in the current scope.
+          at: GDScript::reload (res://addons/gdUnit4/bin/GdUnitCmdTool.gd:5)
+SCRIPT ERROR: Parse Error: Identifier "GdUnitTestCIRunner" not declared in the current scope.
+          at: GDScript::reload (res://addons/gdUnit4/bin/GdUnitCmdTool.gd:10)
+ERROR: Failed to load script "res://addons/gdUnit4/bin/GdUnitCmdTool.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+exit=0
