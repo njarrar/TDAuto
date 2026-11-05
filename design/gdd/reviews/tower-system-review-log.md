@@ -107,3 +107,43 @@ The user first chose raising wave 2's bounties, then kept the labelled optimisti
 - One extra fast (51): upgrading in pairs trails filling first on 3 single, 1 splash, 1 slow (6.5 against 7), failing the script's order assert.
 - Single level-1 cost 48: single only reaches 10 lives against the best mixed build's 9, failing the mono-role gate.
 Revisit when the bots are re-baselined on the fixed tick, when every gate can be retuned together. No data changed.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, economy-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 6 | Recommended: 25
+Summary: Every number checked, and every restated value agrees with Enemy & Wave, Hero, Battle HUD, Combat and Data. Six text and test faults remained: the opening analysis assumed the full 8-gold bonus, which needs a call within 0.6 s; the starters' provenance read two ways and the Pillar 2 margin at single damage 21 was unrecorded; Rule 8 had no row for the commit tap's own press; chip_state() had no contract; the new max(1, ...) guards, the 100 ms clamp and 30 per second had no criterion; and no content row bounded splash_radius or slow_duration, which burst_spike does not catch. The creative director prescribed a spot-check, not a fourth full review.
+Prior verdict resolved: Yes (all 6 prior blocking items, wave 2 by user decision)
+Findings:
+- [BLOCKING] Starter values, Rule 16: opening gold restated without calling (52, 42, 32, 32); payout bands; "real choice" claims removed.
+- [BLOCKING] Starter values: provenance and the Pillar 2 margin at single level-2 damage 21 (25.1%, window above 20 and below 24).
+- [BLOCKING] Rule 8 table: `pressed` on the open chip's own tower stays open.
+- [BLOCKING] Rule 17: chip_state() return contract.
+- [BLOCKING] Acceptance Criteria: criteria reaching the bonus divisor floor, the reload floor, the 100 ms clamp and 30 per second.
+- [BLOCKING] Content rules: splash_radius at most 90 and slow_duration at most 5 s; burst_spike no longer waits for the Hero record.
+- [RECOMMENDED] Rule 17: the HUD shows the live payout at the last frame, not exactly what a call pays.
+- [RECOMMENDED] Rule 8: "frozen while Paused" was dead text; hit radius 36 and registration on tower_built stated.
+- [RECOMMENDED] Starter values: splash 0.86 on three only on a slowed packet; role text overclaims; "upgrading early leads" is a median claim; upgrades priced above fresh builds.
+- [RECOMMENDED] Rule 7 wording against Battle HUD Rules 6 and 7 (an unaffordable disc calls build and gets NO_GOLD).
+- [RECOMMENDED] Content rules: floor tolerance as Data; floor and ceiling on the last wave's bounty share (34%).
+- [RECOMMENDED] Acceptance Criteria: AC59 per row and table-driven with a row count; a kill fixture factory; Rule 5 paired faults; AC14 split and tap vocabulary; splits of AC22, 37, 42, 46, 48, 49 and 64; rewrites of AC17, 18, 19, 43, 44, 50, 53 and 58; upgrade versions of AC7 to AC12, first_in targeting, level-2 role values, two slows, Paused, opening tap, chip_state draining, Won gold, HUD preview; manual pass conditions; criteria for a slot press closing the chip and a tower tap during an arc.
+- [RECOMMENDED] Routed: rates that are not multiples of 1/30 s pay differently at 30 and 60 per second (ADR-0004); live bonus payout and the chip disc over a neighbour (Battle HUD); a slot-to-chip distance of at least 76 (Enemy & Wave layout); retuning the opening, gating the slow and slow trap, rechecking the share margin (bot re-baseline); double taps spending 60 gold (phone test, existing Open Question).
+- [RECOMMENDED] Disagreements: game-designer's disc-only commit or 400 ms guard declined (tap commits is settled; the Open Question and phone test decide); slow and slow gating left to the re-baselined bots; economy-designer's new content rule not needed, since the two-dearest-roles row already enforces the exclusion. Game-designer's provenance finding was half wrong: the script does run on the fixed 1/60 tick in Combat Rule 11's order (Hero, Simulated results); the re-baseline is the real bots in game code.
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/battle-hud.md c523e7d611336730edba829d7f4c8d8109fc0482
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/hero-system.md 7f15d198f2c8161e279ffff9e45d4644a8b8f718
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 2b84b18638e6e2330d40b4e731351ebd7b7cdec1
+Reviewed-Content-Hash: design/gdd/combat-damage.md 419744f670fbcc60bd061e151e86446f2ff53d1f
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 0b9123b5896138cd1318d895d8d6a6eb69c0e1c9
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 9d6ec8138446d49ffa36df14ddb9b3c9d9fa1ce7
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+Reviewed-Content-Hash: tools/balance-sim/hero_bots.py bc1cc2b938adb3c90b5ed02c6d569f4ad30f6fd3
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+Applied in autonomous mode: all 6 blocking items (opening gold without calling and with a call 2 s in, payout bands in Rule 16, "real choice" removed; provenance names the script, its 60 per second fixed tick and the real-bot re-baseline, and records the 25.1% margin and window; Rule 8 row for the open chip's own tower; chip_state() returns {slot_index, elapsed_ms, window_ms, level} or empty; criteria 13b, 42b, 55b and 56b; content rows for splash_radius and slow_duration, burst_spike wording) and recommended: HUD live payout wording, dead Paused text, hit radius and tower registration, slowed-packet splash note, floor tolerance. Follow-on edit outside this GDD: Battle HUD chip_bar reads elapsed_ms and window_ms from chip_state().
+A systems-designer spot-check closed four blockers and found the first provenance wording contradicted Hero (the script does run on the fixed tick), a false "below Data's boot floor" note in 42b, and chip_state() missing the window length; all three were fixed before approval.
+Verdict: APPROVED, on the creative director's ruling that a spot-check decides approval. Not done: every remaining recommended and routed item above.

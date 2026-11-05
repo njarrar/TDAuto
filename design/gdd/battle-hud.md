@@ -249,15 +249,15 @@ The **burst_wedge** formula is defined as:
 
 The **chip_bar** formula is defined as:
 
-`chip_bar = clamp(1 − elapsed / window, 0, 1)`
+`chip_bar = clamp(1 − elapsed_ms / window_ms, 0, 1)`
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `elapsed` | float, ms | 0 and up | calculated (Tower's `chip_state()`) | Real time since the chip opened |
-| `window` | float, ms | 1,500 at MVP | Tower's `ChipWindow` | The chip window's length, never restated here |
+| `elapsed_ms` | int, ms | 0 and up | Tower's `chip_state()` | The clamped `advance` total since the chip opened (Tower Rule 8) |
+| `window_ms` | int, ms | 1,500 at MVP | Tower's `chip_state()` | The chip window's length, never restated here |
 
-**Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value. A `window` of 0 draws an empty bar rather than dividing.
+**Output Range:** 0 to 1. It is a display of Tower's window, and defines no new value. A `window_ms` of 0 draws an empty bar rather than dividing.
 **Example:** 750 ms: 0.5.
 
 ## Edge Cases
