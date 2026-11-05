@@ -222,6 +222,10 @@ Observed on Godot 4.6.1 with gdUnit4 6.1.3, and the exits again on 4.7.2 with
   error — neither is a parse check. The framework's parse check is
   `godot --headless --path . -s res://.claude/scripts/godot-parse-check.gd -- res://<file>.gd …`
   (exit 1 when a script does not load).
+  Observed 2026-11-05 on macOS 4.7.2: it also exited 0 on three files with real parse
+  errors, so it is neither a parse gate nor an autoload lint there. Use
+  `.claude/scripts/godot-parse-check.gd` for the parse gate and grep `project.godot`
+  for `[autoload]` (ADR-0001).
 - On Windows, a quoted full path to the editor (`"C:/Program Files/Godot/…exe"`)
   runs from Git Bash with its stdout and exit code intact.
 

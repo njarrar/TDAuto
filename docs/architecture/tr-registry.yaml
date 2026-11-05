@@ -912,7 +912,7 @@ requirements:
 - id: TR-hud-017
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "HudField redraws only when a quantised view-model key changes (wedge step, digit, bonus label, visible set), not every frame"
+  requirement: "HudField redraws only when a quantised view-model key changes (every value its draw reads, including open-disc and chip affordability) and while a timed visual runs, not every frame"
   created: 2026-11-04
-  revised: ""
+  revised: "2026-11-04"
   status: active

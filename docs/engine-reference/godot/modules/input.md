@@ -78,3 +78,28 @@ func _input(event: InputEvent) -> void:
 - Not testing both mouse and keyboard focus paths (dual-focus in 4.6)
 - Assuming `grab_focus()` affects mouse focus (it only affects keyboard/gamepad in 4.6)
 - Using string literals instead of `StringName` (`&"action"`) for action names in hot paths
+
+## Verified on 4.7.2 (desktop spike, 2026-11-04)
+
+Source: `prototypes/adr-0003-spike/` run on macOS with `4.7.2.stable.official`,
+`canvas_items`/`keep` stretch, both pointer emulations on, events injected with
+`Input.parse_input_event`. Desktop only: Android and iOS behaviour is still owed.
+
+| Premise | Result |
+|---|---|
+| Input arrives before the frame's ticks | Yes. Buffered events are flushed at the start of the frame, before `_physics_process` and `_process`. An event queued during `_process` of frame N is delivered at the start of N+1. |
+| Callback order per event | `_input` on every node, then GUI (`Control.gui_input`), then `_unhandled_input`. A Control that takes the event stops it before `_unhandled_input`. |
+| A STOP Control appears over a gesture already under way | Its **moves** go to the Control's `gui_input` and never reach `_unhandled_input`. Its **release** is not taken and reaches `_unhandled_input`. Read moves and releases of an active pointer in `_input` if a modal may open mid-drag. |
+| A new press under a visible STOP Control | Press, moves and release all go to the Control. Nothing reaches `_unhandled_input`. |
+| A Control hides while it holds a press | Touch focus stays on the hidden Control (its `gui_input` still gets the drag and release). Mouse focus is dropped: the mouse motion and release reach `_unhandled_input`. Ignore releases of an index you never saw pressed. |
+| Mouse to touch emulation (`emulate_touch_from_mouse`) | Each mouse event yields an `InputEventScreenTouch`/`ScreenDrag` with `device = -1` (emulation) delivered **before** the mouse event, which keeps `device = 32` (`InputEvent.DEVICE_ID_MOUSE` is 32 on 4.7). |
+| Touch to mouse emulation (`emulate_mouse_from_touch`, default on) | Touch index 0 yields an `InputEventMouseButton`/`MouseMotion` with `device = -1` delivered **before** the touch event. A second finger (index 1) yields no mouse event. |
+| Event positions under stretch | Already converted to the 540x960 canvas. Window 600x1048 gave a screen transform of scale 1.0907 with a 6 px side letterbox; 500x1000 gave 0.9259 with a 56 px top letterbox. |
+| Resize | `Viewport.size_changed` fired on the same frame as `DisplayServer.window_set_size`. `NOTIFICATION_WM_SIZE_CHANGED` did not reach a child node in the following 4 frames; use the signal. |
+| Lifecycle notifications | `NOTIFICATION_APPLICATION_FOCUS_IN` (2016) and `_OUT` (2017) and `NOTIFICATION_WM_WINDOW_FOCUS_IN` (1004) and `_OUT` (1005) all reach child nodes on desktop. At startup the sequence was 2016, 1005, 2017, then 1004 and 2016 once the window got focus: expect a focus-out before the first gesture. `NOTIFICATION_APPLICATION_PAUSED` (2015) and `_RESUMED` (2014) cannot be exercised on desktop. |
+| Safe area | `DisplayServer.get_display_safe_area()` returned the screen minus the menu bar on macOS. Meaningless off-device. |
+| A Control parented to a Node2D | Gets a zero-size anchorable rect and never receives GUI input. Put HUD Controls under a CanvasLayer or a Control root. |
+
+`input/buffering/agile_event_flushing` read back as null through
+`ProjectSettings.get_setting` with no default supplied; check the 4.7 setting
+name before relying on it.
