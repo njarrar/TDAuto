@@ -1,7 +1,7 @@
 # ADR-0001: App Lifecycle, Composition Root and Fatal Path
 
 ## Status
-Proposed
+Proposed. Revised the same day after TD-ADR CONCERNS and godot-specialist review. Accepting it also records the user's acceptance of QQ-08's composition-root change (a scene-free builder instead of the battle scene's script), which the architecture leaves to that confirmation.
 
 ## Date
 2026-11-05
@@ -24,8 +24,8 @@ TowerRiot needs one place that loads the catalogue, builds and rebuilds a battle
 | **Layer** | Foundation |
 | **Knowledge Risk** | HIGH: GDScript language and object lifetime changed after the model's training (4.5 to 4.7), and app lifecycle notifications are not in the pinned reference |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`; `docs/architecture/architecture.md` (Engine Knowledge Gap Summary, Composition Root, Data Flow 4 to 7, B4, B9, QQ-17) |
-| **Post-Cutoff APIs Used** | None new. The decision rests on behaviour, not new APIs: a method `Callable` or signal connection does not keep a `RefCounted` target alive, and `.call()` on a dead one raises a script error that aborts the caller (observed on the 4.7.2 desktop editor, QQ-17). A typed override in 4.7 needs an explicit `return` |
-| **Verification Required** | Probes P1 to P5 in the appendix. P1 (Callable lifetime on an export template and a phone) and P4 (`push_error` survives a release export) must pass before this ADR is Accepted for phone builds; desktop development may proceed on the editor probe |
+| **Post-Cutoff APIs Used** | None new. The decision rests on behaviour, not new APIs, and only the typed-override rule is sourced in the pinned reference (`breaking-changes.md`); the rest is observed or unverified: a method `Callable` or signal connection does not keep a `RefCounted` target alive, and `.call()` on a dead one raises a script error that aborts the caller (observed on the 4.7.2 desktop editor, QQ-17). A typed override in 4.7 needs an explicit `return` |
+| **Verification Required** | Probes P1 to P7 in the appendix. P1 (Callable lifetime on an export template and a phone) and P4 (`push_error` survives a release export) must pass before this ADR is Accepted for phone builds; desktop development may proceed on the editor probe |
 
 ## ADR Dependencies
 
@@ -34,7 +34,7 @@ TowerRiot needs one place that loads the catalogue, builds and rebuilds a battle
 | **Depends On** | None |
 | **Enables** | ADR-0002 (catalogue load runs from AppRoot), ADR-0003 (adapter lives in the wrapper this ADR defines), ADR-0004 (Clock lives in the wrapper; `Battle.tick` is the only time entry), ADR-0005 (one accessor per battle, failure handler injected here), ADR-0006, ADR-0007 (test harness builds battles through `BattleBuilder`), ADR-0009 |
 | **Blocks** | Every MVP epic: no system can be wired, tested headless or retried until the composition root exists |
-| **Ordering Note** | Write and accept first. ADR-0003's device spike can run in parallel with P1 to P5, since both need the same first phone export |
+| **Ordering Note** | Write and accept first. ADR-0003's device spike can run in parallel with P1 to P7, since both need the same first phone export |
 
 ## Context
 
@@ -66,17 +66,17 @@ Eight approved GDDs share one battle. Each system must be unit-testable with fak
 ### 1. AppRoot: the main scene, three states
 `AppRoot` is the project's main scene, a `Node` with no gameplay references and no autoload. It owns the app states **Boot**, **InStage** and **Fatal**, the Ready catalogue, the app-level `FatalLatch`, and the retry latch.
 
-- **Boot:** its `_ready` makes the app `FatalLatch`, confirms the catalogue-free fatal scene can load, and starts `Catalogue.load(manifest)` (format: ADR-0002). `Failed` goes to Fatal; `Ready` moves to InStage.
-- **InStage:** it picks `stage_id` and `seed`, calls `BattleBuilder.build`, checks the result for `null` first and then the latch, and only then builds a `BattleWrapper` around the `Battle`.
+- **Boot:** its `_ready` makes the app `FatalLatch`, holds the catalogue-free fatal scene by `preload` (so the export filter keeps it and no load can fail later), and starts `Catalogue.load_manifest(manifest)` (format: ADR-0002). It adds children to itself, never to the tree's root, which is busy during `_ready`. `Failed` goes to Fatal; `Ready` moves to InStage.
+- **InStage:** it picks `stage_id` and `stage_seed`, calls `BattleBuilder.build`, checks the result for `null` first and then the latch, and only then builds a `BattleWrapper` around the `Battle`.
 - **Fatal:** terminal for the session. It tears down any wrapper, drops the battle, shows the fatal scene and never opens saves. Development builds show the first cause.
 
 ### 2. BattleBuilder: scene-free, holds nothing
 ```gdscript
 class_name BattleBuilder extends RefCounted
-static func build(catalogue: Catalogue, stage_id: StringName, seed: int,
+static func build(catalogue: Catalogue, stage_id: StringName, stage_seed: int,
 		fatal_handler: Callable) -> Battle
 ```
-In one function, in this order: create the per-battle `FatalLatch`; validate stage inputs (a null Stage record calls `fatal_handler` and returns `null`); construct Flow, Combat, EnemyWave, TowerSim, HeroSim and the one `StatAccessor`; make every signal connection by name in this function, so the parser catches a misspelt signal; inject the B9 callables and values; return the `Battle`. It touches no node, is never called from inside a signal, and keeps no reference to anything it built.
+The parameter is `stage_seed`, not `seed`, which would shadow the global `seed()`. In one function, in this order: check `fatal_handler.is_valid()` (if not, `push_error` and return `null`, which AppRoot treats as Fatal); create the per-battle `FatalLatch` holding `fatal_handler`; validate stage inputs (a null Stage record calls `fatal_handler` and returns `null`); construct Flow, Combat, EnemyWave, TowerSim, HeroSim and the one `StatAccessor`; make every signal connection by name in this function, so the parser catches a misspelt signal; inject the B9 callables and values; return the `Battle`. It touches no node, is never called from inside a signal, and keeps no reference to anything it built.
 
 ### 3. Battle: the strong holder
 `Battle extends RefCounted` holds a typed field for every helper the builder creates: each system, the `FatalLatch` and the accessor. Nothing else holds them strongly. No sim holds a reference back to `Battle`.
@@ -98,11 +98,20 @@ func fatal_cause() -> String          # the first cause, or "" when not latched
 ### 5. FatalLatch and the fatal path
 ```gdscript
 class_name FatalLatch extends RefCounted
-func latch(cause: String) -> void     # keeps the FIRST cause; later calls do nothing
+signal latched(cause: String)          # emitted once, on the first latch only
+func _init(handler: Callable) -> void  # the app handler; AppRoot's own latch passes an empty Callable
+func fatal(cause: String) -> void      # keeps the FIRST cause; later calls do nothing.
+                                       # Sets the latch, calls the handler if is_valid(), emits latched
 func is_set() -> bool
 func cause() -> String
 ```
-The injected `fatal(cause)` is a method on `Battle` (or, during build before the `Battle` exists, on a builder-local latch object the `Battle` later takes over) that latches the battle latch and calls AppRoot's handler, which latches the app latch. It is idempotent. During build it only latches, and build returns `null`. After build, Flow enters FATAL from any phase, Won, Lost and Paused included, calls `cancel_input()`, and emits `phase_changed(FATAL)`; Flow checks the latch before each of its own emits. AppRoot acts on its next frame: tear down the wrapper, drop the battle, show the fatal scene.
+**One owner.** Every injected `fatal` is the method Callable `battle_latch.fatal`. The builder creates the battle `FatalLatch` before anything else, so it exists for the whole build, and the `Battle` then holds it in a typed field. There is no second target. The handler it holds is AppRoot's method, which latches the app `FatalLatch`.
+
+**How Flow learns.** After constructing Flow, the builder connects `battle_latch.latched` to Flow's fatal entry. A fatal after build therefore makes Flow enter FATAL from any phase, Won, Lost and Paused included; Flow calls `cancel_input()` and emits `phase_changed(FATAL)`, and it checks the latch before each of its own emits. A fatal during build, before Flow exists, only latches; the builder checks `is_set()` after each step and returns `null`.
+
+**Who reads the cause.** The fatal screen reads the app latch's `cause()` (development builds only). Tests read the battle latch through `Battle.fatal_cause()`. AppRoot acts on its next frame: `teardown()`, free the wrapper, drop the battle, show the fatal screen.
+
+**Script errors are outside this path.** GDScript has no exceptions: a runtime error (a null dereference, an index out of range, `.call()` on a dead Callable) aborts that one function, and the caller continues with the default return value. Nothing latches. So the design never relies on an error to reach Fatal: `build` returns `null` only through its own explicit checks, and every caller still checks for `null` and the latch. Whether an aborted function's default return behaves the same in a release export is probe P6.
 
 ### 6. Errors: `push_error`, never `assert`
 - `fatal(cause)` is for broken data or contracts: play cannot continue.
@@ -110,20 +119,23 @@ The injected `fatal(cause)` is a method on `Battle` (or, during build before the
 - `assert` is forbidden on any path whose check must hold in release.
 
 ### 7. BattleWrapper and teardown
-`BattleWrapper` is a scene added under AppRoot. It holds, in typed fields, the `InputResolver` (null from `create` calls the failure handler), the adapter, the Clock and the views (input path: ADR-0003; clock: ADR-0004). After each assembly step it checks `battle.halted()` and stops if set. It exposes one teardown used by both retry and Fatal:
+`BattleWrapper` is a scene added under AppRoot. It holds, in typed fields, the `InputResolver` (null from `create` calls the failure handler), the adapter, the Clock and the views (input path: ADR-0003; clock: ADR-0004). After each assembly step it checks `battle.halted()` and stops if set. Assembly also loads the stage scene from the Stage record's `scene_ref`: a `null` load, a `null` from `instantiate()`, or a root of the wrong type calls `fatal` (Flow Rule 18). A scene whose script is broken still loads; whether `instantiate()` can return a partial node is probe P7, and the root-type check covers it either way.
+
+It exposes one teardown used by both retry and Fatal:
 ```gdscript
 func teardown() -> void   # stop the Clock and set_process(false); battle.cancel_input();
                           # battle.set_input_cancel(Callable()); disconnect views; drop the resolver
 ```
+`teardown()` must cope with a wrapper that Fatal stopped partway: every field may be `null`, and each step checks before acting. Calling `cancel_input()` when the resolver is already Idle, or twice, does nothing (QQ-19). It is safe to call twice.
 
 ### 8. Retry: rebuild, never reset
 The Retry and Play again handlers only set an idempotent latch on AppRoot; they never free their own caller. On AppRoot's next `_process`:
 1. If the app latch is set: go to Fatal and stop.
 2. `wrapper.teardown()`.
-3. `remove_child(wrapper)`, then `wrapper.free()`. AppRoot is outside the wrapper's call stack here, so an immediate `free()` is safe and the wrapper's fields release the resolver at once (probe P3 confirms; `queue_free()` is the fallback, with weakrefs sampled one frame later).
+3. `wrapper.free()`, with no `remove_child`: `free()` detaches a node itself, and a wrapper that Fatal stopped before it was added has no parent, where `remove_child` would be an engine error. AppRoot's `_process` runs outside the wrapper's call stack, so an immediate `free()` is safe and the wrapper's fields release the resolver at once (probe P3 confirms; `queue_free()` is the fallback, with weakrefs sampled one frame later).
 4. Drop AppRoot's reference to the `Battle`.
-5. Development builds only: the `weakref`s taken at build to the `Battle`, every system, the accessor and the resolver must all read `null`; any that does not is a development error naming it.
-6. `BattleBuilder.build` again with the same catalogue and seed (Play again) or the same catalogue and the next seed rule (ADR-0004).
+5. The `weakref`s taken at build to the `Battle`, every system, the accessor and the resolver must all read `null`; any that does not is a development error naming it. Development builds run this on every retry and CI always runs it headless; release builds skip it. No AppRoot local may still hold the `Battle` when it samples.
+6. `BattleBuilder.build` again with the same catalogue and the same `stage_seed`, for Retry and Play again alike, so the stage replays exactly (Flow Rule 16).
 
 A latch set outside Won or Lost causes no rebuild.
 
@@ -143,7 +155,7 @@ AppRoot (main scene, Node)            states: Boot -> InStage -> Fatal
 ```
 
 ### Key Interfaces
-`AppRoot`, `BattleBuilder.build`, `Battle` (`tick`, `halted`, `set_input_cancel`, `cancel_input`, `fatal_cause`), `FatalLatch` (`latch`, `is_set`, `cause`), `BattleWrapper.teardown`, and the injected `fatal(cause)` and `dev_error(msg)`. Signatures as above; B4 and B9 of `architecture.md` are amended to add `fatal_cause()`, `FatalLatch.cause()` and `teardown()`.
+`AppRoot`, `BattleBuilder.build`, `Battle` (`tick`, `halted`, `set_input_cancel`, `cancel_input`, `fatal_cause`), `FatalLatch` (`fatal`, `is_set`, `cause`, signal `latched`), `BattleWrapper.teardown`, and the injected `fatal(cause)` (= `battle_latch.fatal`) and `dev_error(msg)`. Signatures as above. On acceptance, `architecture.md` is amended: B4 and the Composition Root table gain `fatal_cause()`, `FatalLatch` and `teardown()`; B9's `fatal` row names `FatalLatch.fatal`; Data Flow 5 drops `remove_child`.
 
 ### Implementation Guidelines
 - Must never add an autoload or a global accessor for any gameplay object.
@@ -155,6 +167,8 @@ AppRoot (main scene, Node)            states: Boot -> InStage -> Fatal
 - Must read every stat a command needs before mutating any state.
 - Must use the injected `fatal` or `dev_error`, never `assert`, for any check that matters in release.
 - Must never free a node from inside its own handler; Retry sets a latch.
+- Must never treat a script error as a fatal: check `null` and `is_set()` explicitly.
+- Test fakes that extend a typed class must `return` explicitly in every override (4.7 typed-override rule).
 - Must never add a reset function to a system; retry rebuilds.
 - Gameplay classes must never read `Engine`, `Time`, `OS`, a timer or `await`.
 
@@ -242,7 +256,9 @@ No game code exists yet (`src/` is empty). The prototypes are throwaway and are 
 - Listener-count test: every expected connection exists after build, and none points at an old battle after retry.
 - Headless test: `cancel_input()` with nothing set does nothing and raises no error; after `set_input_cancel(Callable())`, likewise.
 - Lint: no autoload in `project.godot`; no `assert` under `src/`; no lambda or `bind()` in `BattleBuilder` (ADR-0007).
-- Probes P1 to P5 pass on the first export template and phone.
+- Teardown test: Fatal at each wrapper assembly step leaves `teardown()` error-free, and a second `teardown()` does nothing.
+- Negative control: a fixture that captures a sim object in a lambda makes the retry weakref check fail, watched once, so a green check means something.
+- Probes P1 to P7 pass on the first export template and phone.
 
 ## Related
 - `docs/architecture/architecture.md` v4: Composition Root, Data Flow 4 to 7, B4, B9, QQ-08, QQ-17, QQ-19, QQ-20.
@@ -255,7 +271,9 @@ Probe results go here, so a phone run does not hold the desktop decision. Each r
 | ID | Probe | Pass condition | Result |
 |---|---|---|---|
 | P1 | A method Callable to a `RefCounted` with no other holder, on an export template (desktop) and an Android phone | The target is released, as on the 4.7.2 editor; `.call()` on it is a script error | Editor 4.7.2: as stated (QQ-17). Export, phone: pending |
-| P2 | `is_valid()` on a method Callable whose `RefCounted` target was released | Recorded either way; the design never relies on it for liveness | Pending |
-| P3 | `remove_child` then `free()` of the wrapper from AppRoot's `_process` | No error; `weakref`s to the resolver and battle read `null` in the same frame | Pending |
+| P2 | `is_valid()` on a method Callable whose `RefCounted` target was released, and on `Callable()` | Recorded either way; the design never relies on it for liveness. `Callable()` reads false (expected) | Pending |
+| P3 | `free()` of the wrapper from AppRoot's `_process`, both added and never added to the tree | No error in either case; `weakref`s to the resolver and battle read `null` in the same frame | Pending |
 | P4 | `push_error` from a release export | The message reaches the device log | Pending |
-| P5 | A signal connection from a released `RefCounted` emitter to a live listener, and the reverse | No error on emit; the listener count drops | Pending |
+| P5 | Negative control: a lambda capturing a sim object, then a retry | The weakref check reports the leak, naming the object | Pending |
+| P6 | A runtime error inside a function with a typed return, in a release export | The function aborts, the caller continues with the default return, and nothing latches; recorded so the null and latch checks are known to be the only route to Fatal | Pending |
+| P7 | A stage scene whose root script has a parse error | Recorded: whether `load` returns null, `instantiate()` returns null or a partial node; the root-type check catches the partial case | Pending |

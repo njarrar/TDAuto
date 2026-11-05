@@ -165,7 +165,7 @@ Code root is `src/` (Godot). Proposed folders, one per layer: `src/foundation/`,
 | Module | Owns | Exposes | Consumes | Engine APIs (risk) |
 |---|---|---|---|---|
 | **AppRoot** (main scene, no autoload) | App states Boot, InStage, Fatal (Game State GDD). The Ready catalogue for the session. The app-level FatalLatch. The retry latch. | Starts the catalogue load; builds battles and drops them | Catalogue, FatalLatch | `Node`, `PackedScene`, `Object.free()` vs `queue_free()` timing for the wrapper on retry (**MEDIUM, NEEDS VERIFICATION**), `weakref()` (LOW) |
-| **Builder** (`build(catalogue, stage_id, seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle`, or null after calling `fatal_handler` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4). The 4.7.2 editor probe answered the lifetime half: a Callable does not keep its target alive, so `Battle` holds every helper in a typed field (Flow Rule 2a). Export and phone **NEEDS VERIFICATION** (QQ-17) |
+| **Builder** (`build(catalogue, stage_id, stage_seed, fatal_handler)`) | Nothing persistent. Creates the per-battle FatalLatch first, then constructs one `Battle` and makes every connection. | Returns a `Battle`, or null after calling `fatal_handler` | Every sim module | `Signal.connect(Callable)` (LOW). No `CONNECT_DEFERRED` on gameplay signals (TR-enemy-004). Injected callables are method Callables only: no lambda or `bind()` that captures a sim object (TD-ARCHITECTURE B4). The 4.7.2 editor probe answered the lifetime half: a Callable does not keep its target alive, so `Battle` holds every helper in a typed field (Flow Rule 2a). Export and phone **NEEDS VERIFICATION** (QQ-17) |
 | **BattleWrapper** (scene) | The Clock: real-time accumulator, catch-up clamp (max ticks per frame), accumulator zeroed on `phase_changed(PAUSED)`. Also the input adapter, views and the HUD. Absent headless. | None | Battle, adapter | `Node._process` (LOW); `_process` vs `_physics_process` decided in ADR-0004 |
 | **Fatal screen** (scene) | Catalogue-free, guaranteed to load. Shown by AppRoot. | None | AppRoot FatalLatch cause (development builds show it) | `PackedScene` (LOW) |
 
@@ -274,7 +274,7 @@ Engine starts main scene ──► AppRoot._ready
        Failed ─► fatal screen (no fallbacks, no save access). Includes tap_slop ≤ drag_slop (Data Rule 7)
   3. (VS) Save/Load boot: inject loaded progression into progression systems
   4. AppRoot holds Ready catalogue, picks stage_id and seed. AppRoot state: InStage
-  5. Builder.build(catalogue, stage_id, seed, fatal_handler)
+  5. Builder.build(catalogue, stage_id, stage_seed, fatal_handler)
        a. Create the per-battle FatalLatch first, so a fatal during build has somewhere to land
        b. Validate stage inputs
        c. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim
@@ -469,7 +469,7 @@ func cancel_input() -> void       # public, guarded with is_valid(); Flow and Ap
 # Strong typed fields: every sim, the FatalLatch and the one per-battle StatAccessor (Flow Rule 2a)
 
 class_name BattleBuilder extends RefCounted
-static func build(catalogue: Catalogue, stage_id: StringName, seed: int, fatal_handler: Callable) -> Battle
+static func build(catalogue: Catalogue, stage_id: StringName, stage_seed: int, fatal_handler: Callable) -> Battle
                                   # null after calling fatal_handler when the stage cannot be built
 ```
 Invariants: `build` touches no node, so bots and tests call it headless. It creates the per-battle FatalLatch first, then makes every connection in one function. It is never called from inside a signal. Injected callables are method Callables only: no lambda or `bind()` that captures a sim object, and no sim object holds a reference back to `Battle`, so dropping the `Battle` frees everything and the weakref test passes. Gameplay classes never read `Engine`, `Time`, `OS`, a timer or `await`.
@@ -682,7 +682,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 
 ## Architecture Principles
 
-1. **The battle is a plain function of its inputs.** `(catalogue, stage_id, seed, command script)` determines the result. The sim runs headless, with no scene, no clock and no engine event. Bots, tests and the phone build run the same code. Everything else in this document follows from that.
+1. **The battle is a plain function of its inputs.** `(catalogue, stage_id, stage_seed, command script)` determines the result. The sim runs headless, with no scene, no clock and no engine event. Bots, tests and the phone build run the same code. Everything else in this document follows from that.
 2. **No globals, no autoloads.** The App Root holds the catalogue. The Builder injects it, plus `halted()`, `fatal()`, `targets()`, `cancel_input()`, the error sink and `to_ticks`, into whoever needs them. Dependency injection over singletons is a coding standard, and it is what makes each system unit-testable.
 3. **Data drives gameplay, read at use time.** No gameplay number lives in code. Every value a modifier could ever touch goes through the one stat accessor and is never cached, so the Vertical Slice stat resolver drops in without call-site changes.
 4. **Commit, then emit; observe, never steer.** State is final before any signal. Views and logs listen but cannot change a result, and a battle with all of them removed is identical.

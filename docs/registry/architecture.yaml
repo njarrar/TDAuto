@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: ""
+last_updated: "2026-11-05"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -53,7 +53,17 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: ready_catalogue
+    status: active
+    owner_system: app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    interface: "AppRoot holds the Ready catalogue for the session; BattleBuilder.build receives it; no system reaches it any other way"
+    write_access: app-root-only
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -81,7 +91,20 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: fatal_path
+    status: active
+    pattern: direct_call
+    producer: any-battle-system
+    consumers:
+      - flow
+      - app-root
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    signal_signature: "fatal(cause: String) is the method Callable FatalLatch.fatal, injected by BattleBuilder; FatalLatch emits latched(cause: String) once, connected to Flow's fatal entry"
+    referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -167,7 +190,25 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_singleton_coupling
+    status: active
+    description: "No autoload or global accessor for any gameplay object; AppRoot holds the catalogue and BattleBuilder injects every dependency."
+    why: "Globals break headless tests and make a clean retry unprovable."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: capturing_callable_injection
+    status: active
+    description: "Injected callables are method Callables on objects Battle holds; no lambda or bind() that captures a sim object, and no sim references Battle."
+    why: "A capture creates a reference cycle that keeps the old battle alive after retry."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: assert_for_release_checks
+    status: active
+    description: "Checks that must hold in release use the injected fatal or dev_error sinks (push_error), never assert."
+    why: "Export builds strip assert."
+    adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
 
 # Example:
 #
