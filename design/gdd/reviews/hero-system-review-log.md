@@ -325,3 +325,8 @@ No balance value changed; Status unchanged. Sources: `design/accessibility-requi
 - UI Requirements, Locked (user decision): under Reduce Motion a locked press shows the dotted outline and "Locked" for 1 s, with no motion (AR-V-11, IP-24, OI-04).
 - UI Requirements: "the nudge also repeats the prompt" now says what repeat looks like: the prompt line shows its text again for 1 s. Under Reduce Motion the static cue replaces it (OI-16).
 - Visual table, Cancelling: the reticle at alpha 0.3 (about 2.4:1) is recorded as an accepted exception to AR-V-04, since hiding the preview and kill marks is a non-alpha backup (OI-17). The Reduce Motion row points to the static cue.
+
+## Revision — 2026-11-05 — ADR-0010 sync
+Wording only; no balance value changed; Status unchanged. Source: ADR-0010 (Accepted 2026-11-05) Migration item 5; the user accepted the AC 28 change at ADR-0010 acceptance.
+- Rules 2 and 6: both commands return `BUSY` first (a call inside a tick or another command), and `HALTED` also follows each read. `pin` reads `walk_speed` before it commits; `burst` reads `reach`, then `telegraph_duration`, before it commits.
+- AC 28: "never pinned equals absent" becomes an isolation proof. A never-pinned HeroSim makes no read, no Combat call of kind HERO or BURST, no emit and no field change, and lint L-HERO-1 shows `Battle.tick` reaches Hero only through `hero_sim.tick()`. Building a battle without HeroSim would need a Builder flag, so the old run pair is gone.

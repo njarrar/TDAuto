@@ -3,7 +3,7 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 
@@ -34,10 +34,10 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Stage phases.**
 
-6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here.
+6. **Build.** A stage opens in Build with its clock stopped, so the player can read the new path. Wave 1 starts only when the player taps Start Wave. There is no timer here. The tap sends Flow's command `start_wave()`, which returns a `StartResult`: `OK`, `BUSY` (called inside a tick or another command), `HALTED` (Won, Lost or Fatal), or `NOT_BUILD` (any other phase, Paused included), checked in that order (ADR-0010).
 7. **Wave.** A wave runs until Enemy & Wave reports `wave_cleared`, meaning all its groups have spawned and every enemy, including any it spawned, has died or leaked. The last wave reports `waves_completed` instead, so Flow needs no wave count.
 8. **Intermission.** After every wave but the last, a countdown runs. Enemy & Wave owns its duration and sends it as the payload of `wave_cleared`. The simulation keeps ticking, so the burst keeps recovering. When it reaches 0 the next wave starts.
-9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback if the always-call bot below shows dominance. Bots do not call early unless a mode says so, and a **towers-only, always-call** mode joins the Pillar 2 bot gates.
+9. **Call early.** During Intermission the same button starts the next wave at once. Flow emits `wave_called_early(seconds_left)`, and the Tower GDD turns that into bonus gold. The button sends Flow's command `call_early()`, which returns a `CallResult`: `OK`, `BUSY`, `HALTED`, `NOT_INTERMISSION` (any other phase, Paused included), or `NO_TIME_LEFT` (a call at `intermission_left` 0, ignored with no signal), checked in that order (ADR-0010). Calling costs recovery and preparation time only: less time passes for the burst to recover and for re-pinning and building. The field is clear between waves, so once the burst is ready the cost is small, and a player who ignores the hero pays none of the burst part. The bonus must never depend on burst state, which would turn the hero into an economy timer. A wave cannot be called while another is running at MVP; allowing overlap is the fallback if the always-call bot below shows dominance. Bots do not call early unless a mode says so, and a **towers-only, always-call** mode joins the Pillar 2 bot gates.
 10. **Actions are never phase-locked.** Building, upgrading and re-pinning stay live in Build, Wave and Intermission, and a change of phase never cancels a gesture. In Build, towers and pins apply at once, while movement and timers begin on the first tick. The burst is the exception: Hero refuses it in Build, since a stopped clock would never let it recover.
 
 **Lives and outcome.**
@@ -149,8 +149,8 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If every enemy in a real stage has a `lives_cost` of 0**: the stage cannot be lost. The CI content test rejects it (Enemy & Wave owns the check); code-built fixtures may do it, so the catalogue validator does not.
 - **If `starting_lives` is 1**: the first costly leak is Lost.
 - **If the result is read after a loss**: "wave reached" is the last wave started, which is `wave_index()`.
-- **If a call-early command and the countdown's expiry fall together**: commands apply between ticks, so whichever comes first starts the wave, and the other finds no Intermission and is ignored. `wave_called_early` fires only for a real call.
-- **If Start Wave is tapped twice**: the second tap finds no Build and is ignored.
+- **If a call-early command and the countdown's expiry fall together**: commands apply between ticks, so whichever comes first starts the wave, and the other finds no Intermission and is ignored (`NOT_INTERMISSION`). `wave_called_early` fires only for a real call.
+- **If Start Wave is tapped twice**: the second tap finds no Build and is ignored (`NOT_BUILD`).
 - **If the last wave clears**: `waves_completed` applies; there is no Intermission and the button is gone.
 - **If focus is lost in Won, Lost or Fatal**: no state change.
 - **If focus is lost and the OS kills the app**: the stage is lost and the next launch boots cold.

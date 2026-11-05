@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: "2026-11-04"
+last_updated: "2026-11-05"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -372,11 +372,13 @@ interfaces:
       - hero-sim
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     # was: Combat consumed it and deliver applied 0 outside a tick (dropped after TD-ADR review)
-    signal_signature: "TickGuard.in_tick() -> bool injected as a method Callable; commands are thin public entry points that refuse with no change and ERR_COMMAND_IN_TICK when true; internal transitions call private functions"
+    # was: refuse with an unnamed refusal value (before ADR-0010 acceptance, 2026-11-05)
+    signal_signature: "TickGuard.in_tick() -> bool injected as a method Callable; commands are thin public entry points that, when true, change nothing, report ERR_COMMAND_IN_TICK and return BUSY (ADR-0010); internal transitions call private functions"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0004 Accepted 2026-11-04; binding"
   - contract: stat_read
     status: active
@@ -387,13 +389,16 @@ interfaces:
       - tower-sim
       - hero-sim
       - hud-logic
+      - hero-input
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     # was: HudLogic got it via a Battle.stat_accessor() getter and could read in a gold_changed handler (TD-ADR T1, T2)
-    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int, stat_float(ctx, key) -> float; bad call (null context, unresolved def, unknown key, inapplicable key, type mismatch, bad level, in that order) calls fatal once with cause code and returns 0 or 0.0; is_tower(id), level_count(def_id) never call fatal; object injected by the Builder from the public read-only member Battle.stat_accessor (ADR-0001 amended); the wrapper passes it and battle.halt_gate.halted (public read-only member, ADR-0001 amended) to HudLogic, which reads only in frame step 3, never inside a sim signal handler; caller checks halted() after every read; ReadContext made once per owner, live entity held by WeakRef or null"
+    # was: no HeroInput read site; consumers enemy-wave, tower-sim, hero-sim, hud-logic (before ADR-0010 acceptance, 2026-11-05)
+    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int, stat_float(ctx, key) -> float; bad call (null context, unresolved def, unknown key, inapplicable key, type mismatch, bad level, in that order) calls fatal once with cause code and returns 0 or 0.0; is_tower(id), level_count(def_id) never call fatal; object injected by the Builder from the public read-only member Battle.stat_accessor (ADR-0001 amended); the wrapper passes it and battle.halt_gate.halted (public read-only member, ADR-0001 amended) to HudLogic, which reads only in frame step 3, never inside a sim signal handler; caller checks halted() after every read; HeroInput reads Burst reach, radius, damage (own ReadContext) and Combat hp_left, is_dead in frame step 1, between ticks, only in the Cancelling and Live aim states, each followed by halted() (ADR-0005 amended with ADR-0010); ReadContext made once per owner, live entity held by WeakRef or null"
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0005 Accepted 2026-11-04; binding"
   - contract: battle_signal_catalogue
     status: active
@@ -425,11 +430,13 @@ interfaces:
       - bots
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     # was: no result-API or teardown wording; shallow read-only (before godot-specialist and TD-ADR review)
-    signal_signature: "Battle.take_result_snapshot() -> ResultSnapshot (src/core/flow/result_snapshot.gd) is the result API: plain values, each nested container read-only, per-source damage here, built once in the first frame step 3 that finds WON or LOST; the same instance feeds the result screen and run log; AppRoot may keep it past teardown; Flow.result() -> StageResult keeps outcome, last_wave_started, lives_left"
+    # was: no run counters in the snapshot (before ADR-0010 acceptance, 2026-11-05)
+    signal_signature: "Battle.take_result_snapshot() -> ResultSnapshot (src/core/flow/result_snapshot.gd) is the result API: plain values, each nested container read-only, per-source damage here, run counters too (towers_built and every HeroCounters field: ever_pinned, repins, bursts_fired, bursts_hit_0, bursts_hit_3, bursts_hit_5, burst_victims, burst_kills, kills_per_burst, kills_on_hit_3, as copies, arrays read-only; ADR-0006 amended with ADR-0010), built once in the first frame step 3 that finds WON or LOST; the same instance feeds the result screen and run log; AppRoot may keep it past teardown; Flow.result() -> StageResult keeps outcome, last_wave_started, lives_left"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0006 Accepted 2026-11-04; binding"
   - contract: input_resolver_signals
     status: active
@@ -724,15 +731,17 @@ api_decisions:
   - purpose: command_reentry_guard
     status: active
     # was: guard shape and pause rule unstated (before godot-specialist and TD-ADR review)
-    api: "Every public command: if in_tick(): return refusal; enter(); var r := _body(...); exit(); return r, one return path; ERR_COMMAND_IN_TICK means inside a tick or another command (ADR-0010 may rename BUSY); enter() reports a dev error if already entered; Battle.tick reports and resets a stuck guard; Flow.pause/resume enter only when in_tick() is false; ADR-0004 Decision 6 and Guideline 7 amended 2026-11-04, pending confirmation"
+    # was: return refusal, "ADR-0010 may rename BUSY", "pending confirmation" (before ADR-0010 acceptance, 2026-11-05)
+    api: "Every public command: if in_tick(): return BUSY; enter(); var r := _body(...); exit(); return r, one return path; the dev-error text stays ERR_COMMAND_IN_TICK, meaning inside a tick or another command; enter() reports a dev error if already entered; Battle.tick reports and resets a stuck guard; Flow.pause/resume enter only when in_tick() is false; ADR-0004 Decision 6 and Guideline 7 amended 2026-11-04 and 2026-11-05"
     not: "Lint-only ban on commands in handlers"
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     reason: "Signals fired by commands between ticks are not covered by the tick guard alone"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0006 Accepted 2026-11-04; binding"
   - purpose: headless_test_runner
     status: active
@@ -749,14 +758,16 @@ api_decisions:
   - purpose: project_lint
     status: active
     # was: one file per rule family, suppression markers allowed (before godot-specialist and TD-ADR review)
-    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5; no suppression markers"
+    # was: IDs L-LAYER-1 to L-TEST-5 without the command, dev and hero rows (before ADR-0010 acceptance, 2026-11-05)
+    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010); run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
     not: "Shell or Python regex over source text; gdtoolkit parser; inline lint-allow markers"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0007 Accepted 2026-11-04; binding"
   - purpose: test_push_error_reporting
     status: active
@@ -784,14 +795,16 @@ api_decisions:
   - purpose: gesture_trace_and_log
     status: active
     # was: trace fresh per press, chip_state() on TowerInput (before godot-specialist and TD-ADR review)
-    api: "InputResolver.last_trace() -> GestureTrace, built once at the exit to Idle before became_idle, and state(), read only in src/foundation/input/, src/presentation/dev/ and tests (L-INPUT-7); GestureLog shipped but built by the wrapper only when OS.is_debug_build(), listens through view_wiring to the eight resolver signals and tower_upgraded, reads TowerInput.chip_state() at each tower prompt, writes JSON lines through ADR-0010's sink"
+    # was: "writes JSON lines through ADR-0010's sink", sink unnamed (before ADR-0010 acceptance, 2026-11-05)
+    api: "InputResolver.last_trace() -> GestureTrace, built once at the exit to Idle before became_idle, and state(), read only in src/foundation/input/, src/presentation/dev/ and tests (L-INPUT-7); GestureLog shipped but built by the wrapper only when OS.is_debug_build(), listens through view_wiring to the eight resolver signals and tower_upgraded, reads TowerInput.chip_state() at each tower prompt (chip_state is TowerInput's, settled 2026-11-04), writes JSON lines through JsonlFileSink.append_line for user://gesture_log.jsonl (ADR-0008 amended with ADR-0010)"
     not: "A clock or log in the resolver; a log inside TowerSim or TowerInput"
     adr: docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     reason: "Sub-slop travel, silent endings and tie-break rules reach no signal; the Pillar 4 phone test needs them (TR-input-015)"
     referenced_by:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
-    revised: "2026-11-04"
+    revised: "2026-11-05"
     notes: "ADR-0008 Accepted 2026-11-04; binding"
   - purpose: dev_log_file_write
     status: active
@@ -1056,17 +1069,21 @@ forbidden_patterns:
     notes: "ADR-0009 Accepted 2026-11-04; binding"
   - pattern: command_result_truthiness
     status: active
-    description: "No if r:, not r or bare OK against a command result; compare to the qualified enum value, e.g. TowerSim.BuildResult.OK (lint L-CMD-2, ADR-0007 amendment owed)"
+    # was: "ADR-0007 amendment owed" (before the ADR-0007 amendment, 2026-11-05)
+    description: "No if r:, not r or bare OK against a command result; compare to the qualified enum value, e.g. TowerSim.BuildResult.OK (lint L-CMD-2, ADR-0007 amended 2026-11-05)"
     why: "OK is 0 and falsy; bare OK is the global Error.OK, which is 0 by definition, so r == OK parses and is true and the bug is silent (probes T6, R9); the lint covers hud_logic.gd, tower_input.gd, hero_input.gd and tests/helpers/bots/"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
+    revised: "2026-11-05"
     notes: "ADR-0010 Accepted 2026-11-05; binding"
   - pattern: command_call_outside_owner
     status: active
-    description: "Keyed on receivers in src/: tower_sim.build(, flow.start_wave(, flow.call_early( only in hud_logic.gd; tower_sim.upgrade( only in tower_input.gd; hero_sim.pin(, hero_sim.burst( only in hero_input.gd (lint L-CMD-1); no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false; no sim-folder file outside src/feature/hero/ and no src/root/ file but battle.gd and battle_builder.gd names hero_sim or HeroSim (lint L-HERO-1); ADR-0007 amendment owed"
+    # was: "ADR-0007 amendment owed" (before the ADR-0007 amendment, 2026-11-05)
+    description: "Keyed on receivers in src/: tower_sim.build(, flow.start_wave(, flow.call_early( only in hud_logic.gd; tower_sim.upgrade( only in tower_input.gd; hero_sim.pin(, hero_sim.burst( only in hero_input.gd (lint L-CMD-1); no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false; no sim-folder file outside src/feature/hero/ and no src/root/ file but battle.gd and battle_builder.gd names hero_sim or HeroSim (lint L-HERO-1); ADR-0007 amended 2026-11-05"
     why: "Inputs must act only through their commands so the bot path equals the human path; telemetry must never change a result"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
+    revised: "2026-11-05"
     notes: "ADR-0010 Accepted 2026-11-05; binding"
   - pattern: shader_or_particles_in_battle_views
     status: active

@@ -3,7 +3,7 @@
 > **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers, one user decision and all recommended items applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
@@ -52,7 +52,8 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 
 | Result | Meaning | Checked |
 |---|---|---|
-| `HALTED` | `halted()` is true | 1st, and again after the cost read |
+| `BUSY` | Called inside a tick or inside another command; the dev error reads `ERR_COMMAND_IN_TICK` (ADR-0010) | Before all others |
+| `HALTED` | `halted()` is true, or the cost read latched Fatal (read-time `HALTED`: nothing changes) | 1st after `BUSY`, and again after the cost read |
 | `BAD_SLOT` | `slot_index` outside 0 to the slot count minus 1, since a negative index would wrap | 2nd |
 | `BAD_TOWER` | Data's `is_tower(id)` is false, `build` only | 3rd |
 | `SLOT_OCCUPIED` / `NO_TOWER` | `build` on a built slot / `upgrade` on an empty one | 4th |
@@ -100,7 +101,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_state(slot_index)` (empty, or `tower_id`, `level` and `cooldown_left`). The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10). It reads them when drawing, never in a sim signal handler: `gold_changed` only marks costs dirty (Battle HUD Rule 7, ADR-0005). In development builds `GestureLog` (Input Rule 13, ADR-0008) hears `tower_upgraded` and reads `chip_state()` when its `set_prompt` names a tower, so Tower keeps no log of its own.
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_count()`, and `slot_state(slot_index)`, which returns that slot's own `SlotState` (`tower_id`, `&""` when empty; `level`, 0 when empty; `cooldown_left`), updated at each commit; a bad index returns one shared empty `SlotState` and reports a dev error once (ADR-0010). Views never keep it past their slot. The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10). It reads them when drawing, never in a sim signal handler: `gold_changed` only marks costs dirty (Battle HUD Rule 7, ADR-0005). In development builds `GestureLog` (Input Rule 13, ADR-0008) hears `tower_upgraded` and reads `chip_state()` when its `set_prompt` names a tower, so Tower keeps no log of its own.
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 

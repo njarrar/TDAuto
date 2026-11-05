@@ -3,7 +3,7 @@
 > **Status**: Designed (pending independent review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
@@ -101,7 +101,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **The human log.**
 
-19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Each record holds a launch ID and the build hash. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied()`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call, written at the next `wave_cleared` or outcome: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. It reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
+19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Two dev objects share the work (ADR-0010 Decision 8). **RunMeasures** listens to the sims and keeps only what the result snapshot lacks: the real seconds to first pin, build and burst; per call, `seconds_left`, burst state and lives at the call; and `best_victims` per burst. It closes each call record at the next `wave_cleared` or outcome, with the lives lost. **RunLog** names no sim: it writes each closed call record, and on Won or Lost one attempt record from the result snapshot plus RunMeasures' values. Each record holds a launch ID and the build version. AppRoot makes the launch ID once per launch from the clock and four random bytes, never from a battle or cosmetic RNG. The build version is the project's version setting, or the engine version when that is empty. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied()`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. RunMeasures reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units. `I_top` and `I_bottom` are read once per battle, at build, and never change mid-battle. They are 0 on desktop and usually 0 on a phone, because ADR-0003's letterbox puts the notch and gesture bar in the bars outside the field. 1.5 units is 1 dp at a 360 dp width.
 

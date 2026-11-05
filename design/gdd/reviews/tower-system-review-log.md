@@ -71,3 +71,8 @@ No balance value changed; Status unchanged. Sources: `design/accessibility-requi
 - Rule 8 and its event table (user decision): the 200 ms chip guard counts from the press, as the arc's does. A press that begins within 200 ms is ignored even if released later; the window end still counts at release. Criteria 13, 15 and 16 give press and release times (IP-10, OI-11).
 - Visual table, Range ring: the next-level ring is a dashed 2 px cyan line at alpha 0.5 or above, 3:1 or above on the path, told apart from the current ring by pattern (AR-V-06, OI-02).
 - UI Requirements (user decision): under Reduce Motion a refused disc or chip shows a dotted outline and "Need N gold" for 1 s, with no motion (AR-V-11, IP-24, OI-04). The UX flag now asks the pass to place that cue.
+
+## Revision — 2026-11-05 — ADR-0010 sync
+Wording and tables only; no balance value changed; Status unchanged. Source: ADR-0010 (Accepted 2026-11-05) Migration item 5.
+- Rule 5: the result table gains `BUSY` (a call inside a tick or another command) before all other checks, and `HALTED` also covers a cost read that latched Fatal.
+- Rule 17: `slot_state(slot_index)` returns the slot's own `SlotState`; a bad index returns one shared empty sentinel and reports once. `slot_count()` is listed as a read.

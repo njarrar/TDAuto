@@ -37,8 +37,8 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 6
-last_updated: "2026-11-04"
+version: 7
+last_updated: "2026-11-05"
 
 requirements:
 - id: TR-data-001
@@ -765,9 +765,9 @@ requirements:
 - id: TR-hero-012
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "A resolver-driven script and a direct-command script give tick-identical HeroSim state; a never-pinned run equals a HeroSim-absent run"
+  requirement: "A resolver-driven script and a direct-command script give tick-identical HeroSim state; a never-pinned HeroSim makes no stat read, no Combat call of kind HERO or BURST, no emit and no field change on any tick, and Battle.tick reaches Hero only through hero_sim.tick()"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-hero-013
   system: hero
