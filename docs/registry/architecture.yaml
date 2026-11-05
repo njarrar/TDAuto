@@ -272,7 +272,7 @@ interfaces:
       - tower-system
       - hero-system
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
-    signal_signature: "Commands are applied synchronously from the input call stack, never queued and never from inside a tick; Battle.in_tick() makes command methods refuse and dev_error; ticks run only inside Clock.advance in the wrapper's _process after the frame's input"
+    signal_signature: "Commands are applied synchronously from the input call stack, never queued and never from inside a tick; Battle.in_dispatch() (of which in_tick() is the tick-only read) makes command methods refuse and dev_error; ticks run only inside Clock.advance in the wrapper's _process after the frame's input"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
     added: 2026-11-05
@@ -369,6 +369,7 @@ interfaces:
     producer: combat
     consumers:
       - combat-view
+      - enemy-view
     adr: docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
     signal_signature: "attack_fired(source_kind: Combat.SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float), damage_applied(event: DamageEvent, applied: float, position: Vector2, killed: bool, spawn_id: int); view-only, damage_applied is last in deliver"
     referenced_by:
@@ -1112,7 +1113,7 @@ api_decisions:
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
     added: 2026-11-05
   - purpose: dev_telemetry_run_log
-    api: "RunLog is built by the wrapper only when OS.is_debug_build(); events buffer, the wrapper flushes once per frame through an injected (String) -> bool sink; buffer dropped when is_fatal(); write failure non-fatal; attempt and call JSON-line records per TR-hud-018"
+    api: "RunLog and GestureLog are built by the wrapper only when its setup(battle, dev_telemetry) argument is true (AppRoot is the only reader of OS.is_debug_build() and passes it in); events buffer, the wrapper flushes once per frame through an injected (String) -> bool sink; buffer dropped when is_fatal(); write failure non-fatal; attempt and call JSON-line records per TR-hud-018"
     status: active
     adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
     tr: [TR-hud-013, TR-hud-018]
@@ -1178,6 +1179,15 @@ api_decisions:
     status: active
     adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
     tr: []
+    added: 2026-11-05
+
+  - purpose: flow_command_result_codes
+    api: "Flow.StartResult {OK = 0, HALTED, REENTERED, WRONG_PHASE} for start_wave(); Flow.CallResult {OK = 0, HALTED, REENTERED, WRONG_PHASE, NOT_CALLABLE} for the early call; same rules as the sims (state before geometry, refusal mutates and emits nothing, _in_command discipline); HALTED is silent, REENTERED calls dev_error once"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-state-008]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
     added: 2026-11-05
 
 # Example:
@@ -1704,6 +1714,41 @@ forbidden_patterns:
     tr: [TR-hud-017]
     rule: "HudField must call queue_redraw() only when HudRedrawKey changed or a timed visual runs; draw_string must never be used inside HudField or a field view"
     added: 2026-11-05
+  - pattern: L32
+    description: "Tower fields are written only in tower_sim.gd, Hero fields only in hero_sim.gd, _in_command only in its own sim (ADR-0010 Decision 12b)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: [TR-tower-002, TR-hero-002]
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L33
+    description: "src/battle/ never names TowerInput, HeroInput, RunLog or GestureLog (ADR-0010 Decision 12c)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: []
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L34
+    description: "run_log.gd and gesture_log.gd never name OS., Time., FileAccess or a sim command method (ADR-0010 Decision 12d)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: []
+    status: active
+    path: src/battle/run_log.gd
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L35
+    description: "Import direction: src/battle/ names nothing under src/presentation/ or src/app/; src/data/ names nothing under src/battle/, src/presentation/ or src/app/ (ADR-0006, ADR-0002)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: []
+    status: active
+    path: src/battle/
+    enforced_by: tools/ci/layer-lint.sh
+  - pattern: L36
+    description: "No draw_colored_polygon, draw_arc or draw_circle in per-entity loops under src/presentation/field/ (ADR-0011 Decision 11)"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-and-layer-lint.md
+    tr: []
+    status: active
+    path: src/presentation/field/
+    enforced_by: tools/ci/layer-lint.sh
 
 # Example:
 #

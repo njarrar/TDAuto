@@ -10,7 +10,7 @@ Proposed
 2026-11-05
 
 ## Decision Makers
-Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer. Reviewed once each on 2026-11-05 by `godot-specialist` (1 blocking, 10 minor) and `technical-director` under gate TD-ADR (CONCERNS: 3 blocking, 9 concerns, 5 advisory); all findings are applied in this revision. No second review pass was run.
+Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer. Reviewed once each on 2026-11-05 by `godot-specialist` (1 blocking, 10 minor) and `technical-director` under gate TD-ADR (CONCERNS: 3 blocking, 9 concerns, 5 advisory); all findings are applied in this revision. No second review pass was run. Fix round 2026-11-05 after architecture-review-2026-11-05 (items applied: D1, D2, D6).
 
 ## Summary
 The battle must advance only through `Battle.tick(dt)` at a fixed rate, in one order, with commands between ticks and every random draw reproducible from a seed, while the views and HUD run on real time and keep running after the battle clock stops. This ADR fixes a 60 Hz accumulator `Clock` (a `RefCounted` in the presentation root) driven from the wrapper's `_process` with a cap of 3 ticks per frame (floor 2) whose excess time is dropped, the six-slot tick order, commands applied immediately from the input call stack, a single seeded RNG owned by `Battle` that no MVP system reads, a float policy with per-architecture baselines, `to_ticks` as round-half-away-from-zero, and a gated frame delta for every view clock.
@@ -92,7 +92,7 @@ The GDDs require a battle that is a pure function of `(catalogue, stage_id, seed
 
 | Slot | System | Work |
 |---|---|---|
-| 1 | Flow `tick` | intermission countdown (integer ticks), wave start and clear checks |
+| 1 | Flow `tick` | intermission countdown (integer ticks), wave start |
 | 2 | EnemyWave `advance(tick)` | spawn from the absolute schedule, move, leak (leaks resolve before fire) |
 | 3 | Combat `tick_status(roster)` | slow countdown over the roster |
 | 4 | TowerSim `tick` | by ascending slot index: cooldown, target, `report_attack`, deliver |
@@ -103,10 +103,10 @@ The GDDs require a battle that is a pure function of `(catalogue, stage_id, seed
 
 **7. Frame order and commands between ticks.** Per frame:
 
-1. Engine, before any `_process`: buffered input is flushed (verified on desktop, ADR-0003; provisional on D1). `InputAdapter` callbacks run, the resolver emits, and `HeroInput`, `TowerInput` and `HudLogic` **issue commands synchronously from that call stack**: a command is applied the instant its gesture resolves, not queued. This is "between ticks" because ticks run only inside `Clock.advance`, which is called only from the wrapper's `_process`, and engine callbacks run one after another on the main thread (the premise of Verification item 2). A command therefore never runs inside a tick. The **command guard** is in the sim: `Battle.tick` sets a private in-tick flag and exposes `in_tick()`; Flow, TowerSim and HeroSim receive `battle.in_tick` as a method Callable and their command methods, when it is true, report through `dev_error` and refuse (the result code is ADR-0010's). This catches the realistic breach, a listener of a signal emitted inside a tick that issues a command, in every headless test (commands never pass through the wrapper, and bots run with no Clock). `Clock.is_ticking()` stays, for Verification item 2's lifecycle log only.
+1. Engine, before any `_process`: buffered input is flushed (verified on desktop, ADR-0003; provisional on D1). `InputAdapter` callbacks run, the resolver emits, and `HeroInput`, `TowerInput` and `HudLogic` **issue commands synchronously from that call stack**: a command is applied the instant its gesture resolves, not queued. This is "between ticks" because ticks run only inside `Clock.advance`, which is called only from the wrapper's `_process`, and engine callbacks run one after another on the main thread (the premise of Verification item 2). A command therefore never runs inside a tick. The **command guard** is in the sim: `Battle.tick` sets a private in-tick flag and exposes `in_tick()`; `Battle.in_dispatch()` (ADR-0006: `in_tick()` or any sim's `in_command()`) is the command guard, which Flow, TowerSim and HeroSim receive as a method Callable, and their command methods, when it is true, report through `dev_error` and refuse (the result code is ADR-0010's). This catches the realistic breach, a listener of a signal emitted inside a tick that issues a command, in every headless test (commands never pass through the wrapper, and bots run with no Clock). `Clock.is_ticking()` stays, for Verification item 2's lifecycle log only.
 2. `BattleWrapper._process(delta)`, in this order and nothing else:
    a. compute `view_dt` (Decision 8: 0 while Paused, else the delta clamped to 0.1 s);
-   b. real-time models: `HudLogic.advance(view_dt * 1000.0)` (it clamps to 100 ms itself), `ChipWindow.advance(view_dt * 1000.0)`, `HeroInput.update()`, then the view clocks (`ClearanceWindow.advance(view_dt)`, flash timers, the hero view);
+   b. real-time models: `HudLogic.advance(view_dt * 1000.0)` (it clamps to 100 ms itself), `TowerInput.advance(view_dt * 1000.0)` (which advances its ChipWindow), `HeroInput.update()`, `RunLog.advance(view_dt)` and `RunLog.flush()` when dev telemetry is on (ADR-0010), then the view clocks (`ClearanceWindow.advance(view_dt)`, flash timers, the hero view);
    c. `Clock.advance(delta)`: zero up to `MAX_TICKS_PER_FRAME` calls to `battle.tick(DT)`;
    d. views read the committed state (rosters, slot state, hero queries, HUD view-models), and mark themselves for redraw. **The Call button's bonus and seconds-left are read here, after the ticks, from the same `intermission_left` the command will read, and are never cached in `HudLogic.advance`** (ADR-0011's redraw key must honour this).
 
@@ -146,7 +146,7 @@ Engine frame start: input flushed ──► InputAdapter ► resolver ► HeroIn
                                                        └─ commands applied NOW (between ticks)
 BattleWrapper._process(delta)                          (no _physics_process anywhere)
  a view_dt = 0 if _paused else min(delta, 0.1)
- b HudLogic.advance(ms) · ChipWindow.advance(ms) · HeroInput.update() · ClearanceWindow.advance(s) · view timers
+ b HudLogic.advance(ms) · TowerInput.advance(ms) (ChipWindow) · HeroInput.update() · RunLog.advance/flush (dev only) · ClearanceWindow.advance(s) · view timers
  c Clock.advance(delta): acc += delta; owed = floor(acc/DT); owed > CAP ? (n = CAP, acc = 0) : (n = owed, acc -= n*DT)   [acc settled BEFORE the loop]
       └─ n x battle.tick(DT)
            gate: halted() or phase not WAVE/INTERMISSION ─► return
@@ -348,7 +348,7 @@ Not covered by `docs/engine-reference/godot/`; seven items, each mapped to a Ver
 - `tr-registry.yaml`: TR-hero-016 was registered by `/architecture-review` on 2026-11-05 (done).
 - `architecture.md`: Data Flow 1 order (real-time models before ticks) is confirmed; QQ-01 and QQ-05 close; QQ-11 stays open; QQ-22 stays open until the device run.
 - Registry stances appended to `docs/registry/architecture.yaml` when this ADR is Accepted:
-  - Interface contracts: `tick_entry` (Clock.advance drives `Battle.tick(DT)` from the wrapper's `_process` only; the gate; the six-slot order with `halted()` between slots); `commands_between_ticks` (applied synchronously from the input call stack, never queued; the `Battle.in_tick()` guard); `view_clock` (`view_dt` = 0 under Pause else the delta clamped to 0.1 s, to every frame-clock consumer, never a sim tick; the Call bonus read after the ticks); `flow_phase_fatal` (`Flow.phase()` reads FATAL whenever the latch is set, via `Battle.is_fatal`).
+  - Interface contracts: `tick_entry` (Clock.advance drives `Battle.tick(DT)` from the wrapper's `_process` only; the gate; the six-slot order with `halted()` between slots); `commands_between_ticks` (applied synchronously from the input call stack, never queued; the `Battle.in_dispatch()` guard, of which `Battle.in_tick()` is the tick-only read); `view_clock` (`view_dt` = 0 under Pause else the delta clamped to 0.1 s, to every frame-clock consumer, never a sim tick; the Call bonus read after the ticks); `flow_phase_fatal` (`Flow.phase()` reads FATAL whenever the latch is set, via `Battle.is_fatal`).
   - Performance budgets: 60 fps / 16.6 ms on mobile, with per-system slices input and commands 0.5 ms, simulation ticks 4.0 ms (the tick slice, unmeasured), views and HUD 3.0 ms.
   - API decisions: `tick_driver` (accumulator Clock in `_process`, 60 Hz, cap 3 floor 2, owed time dropped); `authored_time_to_ticks` (`roundi`, halves away from zero, integer countdowns); `gameplay_rng` (one `Battle`-owned generator, no MVP reader, wrapper-held cosmetic RNG); `float_policy` (scalar floats, no `Vector2` method or operator, per-host baselines); `baseline_storage` (`var_to_str`, never JSON); `retry_seed` (`base + n`, recorded).
   - Forbidden patterns: `physics_process_anywhere` (including the four settings), `sim_time_outside_tick`, `command_inside_tick`, `view_clock_on_sim_tick`.

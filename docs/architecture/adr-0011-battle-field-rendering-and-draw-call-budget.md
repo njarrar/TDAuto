@@ -10,7 +10,7 @@ Proposed
 2026-11-05
 
 ## Decision Makers
-Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer in an autonomous run (no questions asked; every open point is a Verification row). Reviewed 2026-11-05 by godot-specialist (BLOCK: 3 blockers, 8 minors) and technical-director (CONCERNS: 7 concerns, 5 advisories); every finding was applied in the same day's fix round (draw-primitive rule from the windowed probe, tint on the field base, glow, modals inside the 12-call cap, DangerRule, kill styling from `damage_applied`). A re-review of the revised ADR is still owed before Acceptance.
+Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer in an autonomous run (no questions asked; every open point is a Verification row). Reviewed 2026-11-05 by godot-specialist (BLOCK: 3 blockers, 8 minors) and technical-director (CONCERNS: 7 concerns, 5 advisories); every finding was applied in the same day's fix round (draw-primitive rule from the windowed probe, tint on the field base, glow, modals inside the 12-call cap, DangerRule, kill styling from `damage_applied`). A re-review of the revised ADR is still owed before Acceptance. Fix round 2026-11-05 after architecture-review-2026-11-05 (items applied: C1 observer row cross-reference, D2, D3, D4, D11, Depends On ADR-0001 and ADR-0007).
 
 ## Summary
 Presentation leaves open how the battle field is drawn, how many draw calls it may cost, how the HUD decides to redraw, and how outcomes tint the field. This ADR makes every field view one node with one `_draw` (enemy, tower, combat, path, hero, `HudField`), turns the "pools" into slot arrays inside those draws rather than into nodes, fixes the redraw key as a pure merge plus a shared quantiser, places the view-model refresh after the ticks, and carries the clearance window, the outcome tint, the no-shader hit flash, the no-interpolation policy and the evidence naming. The 60-call budget stays provisional until a device run.
@@ -44,7 +44,7 @@ Presentation leaves open how the battle field is drawn, how many draw calls it m
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0003 (Accepted or Proposed per its file: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
+| **Depends On** | ADR-0001 (composition root, wrapper `setup(battle, dev_telemetry)`); ADR-0007 (lint rows, test runner); ADR-0003 (Accepted or Proposed per its file: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
 | **Delegates To** | ADR-0007 (lints named in Decision 13; test runner for the pure units); ADR-0010 (the sims' read methods exist as named; input; commands); ADR-0004 (clock, ticks); `technical-artist` / `art-director` (the ring width bias, glyph shapes, tint wording, V3 and V7); `ui-programmer` (HudTopBand Controls) |
 | **Enables** | Every Presentation story: HudField, field views, Combat view, hero view, outcome presentation; ADR-0007's evidence items |
 | **Blocks** | The first HudField or Combat-view story (architecture.md Required ADRs). Only Decision 11's numbers stay provisional |
@@ -80,19 +80,20 @@ Eight requirements are waiting on one rendering decision: TR-combat-011, TR-enem
 
 **5. Hit flash (QQ-10): none, no shader.** The flash is a polygon that `CombatView` draws, not a `modulate` or a shader on a pooled node, because no enemy node exists (Decision 1). This removes the hit-flash shader from art bible §8's three-shader allowance; the other two (chevron pulse, outline) stay allowed but this ADR uses neither, so the MVP scene has **zero** shaders. Closes QQ-10; the Combat GDD already uses none. A marker beside the body versus the body drawn in the flash colour (no extra call, since the body is already a `draw_primitive` run) is an art-director call (V13).
 
-**6. `ClearanceWindow` (TR-combat-015).** A `RefCounted` in `src/presentation/combat_view/`, advanced by `advance(view_dt)` from the wrapper (ADR-0004 step b). Rules: `burst_started` opens it (open, no tail yet). The next BURST `attack_fired` (it fires even for an empty burst) is the release and starts a tail of `CLEARANCE_TAIL_SECONDS` (data, 0.15, owned by Hero's Visual Requirements). `advance` runs the tail down and closes at 0. If a `phase_changed` to WON, LOST or FATAL arrives while open and not released, the window closes at once; a `phase_changed` to anything else, **Paused included**, is ignored; once released, an outcome does not stop the tail (frame clock). Paused freezes the tail because `view_dt` is 0. While `is_open()`, `CombatView` suppresses tower flashes and splash rings and draws no other gold, glow or expanding ring (the burst stays the brightest thing).
+**6. `ClearanceWindow` (TR-combat-015).** (HudLogic's path, deferred here by ADR-0010: `src/presentation/hud/hud_logic.gd`, with `HudField`, `HudTopBand` and `HudModals` beside it as `hud_field.gd`, `hud_top_band.gd`, `hud_modals.gd`.) A `RefCounted` in `src/presentation/field/clearance_window.gd` (with the views), advanced by `advance(view_dt)` from the wrapper (ADR-0004 step b). Rules: `burst_started` opens it (open, no tail yet). The next BURST `attack_fired` (it fires even for an empty burst) is the release and starts a tail of `CLEARANCE_TAIL_SECONDS` (data, 0.15, owned by Hero's Visual Requirements). `advance` runs the tail down and closes at 0. If a `phase_changed` to WON, LOST or FATAL arrives while open and not released, the window closes at once; a `phase_changed` to anything else, **Paused included**, is ignored; once released, an outcome does not stop the tail (frame clock). Paused freezes the tail because `view_dt` is 0. While `is_open()`, `CombatView` suppresses tower flashes and splash rings and draws no other gold, glow or expanding ring (the burst stays the brightest thing).
 
 **7. Frame order inside `BattleWrapper._process`** (ADR-0004 fixes the slots; this ADR places the rest):
 ```
 a. view_dt                                   (ADR-0004, 8)
-b. HudLogic.advance, ChipWindow.advance, HeroInput.update,
+b. TowerInput.advance(view_dt_ms), HeroInput.update(), HudLogic.advance,
+   RunLog.advance / RunLog.flush (only when dev telemetry is on),
    ClearanceWindow.advance(view_dt), flash timers, tint.advance(view_dt)
-c. clock: ticks_owed
-d. for each owed tick: battle.tick(dt)
+c. Clock.advance(delta)  -> runs the owed ticks itself, each battle.tick(dt) (ADR-0004 Decision on Clock)
+d. (no wrapper tick loop: the ticks already ran inside c)
 e. refresh, once per frame, after the ticks (this ADR):
    1. EnemySlots.sync(roster, view_dt), DangerRule.observe(...)  -> sets _dirty if any tick ran, a slot is dying, or a timer runs
    2. TowerView / HeroView / CombatView read their surfaces
-   3. bonus = tower_sim.early_call_bonus()    -> read here, after the ticks, never cached across frames
+   3. bonus = tower_sim.early_call_bonus(seconds_left)    -> read here, after the ticks, never cached across frames
    4. key = HudRedrawKey.merge(...)           -> HudField compares to last key, calls queue_redraw() on change
    5. each field view: if _dirty: queue_redraw()
 ```
@@ -144,7 +145,7 @@ BattleWrapper._process
   c/d ticks ───────────────► Battle (RefCounted sims)
   e refresh (read-only)
       roster() ──► EnemySlots ──► EnemyView._draw (3 passes)
-      slot_state() ──► TowerView      Combat signals ──► CombatView (16 markers) ◄─ ClearanceWindow
+      slot_count()/tower_at() ──► TowerView      Combat signals ──► CombatView (16 markers) ◄─ ClearanceWindow
       HeroInput/HeroSim ──► HeroView  phase_changed WON/LOST ──► FieldTint (backdrop, glow_scale)
       HudLogic part + HeroInput ──► HudRedrawKey.merge ──► HudField.queue_redraw (on change)
 CanvasLayer: HudField, HudTopBand (3 Labels + pips), HudModals (toggle on modal_changed)
@@ -187,14 +188,14 @@ class_name EnemySlots extends RefCounted
 func sync(roster: Array[Targetable], view_dt: float) -> void   # reads, never stores roster
 func mark_killed(spawn_id: int) -> void                        # from damage_applied(killed)
 ```
-`EnemyView extends Node2D` owns an `EnemySlots`, connects `damage_applied` only, and draws.
+`EnemyView extends Node2D` owns an `EnemySlots`, connects `damage_applied` only, and draws. Its row in the Observer allowlist lives in ADR-0006 Decision 5 (`damage_applied`: Combat view, EnemyView, audio (Alpha)); ADR-0011 adds no observer the table lacks.
 
 ### Implementation Guidelines
 - Each field view must be a single `Node2D` with one `_draw`, and must never create a child node per entity or set a material, a shader, a `z_index` or per-entity `modulate`.
 - A view must never call a sim method that mutates, never hold a reference to a sim in a field that outlives the battle, and must listen only to the ADR-0006 allowlist.
 - Views must receive `view_dt` from the wrapper and must never read the engine delta, `Time` or `Engine`; they must never be driven by a tick for the duration of a visual.
 - `roster()` and `targets()` results must never be stored; copy fields into the slot arrays each refresh.
-- `early_call_bonus()` must be read after the ticks of the same frame and never cached across frames.
+- `early_call_bonus(seconds_left)` must be read after the ticks of the same frame and never cached across frames.
 - `HudField` must call `queue_redraw()` only when `HudRedrawKey` changed or a timed visual runs; field views only when `_dirty`.
 - Every numeric visual constant (flash seconds, tail, tint seconds and amounts, ring width bias, slot counts, dying seconds) comes from the catalogue or the HUD record, never a literal.
 - Field `_draw`s must use `draw_primitive` (3 or 4 points), `draw_rect`, `draw_line`/`draw_multiline` and `draw_texture_rect`, grouped by type, and must never call `draw_colored_polygon`, `draw_arc` or filled `draw_circle` in a per-entity loop.

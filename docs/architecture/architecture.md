@@ -347,7 +347,7 @@ Not built at MVP. The contract MVP code must respect: progression systems own th
 
 ### 9. Dev telemetry path
 
-RunLog and GestureLog are built by the wrapper only when `OS.is_debug_build()`; events buffer, the wrapper flushes once per frame through the sink; the buffer is dropped when the latch is set (ADR-0010 Decision 13). A gesture-log harness listens to resolver signals; a run log appends JSON lines to `user://run_log.jsonl` through an injectable sink. A write failure is non-fatal and release builds never write (TR-hud-013, TR-input-015). Both listen only; neither can change a result.
+RunLog and GestureLog are built by the wrapper only when its `dev_telemetry` argument is true (`AppRoot` passes `OS.is_debug_build()`; ADR-0001 as amended 2026-11-05, ADR-0010 Decision 13); events buffer, the wrapper flushes once per frame through the sink; the buffer is dropped when the latch is set (ADR-0010 Decision 13). A gesture-log harness listens to resolver signals; a run log appends JSON lines to `user://run_log.jsonl` through an injectable sink. A write failure is non-fatal and release builds never write (TR-hud-013, TR-input-015). Both listen only; neither can change a result.
 
 ### 10. Frame budget (proposal, unmeasured)
 
