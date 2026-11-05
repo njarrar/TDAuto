@@ -464,6 +464,38 @@ interfaces:
       - docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
     added: 2026-11-05
     revised: ""
+  - contract: input_resolver_api
+    status: active
+    pattern: method-call
+    producer: input-gesture-resolver
+    consumers:
+      - input-adapter
+      - tower-input
+      - hero-input
+      - hud-logic
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-001, TR-input-007, TR-input-008, TR-input-010, TR-input-011]
+    signature: "InputResolver extends RefCounted (src/presentation/input/input_resolver.gd); static create(drag_slop, tap_slop, dev_error = Callable()) -> InputResolver (null if invalid); static validate(drag_slop, tap_slop) -> bool; press/move/release(pointer: int, pos: Vector2), cancel_pointer(pointer: int), cancel(); register(kind: Kind {TAP, SINK, DRAG}, priority: int, centre: Vector2, radius: float, enabled = true) -> int (NONE = -1, ids from 1, never reused); unregister(id), set_centre(id, centre), set_enabled(id, enabled)"
+    tests: tests/unit/input/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: input_resolver_signals
+    status: active
+    pattern: signal
+    producer: input-gesture-resolver
+    consumers:
+      - tower-input
+      - hud-logic
+      - hero-input
+      - gesture-log
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-009, TR-input-015, TR-hud-009]
+    signal_signature: "pressed(best_tap: int, best_drag: int, p: Vector2), tapped(best_tap: int, p: Vector2), ground_tapped(p: Vector2), drag_started(best_drag: int, press_pos: Vector2, p: Vector2), drag_moved(best_drag: int, press_pos: Vector2, p: Vector2), drag_ended(best_drag: int, press_pos: Vector2, release_pos: Vector2), drag_cancelled(best_drag: int), became_idle(); became_idle is last on every exit to Idle"
+    tests: tests/unit/input/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -793,8 +825,26 @@ api_decisions:
     reason: "An emit from inside a fault would publish half-committed state"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
     added: 2026-11-05
     revised: ""
+  - purpose: resolver_call_queue_and_registry
+    status: active
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-010, TR-input-007]
+    api: "press/move/release/cancel_pointer/cancel made from a handler append to a FIFO queue drained by the outermost call (QUEUE_LIMIT 64); register/unregister/set_centre/set_enabled are never queued and apply at once, register returns its id synchronously; winners are frozen values copied at press"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    added: 2026-11-05
+  - purpose: resolver_gesture_log_ring
+    status: active
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-015]
+    api: "PackedInt32Array ring of LOG_CAPACITY 32 x LOG_FIELDS 7 (seq, call, pointer, state_before, state_after, best_tap, best_drag); transitions only; read by recent_transitions(); no time"
+    referenced_by:
+      - docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    added: 2026-11-05
 
 # Example:
 #
@@ -1030,6 +1080,24 @@ forbidden_patterns:
     description: "No `get_connections()` or `get_signal_connection_list()` under src/; test-only."
     why: "Each call allocates an Array of Dictionary; the wiring test is its only user."
     adr: docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
+    added: 2026-11-05
+  - pattern: resolver_reads_engine_input_or_time
+    status: active
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-001]
+    rule: "input_resolver.gd must never reference InputEvent, Node, Time, Engine, OS, DisplayServer, Input, a camera or the scene tree; it is driven only by its five calls"
+    added: 2026-11-05
+  - pattern: resolver_hit_constants_in_resolver
+    status: active
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-007]
+    rule: "Hit radii, priorities, edge_reject_margin and slop literals must never appear in input_resolver.gd; owners declare radii and priorities (ADR-0010), slops come from InputRecord by injection"
+    added: 2026-11-05
+  - pattern: resolver_target_id_reuse_or_dictionary_order
+    status: active
+    adr: docs/architecture/adr-0008-input-resolver-core-and-signal-contract.md
+    tr: [TR-input-007]
+    rule: "Target ids must never be reused or lowered; the hit-test tie-break must iterate the ascending id array and never rely on Dictionary iteration order"
     added: 2026-11-05
 
 # Example:
