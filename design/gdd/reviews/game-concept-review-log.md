@@ -38,3 +38,6 @@ Reviewed-Content-Hash: design/gdd/systems-index.md be3052ce50f27a962ca9eff65e11f
 
 ## Revision — 2026-11-04 — accessibility and pattern fixes (MVP)
 Status unchanged. Pillar 4's design test read "Drag priority: burst > hero". It now reads "hero over burst (hero 200, burst 100)", matching the Input GDD priority table and Hero Rule 15 (OI-19 in `design/ux/interaction-patterns.md`).
+
+## Revision — 2026-11-05 — review recommendations applied
+Status unchanged. Pillar 4's design test and the matching design risk said "a non-developer tester". Both now say "at least two non-developer testers", matching the Input GDD's P1 gate. From the battle HUD review recommendations.

@@ -40,3 +40,17 @@ Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 4e034772ff47e826f54e
 Reviewed-Content-Hash: design/gdd/enemy-wave.md adfe9932b1756518dd4219a26cdb9c048950950d
 Reviewed-Content-Hash: design/gdd/combat-damage.md e4df04fab059c0779ec3460522a8b4f0f6605fc1
 Reviewed-Content-Hash: design/gdd/data-config-pipeline.md fb484d24990461f0800de4d022afa95997ee512d
+
+## Revision — 2026-11-05 — review recommendations applied
+Status unchanged (In Review; re-review pending). The user asked for the recommended items to be applied. Wording and criteria only; no balance value or design intent changed.
+- UI Requirements: arming moves from the 120 ms list to its own 300 ms entry, matching Rule 11, the Visual table and IP-21.
+- Rule 6: the arc discs state radius 36 beside TAP 300.
+- Rule 16 item 4: the count is the snapshot's `got_through`; HudLogic reads each type's `lives_cost` from its Enemy record through the accessor in frame step 3 (ADR-0005 Decision 5), since the snapshot does not carry it.
+- Rule 19: "damage by source and kind" now names the snapshot fields `damage_towers`, `damage_hero`, `damage_burst` and `hero_share`.
+- New Tuning Knobs section: the HudLogic constants (arming 300 ms, disc guard 200 ms, `R` 76, disc radius 36, Start/Call radius 48, three ground rings, result delays 400 and 1,000 ms) with safe ranges, and a pointer to ADR-0011's `ViewStyle` for pixel-only values.
+- AC 1, 29 and 33 rewritten in a measurable form: AC 1 compares a rebuilt HudLogic with a fresh one; AC 29 compares `battle_state.digest(battle)` and `counters()` after every tick (ADR-0007 helper, ADR-0010 Decision 7); AC 33 needs each check to fail on its own fixture while the others pass.
+- AC 5 now covers the static refusal cue on the chip and the locked burst button too (AR-V-11, IP-24).
+- New AC 34: HudTopBand sets `accessibility_name` and `accessibility_live` (`AccessibilityServer.LIVE_POLITE`) on a gold or lives change (TR-hud-001, ADR-0011 Decision 6).
+- Header Last Verified set to 2026-11-05.
+Deferred: text sizes against AR-V-01 (may break layout clearances; needs the UX spec); Player Fantasy (advisory at `standard`); a bottom inset over 72 units (handed to the Mobile Platform GDD); 125% text (Alpha).
+Other documents: `design/ux/interaction-patterns.md` IP-02 now cites Input Rule 3 for sticky drag; IP-23 already put the retry latch on the app root, so it needed no change. `design/gdd/game-concept.md` Pillar 4 and its design risk now ask for at least two non-developer testers (Input GDD P1).

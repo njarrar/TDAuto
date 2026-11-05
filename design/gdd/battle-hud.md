@@ -4,7 +4,7 @@
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-05
-> **Last Verified**: 2026-11-02
+> **Last Verified**: 2026-11-05
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
 ## Summary
@@ -44,7 +44,7 @@ ADR-0011 Decision 1 sets this split and the draw order; none of these pieces use
 
 **Build arc.**
 
-6. **Tap a slot, get three discs.** `slot_tapped` from TowerInput registers one backdrop (TAP 250, a sink covering the field) and three discs (TAP 300), which compete from the next press. Order is always triangle, hexagon, square, left to right, on every slot and both hands, for motor memory. A panel above each disc holds its word and cost on two lines: Single, Splash, Slow. The new tower firing at once demonstrates the role. A disc press within 200 ms of opening is ignored, since a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy a tower that cannot be sold. Start/Call is registered but disabled while an arc is open, because at priority 350 it would otherwise beat the backdrop; an arc open across a phase change keeps it so.
+6. **Tap a slot, get three discs.** `slot_tapped` from TowerInput registers one backdrop (TAP 250, a sink covering the field) and three discs (TAP 300, radius 36), which compete from the next press. Order is always triangle, hexagon, square, left to right, on every slot and both hands, for motor memory. A panel above each disc holds its word and cost on two lines: Single, Splash, Slow. The new tower firing at once demonstrates the role. A disc press within 200 ms of opening is ignored, since a slot's disc and the hexagon's are only 4 units apart, and a double tap must dismiss rather than buy a tower that cannot be sold. Start/Call is registered but disabled while an arc is open, because at priority 350 it would otherwise beat the backdrop; an arc open across a phase change keeps it so.
 7. **Tap a disc: `build`.** The disc always calls `build`, and the result decides: `OK` closes the arc and unregisters it at once, with a 120 ms collapse as art only. `NO_GOLD` leaves it open and shows a refusal: a nudge, or the static refusal cue under Reduce Motion (UI Requirements). `HALTED` closes it. Anything else closes it and logs a development error. Opening the arc, and `gold_changed` while it is open, only mark costs dirty. HudLogic reads them through the accessor, at level 1 only, when it next draws (frame step 3), and never in a sim signal handler, since `gold_changed` fires inside the tick (ADR-0005). So nothing can ask past a level count. An unaffordable disc is dimmed and struck through, updated live.
 8. **Closing.** `pressed` with a best tap that is not one of the discs closes the arc and unregisters it, and the later `tapped(backdrop)` is ignored. `drag_started` closes it. A finger rolling off a disc leaves it open. A phase change among Build, Wave and Intermission leaves it open. Paused, an outcome and Fatal close it.
 
@@ -92,7 +92,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
     1. Hero never pinned: "Next try: drag the hero"
     2. No tower built: "Next try: tap a slot to build"
     3. No burst fired: "Next try: drag from the big button"
-    4. Otherwise the type with the most lives lost, as count × `lives_cost`, if its role is not yet built: `heavy` "Triangles hit heavies", `normal` "Hexagons hit groups", `fast` "Squares slow fast enemies". Ties go in that order. If its role is built, there is no line, since the hint would have nothing to add.
+    4. Otherwise the type with the most lives lost, as count × `lives_cost`, if its role is not yet built: `heavy` "Triangles hit heavies", `normal` "Hexagons hit groups", `fast` "Squares slow fast enemies". Ties go in that order. If its role is built, there is no line, since the hint would have nothing to add. The count is the snapshot's `got_through`. The snapshot does not carry `lives_cost`, so HudLogic reads each enemy type's `lives_cost` from its Enemy record through the accessor in frame step 3, never in a signal handler (ADR-0005 Decision 5).
 
 **Paused.**
 
@@ -104,7 +104,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **The human log.**
 
-19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Two dev objects share the work (ADR-0010 Decision 8). **RunMeasures** listens to the sims and keeps only what the result snapshot lacks: the real seconds to first pin, build and burst; per call, `seconds_left`, burst state and lives at the call; and `best_victims` per burst. It closes each call record at the next `wave_cleared` or outcome, with the lives lost. **RunLog** names no sim: it writes each closed call record, and on Won or Lost one attempt record from the result snapshot plus RunMeasures' values. Each record holds a launch ID and the build version. AppRoot makes the launch ID once per launch from the clock and four random bytes, never from a battle or cosmetic RNG. The build version is the project's version setting, or the engine version when that is empty. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. RunMeasures reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
+19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Two dev objects share the work (ADR-0010 Decision 8). **RunMeasures** listens to the sims and keeps only what the result snapshot lacks: the real seconds to first pin, build and burst; per call, `seconds_left`, burst state and lives at the call; and `best_victims` per burst. It closes each call record at the next `wave_cleared` or outcome, with the lives lost. **RunLog** names no sim: it writes each closed call record, and on Won or Lost one attempt record from the result snapshot plus RunMeasures' values. Each record holds a launch ID and the build version. AppRoot makes the launch ID once per launch from the clock and four random bytes, never from a battle or cosmetic RNG. The build version is the project's version setting, or the engine version when that is empty. Attempt: towers built, lives, last wave, damage by source (`damage_towers`, `damage_hero`, `damage_burst`) and `hero_share`, `slows_applied`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. RunMeasures reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units. `I_top` and `I_bottom` are read once per battle, at build, and never change mid-battle. They are 0 on desktop and usually 0 on a phone, because ADR-0003's letterbox puts the notch and gesture bar in the bars outside the field. 1.5 units is 1 dp at a 360 dp width.
 
@@ -330,7 +330,7 @@ A purchase, a tap and a press all answer on the next frame, and nothing bounces.
 
 This whole document is UI. Tower's and Hero's UI Requirements stand, and are drawn here.
 
-- 120 ms: arc, presses, arming. 200 ms: dash, 12-unit panel slides, with opacity fixed. Paused is instant.
+- 120 ms: arc and presses. 200 ms: dash, 12-unit panel slides, with opacity fixed. 300 ms: arming (Rule 11, IP-21). Paused is instant.
 - Reduce Motion: AR-V-10 in `design/accessibility-requirements.md` is the one list of what it cuts, freezes and keeps, and this GDD does not restate it. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record. AppRoot reads both once into `PresentationSettings` (ADR-0001), and views ask the wrapper's `MotionPolicy`, never the flag (ADR-0011 Decision 8).
 - Refusal under Reduce Motion: the nudge is skipped and HudField draws a static cue instead. The refused item (arc polygon, chip or locked burst button) shows a dotted outline and one short line of text naming the reason, "Need N gold" or "Locked", 14 dp on panel, for 1 s of real time, with no motion. N is the cost minus gold at the refusal. Tower and Hero report `NO_GOLD` and Locked; the arc-and-chip and pin-and-aim UX specs place the line (AR-V-11, IP-24).
 - Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size, all drawn by HudField's last pass (ADR-0011 Decisions 6 and 10). Modals add about 4. Unverified until M9a.
@@ -353,16 +353,32 @@ This whole document is UI. Tower's and Hero's UI Requirements stand, and are dra
 | Costs, accessor, level count, preview context | `design/gdd/data-config-pipeline.md` | Rule 10 | Rule dependency |
 | Band, panels, type, colour, lives, chip | `design/art/art-bible.md` | §2, §3, §4, §7, §8 | Value dependency; amended |
 
+## Tuning Knobs
+
+HudLogic owns these constants, since each one changes how a tap resolves or when text shows (ADR-0011 Decision 9). None changes a sim result.
+
+| Knob | Value | Safe range | What it changes |
+|---|---|---|---|
+| Arming time | 300 ms | Kept equal to Flow's Game Feel and IP-21; change all three together | How long a new button or the result screen ignores presses (Rules 2, 11) |
+| Arc disc guard | 200 ms | Counted from the press, the same clock as Tower Rule 8's chip guard (OI-11) | Whether a double tap on a slot dismisses the arc or buys a tower (Rule 6) |
+| Arc spread `R` | 76 units | 76 and up; a larger `R` must recheck L1 and the Start/Call clearance (content rules) | How far the three discs sit from the slot |
+| Arc disc radius | 36 units | 36 to 38 at `R` 76: at least Input's `target_ok` floor (AC 28), and two radii must stay within the 76-unit chord | How easy a disc is to hit |
+| Start/Call hit radius | 48 units | 36 and up; a larger radius must recheck the 7.2 clearance beside the left burst and the 16 clear to each slot | How easy Start/Call is to hit |
+| Ground rings | 3 per battle | 0 and up | How long the game shows that a ground tap does nothing (Rule 14) |
+| Result text delay | 400 ms Lost, 1,000 ms Won | Waits for the first phone test (Game Feel); Retry arms 300 ms after it | How long the board holds before the result shows (Rule 15) |
+
+Values that only change pixels (colours, alphas, line widths, text sizes, and art timings such as the 120 ms collapse and the 200 ms dash fade) live in ADR-0011's `ViewStyle`, not here.
+
 ## Acceptance Criteria
 
 Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each THEN is the entire log. No scene or time assertions.
 
 **CI: Logic**
-1. (Rule 3; Data, Enemy & Wave rows) **GIVEN** a spy changing cost, **WHEN** the arc reopens, **THEN** the new cost shows; a new instance holds nothing.
+1. (Rule 3; Data, Enemy & Wave rows) **GIVEN** a spy changing cost, **WHEN** the arc reopens, **THEN** the new cost shows. **GIVEN** a HudLogic with an open arc, an armed Start/Call, two ground rings drawn and prompt 3 latched, **WHEN** a rebuild makes a new HudLogic, **THEN** its state equals a fresh instance's: arc closed, no target registered, buttons Hidden, ring count 0, no prompt latched, no result text.
 2. (Rule 4; Pips row) **GIVEN** each phase, **THEN** HudLogic's visible set is exact, with the burst button in all, and the pips match `wave_index()` as that row states.
 3. (Rule 5) **GIVEN** split groups, **THEN** one total per type, in fixed order.
 4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled. A disc press at 199 ms is ignored, and at 200 ms it counts.
-5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges, or under Reduce Motion shows the static cue with "Need N gold" for 1 s; `HALTED` closes; others close and log an error. One tap, one `build`.
+5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges, or under Reduce Motion shows the static cue with "Need N gold" for 1 s; `HALTED` closes; others close and log an error. One tap, one `build`. Under Reduce Motion the same static cue also shows for a refused chip upgrade ("Need N gold") and for a press on the locked burst button ("Locked"): dotted outline, one line, no nudge, up at 999 ms of `advance(ms)` and gone at 1,000 (AR-V-11, IP-24).
 6. (Rule 7) Level 1 read in the view step after opening or `gold_changed`, never inside a sim signal handler; dimming flips both ways; a newly affordable disc builds.
 7. (Rule 8; Input row) A press outside closes and unregisters; a later `tapped(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
 8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.
@@ -388,11 +404,12 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 28. (Pillar 4, 44 pt / 48 dp) Arc, chip, Start/Call and burst radii pass Input's `target_ok`, and 35 fails; Retry's short side is at least 72 units.
 
 **CI: Integration**
-29. (Independence) One script with and without the HUD: identical full state.
+29. (Independence) **GIVEN** one command script and one `(catalogue, stage_id, rng_seed)`, **WHEN** it runs on a battle with the HUD built and on one without, **THEN** `battle_state.digest(battle)` and HeroSim's `counters()` are equal after every tick (ADR-0007 `tests/helpers/battle/battle_state.gd`, used as in ADR-0010 Decision 7).
 30. (Rule 1) Headless wiring builds no HUD piece.
 31. (Paid) With real Tower and Flow, the shown bonus equals the paid one.
 32. (Retry) Two taps, one rebuild, a clean HUD.
-33. (Content) Real records pass; each check fails on its own fixture, watched failing once.
+33. (Content) **GIVEN** the real records, **THEN** every content check passes. **GIVEN** one fixture per check, built with `catalogue_fixtures.gd` `with_field` so that only that check's bound breaks, **THEN** that check fails and every other check passes.
+34. (Rule 1; TR-hud-001, ADR-0011 Decision 6) **GIVEN** a HudTopBand on fake reads, **WHEN** gold changes, and then lives change, **THEN** after each change its `accessibility_name` names the new gold and lives values and its `accessibility_live` is `AccessibilityServer.LIVE_POLITE`.
 
 **Deferred criteria.** Done for this system means every criterion runnable today passes and each of these has its owner.
 

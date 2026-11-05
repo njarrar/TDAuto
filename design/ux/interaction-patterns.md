@@ -126,7 +126,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **When NOT to Use**: any new verb. A new drag needs a Per-Feature Matrix row (AR-C-07) and a two-tap path (IP-28).
 **Sources**: Input Rules 3, 6, 12; Game Feel "Sticky drag".
 **Accessibility**: AR-M-05 steady-hand slop; AR-M-06: every drag has a two-tap path at Alpha (IP-28).
-**Implementation Notes**: The owner clamps the raw position. Sticky is set once in the resolver (Input Rule 6).
+**Implementation Notes**: The owner clamps the raw position. Sticky is set once in the resolver (Input Rule 3).
 
 #### IP-03 Press response
 
