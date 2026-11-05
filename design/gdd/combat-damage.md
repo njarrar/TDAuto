@@ -143,7 +143,7 @@ The **in_radius** formula is defined as:
 **Output Range:** true or false, inclusive, so an enemy exactly on the edge is hit and a primary target at distance 0 always is.
 **Example:** radius 50, enemy at (30, 40): 2,500 ≤ 2,500, a hit.
 
-A slow of duration `d` is stored as `max(1, to_ticks(d))` whole ticks (Enemy & Wave Formulas; `ceil` came out a tick high at 4.15, 8.05 and 8.3 s), and affects that many moves, because it first applies on the next tick and counts down after each move. The slot empties when the count is at or below 0. `slow_duration` has a floor of one tick at `dt` 1/60 (Data & Config); the `max` covers a fixture with a coarser `dt`.
+A slow of duration `d` is stored as `max(1, to_ticks(d))` whole ticks (Enemy & Wave Formulas; `ceil` came out a tick high at 4.15, 8.05 and 8.3 s), and affects that many moves, because it first applies on the next tick and counts down after each move. The slot empties when the count is at or below 0. `slow_duration` has a floor of `MIN_INTERVAL`, 1/30 s (Data & Config), which is 1 tick at 30 per second and 2 at 60; the `max` covers a fixture with a coarser `dt`.
 
 ## Edge Cases
 
