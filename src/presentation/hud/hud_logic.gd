@@ -532,11 +532,12 @@ func chip_affordable() -> bool:
 	return _chip_affordable
 
 
-## Chip bar, 1 to 0 over the window (Battle HUD Formulas).
-func chip_bar() -> float:
+## Gold the open panel's Sell button pays, or 0 with no panel.
+func chip_sell_value() -> int:
 	if _tower_input == null:
-		return 0.0
-	return clampf(1.0 - _tower_input.chip_state().elapsed_ms / ChipWindow.WINDOW_MS, 0.0, 1.0)
+		return 0
+	var state: TowerInput.ChipState = _tower_input.chip_state()
+	return state.sell_value if state.open else 0
 
 
 ## Gold for the top band.
@@ -722,6 +723,12 @@ func _read_chip_cost() -> void:
 		return
 	var def_id: StringName = _tower_sim.slot_tower(state.slot_index)
 	if def_id == &"" or state.level >= _accessor.level_count(def_id):
+		# Last level: no Upgrade button, so no cost to show.
+		_chip_slot = state.slot_index
+		_chip_level = state.level
+		_chip_dirty = false
+		_chip_cost_value = 0
+		_chip_affordable = false
 		return
 	_cost_ctx.def_id = def_id
 	_cost_ctx.level = state.level + 1

@@ -120,7 +120,8 @@
           "radius": 60.0,
           "hand": "both"
         }
-      ]
+      ],
+      "sell_refund_percent": 70
     }
   ]
 }

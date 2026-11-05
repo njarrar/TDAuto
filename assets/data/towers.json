@@ -2,7 +2,7 @@
   "tower": [
     {
       "id": "tower_single",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. Level 3 added after first playable (user, 2026-11-05).",
       "tags": [
         "single_target"
       ],
@@ -20,12 +20,19 @@
           "range": 165.0,
           "attack_interval": 0.6,
           "visual_key": "tower_single_2"
+        },
+        {
+          "cost": 80,
+          "damage": 32.0,
+          "range": 180.0,
+          "attack_interval": 0.6,
+          "visual_key": "tower_single_3"
         }
       ]
     },
     {
       "id": "tower_splash",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. Level 3 added after first playable (user, 2026-11-05).",
       "tags": [
         "splash"
       ],
@@ -45,12 +52,20 @@
           "attack_interval": 1.0,
           "visual_key": "tower_splash_2",
           "splash_radius": 75.0
+        },
+        {
+          "cost": 100,
+          "damage": 42.0,
+          "range": 180.0,
+          "attack_interval": 1.0,
+          "visual_key": "tower_splash_3",
+          "splash_radius": 90.0
         }
       ]
     },
     {
       "id": "tower_slow",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. Level 3 added after first playable (user, 2026-11-05).",
       "tags": [
         "slow"
       ],
@@ -72,6 +87,15 @@
           "visual_key": "tower_slow_2",
           "slow_strength": 0.5,
           "slow_duration": 2.5
+        },
+        {
+          "cost": 85,
+          "damage": 0.0,
+          "range": 180.0,
+          "attack_interval": 0.6,
+          "visual_key": "tower_slow_3",
+          "slow_strength": 0.6,
+          "slow_duration": 3.0
         }
       ]
     }

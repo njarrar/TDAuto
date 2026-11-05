@@ -276,3 +276,46 @@ func test_listeners_do_not_change_state() -> void:
 		rig.tower.upgrade(0)
 
 	assert_dict(with_listeners.tower.state_fields()).is_equal(without.tower.state_fields())
+
+
+# Sell (Tower Rule 4, first playable 2026-11-05): 70% of all spend back, slot freed.
+
+func test_sell_refunds_seventy_percent_of_build_and_upgrade_and_frees_the_slot() -> void:
+	var rig: Rig = Rig.new()
+	rig.tower.build(0, Rig.A)
+	rig.tower.upgrade(0)
+	assert_int(rig.tower.sell_value(0)).is_equal(49)
+	rig.rec.entries.clear()
+
+	var result: TowerSim.SellResult = rig.tower.sell(0)
+
+	assert_int(result).is_equal(TowerSim.SellResult.OK)
+	assert_int(rig.tower.gold()).is_equal(79)
+	assert_str(String(rig.tower.slot_tower(0))).is_equal("")
+	assert_int(rig.tower.slot_level(0)).is_equal(0)
+	assert_int(rig.tower.sell_value(0)).is_equal(0)
+	assert_array(rig.rec.entries).is_equal(["gold:79"])
+
+
+func test_sell_refusals_change_nothing() -> void:
+	var rig: Rig = Rig.new()
+	rig.rec.entries.clear()
+
+	assert_int(rig.tower.sell(0)).is_equal(TowerSim.SellResult.NO_TOWER)
+	assert_int(rig.tower.sell(-1)).is_equal(TowerSim.SellResult.BAD_SLOT)
+	assert_int(rig.tower.sell(99)).is_equal(TowerSim.SellResult.BAD_SLOT)
+
+	assert_int(rig.tower.gold()).is_equal(100)
+	assert_array(rig.rec.entries).is_empty()
+
+
+func test_a_sold_slot_can_be_built_again_with_another_role() -> void:
+	var rig: Rig = Rig.new()
+	rig.tower.build(0, Rig.A)
+	rig.tower.sell(0)
+
+	var result: TowerSim.BuildResult = rig.tower.build(0, Rig.B)
+
+	assert_int(result).is_equal(TowerSim.BuildResult.OK)
+	assert_str(String(rig.tower.slot_tower(0))).is_equal(String(Rig.B))
+	assert_int(rig.tower.sell_value(0)).is_equal(21)

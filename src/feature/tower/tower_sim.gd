@@ -2,9 +2,12 @@ class_name TowerSim extends RefCounted
 ## Gold, tower slots, the build and upgrade commands and the tower tick
 ## (Tower GDD, ADR-0010 Decisions 2 to 7, ADR-0005 Decision 7).
 ## Headless. Slot positions are read from the stage as float pairs.
+## Sell (Tower Rule 4, first playable 2026-11-05): pays back sell_refund_percent of
+## everything spent on the slot and empties it. It emits only gold_changed; views poll.
 
 enum BuildResult { OK = 0, HALTED = 1, BAD_SLOT = 2, BAD_TOWER = 3, SLOT_OCCUPIED = 4, NO_GOLD = 5 }
 enum UpgradeResult { OK = 0, HALTED = 1, BAD_SLOT = 2, NO_TOWER = 3, MAX_LEVEL = 4, NO_GOLD = 5 }
+enum SellResult { OK = 0, HALTED = 1, BAD_SLOT = 2, NO_TOWER = 3 }
 
 const ROLE_SPLASH: StringName = &"splash"
 const ROLE_SLOW: StringName = &"slow"
@@ -35,6 +38,8 @@ var _bad_index_reported: bool = false
 var _slot_tower: Array[StringName] = []
 var _slot_level: PackedInt32Array = PackedInt32Array()
 var _slot_cooldown: PackedInt32Array = PackedInt32Array()
+## Gold spent on each slot's tower: its build plus every upgrade. 0 when empty.
+var _slot_spent: PackedInt32Array = PackedInt32Array()
 var _slot_ctx: Array[ReadContext] = []
 var _cost_ctx: ReadContext
 var _unslowed: Array[Targetable] = []
@@ -59,6 +64,7 @@ func _init(stage: StageRecord, accessor: StatAccessor, halted: Callable, between
 		_slot_tower.append(&"")
 		_slot_level.append(0)
 		_slot_cooldown.append(0)
+		_slot_spent.append(0)
 		_slot_ctx.append(ReadContext.make(&"", 0))
 	_cost_ctx = ReadContext.make(&"", 0)
 	_rate_ticks = int(to_ticks.call(stage.early_call_seconds_per_gold))
@@ -92,6 +98,7 @@ func build(slot_index: int, tower_id: StringName) -> BuildResult:
 	_slot_tower[slot_index] = tower_id
 	_slot_level[slot_index] = 1
 	_slot_cooldown[slot_index] = 0
+	_slot_spent[slot_index] = cost
 	var ctx: ReadContext = _slot_ctx[slot_index]
 	ctx.def_id = tower_id
 	ctx.level = 1
@@ -128,12 +135,48 @@ func upgrade(slot_index: int) -> UpgradeResult:
 	_gold -= cost
 	_slot_level[slot_index] = level + 1
 	_slot_ctx[slot_index].level = level + 1
+	_slot_spent[slot_index] += cost
 	if cost != 0:
 		gold_changed.emit(_gold)
 		if bool(_halted.call()):
 			return UpgradeResult.OK
 	tower_upgraded.emit(slot_index, level + 1)
 	return UpgradeResult.OK
+
+
+## Sells the tower in a slot: gold rises by sell_value(slot_index) and the slot empties.
+## Check order: between ticks, halted, slot, tower. Emits gold_changed only when the
+## refund is not 0; the slot and tower views poll slot_tower().
+func sell(slot_index: int) -> SellResult:
+	if not bool(_between_ticks.call()):
+		_fatal.call("command inside tick: TowerSim.sell")
+		return SellResult.HALTED
+	if bool(_halted.call()):
+		return SellResult.HALTED
+	if slot_index < 0 or slot_index >= _slot_n:
+		return SellResult.BAD_SLOT
+	if _slot_tower[slot_index] == &"":
+		return SellResult.NO_TOWER
+	var refund: int = sell_value(slot_index)
+	_gold += refund
+	_slot_tower[slot_index] = &""
+	_slot_level[slot_index] = 0
+	_slot_cooldown[slot_index] = 0
+	_slot_spent[slot_index] = 0
+	var ctx: ReadContext = _slot_ctx[slot_index]
+	ctx.def_id = &""
+	ctx.level = 0
+	if refund != 0:
+		gold_changed.emit(_gold)
+	return SellResult.OK
+
+
+## Gold a sell would pay now: sell_refund_percent of the slot's total spend, rounded
+## down. 0 for an empty or bad slot. Non-fatal.
+func sell_value(slot_index: int) -> int:
+	if slot_index < 0 or slot_index >= _slot_n:
+		return 0
+	return (_slot_spent[slot_index] * _stage.sell_refund_percent) / 100
 
 
 ## Battle step 4 only. Slots run by ascending index.

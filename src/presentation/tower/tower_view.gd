@@ -16,8 +16,10 @@ func _draw() -> void:
 		var c: Vector2 = model.centres[i]
 		var col: Color = ViewStyles.color_of(model.keys[i])
 		draw_circle(c, ViewStyles.SLOT_RADIUS - 8.0, col)
-		for lv: int in range(model.levels[i]):
-			draw_circle(c + Vector2(float(lv) * 10.0 - 5.0, 0.0), 3.0, ViewStyles.KEYLINE)
+		# One pip per level, centred on the tower, so level 3 reads as three pips.
+		var pips: int = model.levels[i]
+		for lv: int in range(pips):
+			draw_circle(c + Vector2((float(lv) - float(pips - 1) * 0.5) * 10.0, 0.0), 3.0, ViewStyles.KEYLINE)
 		var ring: Color = ViewStyles.RING_READY if model.cooling[i] <= 0.0 else ViewStyles.RING_COOLING
 		var sweep: float = TAU if model.cooling[i] <= 0.0 else TAU * (1.0 - model.cooling[i])
 		draw_arc(c, ViewStyles.SLOT_RADIUS - 2.0, -PI * 0.5, -PI * 0.5 + sweep,

@@ -62,6 +62,7 @@ const ROLE_FIELDS: Dictionary = {
 ## Fields that may be absent on a record type. Every other declared field is required.
 const OPTIONAL_FIELDS: Dictionary = {
 	"tower_level": ["splash_radius", "slow_strength", "slow_duration"],
+	"stage": ["sell_refund_percent"],
 }
 
 ## Fields of each record type and sub-record. Keys are the JSON names.
@@ -110,6 +111,8 @@ const FIELDS: Dictionary = {
 		"scene_ref": _TEXT,
 		"wave_ids": ["id_refs:wave", null, null, false, false],
 		"starting_gold": _GOLD,
+		## Share of a tower's total spend paid back on sell, 0 to 100. Optional (default 70).
+		"sell_refund_percent": ["int", 0, 100, true, true],
 		"starting_lives": ["int", 1, 1000, true, true],
 		"early_call_seconds_per_gold": _INTERVAL,
 		"path_points": ["points", null, null, false, false],

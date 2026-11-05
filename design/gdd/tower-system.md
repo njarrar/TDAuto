@@ -11,7 +11,7 @@
 
 ## Summary
 
-The player's standing army and the money that buys it: three tower roles on a stage's slots, one upgrade each, and gold from kills and early calls. Players feel it as a choice that never quite closes, because gold cannot fill the board before the last wave, and as a commitment, because a build cannot be undone. It owns tower attacks, gold and the build and upgrade commands, and no damage, targeting helpers, enemy list or arc drawing.
+The player's standing army and the money that buys it: three tower roles on a stage's slots, two upgrades each (level 3 added after first playable, 2026-11-05), and gold from kills and early calls. Players feel it as a choice that never quite closes, because gold cannot fill the board before the last wave, and as a commitment, because selling pays back only 70%. It owns tower attacks, gold and the build and upgrade commands, and no damage, targeting helpers, enemy list or arc drawing.
 
 > **Quick reference** — Layer: `Feature` · Priority: `MVP` · Key deps: `Enemy & Wave, Combat & Damage, Input & Gesture Resolver, Data & Config Pipeline, Game State & Stage Flow`
 
@@ -48,9 +48,9 @@ TowerInput's only way to change anything is the `upgrade` command the bots also 
 
 This confirms the art bible's open proposal, and it changes square's meaning from rapid fire to slow. A rapid-fire tower at Small Ship needs another shape.
 
-2. **Two levels at MVP.** The concept's level 1 and 2 stand; the art bible's level 3 is later vocabulary. Each level holds absolute values. `cost` at level N is the price of reaching N, as Data & Config proposed. A content rule requires exactly two levels, so the rule is one edit away when level 3 arrives.
+2. **Three levels (first playable, user 2026-11-05; was two at MVP).** Level 3 gives gold a use once every slot is full. Starter level 3: single 80 gold, damage 32, range 180; splash 100, damage 42, range 180, radius 90; slow 85, range 180, strength 0.6 for 3.0 s. Each level holds absolute values. `cost` at level N is the price of reaching N, as Data & Config proposed. The content rule now asks for exactly three levels; the drawer shows one pip per level.
 3. **Slow deals no damage.** A slow tower with `damage` 0 never earns a kill by itself, and cannot win alone. Combat Rule 10 sets its target: the first unslowed enemy, else the first enemy.
-4. **No selling or refund at MVP.** A second gesture on a tower would compete with the upgrade tap, and live refunds would let players move towers to follow packets. A wrong disc costs gold at once, and a wrong plan can surface only at wave 6, minutes later, so instant retry undersells the price. That is accepted as the weight of a choice. Revisit if the phone test shows arc mis-fires, or a playtest shows lost stages that players blame on one early build. Against mis-fires the fallbacks run in order: a larger arc radius (Battle HUD), then a wider gap between discs, then a short refund grace, last because it adds an undo state and a second gesture window. This means no tower is ever removed, so the Input edge case on re-enabling a slot does not arise.
+4. **Sell pays back 70% (first playable, user 2026-11-05; was: no selling at MVP).** The user filled every slot and then had no way to change a tower or keep growing, so selling is in. `sell(slot_index)` pays `sell_refund_percent` (a Stage field, optional, default 70, 0 to 100) of everything spent on that slot, its build plus every upgrade, rounded down, and empties the slot so any role can be built there. Check order: between ticks, halted, slot, tower; results `OK`, `HALTED`, `BAD_SLOT`, `NO_TOWER`. It emits `gold_changed` only when the refund is not 0 and no new signal: views poll `slot_tower()`. The 30% loss keeps a build a commitment and stops free moves to chase each packet. Sell lives on the tower panel (Rule 8).
 
 **Building and upgrading.**
 
@@ -70,7 +70,7 @@ IDs and levels are checked before any accessor read, through Data's non-fatal `i
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
 7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and does nothing. The arc belongs to the HUD, which calls `build`.
-8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
+8. **The tower panel (first playable, user 2026-11-05; was a 1.5 s timed chip).** A tap on a tower opens its panel and shows its range ring: an **Upgrade** button with the next level's cost (only below the last level), left of the tower, and a **Sell** button with the refund, right of it, both radius 34 and 76 px above the tower centre (TowerInput `PANEL_DX` 44). The panel has no time limit. It closes on Sell, on a second tap on the same tower, on a press anywhere else, and on Paused, an outcome or Fatal. Upgrade keeps it open on the new level and removes the Upgrade button at the last level. A button tap in the first 200 ms after opening is ignored, the bounce guard (Input Rule 8), fed by `ChipWindow.advance(ms)` on real time. On `NO_GOLD` the panel stays open with the cost dimmed. The table below is the earlier timed chip's, kept for history; where it differs, this rule wins.
 
 | Event while a chip is open | Result |
 |---|---|
@@ -164,7 +164,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 - **Battle HUD:** done. It draws the arc, chip, cost, dimming and the range ring (Battle HUD GDD).
 - **Enemy & Wave:** its starter HP is amended here, and its "550" gold example is now the all-single minimum.
 
-**Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
+**Deliberately not built for MVP.** Undo, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
 
 → Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection. Decided: ADR-0010 builds TowerInput in `BattleWrapper.attach` with its own `ChipWindow` fed by `advance(ms)` (Decisions 1 and 8); ADR-0004 Decision 5 runs input before the ticks; ADR-0006 Decision 4 types `tower_id` as `StringName`; ADR-0001 Decision 7 owns retry teardown.
 

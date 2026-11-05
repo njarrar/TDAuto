@@ -14,10 +14,14 @@ func test_commit_window_bounds() -> void:
 	assert_int(w.slot()).is_equal(2)
 
 
-func test_expires_at_1500() -> void:
+func test_stays_open_with_no_time_limit() -> void:
+	# Since first playable the panel has no expiry; only a close or a press elsewhere ends it.
 	var w: ChipWindow = ChipWindow.new()
 	w.open(0)
-	w.advance(1500.0)
+	w.advance(60000.0)
+	assert_bool(w.is_open()).is_true()
+	assert_bool(w.can_commit()).is_true()
+	w.close()
 	assert_bool(w.is_open()).is_false()
 	assert_bool(w.can_commit()).is_false()
 

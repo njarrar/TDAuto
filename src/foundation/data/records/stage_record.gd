@@ -2,12 +2,17 @@ class_name StageRecord extends RefCounted
 ## A stage definition. Geometry is stored as float64, x and y interleaved, so no
 ## 32-bit Vector2 rounding enters the data. Consumers convert at use.
 
+## Used when a stage file leaves out sell_refund_percent (an optional field).
+const DEFAULT_SELL_REFUND_PERCENT: int = 70
+
 var id: StringName = &""
 var rationale: String = ""
 ## Path to the stage's look-only scene. The one path in the catalogue.
 var scene_ref: String = ""
 var wave_ids: Array[StringName] = []
 var starting_gold: int = 0
+## Percent of a tower's total spend paid back when it is sold (Tower GDD Rule 4).
+var sell_refund_percent: int = DEFAULT_SELL_REFUND_PERCENT
 var starting_lives: int = 0
 var early_call_seconds_per_gold: float = 0.0
 ## [x0, y0, x1, y1, ...]
@@ -32,6 +37,7 @@ static func from_dict(data: Dictionary) -> StageRecord:
 	for wave_id: Variant in (data["wave_ids"] as Array):
 		record.wave_ids.append(StringName(String(wave_id)))
 	record.starting_gold = int(data["starting_gold"])
+	record.sell_refund_percent = int(data.get("sell_refund_percent", DEFAULT_SELL_REFUND_PERCENT))
 	record.starting_lives = int(data["starting_lives"])
 	record.early_call_seconds_per_gold = float(data["early_call_seconds_per_gold"])
 	record.path_points = _flatten(data["path_points"] as Array)
@@ -82,6 +88,7 @@ func to_dict() -> Dictionary:
 		"scene_ref": scene_ref,
 		"wave_ids": wave_list,
 		"starting_gold": starting_gold,
+		"sell_refund_percent": sell_refund_percent,
 		"starting_lives": starting_lives,
 		"early_call_seconds_per_gold": early_call_seconds_per_gold,
 		"path_points": Array(path_points),

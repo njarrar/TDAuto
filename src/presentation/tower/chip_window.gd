@@ -1,10 +1,10 @@
 class_name ChipWindow extends RefCounted
-## The upgrade chip's real-time window (Tower Rule 8, ADR-0010 Decision 8). Pure: no engine.
+## The tower panel's open state and bounce guard (Tower Rule 8, ADR-0010 Decision 8).
+## Pure: no engine. Since first playable (user, 2026-11-05) the panel has no time limit:
+## it stays open until a button is used or a press lands elsewhere.
 
-## A tap earlier than this after opening is ignored (bounce guard).
+## A button tap earlier than this after opening is ignored (bounce guard).
 const MIN_COMMIT_MS: float = 200.0
-## The chip expires at this elapsed time.
-const WINDOW_MS: float = 1500.0
 
 var _open: bool = false
 var _slot: int = -1
@@ -25,18 +25,16 @@ func close() -> void:
 	_elapsed = 0.0
 
 
-## Advances real time. Ignores non-finite or negative ms. Closes at WINDOW_MS.
+## Advances real time. Ignores non-finite or negative ms. Never closes the window.
 func advance(ms: float) -> void:
 	if not _open:
 		return
 	if not is_finite(ms) or ms < 0.0:
 		return
 	_elapsed += ms
-	if _elapsed >= WINDOW_MS:
-		close()
 
 
-## True while the window runs.
+## True while the window is open.
 func is_open() -> bool:
 	return _open
 
@@ -51,6 +49,6 @@ func elapsed_ms() -> float:
 	return _elapsed
 
 
-## True when a tap would commit: 200 <= elapsed < 1500.
+## True when a button tap would commit: open and at least MIN_COMMIT_MS since opening.
 func can_commit() -> bool:
-	return _open and _elapsed >= MIN_COMMIT_MS and _elapsed < WINDOW_MS
+	return _open and _elapsed >= MIN_COMMIT_MS

@@ -71,11 +71,19 @@ func _draw_burst() -> void:
 	if state == HudLogic.BurstButton.COOLING:
 		draw_arc(c, 36.0, -PI * 0.5, -PI * 0.5 + TAU * (1.0 - model.burst_wedge()), 32, col, ViewStyles.stroke(6.0), false)
 		_texts[2].append([str(model.burst_digit()), c + Vector2(-10.0, -60.0), ViewStyles.HUD_TEXT])
-	if model.chip_cost() > 0 and tower_input != null:
+	if tower_input != null:
 		var cs: TowerInput.ChipState = tower_input.chip_state()
 		if cs.open and cs.slot_index < tower_view_centres.size():
-			var p: Vector2 = tower_view_centres[cs.slot_index] + Vector2(0.0, -TowerInput.CHIP_OFFSET_Y)
-			var cc: Color = ViewStyles.HUD_TEXT if model.chip_affordable() else ViewStyles.HUD_DIM
-			draw_circle(p, TowerInput.CHIP_RADIUS, ViewStyles.HUD_PANEL)
-			draw_arc(p, TowerInput.CHIP_RADIUS, -PI * 0.5, -PI * 0.5 + TAU * model.chip_bar(), 32, cc, ViewStyles.stroke(3.0), false)
-			_texts[0].append([str(model.chip_cost()), p + Vector2(-12.0, 8.0), cc])
+			var tc: Vector2 = tower_view_centres[cs.slot_index]
+			if cs.can_upgrade and model.chip_cost() > 0:
+				var up: Vector2 = TowerInput.upgrade_centre(tc)
+				var uc: Color = ViewStyles.HUD_TEXT if model.chip_affordable() else ViewStyles.HUD_DIM
+				draw_circle(up, TowerInput.CHIP_RADIUS, ViewStyles.HUD_PANEL)
+				draw_arc(up, TowerInput.CHIP_RADIUS, 0.0, TAU, 32, uc, ViewStyles.stroke(3.0), false)
+				_texts[0].append(["Up", up + Vector2(-12.0, -4.0), uc])
+				_texts[0].append([str(model.chip_cost()), up + Vector2(-14.0, 18.0), uc])
+			var sp: Vector2 = TowerInput.sell_centre(tc)
+			draw_circle(sp, TowerInput.CHIP_RADIUS, ViewStyles.HUD_PANEL)
+			draw_arc(sp, TowerInput.CHIP_RADIUS, 0.0, TAU, 32, ViewStyles.HUD_TEXT, ViewStyles.stroke(3.0), false)
+			_texts[0].append(["Sell", sp + Vector2(-20.0, -4.0), ViewStyles.HUD_TEXT])
+			_texts[0].append([str(cs.sell_value), sp + Vector2(-14.0, 18.0), ViewStyles.HUD_TEXT])
