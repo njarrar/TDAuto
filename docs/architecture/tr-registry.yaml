@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 7
+version: 8
 last_updated: "2026-11-05"
 
 requirements:
@@ -128,9 +128,9 @@ requirements:
 - id: TR-data-013
   system: data
   gdd: design/gdd/data-config-pipeline.md
-  requirement: "A CI content test opens each Stage scene_ref, applies layout and wave rules, checks rationale fields and owning-GDD balance ranges, and fails a data file the manifest omits, a manifest path whose case differs from the file, and a key repeated inside one JSON object"
+  requirement: "A CI content test opens each Stage scene_ref, applies layout and wave rules, checks rationale fields and owning-GDD balance ranges, and fails a data file the manifest omits, a manifest path whose case differs from the file, a key repeated inside one JSON object, and a path_points coordinate that a 32-bit float cannot hold exactly"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-data-014
   system: data
@@ -368,6 +368,13 @@ requirements:
   gdd: design/gdd/game-state-stage-flow.md
   requirement: "Wrapper-side presentation timers (Lost delay, Won beat, button arming) run on the frame clock outside the simulation"
   created: 2026-11-03
+  revised: ""
+  status: active
+- id: TR-state-015
+  system: state
+  gdd: design/gdd/game-state-stage-flow.md
+  requirement: "Flow's commands start_wave() and call_early() run between ticks and return their own result enums in fixed check order (OK, BUSY, HALTED, then the phase checks: NOT_BUILD; NOT_INTERMISSION, NO_TIME_LEFT); a refusal changes and emits nothing"
+  created: 2026-11-05
   revised: ""
   status: active
 - id: TR-combat-001
@@ -695,9 +702,9 @@ requirements:
 - id: TR-hero-002
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "pin() and burst() run between ticks and return ordered enum result codes, state checked before geometry; a refusal mutates nothing"
+  requirement: "pin() and burst() run between ticks and return ordered enum result codes (BUSY first, then HALTED), state checked before geometry; every stat read comes before the commit and a read that latches Fatal returns HALTED; a refusal mutates nothing"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-hero-003
   system: hero
@@ -793,9 +800,9 @@ requirements:
 - id: TR-hud-001
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD is HudLogic (plain), HudTopBand (display-only Controls) and HudField (one _draw, targets as resolver discs), absent headless and rebuilt on retry"
+  requirement: "The HUD is four pieces, absent headless and rebuilt on retry: HudLogic (plain), HudTopBand (one display-only Control that draws no text and sets accessibility_name and accessibility_live for gold and lives), HudField (one _draw above the field, all HUD text in one last pass by size, targets as resolver discs) and RangeRingView (a second _draw node under the field entities)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-002
   system: hud
