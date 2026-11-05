@@ -500,7 +500,7 @@ func result() -> StageResult         # readable after the outcome until the batt
 func in_build() -> bool
 func tick() -> void
 var intermission_left: int           # integer ticks, never float subtraction
-# Commands (between ticks). The GDD names the actions, not the methods; names are proposed (QQ-18).
+# Commands (between ticks). Names and result enums decided by ADR-0010 Decision 2 (QQ-18 resolved).
 func start_wave() -> StartResult     # Start Wave in BUILD; a second tap finds no BUILD and is ignored
 func call_early() -> CallResult      # Call during INTERMISSION; a call at 0 is ignored with no signal
 func pause() -> void
@@ -740,7 +740,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-15 | Resolved by ADR-0007 Decision 10: the GDScript 4.7 pitfalls (typed-method override needs an explicit `return`; packed-array element writes skip setters; lambdas capture locals by value; signal parameter types are not checked at `emit()`) are a Required and Forbidden list for `/create-control-manifest`. | Resolved | ADR-0007, `/create-control-manifest` |
 | QQ-16 | Resolved by ADR-0007 Decision 9: no prefix; a collision lint plus a reserved-name list. | Resolved | ADR-0007 |
 | QQ-17 | Method `Callable`s and signal connections did not keep a `RefCounted` alive in a 4.7.2 editor probe, and `.call()` on a dead or empty one raised a script error and aborted the calling function. So every target needs a strong holder (Flow review, 2026-11-04). Re-confirm on an export template. | Medium | ADR-0001 |
-| QQ-18 | Flow's command method names and their result enums (`start_wave`, `call_early`, `StartResult`, `CallResult`) are proposed here; the Game State GDD names the actions but not the methods. | Low | ADR-0010 |
+| QQ-18 | Resolved by ADR-0010 Decision 2: `start_wave() -> Flow.StartResult { OK = 0, HALTED, REENTERED, WRONG_PHASE }` and `call_early() -> Flow.CallResult { OK = 0, HALTED, REENTERED, WRONG_PHASE, NOT_CALLABLE }`; `HALTED` is silent, `REENTERED` calls `dev_error` once. | Resolved | ADR-0010 |
 | QQ-21 | Resolved by ADR-0002 Decision 15: Save/Load is deferred to Vertical Slice with no separate ADR; the seams are recorded (`to_dict()`/`from_dict()` with a version field, progression systems never calling Save, saves holding only stable IDs and levels, a retired-ID list at Vertical Slice). The Pre-Production gate reads that decision. | Resolved | ADR-0002, `/gate-check pre-production` |
 | QQ-22 | The cross-GDD scenarios 1, 3 and 5 (`design/gdd/gdd-cross-review-2026-11-04.md`) rest on ADR-0003's and ADR-0004's premises: input delivered before the frame's ticks, and modal Controls stopping presses while moves and releases reach the adapter. Re-walked 2026-11-04 after the desktop spike: both premises hold provided the adapter reads moves and releases in `_input` (a STOP Control swallows moves, not releases, in `_unhandled_input`). Stays open until a device run confirms the same order on Android and iOS (ADR-0003 D1 to D4, ADR-0004 V1 and V2); a failed premise reopens Input and Battle HUD rules that are Approved, and ADR-0004 and ADR-0008 hold ADR-0003 as a provisional premise until then. | Medium (open) | ADR-0003 (device run), ADR-0004 |
 
