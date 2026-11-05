@@ -358,7 +358,7 @@ interfaces:
       - game-state-stage-flow
       - tower-sim
     adr: docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
-    signal_signature: "enemy_leaked(lives_cost: int), enemy_killed(bounty: int), wave_cleared(intermission_duration: float), waves_completed() (renamed from waves_completed); emitted in spawn_id order after the roster removal; leaks before the clear; the last wave emits waves_completed and not wave_cleared"
+    signal_signature: "enemy_leaked(lives_cost: int), enemy_killed(bounty: int), wave_cleared(intermission_duration: float), waves_completed() (renamed by ADR-0006 from the GDD's original name, QQ-07); emitted in spawn_id order after the roster removal; leaks before the clear; the last wave emits waves_completed and not wave_cleared"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-and-view-allowlist.md
     added: 2026-11-05
