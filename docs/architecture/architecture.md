@@ -270,7 +270,7 @@ Rules for all of them (ADR-0006):
 ```
 Engine starts main scene ──► AppRoot._ready
   1. AppRoot FatalLatch ready; the catalogue-free fatal scene is loadable. AppRoot state: Boot
-  2. Catalogue.load(manifest)         Unloaded ─► Loading ─► Ready | Failed
+  2. Catalogue.load_manifest(manifest)  Unloaded ─► Loading ─► Ready | Failed
        Failed ─► fatal screen (no fallbacks, no save access). Includes tap_slop ≤ drag_slop (Data Rule 7)
   3. (VS) Save/Load boot: inject loaded progression into progression systems
   4. AppRoot holds Ready catalogue, picks stage_id and seed. AppRoot state: InStage
@@ -382,7 +382,7 @@ Every command result enum puts `OK = 0` first; the remaining values are listed i
 | `Catalogue` | `RefCounted` | `src/foundation/data/catalogue.gd` | Holds every record by ID after a Ready load; read-only by contract | ADR-0002 |
 | `LoadResult` | `RefCounted` | same | `ok: bool`, `errors: Array[ValidationError]` | ADR-0002 |
 | `ValidationError` | `RefCounted` | `src/foundation/data/validation_error.gd` | `code: StringName`, `source: String`, `record_id: StringName`, `field: StringName` | ADR-0002 |
-| Record classes: `TowerRecord`, `EnemyRecord`, `WaveRecord`, `StageRecord`, `HeroRecord`, `BurstRecord`, `InputRecord` | `Resource` or `RefCounted` (format is ADR-0002) | `src/foundation/data/records/` | `id: StringName` plus each GDD's fields. `StageRecord` holds `path_points`, `slot_positions`, `path_width`, `requires_bend`, `early_call_seconds_per_gold`, `hero_start`, `pin_rect`, `pin_exclusion`, `scene_ref`. `InputRecord` holds `drag_slop`, `tap_slop`, `edge_reject_margin`, `left_handed`, `reduce_motion` | ADR-0002 |
+| Record classes: `TowerRecord`, `EnemyRecord`, `WaveRecord`, `StageRecord`, `HeroRecord`, `BurstRecord`, `InputRecord` | `RefCounted`; records come from JSON (ADR-0002) | `src/foundation/data/records/` | `id: StringName` plus each GDD's fields. `StageRecord` holds `path_points`, `slot_positions`, `path_width`, `requires_bend`, `early_call_seconds_per_gold`, `hero_start`, `pin_rect`, `pin_exclusion`, `scene_ref`. `InputRecord` holds `drag_slop`, `tap_slop`, `edge_reject_margin`, `left_handed`, `reduce_motion` | ADR-0002 |
 | `ReadContext` | `RefCounted` | `src/foundation/data/read_context.gd` | `def_id: StringName`, `level: int = 0`, `live_entity: Object = null`. **One reused instance per caller** (per enemy, per tower slot, one for the hero), never one per read, so a tick allocates nothing | ADR-0005 |
 | `Targetable` | `RefCounted` | `src/core/combat/targetable.gd` | `spawn_id: int`, `position: Vector2` (cached once per tick), `removed: bool`, `health: Health`, `status: Status` | ADR-0009 |
 | `Enemy` | `Targetable` | `src/feature/enemy_wave/enemy.gd` | Adds `def_id: StringName`, `distance: float`, its `ReadContext` | ADR-0009 |
@@ -702,7 +702,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 |---|---|---|---|
 | QQ-01 | Tick driver: custom accumulator in `_process` or `_physics_process`; tick rate (60 Hz proposed); `MAX_TICKS_PER_FRAME`; behaviour on a frame stall. | High | ADR-0004 |
 | QQ-02 | Stretch mode and aspect (`project.godot` sets none; 4.7 changed new-project defaults), minimum width (360 dp proposed), whether a taller phone letterboxes or reveals the off-field entry. Layout rules L3, L5 to L7 depend on the answer. ADR-0003 decides; the Mobile Platform GDD inherits. | High | ADR-0003 |
-| QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. | High | ADR-0002 |
+| QQ-03 | Catalogue format: typed `Resource` or JSON; how missing fields and fractional integers are caught; how read-only is enforced and snapshot-tested (`duplicate_deep()`); proof it loads from an Android export. Closed 2026-11-05 by ADR-0002 (Accepted): JSON records under `res://data/` listed in a manifest, raw-Dictionary validation, read-only typed records proved by a canonical snapshot; the Android export check is its probe Q1. | High | ADR-0002 |
 | QQ-04 | Type of `tower_id` and other IDs across signals: `StringName`, `String` or `int`. | Medium | ADR-0006 |
 | QQ-05 | `Vector2` is documented as 32-bit in a stock build but unverified on 4.7. PinGeometry avoids `Vector2` methods until it is. Float results may differ between x86 and ARM, so bot baselines are kept per architecture. | Medium | ADR-0004 |
 | QQ-06 | Engine event order: does input arrive before `_process`; Control event order against `_unhandled_input`; which notifications fire on Android and iOS for pause and focus loss; moves and releases delivered after a `cancel` on focus return. | High | ADR-0003 (spike) |

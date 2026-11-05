@@ -1,7 +1,7 @@
 # ADR-0002: Catalogue Storage Format, Manifest and Validation
 
 ## Status
-Proposed. Revised the same day after TD-ADR CONCERNS (no blockers) and godot-specialist review (no blockers). Names follow `architecture.md` B0; on acceptance, B0, Data Flow 4 and QQ-03 are amended as Key Interfaces states.
+Accepted 2026-11-05 by njarrar. Revised before acceptance after TD-ADR CONCERNS (no blockers) and godot-specialist review (no blockers). Names follow `architecture.md` B0. Appendix probes Q1 to Q4 remain pending; Q1 (the JSON files and stage scenes load from an Android export) must pass before any phone build.
 
 ## Date
 2026-11-05
