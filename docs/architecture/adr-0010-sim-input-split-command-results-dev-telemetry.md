@@ -187,7 +187,7 @@ Decision 2 gives the enums, Decision 6 the queries, ADR-0006 the signals. New si
 # TowerSim
 func build(slot_index: int, tower_id: StringName) -> BuildResult
 func upgrade(slot_index: int) -> UpgradeResult
-func slot_state(slot_index: int) -> SlotState      # owned per slot; shared empty sentinel if bad
+func slot_state(slot_index: int) -> SlotState      # owned per slot; shared empty sentinel if bad; adds cooldown_full: int (amended 2026-11-05)
 func call_bonus(ticks_left: int) -> int             # side-effect free
 # HeroSim; enum PinState { UNPINNED, WALKING, PINNED }, enum BurstState { READY, TELEGRAPHING, COOLING }
 func pin(pos: Vector2) -> PinResult
@@ -305,3 +305,6 @@ No code exists. Sync items, none made here:
 ## Related
 - ADR Dependencies lists the ADRs. Supplies ADR-0008 Decision 8's sink; ADR-0011 draws from Decision 6.
 - GDDs: those in GDD Requirements Addressed. Open items: none.
+
+## Amendments
+- **2026-11-05, with ADR-0011 (pending the user's confirmation at ADR-0011 acceptance); Status stays Accepted.** `SlotState` gains `cooldown_full: int`: the tick count the tower set `cooldown_left` to at its last attack, 0 when empty or not yet fired, and unchanged on upgrade, as the timer is. Decision 6's Combat row also reads `speed_factor(enemy)` and `hp_ratio(enemy)` (ADR-0009 amendment of the same date), for the slow drag lines and the damaged core. Views use them to draw the Cooling ring and the enemy state cues without reading a stat. Nothing else in this ADR changes.

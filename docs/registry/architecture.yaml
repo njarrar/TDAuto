@@ -578,12 +578,13 @@ performance_budgets:
     status: active
     budget_ms: 3.0
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
-    notes: "Frame step 3 refresh plus every _draw body, p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst); draw calls 60 a frame: field views 36, HUD 12 (about 8, text batches 3), modals 4, engine 4, spare 4; desktop bench P-V1 trigger 0.2 ms p95 in a release export; fallback F1 MultiMesh per enemy body shape and flashes; measured M9a desktop windowed and M9b phone. ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    # was: fixed caps field 36, modals 4, spare 4; F1 per shape (before godot-specialist and TD-ADR review)
+    notes: "CPU: frame step 3 refresh plus every _draw body (draw commands), p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst). GPU: 60 draw calls a frame, provisional until M9a: HUD at most 12 (about 8, text batches at most 3), engine 4, spare 8 (a modal's about 4 come from spare), field views what is left (36), no per-node cap. Desktop bench P-V1 trigger 0.2 ms p95 in a release export; debug runs about 0.5 to 0.8 ms, so fallback F1 (one MultiMeshInstance2D per enemy pass with rim-keyline disc mesh, plus flashes) is the likely path. Measured M9a desktop windowed and M9b phone. ADR-0011 Proposed 2026-11-05; not binding until Accepted"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
 
 # Example:
 #
@@ -819,36 +820,39 @@ api_decisions:
     notes: "ADR-0010 Accepted 2026-11-05; binding"
   - purpose: battle_field_drawing
     status: active
-    api: "One _draw node per view family under one FieldViews Node2D, tree order is draw order (Backdrop, ExitStrip, RangeRings, Towers, HeroZones, Enemies, Combat, Hero, HudTopBand, HudField); enemies in three passes by size in spawn_id order; Vector2(t.x, t.y) built only at the draw call; queue_redraw only on change; antialiased false"
+    # was: ten nodes with a separate HeroZones (before godot-specialist and TD-ADR review)
+    api: "One _draw node per view family under one FieldViews Node2D at the canvas origin, tree order is draw order (Backdrop, ExitStrip, RangeRings, Towers, Enemies, Combat, Hero, HudTopBand, HudField); enemies in three passes by size in spawn_id order; Vector2(t.x, t.y) built only at the draw command; queue_redraw only on change; every line command width at least 2.0 from ViewStyle and antialiased false; pixel-only values in ViewStyle, gameplay values never"
     not: "a node per enemy, tower or effect; z_index, CanvasLayer or materials between field views"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
-    reason: "TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001; fewest batch breaks; probe R6 shows _draw runs only when queued and runs headless"
+    reason: "TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001; fewest batch breaks; probes R6 and R20: _draw runs headless, siblings in tree order, an unqueued node keeps its commands; R14: width -1.0 is a thin primitive"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
   - purpose: path_geometry
     status: active
-    api: "Geometry2D.offset_polyline(path_points, path_width / 2, JOIN_MITER, END_BUTT) for the edge and path_width / 2 - 2 for the body, baked once at wrapper build, drawn with draw_colored_polygon; triangulate_polygon check, else one dev error and a draw_polyline fallback"
+    # was: triangulate check only (before godot-specialist review)
+    api: "Self-crossing check on path_points first (non-adjacent segment pairs through Geometry2D.segment_intersects_segment); then Geometry2D.offset_polyline(path_points, path_width / 2, JOIN_MITER, END_BUTT) for the edge and path_width / 2 - 2 for the body, baked once at wrapper build, drawn with draw_colored_polygon; a crossing, more than one polygon, a clockwise polygon or an empty triangulate_polygon gives one dev error and a dev-only draw_polyline fallback"
     not: "draw_polyline or Line2D as the main path"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
-    reason: "Probe R4, verified 4.7.2 headless: exact square 90 degree corners at width 72 and 68; no dependence on the 4.7 line feather change"
+    reason: "Probes R4 and R16, verified 4.7.2 headless: exact square 90 degree corners at width 72 and 68; a self-crossing path merges into one valid polygon with no error; a wide loop adds a clockwise hole"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
   - purpose: battle_hud_text
     status: active
-    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); one font loaded once by the wrapper, ThemeDB.fallback_font until chosen"
+    # was: no gold-record, AccessKit or tnum conditions (before godot-specialist and TD-ADR review)
+    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); gold layout and string owned by HudTopBand as a plain record; HudTopBand sets accessibility_name and accessibility_live for gold and lives; one font loaded once by the wrapper, ThemeDB.fallback_font until chosen; tabular numerals through a FontVariation with tnum"
     not: "Label nodes in the battle HUD (modal TapScreens may use them)"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
-    reason: "Holds TR-hud-015's at most 3 text batches whatever the engine does across nodes; probes R3 and R7"
+    reason: "Aims at TR-hud-015's at most 3 text batches (one atlas per size expected, counted in M9a; digits return to HudTopBand if batches merge across nodes); probes R3, R15, R18"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:

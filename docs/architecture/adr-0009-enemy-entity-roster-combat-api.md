@@ -310,3 +310,6 @@ GDD sync (4 GDDs checked): combat-damage.md (Rules 3, 10, 11, 12, Core Rules), e
 - Depends on ADR-0001, 0002, 0004, 0005, 0006, 0007; amends ADR-0006 and ADR-0007 at acceptance; enables ADR-0010, ADR-0011.
 - `architecture.md` v6 (rule 5, B0, B6, B7, B9, Data Flow 10, QQ-08, QQ-10, QQ-11); `architecture-review-2026-11-04.md` (Blocking 1, Conflict 2, Should-fix 6).
 - GDDs: `combat-damage.md`, `enemy-wave.md`, `tower-system.md` (Rules 9, 10, 13, starter values), `hero-system.md` (Rules 4, 8, Tick).
+
+## Amendments
+- **2026-11-05, with ADR-0011 (pending the user's confirmation at ADR-0011 acceptance); Status stays Accepted.** Combat gains `func hp_ratio(enemy: Targetable) -> float`, a view-only read: `hp / max_hp` from the enemy's `Health`, which already holds `max_hp`, and 1.0 for an unattached enemy. Decision 1's list of `Health` reads outside `src/core/combat/` becomes `hp_left`, `is_dead`, `speed_factor`, `hp_ratio`. It changes no state, reports nothing and is not called by the sim. Nothing else in this ADR changes.
