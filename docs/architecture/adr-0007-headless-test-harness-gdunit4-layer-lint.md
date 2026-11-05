@@ -140,7 +140,7 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 ### 6. Lints: GDScript, token based, run by Godot headless
 - **Tool**: `tools/ci/lint/lint_main.gd` (`extends SceneTree`) walks `src/`, `tests/`, `tools/ci/` and `.tscn` files. `gd_tokens.gd` is a hand-written scanner (`GDScriptTokenizer` is not exposed). It must handle triple-quoted, raw `r"..."`, `&"..."` and `^"..."` literals, `#` inside strings, `##` doc comments, `\` line continuation, line counts across multi-line strings, and `$` and `%` node paths. Comments drop; each string stays one token.
 - **Rule shape**: one table-driven rule, `token_rules.gd`, holds every "banned token in scope" row (Kind T below) as data, each row with a hit and a clean sample in `tests/unit/lint/token_rules_test.gd`. Only Kind C rules get their own code in `tools/ci/lint/rules/`, each a pure `check(path, tokens, ctx)` with its own samples.
-- **Scopes** live once in `tools/ci/lint/scopes.gd` (ADR-0004 review B4): `SIM = src/foundation, src/core, src/feature`; `RNG_EXEMPT = src/root/battle_builder.gd, src/root/battle_wrapper.gd`; the adapter, TapScreen, Wiring, wrapper, ResultScreen, RunLog and ReadContext owner paths; each folder's layer. `tests/unit/lint/` is exempt from string-literal rules, since its samples are strings.
+- **Scopes** live once in `tools/ci/lint/scopes.gd` (ADR-0004 review B4): `SIM = src/foundation, src/core, src/feature`; `RNG_EXEMPT = src/root/battle_builder.gd, src/root/battle_wrapper.gd`; the adapter, TapScreen, Wiring, wrapper, ResultScreen, RunLog and ReadContext owner paths; `run_measures.gd` as a VIEW scope (ADR-0010); each folder's layer. `tests/unit/lint/` is exempt from string-literal rules, since its samples are strings.
 - **Settings suite** (Kind S): `tests/unit/app/app_settings_test.gd` reads `ProjectSettings`, the base key and every `.<feature>` override key, never file text.
 - **Output**: `LINT <ID> <path>:<line> <message>`, then a count per ID. No suppression marker exists.
 - **Known gaps**: the lint matches names, not types. It misses calls through `call()`, a string `Callable` or a renamed local, and `Vector2` operators on values it cannot see are `Vector2`. Review and the runtime tests (replay digest, read-only containers, listener test) back each gap.
@@ -180,7 +180,7 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-STAT-1 | 0005 G5 | T3 | `src/` | A string or `&"..."` key in `stat_int(` or `stat_float(` |
 | L-STAT-2 | 0005 G1 | C3 | `src/` but `foundation/data/` | On a receiver typed as a tower level, enemy, hero or burst record: a field `StatKeys.ROWS` lists |
 | L-STAT-3 | 0005 G10 | A | | Alias of L-APP-5 for `stat_accessor.gd`, `read_context.gd` |
-| L-STAT-4 | registry `read_context_per_read` (0005 G6) | T3 | `src/` | `ReadContext.new(` outside the owner files in `scopes.gd` (enemy, tower_sim, hero_sim, hud_logic) |
+| L-STAT-4 | registry `read_context_per_read` (0005 G6) | T3 | `src/` | `ReadContext.new(` outside the owner files in `scopes.gd` (enemy, tower_sim, hero_sim, hud_logic, hero_input) |
 | L-SIG-1 | 0006 G1 | T3 | `src/` | `emit_signal(`, `connect("`, `add_user_signal(` |
 | L-SIG-2 | 0006 G2 | T3 | `src/` | `CONNECT_` flags; `call_deferred` on an emit; `await` on a battle signal; `tween_await(` |
 | L-SIG-3 | 0006 G4 | C3 | presentation, wrapper | Assigning a field of `flow`, `combat`, `enemy_wave`, `tower_sim`, `hero_sim`, `fatal_latch`, `stat_accessor`, `halt_gate` |
@@ -190,6 +190,10 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-COMBAT-2 | 0009 G2 (amendment) | C3 | `src/` but `feature/enemy_wave/` | On a receiver typed `Targetable` or `Enemy`, assigning `spawn_id`, `distance`, `x`, `y`, `removed` |
 | L-COMBAT-3 | 0009 G4 (amendment) | T3 | `src/` | `DamageEvent.new(` outside `tower_sim.gd`, `hero_sim.gd` |
 | L-COMBAT-4 | 0009 G2 (amendment) | C3 | `src/` but `enemy_wave.gd` | `append`, `remove_at`, `clear`, `sort`, `erase` or assignment on a `roster()` or `targets()` result |
+| L-CMD-1 | 0010 G7 (amendment) | C3 | `src/` | On its receiver: `tower_sim.build(`, `flow.start_wave(`, `flow.call_early(` outside `hud_logic.gd`; `tower_sim.upgrade(` outside `tower_input.gd`; `hero_sim.pin(`, `hero_sim.burst(` outside `hero_input.gd` |
+| L-CMD-2 | 0010 G3 (amendment) | C3 | those three files, `tests/helpers/bots/` | `if`, `not`, `and`, `or` right before a command call; bare `OK` beside a result |
+| L-DEV-1 | 0010 G9 (amendment) | T3 | `src/presentation/dev/`; `SIM` | `FileAccess` outside `jsonl_file_sink.gd`; any `FileAccess` in `SIM` |
+| L-HERO-1 | 0010 D7 (amendment) | T2 | `SIM` but `feature/hero/`; `src/root/` but `battle.gd`, `battle_builder.gd` | `hero_sim`, `HeroSim` |
 | L-NAME-1 | QQ-16; 0005 E7 | C1 | `src/` | A `class_name` that `ClassDB.class_exists()` knows, or whose `get_global_class_list()` entry names another path (the list holds one entry per name) |
 | L-NAME-2 | QQ-16 | T1 | `tests/`, `tools/` | Any `class_name` |
 | L-GD-1 | QQ-15 | D | `src/`, `tests/` | `arr[i] = v` on a property with a `set(`; lands with the first such property |
@@ -407,6 +411,7 @@ Harness tests:
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). F2: `debug/gdscript/warnings/exclude_addons` does not exist in 4.7.2; F2 now keeps `debug/gdscript/warnings/directory_rules` at its default `{"res://addons": 0}`, which already skips addon warnings. Decision 9 gains notes N1 (`inference_on_variant` is an error by default: type a `weakref()` local as `WeakRef`, not `:=`) and N2 (a variable named `log` breaks the parse). H7: archive name and SHA512 confirmed; the CI story still copies the URL. H4, H5, H7 and H8 are marked verified.
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5 and 9). Last Verified now names the probes verified 4.7.2 headless (H4, H5, H7, H8) and those that still need gdUnit4 (H1, H2, H3, H6, H9). Depends On lists ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006 by number, so `adr-dep-graph.sh` sees all six edges. Nothing else in this ADR changes.
 - **2026-11-04, with ADR-0009** (confirmed by the user at ADR-0009 acceptance); Status stays Accepted. Lint rows L-COMBAT-1 to L-COMBAT-4 (ADR-0009 Migration 4). `combat_invariant.gd` reads `applied` from the plain-value `damage_applied` (argument 3). `combat_probe_test.gd` runs ADR-0009 B1 to B4 and X1 to X7 in the probe suite.
+- **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Lint rows L-CMD-1 (keyed on the receiver), L-CMD-2 (scoped to the three caller files and the bots), L-DEV-1 (scoped to `src/presentation/dev/`, plus sim folders never name `FileAccess`; the full list waits for the save ADR) and L-HERO-1 (ADR-0010 Migration 4). L-STAT-4's owner list adds `hero_input.gd`. `scopes.gd` names `run_measures.gd` as a VIEW scope.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.

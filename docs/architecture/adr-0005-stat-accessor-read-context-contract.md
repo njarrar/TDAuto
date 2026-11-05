@@ -105,13 +105,15 @@ A read checks in this order and stops at the first failure:
 | `TowerSim` | one scratch, for commands | per command | per command | none |
 | `HeroSim` | two, at battle build | Hero ID; `burst_id` | 0 | the hero state, for both |
 | `HudLogic` | one preview | before each read | before each read | none |
+| `HeroInput` (ADR-0010) | one, at setup | `burst_id` | 0 | none |
 
 - Only the owner writes a context. Sims never change `def_id`; TowerSim changes only `level`. The accessor never stores a context or a value.
 
 ### 5. Where reads may happen
 - **Inside a tick**, by EnemyWave (`move_speed`, `lives_cost`, `bounty`, and `max_hp` once at spawn), TowerSim (`range`, then `damage`, `attack_interval` and role keys) and HeroSim (Hero and Burst keys). A sim reads every stat an action needs before it changes state (Tower Rule 9 step 3).
-- **In a command, before any change.** `build` and `upgrade` call `is_tower` and `level_count` first, then read `cost`, then check `halted()`; a bad cost read returns `HALTED` with nothing changed.
+- **In a command, before any change.** `build` and `upgrade` call `is_tower` and `level_count` first, then read `cost`, then check `halted()`; a bad cost read returns `HALTED` with nothing changed. `pin` reads `walk_speed`; `burst` reads `reach`, then `telegraph_duration`; each read is followed by `halted()` (ADR-0010 Decision 3).
 - **In frame step 3 only, by HudLogic.** Opening the arc and `gold_changed` only mark costs dirty; HudLogic reads `cost` (and `range` for range rings) in the next view step. The wedge reads Burst `cooldown` there each refresh with the injected `burst_id`. `gold_changed` fires in the reap slot, inside the tick, so **HudLogic never reads the accessor from inside a sim signal handler**. For an upgrade chip, HudLogic checks `level < level_count(def_id)`, then sets the preview `level` to `level + 1`. After each read it checks `halted()` and, when true, abandons the update for the Fatal path.
+- **In frame step 1, by HeroInput, between ticks, only in the Cancelling and Live aim states** (amended 2026-11-05 with ADR-0010): Burst `reach`, `radius`, `damage`, and Combat `hp_left`, `is_dead` for the kill preview, each followed by `halted()`.
 - **Never cached.** A value is used in its action and dropped, except `max_hp` seeding `Health`. A countdown started with `to_ticks` is state, not a cached stat; a new `attack_interval` applies at the next reload (Tower Rule 12).
 - The Builder reads no stat; it reads `burst_id` from the Hero record directly.
 
@@ -358,3 +360,4 @@ Fixtures are code-built through `Catalogue.from_documents` (ADR-0002); no file I
 
 ## Amendments
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). E5 is corrected: a `String` literal key costs the same as a `StringName` constant (ratio 0.99); a `String` variable costs 1.42x. Decision 3 and R2 drop the cost reason, so L-STAT-1 rests on the vocabulary and typo safety only. Decision 3 and Key Interfaces now say `@abstract` makes `StatKeys` impossible to construct by name; `load(path).new()` still builds one, which needs no lint at MVP. Engine Compatibility and the E rows, V6 and V7 are marked verified.
+- **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Decision 5 gains a read site: in frame step 1, by HeroInput, between ticks, only in the Cancelling and Live aim states, Burst `reach`, `radius`, `damage`, and Combat `hp_left`, `is_dead`, each followed by `halted()`. HeroInput owns one context (Decision 4 table), and `hero_input.gd` joins L-STAT-4's owner list (ADR-0007). The command bullet now names the `pin` and `burst` reads. Nothing else in this ADR changes.

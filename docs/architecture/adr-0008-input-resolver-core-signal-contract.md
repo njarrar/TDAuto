@@ -122,7 +122,7 @@ Rule 13 needs facts no signal carries: travel under slop, the end of a silent ge
 
 ### 8. Gesture log harness (TR-input-015, harness side; Data Flow 9)
 - `class_name GestureLog extends RefCounted`, `src/presentation/dev/gesture_log.gd`. Shipped but never built in release: the BattleWrapper builds it only when `OS.is_debug_build()` is true. The file stays in the pck and the wrapper may name it statically; an export preset filter is not chosen.
-- `setup(resolver, device, insets, now_ms, append_line, chip_state, dev_error)`, all method Callables. `now_ms` wraps `Time.get_ticks_msec` (tests inject a fake); `append_line(line: String) -> bool` is ADR-0010's JSONL sink to `user://gesture_log.jsonl`; `chip_state` is TowerSim's read.
+- `setup(resolver, device, insets, now_ms, append_line, chip_state, dev_error)`, all method Callables. `now_ms` wraps `Time.get_ticks_msec` (tests inject a fake); `append_line(line: String) -> bool` is `JsonlFileSink.append_line` (ADR-0010 Decision 8) on its own sink for `user://gesture_log.jsonl`; `chip_state` is `TowerInput.chip_state` (settled 2026-11-04; amended 2026-11-05).
 - Listens through `view_wiring` to the eight resolver signals and TowerSim's `tower_upgraded`. View-only: no command, registry or gesture call, no kept payload object.
 - `set_prompt(action: StringName, target: int, target_centre: Vector2)` comes from the phone-test prompter; a tower prompt reads `chip_state()` then.
 - In its `became_idle` handler it writes one JSON line holding every Rule 13 field (Input GDD), plus `press_slop` and `tap_is_sink`, from `last_trace()`, its own times and the prompt. Each `tower_upgraded` gives one line.
@@ -265,7 +265,7 @@ A handler loop hangs the game with no error; the dev guard costs legal chains no
 | input-gesture-resolver.md | TR-input-010: commit before emit; FIFO queue in the outermost call | Decision 4. Full |
 | input-gesture-resolver.md | TR-input-011: `validate()`, `create()` null; non-finite dropped | Decisions 1, 2, 4. Full |
 | input-gesture-resolver.md | TR-input-013: targets are discs, HUD Controls first | Decision 2. Partial, shared with ADR-0003 (Control part) |
-| input-gesture-resolver.md | TR-input-015: dev gesture log with every Rule 13 field | Decisions 7, 8. Partial until ADR-0010 decides the sink |
+| input-gesture-resolver.md | TR-input-015: dev gesture log with every Rule 13 field | Decisions 7, 8; ADR-0010 Decision 8 gives the sink. Full |
 | tower-system.md | TR-tower-011: TowerInput registers slots and chip, disables built slots, closes chip on phase, ignores taps while halted | Decisions 2, 6, 9. Full |
 | hero-system.md | TR-hero-010: hero DRAG, button DRAG, sink TAP; centre each frame; hysteresis hit test | Decisions 2, 5, 9. Full |
 | battle-hud.md | TR-hud-008: arc registers and unregisters, disables Start/Call, closes on outcome, Paused, Fatal | Decisions 2, 6, 9. Full |
@@ -342,3 +342,4 @@ godot-specialist: **CONCERNS** (none blocking). TD-ADR: **CONCERNS**. All findin
 
 ## Amendments
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). Probes R1 to R6 ran on 4.7.2 headless and all match (`docs/engine-reference/godot/probe-results.md`). Engine Compatibility (Knowledge Risk, Verification Required) and the Engine probes list under Validation Criteria now mark them verified. The R3 line now names the probe file's R3a (storage, NaN, INF) and R3b (the slop edge). The probes still become CI tests (ADR-0007 Decision 7). Nothing else in this ADR changes.
+- **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Decision 8: `chip_state` is TowerInput's read, which owns `ChipWindow` (settled 2026-11-04, review row T6), not TowerSim's. GestureLog's `append_line` is the `append_line` of ADR-0010's `JsonlFileSink` for `user://gesture_log.jsonl`. TR-input-015 now reads Full. Nothing else in this ADR changes.
