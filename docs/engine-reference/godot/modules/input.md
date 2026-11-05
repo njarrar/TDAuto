@@ -94,12 +94,26 @@ Source: `prototypes/adr-0003-spike/` run on macOS with `4.7.2.stable.official`,
 | A Control hides while it holds a press | Touch focus stays on the hidden Control (its `gui_input` still gets the drag and release). Mouse focus is dropped: the mouse motion and release reach `_unhandled_input`. Ignore releases of an index you never saw pressed. |
 | Mouse to touch emulation (`emulate_touch_from_mouse`) | Each mouse event yields an `InputEventScreenTouch`/`ScreenDrag` with `device = -1` (emulation) delivered **before** the mouse event, which keeps `device = 32` (`InputEvent.DEVICE_ID_MOUSE` is 32 on 4.7). |
 | Touch to mouse emulation (`emulate_mouse_from_touch`, default on) | Touch index 0 yields an `InputEventMouseButton`/`MouseMotion` with `device = -1` delivered **before** the touch event. A second finger (index 1) yields no mouse event. |
-| Event positions under stretch | Already converted to the 540x960 canvas. Window 600x1048 gave a screen transform of scale 1.0907 with a 6 px side letterbox; 500x1000 gave 0.9259 with a 56 px top letterbox. |
+| Event positions under stretch | Already converted to the 540x960 canvas. The screen transform is anisotropic (integer-rounded viewport rect). Window 600x1048: `Transform2D(Vector2(1.090741, 0), Vector2(0, 1.091667), Vector2(6, 0))`. Window 500x1000: `Transform2D(Vector2(0.925926, 0), Vector2(0, 0.925), Vector2(0, 56))`. |
 | Resize | `Viewport.size_changed` fired on the same frame as `DisplayServer.window_set_size`. `NOTIFICATION_WM_SIZE_CHANGED` did not reach a child node in the following 4 frames; use the signal. |
 | Lifecycle notifications | `NOTIFICATION_APPLICATION_FOCUS_IN` (2016) and `_OUT` (2017) and `NOTIFICATION_WM_WINDOW_FOCUS_IN` (1004) and `_OUT` (1005) all reach child nodes on desktop. At startup the sequence was 2016, 1005, 2017, then 1004 and 2016 once the window got focus: expect a focus-out before the first gesture. `NOTIFICATION_APPLICATION_PAUSED` (2015) and `_RESUMED` (2014) cannot be exercised on desktop. |
 | Safe area | `DisplayServer.get_display_safe_area()` returned the screen minus the menu bar on macOS. Meaningless off-device. |
 | A Control parented to a Node2D | Gets a zero-size anchorable rect and never receives GUI input. Put HUD Controls under a CanvasLayer or a Control root. |
 
-`input/buffering/agile_event_flushing` read back as null through
-`ProjectSettings.get_setting` with no default supplied; check the 4.7 setting
-name before relying on it.
+The spike read `input/buffering/agile_event_flushing`, the wrong key prefix; the
+setting is `input_devices/buffering/agile_event_flushing` (see below).
+
+### Echo off: `emulate_mouse_from_touch=false` (4.7.2 probe, 2026-11-05, `prototypes/adr-0003-spike/echo-off-probe/`)
+
+Same project as the spike with the six keys ADR-0003 adopts (`emulate_touch_from_mouse=true`, `emulate_mouse_from_touch=false`), run on macOS 4.7.2.
+
+| Premise | Result |
+|---|---|
+| Callback split with the echo off | Identical to the rows above. A new touch under a visible STOP Control goes to `_input` and the Control's `gui_input`, nothing to `_unhandled_input`. With the Control shown mid-gesture, drags reach `_input` and `gui_input` (not `_unhandled_input`); the release reaches `_input` and `_unhandled_input`. |
+| `Button` with the echo off | Receives the raw `InputEventScreenTouch` in `gui_input`, swallows it before `_unhandled_input`, and fires `pressed` on release. A `Button` is `MOUSE_FILTER_STOP` by default. |
+| Left mouse click | `ScreenTouch` index 0, device `DEVICE_ID_EMULATION` (-1), then `MouseButton` device 32. |
+| Right click | `MouseButton` only (device 32); no touch is emitted. Middle click not probed. |
+| `agile_event_flushing` | Setting is `input_devices/buffering/agile_event_flushing`, default false. |
+| Press in a letterbox bar | Arrives with a coordinate outside the field: window (1, 500) at 600x1048 gave (-4.584, 458.0); window (250, 10) at 500x1000 gave (270.0, -49.73). |
+| `aspect="expand"` | Never shrinks below 540x960; grows the long axis only, origin (0, 0), extra at the right or bottom: 549x960 at 600x1048, 540x1080 at 500x1000. A bar press at (1, 500) arrives inside the field (x 0.915). `keep_width` was not probed. |
+| `DisplayServer.window_is_focused()` | False at `_ready` on a launch where the window never got focus; no focus notification arrived in that run. |

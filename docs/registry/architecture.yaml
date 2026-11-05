@@ -163,6 +163,19 @@ interfaces:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
     added: 2026-11-05
     revised: ""
+  - contract: platform_lifecycle_to_pause
+    status: active
+    pattern: signal
+    producer: input-adapter
+    consumers:
+      - game-state-stage-flow
+      - battle-hud
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    signal_signature: "lifecycle_paused() once per focus loss (APPLICATION_FOCUS_OUT, WM_WINDOW_FOCUS_OUT, APPLICATION_PAUSED, deduplicated until a focus-in, ignored until the window has been seen focused); wrapper connects it to Flow.pause and HudLogic.modal_cancel; viewport_resized() on Viewport.size_changed goes to HudLogic.modal_cancel only and never pauses"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -302,6 +315,46 @@ api_decisions:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
     added: 2026-11-05
     revised: ""
+  - purpose: input_callback_split
+    status: active
+    api: "InputAdapter reads presses in _unhandled_input and moves, releases and cancels of pointers it forwarded in _input"
+    not: "reading moves or releases in _unhandled_input, or presses in _input"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    reason: "a STOP Control appearing over a live gesture swallows its moves in _unhandled_input (4.7.2 spike); presses in _unhandled_input keep a modal from leaking a tap beneath"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: pointer_event_family
+    status: active
+    api: "emulate_touch_from_mouse=true, emulate_mouse_from_touch=false; InputAdapter.read_pointer (static, also called by HudModals) reads only InputEventScreenTouch and InputEventScreenDrag"
+    not: "reading InputEventMouse* or branching on InputEvent.device"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    reason: "one event family so a press never arrives twice; desktop exercises the touch path (spike: mouse yields a device -1 touch before the device 32 mouse event)"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: display_stretch
+    status: active
+    api: "viewport 540x960, stretch mode canvas_items, aspect keep, no Camera2D; one DisplayContract.accepts for press bounds; event positions are field units unchanged"
+    not: "stretch aspect expand (4.7 new-project default), a Camera2D, or a canvas-transform change on the wrapper"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    reason: "keep makes field units equal viewport units on every device (TR-input-016); the only mode measured by the spike"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: hud_control_parenting
+    status: active
+    api: "every battle HUD Control under one CanvasLayer that is a child of the wrapper; only HudModals is MOUSE_FILTER_STOP, all others MOUSE_FILTER_IGNORE"
+    not: "a Control under a Node2D, or a STOP or PASS Control over the field"
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    reason: "a Control parented to a Node2D gets a zero-size rect and no GUI input (spike); a stray STOP Control swallows presses before the adapter"
+    referenced_by:
+      - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -387,6 +440,18 @@ forbidden_patterns:
     description: "scene_ref is a String path; the catalogue never loads or instances a scene. The content test and ADR-0001's runtime load() null check cover it."
     why: "Checking scenes at load would mean instancing every stage (Data Rule 9)."
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+  - pattern: input_event_read_outside_read_pointer
+    status: active
+    description: "Only InputAdapter.read_pointer tests InputEvent subclasses or reads their fields; InputAdapter and HudModals call it. No gameplay or HUD code names InputEventMouse*, InputEventKey or event.device."
+    why: "Two translations of the same events drift apart (event family, canceled flag)."
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+  - pattern: scene_tree_paused_for_flow_pause
+    status: active
+    description: "Pause is Flow's PAUSED state; get_tree().paused is never set."
+    why: "A second pause mechanism needs process_mode on every always-running node and its Control and input behaviour is not in the engine reference."
+    adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
     added: 2026-11-05
 
 # Example:

@@ -5,3 +5,11 @@ Desktop-only probe of the engine behaviour ADR-0003 depends on (architecture QQ-
 Run: `/Applications/Godot.app/Contents/MacOS/Godot --path prototypes/adr-0003-spike --resolution 600x1200 | grep 'SPIKE|'`
 
 Results and their reading are recorded in `docs/architecture/adr-0003-*.md` (Engine Compatibility) and `docs/engine-reference/godot/modules/input.md`.
+
+## Key set per run (ADR-0003 Decision 10)
+
+The tables in `docs/engine-reference/godot/modules/input.md` were recorded with this
+folder's `project.godot` (`emulate_mouse_from_touch` on). ADR-0003 adopted the six
+keys in `echo-off-probe/project.godot` (`emulate_mouse_from_touch` off); every device
+run D1 to D10 uses that key set, so copy those six keys into this `project.godot`
+before a device run and state the key set in each log.
