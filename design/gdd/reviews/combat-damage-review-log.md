@@ -160,3 +160,6 @@ No edit for the Vertical Slice item: Visual Feedback & VFX and Stage Progression
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. `damage_applied` names its position `hit_position`, and Rule 12 tells views to use it (ADR-0006 Decision 4). The Open Question on the tick order is answered: accepted 2026-11-04 (ADR-0004 Decision 5); the ProjectileSpawner cut stays open.
+
+## Revision — 2026-11-04 — ADR-0009 sync
+No balance value changed; Status unchanged. Rule 12: `damage_applied` now carries plain values, `(source_kind, source_id, applied, hit_position, killed, spawn_id)`, and no view reads an enemy (ADR-0009 Decision 6; ADR-0006 amended). Rule 3: the guards run null target, removed, amount, kind, then dead, and the constants add `ERR_NO_TARGET`, `ERR_ATTACHED_TWICE`, `ERR_BAD_MAX_HP`, `ERR_BAD_KIND` and `ERR_BAD_RANGE`. Rule 7 adds the null check first. Rule 10 adds the range check and the empty or null list. Rule 11 types `Array[Targetable]`. Core Rules: the cached position is stored as `x`, `y`, and `attach(enemy, max_hp) -> bool` with its three guards. Rule 9: Combat holds no `dt`. New criteria 19 to 22 cover `ERR_NO_TARGET`, `ERR_BAD_KIND`, `ERR_BAD_RANGE` and `attach`; criterion 12 checks each argument with `typeof()`. The ProjectileSpawner cut is answered: accepted 2026-11-04 (ADR-0009 Decision 7).

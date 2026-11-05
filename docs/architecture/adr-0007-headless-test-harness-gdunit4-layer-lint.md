@@ -123,7 +123,7 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | `battle/battle_members.gd` | `emitters(battle)` by `get_property_list()` (ADR-0006 Decision 8 step 1) |
 | `battle/battle_state.gd` | `take(battle)`: plain values from every read-only query, resolver registry excluded; `digest(battle)`: `var_to_bytes` of `take()` (ADR-0004 V7) |
 | `battle/weak_check.gd` | `refs(objects)`, `all_freed(refs)`; the caller drops its locals first |
-| `battle/combat_invariant.gd` | Combat invariant `I`: `check(log, combat, enemies) -> String`, empty when sums agree; reads ADR-0009's queries |
+| `battle/combat_invariant.gd` | Combat invariant `I`: `check(log, combat, enemies) -> String`, empty when sums agree; reads ADR-0009's queries and `applied` (`damage_applied` argument 3, amendment) |
 | `asserts/log_asserts.gd` | `assert_log(test, log, expected)`: the entire log in order, no `type_errors()` |
 
 - A fake overriding a typed method keeps the parameter list and returns that type on every path (4.7; `return 0`, `return 0.0`; the guide's `return null` fits only `Object` or `Variant` returns).
@@ -186,6 +186,10 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-SIG-3 | 0006 G4 | C3 | presentation, wrapper | Assigning a field of `flow`, `combat`, `enemy_wave`, `tower_sim`, `hero_sim`, `fatal_latch`, `stat_accessor`, `halt_gate` |
 | L-SIG-4 | 0006 G6 | C3 | `src/` | A `*_id` parameter or variable typed `String` |
 | L-SIG-5 | 0006 G8 | T3 | ResultScreen, RunLog | Any sim member or sim class name |
+| L-COMBAT-1 | 0009 G1 (amendment) | T3 | `src/` but `core/combat/` | `.health`, `.status`, `Health.new(`, `Status.new(` |
+| L-COMBAT-2 | 0009 G2 (amendment) | C3 | `src/` but `feature/enemy_wave/` | On a receiver typed `Targetable` or `Enemy`, assigning `spawn_id`, `distance`, `x`, `y`, `removed` |
+| L-COMBAT-3 | 0009 G4 (amendment) | T3 | `src/` | `DamageEvent.new(` outside `tower_sim.gd`, `hero_sim.gd` |
+| L-COMBAT-4 | 0009 G2 (amendment) | C3 | `src/` but `enemy_wave.gd` | `append`, `remove_at`, `clear`, `sort`, `erase` or assignment on a `roster()` or `targets()` result |
 | L-NAME-1 | QQ-16; 0005 E7 | C1 | `src/` | A `class_name` that `ClassDB.class_exists()` knows, or whose `get_global_class_list()` entry names another path (the list holds one entry per name) |
 | L-NAME-2 | QQ-16 | T1 | `tests/`, `tools/` | Any `class_name` |
 | L-GD-1 | QQ-15 | D | `src/`, `tests/` | `arr[i] = v` on a property with a `set(`; lands with the first such property |
@@ -196,7 +200,7 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-TEST-5 | Decision 5 | T1 | `tests/` | `assert_error(` with no `await` before it |
 
 ### 7. Engine probe suite
-- `tests/unit/engine/`, one file per handing ADR: `callable_ref_probe_test.gd` (ADR-0001 V1), `json_probe_test.gd` (ADR-0002 E1 to E3), `tick_probe_test.gd` (ADR-0004 V11a to e), `stat_probe_test.gd` (ADR-0005 E1, E3, E7), `signal_probe_test.gd` (ADR-0006 E1 to E6), `harness_probe_test.gd` (H2a, H2b, H5, H8, H9).
+- `tests/unit/engine/`, one file per handing ADR: `callable_ref_probe_test.gd` (ADR-0001 V1), `json_probe_test.gd` (ADR-0002 E1 to E3), `tick_probe_test.gd` (ADR-0004 V11a to e), `stat_probe_test.gd` (ADR-0005 E1, E3, E7), `signal_probe_test.gd` (ADR-0006 E1 to E6), `combat_probe_test.gd` (ADR-0009 B1 to B4, X1 to X7; amendment), `harness_probe_test.gd` (H2a, H2b, H5, H8, H9).
 - A probe prints `PROBE <id> <answer>` and asserts nothing about which answer is right; must-pass parts (ADR-0001 V1 case f) assert.
 - After a run on a new engine or gdUnit4 version, the story adds a row per probe to `docs/engine-reference/godot/probe-results.md` (ID, date, Godot and gdUnit4 versions, OS and architecture, answer, test file), plus a line in the doc each handing ADR names where guidance changes. An answer that differs from the row on file is a review item.
 
@@ -402,6 +406,7 @@ Harness tests:
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Lint rows L-INPUT-6 and L-INPUT-7; `recording_resolver.gd` also logs `register`, `unregister`, `set_centre`, `set_enabled`.
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). F2: `debug/gdscript/warnings/exclude_addons` does not exist in 4.7.2; F2 now keeps `debug/gdscript/warnings/directory_rules` at its default `{"res://addons": 0}`, which already skips addon warnings. Decision 9 gains notes N1 (`inference_on_variant` is an error by default: type a `weakref()` local as `WeakRef`, not `:=`) and N2 (a variable named `log` breaks the parse). H7: archive name and SHA512 confirmed; the CI story still copies the URL. H4, H5, H7 and H8 are marked verified.
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5 and 9). Last Verified now names the probes verified 4.7.2 headless (H4, H5, H7, H8) and those that still need gdUnit4 (H1, H2, H3, H6, H9). Depends On lists ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006 by number, so `adr-dep-graph.sh` sees all six edges. Nothing else in this ADR changes.
+- **2026-11-04, with ADR-0009** (confirmed by the user at ADR-0009 acceptance); Status stays Accepted. Lint rows L-COMBAT-1 to L-COMBAT-4 (ADR-0009 Migration 4). `combat_invariant.gd` reads `applied` from the plain-value `damage_applied` (argument 3). `combat_probe_test.gd` runs ADR-0009 B1 to B4 and X1 to X7 in the probe suite.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.

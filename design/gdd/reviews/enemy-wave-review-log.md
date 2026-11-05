@@ -133,3 +133,6 @@ Wording and tables only, no balance value or status change. Interactions and Dep
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. The signal `waves_complete` is now `waves_completed` in every code form, test logs included (ADR-0006 Decision 5). The Open Question on the tick order is answered: accepted 2026-11-04 (ADR-0004 Decision 5); the path and slots move stays open.
+
+## Revision — 2026-11-04 — ADR-0009 sync
+No balance value changed; Status unchanged. Rule 9 and Rule 14: the cached position is stored as `x`, `y` (64-bit `float`); an enemy is a `Targetable`, and both lists are `Array[Targetable]`. Rule 14: the add-enemy step calls Combat's `attach` and calls fatal on `false`. Rule 12: the two tick entries are `advance()` and `reap()`, and `advance()` takes no argument (ADR-0009 Decision 4). Open Questions: the path and slots move is answered, accepted 2026-11-04 (ADR-0009 Decision 4), and the seams row notes what ADR-0009 answers.

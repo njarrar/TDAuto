@@ -384,12 +384,14 @@ interfaces:
       - content-test
     adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     # was: position parameters, no Error check, test catalogue (before godot-specialist and TD-ADR review)
-    signal_signature: "Roles: WIRING enemy_leaked(lives_cost: int), enemy_killed(bounty: int), wave_cleared(intermission_duration: float), waves_completed(), wave_called_early(seconds_left: float), latched(cause: String), each with exactly one Builder listener _on_<signal>; VIEW phase_changed(value: Flow.Phase), lives_changed(current: int), gold_changed(current: int), tower_built(slot_index: int, tower_id: StringName), tower_upgraded(slot_index: int, level: int), hero_pinned(pin_position: Vector2), burst_started(aim_point: Vector2, telegraph_ticks: int), attack_fired, damage_applied(..., hit_position: Vector2, ...), no sim listener; INPUT resolver pressed, tapped, ground_tapped, drag_started, drag_moved, drag_ended, drag_cancelled, became_idle; sync emit, commit before emit, flags 0, connect Error checked; test-side signal table checks type, class_name and enum bit per argument; tests read Wiring.pairs() (ADR-0001 amendment, pending)"
+    # was: damage_applied(event: DamageEvent, applied: float, hit_position: Vector2, killed: bool, spawn_id: int) (before ADR-0009 acceptance, 2026-11-04)
+    signal_signature: "Roles: WIRING enemy_leaked(lives_cost: int), enemy_killed(bounty: int), wave_cleared(intermission_duration: float), waves_completed(), wave_called_early(seconds_left: float), latched(cause: String), each with exactly one Builder listener _on_<signal>; VIEW phase_changed(value: Flow.Phase), lives_changed(current: int), gold_changed(current: int), tower_built(slot_index: int, tower_id: StringName), tower_upgraded(slot_index: int, level: int), hero_pinned(pin_position: Vector2), burst_started(aim_point: Vector2, telegraph_ticks: int), attack_fired, damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int) as plain values, no sim listener; INPUT resolver pressed, tapped, ground_tapped, drag_started, drag_moved, drag_ended, drag_cancelled, became_idle; sync emit, commit before emit, flags 0, connect Error checked; test-side signal table checks type, class_name and enum bit per argument; tests read Wiring.pairs() (ADR-0001 amendment, pending)"
     referenced_by:
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+      - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     revised: "2026-11-04"
-    notes: "ADR-0006 Accepted 2026-11-04; binding"
+    notes: "ADR-0006 Accepted 2026-11-04; binding. damage_applied payload amended 2026-11-04 with ADR-0009"
   - contract: result_snapshot
     status: active
     pattern: shared_resource
@@ -446,12 +448,12 @@ interfaces:
     consumers:
       - battle-wrapper
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
-    signal_signature: "damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int), plain values, VIEW role; replaces the DamageEvent payload in battle_signal_catalogue once ADR-0006 is amended at ADR-0009 acceptance"
+    signal_signature: "damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int), plain values, VIEW role; replaced the DamageEvent payload in battle_signal_catalogue (ADR-0006 amended 2026-11-04)"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
-    revised: ""
+    revised: "2026-11-04"
     notes: "ADR-0009 Accepted 2026-11-04; binding"
 
 # Example:

@@ -101,11 +101,11 @@ Parameter names and types are part of the contract.
 | HeroSim | `hero_pinned(pin_position: Vector2)` | VIEW | From `pin()`, after the pin target is set | none |
 | HeroSim | `burst_started(aim_point: Vector2, telegraph_ticks: int)` | VIEW | From `burst()`, after the burst state is set | none |
 | Combat | `attack_fired(source_kind: Combat.SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` | VIEW | From `report_attack`, before its `deliver` calls | none |
-| Combat | `damage_applied(event: DamageEvent, applied: float, hit_position: Vector2, killed: bool, spawn_id: int)` | VIEW | From `deliver`, after HP, dead state and counters commit | none |
+| Combat | `damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int)` | VIEW | From `deliver`, after HP, dead state and counters commit | none |
 | InputResolver | the eight INPUT signals | INPUT | Payloads and order: ADR-0008 | none |
 
 - `Vector2`, `int`, `float`, `bool`, `StringName` and enums are values, so a listener gets a copy (TR-combat-010). `hit_position` and `pin_position` avoid a name that reads as a `Node2D` property.
-- `damage_applied` alone carries an object (`DamageEvent`, holding a `Targetable`): listeners never write to it or keep it. ADR-0009 may replace it with plain values by amending this row.
+- `damage_applied` carries plain values only (amended 2026-11-04 with ADR-0009 Decision 6): no listener reaches an enemy or a reused `DamageEvent`.
 - Durations keep their GDD unit: seconds as `float` in `wave_cleared` and `wave_called_early`, ticks as `int` in `burst_started`. A listener turns seconds into ticks with `to_ticks` (ADR-0004).
 - Sim handlers are named `_on_<signal>`.
 
@@ -342,6 +342,7 @@ godot-specialist: **CONCERNS**. TD-ADR: **CONCERNS**. All findings relayed were 
 - **2026-11-04, with ADR-0008** (confirmed by the user 2026-11-04 at ADR-0008 acceptance; Status stays Accepted). Decision 3, INPUT row: owners never command from `drag_cancelled` or `became_idle`, the cleanup edges that `cancel()` fires inside a tick or at teardown (ADR-0008 Decision 6).
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). Probe E3 confirms that a `String` payload converts silently into a typed `StringName` parameter. Decision 8 already says recording fakes take untyped arguments and check `typeof()`; V6 now says so too. E1 to E6 are marked verified in Engine Compatibility and Validation Criteria.
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`, Should fix 5). The Knowledge Risk line now agrees with Verification Required: probes E1 to E6 are verified 4.7.2 headless. Nothing else in this ADR changes.
+- **2026-11-04, with ADR-0009** (confirmed by the user at ADR-0009 acceptance); Status stays Accepted. Decision 4, Combat `damage_applied` row: the payload is now plain values, `(source_kind, source_id, applied, hit_position, killed, spawn_id)`, as ADR-0009 Decision 6 sets. The `event: DamageEvent` argument is gone, so no VIEW payload holds an object. Combat Rule 12 and the registry `battle_signal_catalogue` entry change with it.
 
 ## Related
 - Depends on ADR-0001, ADR-0003, ADR-0004, ADR-0005 (Accepted); amends ADR-0001 and ADR-0004 (confirmed 2026-11-04). Enables ADR-0007 to ADR-0010.

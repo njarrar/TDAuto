@@ -124,3 +124,6 @@ Wording and tables only; no domain bound or balance value changed.
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. The one-tick floor reads `TickMath.TICK_SECONDS` (ADR-0004 Decision 2). Rule 10, Edge Cases and AC 7 list the six bad-call causes in order (null context, unresolved `def_id`, unknown key, inapplicable key, type mismatch, bad level) and say the returned `0` or `0.0` is unusable (ADR-0005 Decisions 1 and 2). The signal `waves_complete` is now `waves_completed` (ADR-0006 Decision 5).
+
+## Revision — 2026-11-04 — ADR-0009 sync
+No balance value changed; Status unchanged. Rule 9: the CI content test fails a `path_points` coordinate that a 32-bit float cannot hold exactly (ADR-0009 Decision 4). Criterion 10 adds a fixture case for it.
