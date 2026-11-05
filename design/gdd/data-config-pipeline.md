@@ -1,9 +1,9 @@
 # Data & Config Pipeline
 
-> **Status**: In Review (design reviews 2026-11-01: NEEDS REVISION four times; the fourth review's 4 blocking items applied, re-review pending)
+> **Status**: Approved (design review 2026-11-05: APPROVED after wording-only ADR syncs; prior four reviews NEEDS REVISION, all blocking items applied)
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
-> **Last Verified**: 2026-11-01
+> **Last Updated**: 2026-11-05
+> **Last Verified**: 2026-11-05 (against Accepted ADR-0001 to ADR-0011)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (`visual_key` on Enemy and Hero, art bible mapping, Open Questions widened)
 > **Implements Pillar**: Enabling system for all four pillars (Pillar 1 and 3 most directly: growth and stage variety are data)
 
@@ -35,26 +35,26 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 
 **Extension rule.** These tables are the MVP minimum. An owning GDD adds a field by updating the domain table and the validator in the same change; no empty fields are reserved ahead of need. Adding a field must not change the loader or accessor contract. The Enemy & Wave GDD added the Stage geometry fields this way; routes, locomotion and armour or resist wait for Vertical Slice.
 
-**Field domains.** These are invariants against typos and broken simulation, not balance. Balance ranges belong to the owning GDDs. All ceilings and the floor are proposed.
+**Field domains.** These are invariants against typos and broken simulation, not balance. Balance ranges belong to the owning GDDs. All ceilings and the floor are proposed. Lengths, speeds and coordinates are in field units: the 540 × 960 reference field, which equals viewport units (ADR-0003).
 
 | Field | Type | Min | Max | Balance owner |
 |---|---|---|---|---|
 | `attack_interval`, `spawn_interval`, `cooldown`, `slow_duration`, `early_call_seconds_per_gold` | float, seconds | one tick (`TickMath.TICK_SECONDS`, 1/60) | 600 | Tower, Enemy & Wave, Hero |
 | `telegraph_duration`, `start_delay` | float, seconds | 0 | 600 | Hero, Enemy & Wave |
 | `damage` | float | 0 | 1,000,000 | Tower, Hero |
-| `range`, `leash_radius`, `radius`, `reach`, `splash_radius` | float, world units | above 0 | 2,000 | Tower, Hero |
-| `move_speed` (as authored; slowed speed is Combat's), `walk_speed` | float, units/s | above 0 | 2,000 | Enemy & Wave, Hero |
+| `range`, `leash_radius`, `radius`, `reach`, `splash_radius` | float, field units | above 0 | 2,000 | Tower, Hero |
+| `move_speed` (as authored; slowed speed is Combat's), `walk_speed` | float, field units/s | above 0 | 2,000 | Enemy & Wave, Hero |
 | `max_hp` | float | above 0 | 1,000,000 | Enemy & Wave |
 | `slow_strength` | float | above 0 | below 1 | Tower; meaning owned by Combat. 0 is dead data and 1 would freeze enemies |
 | `cost`, `bounty`, `starting_gold` | int | 0 | 100,000 | Tower, Enemy & Wave |
 | `lives_cost` | int | 0 | 1,000 | Enemy & Wave |
 | `intermission_duration` | float, seconds | 0 | 600 | Enemy & Wave |
-| `drag_slop` | float, world units | 8 | 30 | Input |
-| `tap_slop` | float, world units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's |
-| `edge_reject_margin` | float, world units | 0 | 48 | Input |
+| `drag_slop` | float, field units | 8 | 30 | Input |
+| `tap_slop` | float, field units | 16 | 34 | Input; the cross-field rule `tap_slop > drag_slop` is the resolver's `validate()`, not this validator's; the CI content test also checks it (ADR-0002 Decision 7) |
+| `edge_reject_margin` | float, field units | 0 | 48 | Input |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
-| `path_width` | float, world units | above 0 | 2,000 | Enemy & Wave |
+| `path_width` | float, field units | above 0 | 2,000 | Enemy & Wave |
 
 Simultaneous spawns are expressed by overlapping groups, not an interval of 0.
 
@@ -91,11 +91,11 @@ There is no separate economy record: gold values sit on the records that spend o
 
 1. **All authored gameplay values live in the catalogue.** Each owning GDD's tunable values are catalogue fields, and changing a fixture value changes that consumer's behaviour (checked per consumer story). Engine constants and pure presentation timings are not gameplay values.
 2. **Identity.** IDs are lowercase snake_case (validated), unique across all record types, and never encode stats or tree position. Display names may change; IDs never change and are never reused.
-3. **References are by ID and typed.** A record refers to another record by its ID, never by file path, and the reference must resolve to the expected record type (`burst_id` must name a Burst). Only owned sub-data (a tower's levels, a wave's groups) nests inside a record.
+3. **References are by ID and typed.** A record refers to another record by its ID, never by file path, and the reference must resolve to the expected record type (`burst_id` must name a Burst). `scene_ref` is not a record reference: it names a scene by its `res://` path, so this rule does not apply to it (ADR-0002 Decision 1). Only owned sub-data (a tower's levels, a wave's groups) nests inside a record.
 4. **Explicit manifest.** The catalogue loads from an explicit list of data files, never a runtime directory scan (exported builds rename and package files).
 5. **Load once, all or nothing.** The whole catalogue loads before the first gameplay scene, triggered by the app root. Either every record is present and valid, or the game does not start. This covers records only; stage scene content is covered by Rule 9.
-6. **Read-only after load.** No system writes to a definition. Mutable state (current HP, cooldown, target, current level) lives on the runtime instance, which holds `def_id`, and level for Towers. The engine does not enforce this, so it is a rule with a test (see Acceptance Criteria).
-7. **Validate everything, collect all errors, then fail.** Every error has the structure `{code, source, record_id, field}`, where `source` is the file, or a label for code-built fixtures. Manifest and file errors stop before any record checks, since records from a broken manifest would only produce noise. A record type with no records is detected once every file is parsed and before any record is validated; it counts as a manifest-tier error and stops record checks the same way. So does `record_count`: a catalogue without exactly one Input record and exactly one Hero record, since the Builder reads one of each with no selector and a second record would be silently ignored (ADR-0002). An unknown tag suppresses that record's role checks, so one typo gives one error. Checks: ID format, duplicate IDs, dangling or wrong-type references, missing fields, unknown properties (`unknown_property`: a field the record's own type does not declare, so a Tower field on an Enemy record fails), unknown tags, a tower without exactly one role tag, role fields missing for or present without their tag, lists shorter than their `min_count` (`path_points` 2; `slot_positions`, `wave_ids`, `levels` and `groups` 1; enemy `tags` 0; `pin_exclusion` 0 for now), fractional integers, and every number finite (checked first) and inside the field-domain table. From Vertical Slice, modifier stat keys are checked against the vocabulary. There are two tiers and no warning tier, since a solo developer learns to ignore warnings: these boot-fatal invariants, and the CI content test for everything else (Rule 9).
+6. **Read-only after load.** No system writes to a definition. Mutable state (current HP, cooldown, target, current level) lives on the runtime instance, which holds `def_id`, and level for Towers. The engine guards only the stored lists, made read-only after validation, and not scalar fields (ADR-0002 Decision 4), so it is a rule with a test (see Acceptance Criteria).
+7. **Validate everything, collect all errors, then fail.** Every error has the structure `{code, source, record_id, field}`, where `source` is the file, or a label for code-built fixtures. Manifest and file errors stop before any record checks, since records from a broken manifest would only produce noise. A record type with no records is detected once every file is parsed and before any record is validated; it counts as a manifest-tier error and stops record checks the same way. So does `record_count`: a catalogue without exactly one Input record and exactly one Hero record, since the Builder reads one of each with no selector and a second record would be silently ignored (ADR-0002). An unknown tag suppresses that record's role checks, so one typo gives one error. Manifest and file errors include a file that is not one `{type, records}` object and an unknown record type (ADR-0002 Decision 5). Checks: a missing ID, ID format, duplicate IDs, dangling or wrong-type references, missing fields, a JSON `null` (`null_value`), a value of the wrong kind such as a string where a number belongs (`wrong_kind`), unknown properties (`unknown_property`: a field the record's own type does not declare, so a Tower field on an Enemy record fails), unknown tags, a tower without exactly one role tag, role fields missing for or present without their tag, lists shorter than their `min_count` (`path_points` 2; `slot_positions`, `wave_ids`, `levels` and `groups` 1; enemy `tags` 0; `pin_exclusion` 0 for now), fractional integers, and every number finite (checked first) and inside the field-domain table. From Vertical Slice, modifier stat keys are checked against the vocabulary. There are two tiers and no warning tier, since a solo developer learns to ignore warnings: these boot-fatal invariants, and the CI content test for everything else (Rule 9).
 8. **No fallbacks, in any build.** A silently defaulted value corrupts balance and the hero-share metric. A development run names every error by file, record and field. Content ships inside the build, with no mods or network, so the CI content test (Rule 9) and the exported-build check in Acceptance Criteria guard against shipping bad data; if it still happens, the player sees a generic fatal screen that uses no catalogue data, and saves are never opened.
 9. **Scene content is checked by the content test, not at boot.** Checking scenes at load would mean instancing every stage. The CI content test opens each `scene_ref` and verifies the scene exists, and applies the Enemy & Wave GDD's layout and wave rules to the records. The same test enforces a non-empty `rationale` on every record and any balance range an owning GDD declares. It also fails a data file the manifest omits, a manifest path whose case differs from the file on disk, and a key repeated inside one JSON object, which the parser would otherwise resolve silently to one value (ADR-0002 Decision 7). It fails a `path_points` coordinate that a 32-bit float cannot hold exactly, since `Vector2` stores 32 bits and the path maths run in 64 (ADR-0009 Decision 4); the starter points are integers. Art-bible range and consecutive-stage checks join it at Vertical Slice. A stage scene that is still broken at runtime gives a fatal screen at stage start, naming the stage in a development run.
 10. **One stat accessor.** Any number a modifier could target (damage, range, cost, bounty, leash radius) is read through one accessor taking a **read context** and a stat key, and returning the type the stat-key table declares for that key. The context always holds `def_id`; for a Tower it also holds the level, since Towers are the only MVP record with levels. A level passed for an Enemy, Hero or Burst is a bad call. The context holds the live entity when one exists; a HUD cost preview has none and passes `def_id` and level alone. At MVP the accessor returns the base value for that context. The system also exposes each tower's level count as a non-fatal `level_count(def_id)`, so callers never ask past the maximum, and a non-fatal `is_tower(id)`, so a command can refuse a bad ID rather than reach the handler. The context allows a live entity, not just a definition, because the first cross-buff ("towers near the hero") depends on instance and position; a definition-only form would mean rewriting every call site at Vertical Slice. Callers read at use time and never cache at spawn: when a spy accessor changes its value between uses, the consumer's next use reflects it (checked in the Tower, Hero and HUD stories). Structural data (a wave's groups) and every Stage field (`scene_ref`, `wave_ids`, `starting_gold`, `starting_lives`, `early_call_seconds_per_gold`, `path_points`, `slot_positions`, `path_width`, `hero_start`, `pin_rect`, `pin_exclusion`) are read directly, not through the accessor: Stage has no stat-key row. A modifier that targets a stage start value ("+50 starting gold") is a Stat GDD question and would add a Stage row then. A bad call has one of six causes, checked in this order: a null context, an unresolved `def_id`, an unknown key, a key inapplicable to that record, a type mismatch (the int read on a float key, or the float read on an int key; never coerced), and a bad level (out of range, or a level on a record without levels). It calls an injected failure handler once, naming the first cause. **The handler is the contract:** in the game it reaches the fatal screen, and tests replace it. After a bad call the read returns `0` or `0.0`, so it keeps a typed return, but that value is unusable: no caller may use it and no test asserts it. The check is plain code, so it survives release builds (ADR-0005).
@@ -109,7 +109,7 @@ There is no separate economy record: gold values sit on the records that spend o
 
 No Formulas section: this system stores values and defines no tunable numeric rule; the validation bounds above are invariants, and owning GDDs define the rules.
 
-→ Becomes an ADR: storage format (recommended: typed Godot Resources, JSON as fallback if downloadable content or modding is ever wanted, since Resources can carry scripts), read-only enforcement, accessor signature and key format, file locations. **The ADR must choose a format that can detect a missing field, a fractional integer and an unknown property.** Typed resources may silently supply a default for a missing field, which would make Rule 8 meaningless, so if the format cannot detect these itself, the ADR must add a check that does. This GDD assumes only typed records keyed by stable ID behind one read-only lookup. Export behaviour is unverified until a real Android export runs. **Settled by ADR-0002 (Accepted):** data is JSON files listed in a manifest and read as text, not typed Resources, because a `.tres` load hides all three cases before any check runs, and parsed JSON keeps them visible. Records are typed read-only objects built from the JSON; the Android export proof is still owed at Technical Setup.
+→ Decided by ADRs: storage format, read-only enforcement and file locations by ADR-0002; accessor signature and key format by ADR-0005. The test this GDD set was that the format must detect a missing field, a fractional integer and an unknown property, or Rule 8 means nothing. **Settled by ADR-0002 (Accepted):** data is JSON files listed in a manifest and read as text, not typed Resources, because a `.tres` load hides all three cases before any check runs, and parsed JSON keeps them visible. Records are typed read-only objects built from the JSON; the Android export proof is still owed at Technical Setup.
 
 ### States and Transitions
 
@@ -132,7 +132,7 @@ There is no reload transition: a data change applies on the next run.
 | Tower System | Tower levels through the accessor | This system |
 | Hero System | Hero and Burst through the accessor | This system |
 | Input & Gesture Resolver | The Input record, read directly | This system; Input GDD owns its meaning |
-| Battle HUD | Costs for the cost chip through the accessor; Burst `cooldown` (seconds) through the accessor, by the Burst ID the builder passes, for the wedge (HUD Rule 12) | This system |
+| Battle HUD | Costs for the arc and cost chip, and `range` for range rings, through the accessor; Burst `cooldown` (seconds) through the accessor, by the Burst ID the builder passes, for the wedge (HUD Rule 12) | This system |
 | Stat & Modifier Resolution (VS) | Drops in behind the accessor with no call-site changes | Stat GDD owns the resolver; this system owns the key vocabulary |
 | Save/Load (VS) | Stable IDs; retired-ID list from Vertical Slice | Save/Load owns migration |
 
@@ -143,6 +143,9 @@ There is no reload transition: a data change applies on the next run.
 **MVP**
 - **If the manifest is empty or a record type has no records**: Fail. Serves no lookup.
 - **If a manifest path repeats or a file is empty**: Fail with one manifest error, and no record checks run.
+- **If a file is not one `{type, records}` object, has another top-level key, or names an unknown record type**: Fail with one file error, and no record checks run (ADR-0002 Decision 5).
+- **If the catalogue has no Input record or no Hero record, or more than one of either**: Fail with `record_count`, and no record checks run. A second record would otherwise be silently ignored.
+- **If a field holds JSON `null` or a value of the wrong kind (a string where a number belongs)**: Fail with `null_value` or `wrong_kind`, before any bounds check.
 - **If an ID appears in two record types**: Fail, naming both records.
 - **If a reference resolves to the wrong type (`burst_id` names an enemy)**: Fail.
 - **If a wave references an enemy that no longer exists**: Fail as dangling. MVP has no retired state.
@@ -158,7 +161,7 @@ There is no reload transition: a data change applies on the next run.
 - **If a number is NaN or infinite**: Fail, checked before bounds, since infinity passes "above 0".
 - **If `starting_lives` is below 1**: Fail.
 - **If the accessor gets a null context, an unresolved `def_id`, an unknown key, a key inapplicable to that record, a type mismatch or a bad level**: the failure handler is called once with the first cause, in that order, and in the game it reaches the fatal screen. The read returns `0` or `0.0`, which is unusable: no caller uses it (ADR-0005).
-- **If a caller mutates a definition**: nothing blocks it at runtime; the read-only test fails by comparing a catalogue snapshot after a battle, including directly read wave groups.
+- **If a caller mutates a definition**: a write to a stored list is refused by the engine, but nothing blocks a scalar write at runtime; the read-only test fails by comparing a catalogue snapshot after a battle, including directly read wave groups.
 - **If device load fails after a green CI run**: generic fatal screen using no catalogue data; saves stay unopened.
 - **If a stage scene is broken at runtime despite the content test**: fatal screen at stage start; the catalogue stays Ready.
 
@@ -172,7 +175,7 @@ There is no reload transition: a data change applies on the next run.
 
 **Upstream:** none. This is a Foundation system. It relies only on the engine's file access.
 
-**Downstream (hard unless noted; none has a GDD yet, so every interface is provisional until that GDD confirms it):**
+**Downstream (hard unless noted).** The seven MVP systems below have GDDs, and each lists this one; their interfaces are set by the Accepted ADRs (mainly ADR-0001, ADR-0002 and ADR-0005). The Vertical Slice rows have no GDD yet, so those interfaces stay provisional until that GDD confirms them.
 
 | System | Data interface |
 |---|---|
@@ -182,12 +185,12 @@ There is no reload transition: a data change applies on the next run.
 | Tower System | Tower levels via the accessor |
 | Hero System | Hero and Burst via the accessor |
 | Input & Gesture Resolver | The Input record |
-| Battle HUD & Build UI | Costs and Burst `cooldown` via the accessor |
+| Battle HUD & Build UI | Costs, `range` and Burst `cooldown` via the accessor |
 | Stat & Modifier Resolution (VS) | Key vocabulary; replaces the accessor's internals |
 | Skill Tree, Hero Weapons, Synergies (VS) | New record types reserved in Core Rules |
 | Save/Load (VS) | Stable IDs and retired-ID list |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored.
+Per the bidirectional rule, each Vertical Slice GDD must list this one when authored.
 
 ## Visual/Audio Requirements
 
@@ -217,16 +220,16 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 
 **CI: Logic**
 1. (Rules 2, 3) **GIVEN** fixtures with a cross-type duplicate ID, a dangling reference and a `burst_id` naming an enemy, **WHEN** validated, **THEN** the state is Failed and each error is a `{code, source, record_id, field}` value (one per record for duplicates). Fixtures supply a label as `source`.
-2. (Rule 7) **GIVEN** table-driven fixtures (missing field, unknown property, unknown tag, role field missing on one level, role field without its tag, tower with no role tag, ID not in snake_case, empty `wave_ids` or `levels`, a path of one point or with a repeated consecutive point, fractional integer), **WHEN** validated, **THEN** each yields exactly its one expected `{code, record_id, field}`, including a single error for an unknown tag on a tower with no other tag.
+2. (Rule 7) **GIVEN** table-driven fixtures (missing ID, missing field, JSON `null`, a string in a number field, unknown property, unknown tag, role field missing on one level, role field without its tag, tower with no role tag, ID not in snake_case, empty `wave_ids` or `levels`, a path of one point or with a repeated consecutive point, fractional integer), **WHEN** validated, **THEN** each yields exactly its one expected `{code, record_id, field}`, including a single error for an unknown tag on a tower with no other tag.
 3. (Rule 7) **GIVEN** boundary values, **WHEN** validated, **THEN** an interval below one tick, `max_hp` 0, cost -1, `start_delay` -1, `count` 0, `starting_lives` 0, `slow_strength` 0, 1 and 1.01 and any value above its ceiling fail; NaN and infinity report non-finite, not bounds; cost 0, `lives_cost` 0, delay 0, `slow_strength` 0.5, values exactly at an inclusive floor or ceiling, repeated wave IDs and overlapping groups pass.
 4. (Rule 7) **GIVEN** a fixture seeded with 5 unrelated errors, **WHEN** validated once, **THEN** the reported set equals those 5 `{code, source, record_id, field}` values, in any order.
-5. (Rule 5) **GIVEN** an empty manifest, a type with no records, a repeated path or an empty file, each alongside an otherwise invalid record, **WHEN** loaded, **THEN** there is one manifest or file error, no record error is reported, the state is Failed and no lookup is served. **GIVEN** a valid fixture, **THEN** the state is Ready.
+5. (Rules 5, 7) **GIVEN** an empty manifest, a type with no records, a repeated path, an empty file, a file that is not a `{type, records}` object, or a second Input or Hero record, each alongside an otherwise invalid record, **WHEN** loaded, **THEN** there is one manifest, file or type error, no record error is reported, the state is Failed and no lookup is served. **GIVEN** a valid fixture, **THEN** the state is Ready.
 6. (Rule 10) **GIVEN** a valid fixture whose values differ per level and per record, **WHEN** every key applicable to each record is read (towers: for each level, role keys only with that role's tag), with a live entity and with a preview context, **THEN** the base value of the declared type is returned, and each tower's exposed level count matches its record.
 7. (Rules 10, 11) **GIVEN** a spy failure handler injected into the accessor, **WHEN** called with a null context, an unresolved `def_id`, an unknown key, an inapplicable key (including a role key on a tower without that role), a type mismatch (the int read on a float key, or the float read on an int key), an out-of-range level or a level on a record without levels, **THEN** the spy fires once naming that cause. The returned `0` or `0.0` is unusable and is not asserted.
 8. (Rule 12) **GIVEN** two code-built fixtures with different values, **WHEN** read side by side, **THEN** each returns its own values with no file I/O.
 
 **CI: Integration**
-9. (Rules 4, 7) **GIVEN** the real manifest plus a valid data file not listed in it, **WHEN** loaded, **THEN** there are zero errors, every listed record is present, and the unlisted record is absent. This proves manifest logic only, not export behaviour.
+9. (Rules 4, 7) **GIVEN** a fixture manifest in `res://tests/fixtures/catalogue/` plus a valid data file in that folder not listed in it, **WHEN** loaded from that data root, **THEN** there are zero errors, every listed record is present, and the unlisted record is absent. This proves manifest logic only, not export behaviour.
 10. (Rule 9) **GIVEN** every Stage record, **WHEN** the content test opens each `scene_ref`, **THEN** each exists; a broken fixture scene fails, naming its stage. A fixture path point that a 32-bit float cannot hold exactly (such as 0.1) fails, naming its stage.
 11. (Rule 6, detector self-test) **GIVEN** a deep catalogue snapshot including wave groups, **WHEN** a test deliberately changes a nested fixture value, **THEN** the comparison reports that field; with no change it reports none.
 12. (Rules 8, 10) **GIVEN** an injected handler, **WHEN** a bad accessor call occurs, **THEN** the handler is invoked and the catalogue stays Ready. The fatal screen itself is owned by Game State (see deferred criteria).
@@ -244,7 +247,7 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 | Rule 10 never-cache: a spy accessor changes its value between two uses and the second use reflects it | Each consumer story (Tower, Hero, HUD) |
 | Rule 1: changing a fixture value changes the consumer's behaviour | Each consumer story |
 | Fatal screen shows on a broken stage scene or bad accessor call | Game State & Stage Flow |
-| Android export loads the catalogue (no path or packing assumption) | Storage-format ADR, Technical Setup |
+| Android export loads the catalogue (no path or packing assumption) | ADR-0002 X1 and X2, Technical Setup |
 
 ## Open Questions
 
@@ -257,5 +260,6 @@ Logic criteria use code-built fixtures with no file I/O. All CI criteria use fix
 | Optional tooling, unscheduled: headless validate-only command (reuse the content test first), alternate manifest, DPS dump | producer | When tuning hurts |
 | The accessor returns numbers only: how does a tree node that visibly changes something (Pillar 1's "shots chain") reach the game? | Stat GDD | Stat GDD |
 | Both thresholds (10 s tuning loop, 1 s device load) are proposals; `project.yaml` has no load budget | producer + performance-analyst | First phone build |
-| Scene checks run on the project, not the export, because the test runner cannot run on an exported build: is the manual check enough? | technical-director | Storage-format ADR |
+| Scene checks run on the project, not the export, because the test runner cannot run on an exported build: is the manual check enough? **Answered by ADR-0002 Decision 8:** no; a desktop export smoke (X1) loads the catalogue from a `.pck` and instances every `scene_ref`, and X2 stays manual on a device | technical-director | Closed (ADR-0002) |
+| Must a stage hold at least one `pin_exclusion` shape? Its `min_count` is 0 for now (ADR-0002 Decision 3) | Hero or Enemy & Wave GDD owner | Before the first Hero story |
 | `tests/README.md` is stale: it says clones lack the class cache (now tracked) and that gdUnit4 is uninstalled (now in `addons/`) | gameplay-programmer | First test story |

@@ -1,10 +1,10 @@
 # Tower System (incl. Gold Economy)
 
-> **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers, one user decision and all recommended items applied, re-review pending)
+> **Status**: Approved 2026-11-05 (second design review, full mode at workflow `standard`: APPROVED once its wording-only ADR syncs were made in the same pass; first review 2026-11-02 NEEDS REVISION, all its items applied)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-05
-> **Last Verified**: 2026-11-02
+> **Last Verified**: 2026-11-05
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
 ## Summary
@@ -64,8 +64,8 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 IDs and levels are checked before any accessor read, through Data's non-fatal `is_tower(id)` and `level_count(def_id)` (Data Rule 10), so a bot's bad ID or a last-level upgrade returns a refusal rather than reaching the fatal handler. Cost is read through the accessor at use time, never cached from when the arc or chip opened. On success, in one step and with nothing between: gold falls by the cost, the tower is created or its level raised, then `gold_changed` fires, then `tower_built` or `tower_upgraded`. All state is committed before the first signal, and a listener to these signals must not call a command. A refusal changes nothing and emits nothing.
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
-7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and struck through. A tap on it still calls `build`, which returns `NO_GOLD`, and the HUD shows a refusal (Battle HUD Rule 7). The arc belongs to the HUD, which calls `build`.
-8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when its press begins at `elapsed ≥ 200` ms and it is released at `elapsed < 1500` ms. A press that begins in the first 200 ms is ignored, even if released later, a hard guard against a bounce (Input Rule 8). The guard counts from the press, as the arc's does (Battle HUD Rule 6); TowerInput takes the press time from `pressed`. The chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
+7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. The concept's MVP item 6 now says the same; it once also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and struck through. A tap on it still calls `build`, which returns `NO_GOLD`, and the HUD shows a refusal (Battle HUD Rule 7). The arc belongs to the HUD, which calls `build`.
+8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when its press begins at `elapsed ≥ 200` ms and it is released at `elapsed < 1500` ms. A press that begins in the first 200 ms is ignored, even if released later, a hard guard against a bounce (Input Rule 8). The guard counts from the press, as the arc's does (Battle HUD Rule 6). `pressed` carries no time, so TowerInput reads the window's elapsed time when `pressed` fires (ADR-0008). The chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
 
 | Event while a chip is open | Result |
 |---|---|
@@ -101,7 +101,7 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 
 **Reading.**
 
-17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_count()`, and `slot_state(slot_index)`, which returns that slot's own `SlotState` (`tower_id`, `&""` when empty; `level`, 0 when empty; `cooldown_left`), updated at each commit; a bad index returns one shared empty `SlotState` and reports a dev error once (ADR-0010). Views never keep it past their slot. The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10). It reads them when drawing, never in a sim signal handler: `gold_changed` only marks costs dirty (Battle HUD Rule 7, ADR-0005). In development builds `GestureLog` (Input Rule 13, ADR-0008) hears `tower_upgraded` and reads `chip_state()` when its `set_prompt` names a tower, so Tower keeps no log of its own.
+17. **Signals and reads.** Signals: `gold_changed(current)`, `tower_built(slot_index, tower_id)`, `tower_upgraded(slot_index, level)`, all on Flow's view allowlist, with nothing in gameplay depending on them. A read `slows_applied()` counts every `apply_slow` call, so the result can show what a tower that kills nothing did (Battle HUD Rule 15). TowerInput adds `slot_tapped(slot_index)` for the HUD's arc, `tower_inspected(slot_index)` and `chip_state()`. It exists only in the wrapper, so headless wiring tests cannot see it and a story test with a fake resolver proves that a tap reaches the arc. Reads: `gold()`, `slot_count()`, `towers_built()`, `call_bonus(ticks_left)`, and `slot_state(slot_index)`, which returns that slot's own `SlotState` (`tower_id`, `&""` when empty; `level`, 0 when empty; `cooldown_left`; `cooldown_full`, the tick count the last attack set `cooldown_left` to, 0 when empty or not yet fired, and unchanged by an upgrade, as the timer is). It is updated at each commit and whenever the timer changes, since the Cooling ring reads it (ADR-0011 Decision 4); a bad index returns one shared empty `SlotState` and reports a dev error once (ADR-0010). `call_bonus(ticks_left)` is the bonus formula with no side effect, so the HUD's "Call +N" shows what a call pays (ADR-0010 Decision 4). Views never keep it past their slot. The HUD reads costs and stats through the accessor by `def_id` and level, after checking `level_count`, since asking past the last level is Fatal (Data Rule 10). It reads them when drawing, never in a sim signal handler: `gold_changed` only marks costs dirty (Battle HUD Rule 7, ADR-0005). In development builds `GestureLog` (Input Rule 13, ADR-0008) hears `tower_upgraded` and reads `chip_state()` when its `set_prompt` names a tower, so Tower keeps no log of its own.
 
 **Starter values.** These are fixtures, not balance. They were run through a throwaway simulation of the starter stage on the fixed tick and Combat Rule 11's order, using scripted bots. All costs are gold, and all times seconds.
 
@@ -159,9 +159,9 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 - **Battle HUD:** done. It draws the arc, chip, cost, dimming and the range ring (Battle HUD GDD).
 - **Enemy & Wave:** its starter HP is amended here, and its "550" gold example is now the all-single minimum.
 
-**Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
+**Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, a chip on build, and a rapid-fire role (a later tower, with its own shape; Rule 1).
 
-→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection. Now settled: the wrapper feeds `ChipWindow.advance(ms)` in frame step 1, after input and before the ticks (ADR-0004 Decision 4); signal signatures, with `tower_id` a `StringName`, are ADR-0006's; teardown is ADR-0001's.
+→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection. All settled. TowerSim and TowerInput are plain objects; the builder makes TowerSim and only the wrapper makes TowerInput, which owns `ChipWindow` and `chip_state()` (ADR-0010 Decision 1). The wrapper feeds `ChipWindow.advance(ms)` in frame step 1, after input and before the ticks (ADR-0004 Decision 4); signal signatures, with `tower_id` a `StringName`, are ADR-0006's; teardown is ADR-0001's.
 
 ### States and Transitions
 
@@ -341,7 +341,7 @@ Per the bidirectional rule, each must list this one when authored. Data, Enemy &
 
 ## Visual/Audio Requirements
 
-The MVP minimum, primitives only, drawn by one `_draw()` node for all towers. All values are unverified on a device and none has been rendered. Lines, flashes and splash rings belong to Combat.
+The MVP minimum, primitives only, drawn by one `_draw()` node for all towers, `TowerView` (ADR-0011). All values are unverified on a device and none has been rendered. Lines, flashes and splash rings belong to Combat.
 
 | Event | Visual | Art bible |
 |---|---|---|
@@ -350,8 +350,8 @@ The MVP minimum, primitives only, drawn by one `_draw()` node for all towers. Al
 | `slow` | Upright square, 44 px side, solid cyan, so it never reads as a 56 px hairline slot | §3 |
 | Level 2 | Inset outline at 60% scale, 3 px, field colour | §3 Accretion |
 | Ready | Complete 2 px ring, radius 34 | §2 |
-| Cooling | The ring regrows clockwise, linear; the body stays solid | §2, §4, amended |
-| Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms | §8 |
+| Cooling | The ring regrows clockwise, linear, as `cooldown_left / cooldown_full` from `SlotState`, and 0 when `cooldown_full` is 0; no view reads `attack_interval` (ADR-0011 Decision 4); the body stays solid | §2, §4, amended |
+| Build | First frame: full geometry, white overlay alpha 0.6, scale 1.15 to 1, 120 ms. Under Reduce Motion there is no scale and the overlay only fades (AR-V-10, ADR-0011 Decision 8) | §8 |
 | Upgrade | First frame: the inset is present, with the same overlay | §1 |
 | Slow fires | Cyan line, no flash; violet only on the victim, plus Combat's slow drag lines, so a slowed enemy reads without a number | §4 |
 | Range ring | Solid 2 px cyan, unfilled, alpha 0.5, under entities. Arc open: one ring per distinct level-1 range. Chip open: current, plus next as a dashed 2 px cyan line at alpha 0.5 or above, so it reaches 3:1 on the path and differs from the current ring by pattern, not by fade (AR-V-06). After a build or upgrade: 400 ms, then a 200 ms fade | §1 |
@@ -376,7 +376,7 @@ Battle HUD draws these; this system supplies the data.
 - Under Reduce Motion the nudge is skipped and a static cue stands in: the refused disc or chip shows a dotted outline and one short line of text, "Need N gold", for 1 s, with no motion. N is the cost minus gold at the refusal (AR-V-11, IP-24; Battle HUD UI Requirements).
 - A tap on a level-2 tower shows its range ring for 1.5 s, so the tap is not silent. It opens no chip.
 
-📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path. That pass must place the static refusal cue set in UI Requirements (AR-V-11). It must also cover an expired or closed chip, an armed look after the 200 ms guard, a maximum-level cue beside the range ring, a chip that would leave the field, static fallbacks for the build overlay and arc collapse, and the unit-to-dp scale behind the 44 pt / 48 dp targets.
+📌 **UX Flag — Tower System:** run `/ux-design` for the arc and chip before writing epics. Open points: whether the chip's draining bar reads under a thumb, a dimmed cost must stay legible, a polygon plus digits in 56 px is tight, and the range ring's contrast over the path. That pass must place the static refusal cue set in UI Requirements (AR-V-11). It must also cover an expired or closed chip, an armed look after the 200 ms guard, a maximum-level cue beside the range ring, a chip that would leave the field, and the unit-to-dp scale behind the 44 pt / 48 dp targets.
 
 ## Cross-References
 
@@ -498,4 +498,4 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |
 | Does the hexagon read apart from the square at quarter scale? | art-director | First render |
 | Are 3 px insets enough to rank levels on a phone? The fallback is 4 px | art-director | First phone build |
-| Does the technical director accept the TowerSim and TowerInput split, and the rest of the ADR above? | technical-director | Input ADR, before TowerInput stories |
+| Closed 2026-11-05: the TowerSim and TowerInput split and the rest of the ADR note above are settled by Accepted ADR-0010 Decision 1, with ADR-0001, ADR-0004, ADR-0006 and ADR-0008 | technical-director | Done |

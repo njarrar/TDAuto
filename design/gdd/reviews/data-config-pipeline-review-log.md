@@ -127,3 +127,40 @@ No balance value changed; Status unchanged. The one-tick floor reads `TickMath.T
 
 ## Revision — 2026-11-04 — ADR-0009 sync
 No balance value changed; Status unchanged. Rule 9: the CI content test fails a `path_points` coordinate that a 32-bit float cannot hold exactly (ADR-0009 Decision 4). Criterion 10 adds a fixture case for it.
+
+## Review — 2026-11-05 — Verdict: APPROVED
+Review mode: full · Workflow: standard
+Scope signal: M (producer should verify before sprint planning)
+Specialists: none spawned. This session had no agent tool, so the main reviewer did the game-designer, systems-designer, godot-specialist, qa-lead and creative-director passes from each role's view. None of those agents reviewed or passed this document.
+Blocking items: 0 after fixes (5 found, all wording, all applied) | Recommended: 6
+Summary: Checked line by line against the eleven Accepted ADRs, with ADR-0002 and ADR-0005 as the source of truth. The five blocking items were all stale or contradicting text, not design gaps, and each was fixed by wording that follows an ADR. No balance value or design intent changed. No design decision for this system is open: the open rows in Open Questions are owned by other GDDs, by Technical Setup proofs or by Vertical Slice. APPROVED because no blocking item remains and no decision is open; the open recommendations are advisory.
+Prior verdict resolved: Yes (the fourth review's 4 blockers stayed applied; the three ADR syncs of 2026-11-04 checked and kept)
+Findings:
+- [BLOCKING, fixed] Field domains: "world units" for lengths, speeds and the Input fields; ADR-0003 and the Input GDD say field units. Now "field units", with one line defining them
+- [BLOCKING, fixed] Acceptance Criteria AC9: "the real manifest plus an unlisted file gives zero errors" contradicted Rule 9's unlisted-file check; now a fixture manifest in res://tests/fixtures/catalogue/ (ADR-0002 Decision 2, V3)
+- [BLOCKING, fixed] Edge Cases / AC5: record_count, a bad file envelope and an unknown record type were boot-fatal in Rule 7 and ADR-0002 but had no edge case or criterion; added (ADR-0002 Decision 5, V2)
+- [BLOCKING, fixed] Core Rules (Rule 7) / Edge Cases / AC2: missing ID, JSON null and wrong kind (ADR-0002 Tier 1) were not listed; added
+- [BLOCKING, fixed] Detailed Design ("Becomes an ADR" note): still recommended typed Resources ahead of the ADR-0002 result; rewritten to state the decision
+- [RECOMMENDED, fixed] Core Rules (Rule 3): scene_ref is a path, not a record reference (ADR-0002 Decision 1)
+- [RECOMMENDED, fixed] Core Rules (Rule 6) / Edge Cases: the engine does guard stored lists after validation (ADR-0002 Decision 4); "nothing blocks it" was wrong
+- [RECOMMENDED, fixed] Interactions / Dependencies: HUD also reads range for range rings (ADR-0005 Decision 5); Dependencies said no downstream GDD exists, but all seven MVP GDDs exist and list this one
+- [RECOMMENDED, fixed] Field domains (tap_slop): the CI content test also checks tap_slop > drag_slop (ADR-0002 Decision 7)
+- [RECOMMENDED, fixed] Open Questions / Deferred criteria: scene-check row closed by ADR-0002 Decision 8 (X1); export row names ADR-0002 X1 and X2; new row for the pin_exclusion min_count owned by Hero or Enemy & Wave
+- [RECOMMENDED, open] Other GDD: combat-damage.md line 32 still says "world units" for the cached enemy position; the Combat owner should change it to field units
+- [RECOMMENDED, open] Acceptance Criteria AC13: no way named to force a bad accessor call in a release build (carried from the fourth review)
+- [RECOMMENDED, open] Acceptance Criteria AC7: could name the ADR-0005 cause codes (stat_null_context and the rest) so tests compare the first token
+- [RECOMMENDED, open] Player Fantasy and Tuning Knobs absent: advisory at standard; the proposed 10 s and 1000 ms thresholds and the domain ceilings are the knobs
+- [RECOMMENDED, open] Open Questions: tests/README.md is still stale (says gdUnit4 is not installed), owner gameplay-programmer
+- [RECOMMENDED, open] Header: Creative Director Review line dates from 2026-11-01; no CD gate has run on the ADR syncs
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md eb4deee4f73f034bc672f49d569d8d5601822d8e
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 5fc68e4c2eda531b8ef80a5663b2f33961b139cf
+Reviewed-Content-Hash: design/gdd/systems-index.md 971496057bf0c58f61f40f19e60298032121850a
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md add0f1c5a5b8b8bd7f52b3683fd9985b84c911b2
+Reviewed-Content-Hash: design/gdd/battle-hud.md 9cae820470e28dccf98015d4a423e8c9d9626a5a
+Reviewed-Content-Hash: design/gdd/combat-damage.md e4df04fab059c0779ec3460522a8b4f0f6605fc1
+Reviewed-Content-Hash: design/gdd/enemy-wave.md adfe9932b1756518dd4219a26cdb9c048950950d
+Reviewed-Content-Hash: design/gdd/tower-system.md 0d7fc21d197c7b1ae4c7bc6f6749df6d58d7b886
+Reviewed-Content-Hash: design/gdd/hero-system.md 88c68ce97af3b80dd0dff559a3ab3d65a2cfa1f2
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d0971ae2056275d68099e04af472c70bac83009d

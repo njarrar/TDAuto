@@ -76,3 +76,45 @@ No balance value changed; Status unchanged. Sources: `design/accessibility-requi
 Wording and tables only; no balance value changed; Status unchanged. Source: ADR-0010 (Accepted 2026-11-05) Migration item 5.
 - Rule 5: the result table gains `BUSY` (a call inside a tick or another command) before all other checks, and `HALTED` also covers a cost read that latched Fatal.
 - Rule 17: `slot_state(slot_index)` returns the slot's own `SlotState`; a bad index returns one shared empty sentinel and reports once. `slot_count()` is listed as a read.
+
+## Review — 2026-11-05 — Verdict: APPROVED
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: none spawned. This review ran as a subagent with no Agent tool, so the main reviewer took each role's view in turn: game-designer, systems-designer, economy-designer, ux-designer, qa-lead, godot-specialist, and creative-director for the verdict. None of those agents passed this document; the views below are the main reviewer's.
+Blocking items: 6, all wording, all fixed in this pass | Recommended: 7
+Summary: Every blocker from 2026-11-02 is fixed, and all formulas and starter numbers check out against Enemy & Wave and the Accepted ADRs. The six blockers this time were all stale text against ADR-0008, ADR-0010 and ADR-0011: `SlotState` lacked `cooldown_full`, Rule 17 lacked `call_bonus` and `towers_built`, the build overlay had no Reduce Motion fallback, and an open question asked about an ADR that is now Accepted. Each fix is wording only, and no balance value or design intent changed. No blocker and no open design decision remain, so the verdict is APPROVED; what is left is advisory or waits for playtest.
+Prior verdict resolved: Yes. All 8 blockers of 2026-11-02 are fixed in the text (splash 0.57 and 0.86, downstream GDDs listed, chip bar cited, 0-bounty case, `report_attack`, `level_count` and `is_tower`, criteria 51 and 6).
+Findings:
+- [BLOCKING, fixed] Rule 17: `SlotState` lacked `cooldown_full` (ADR-0010 amendment, ADR-0011 Decision 4). Added, with its meaning.
+- [BLOCKING, fixed] Rule 17: "updated at each commit" did not match criterion 31 or the Cooling ring, which reads `cooldown_left` live. It now says the state also updates whenever the timer changes.
+- [BLOCKING, fixed] Rule 17: reads lacked `call_bonus(ticks_left)` and `towers_built()` (ADR-0010 Decisions 4 to 6). Added.
+- [BLOCKING, fixed] Visual table, Build and Cooling rows: no Reduce Motion fallback and no `SlotState` source for the ring (TR-tower-015, AR-V-10, ADR-0011 Decisions 4 and 8). Added. The UX flag no longer lists the fallbacks as open.
+- [BLOCKING, fixed] Open Questions and the ADR note: asked the technical director to accept the split. ADR-0010 is Accepted, so the question is closed and the note names Decision 1.
+- [BLOCKING, fixed] Rule 8: "takes the press time from `pressed`" did not match ADR-0008, where `pressed` carries no time. It now reads the window's elapsed time when `pressed` fires.
+- [RECOMMENDED] Acceptance Criteria: no criterion for `BUSY` (Rule 5, ADR-0010 V1), for `call_bonus` matching the paid bonus (ADR-0010 V3), or for `cooldown_full` on fire, upgrade and empty slots. Add them before the TowerSim story.
+- [RECOMMENDED] Rule 8: `advance(ms)` runs after input in frame step 1, so the elapsed time read at a press or release can be up to one frame old. The guard errs safe and the expiry errs up to one frame late. Say so, or decide otherwise.
+- [RECOMMENDED] Manual evidence: add a Reduce Motion screenshot of the build overlay and of the static refusal cue.
+- [RECOMMENDED] Missing sections, advisory at `standard`: Player Fantasy (Game Feel covers part of it) and Tuning Knobs. AR-M-07 at Alpha needs a home for the chip window multiplier.
+- [RECOMMENDED] Formulas, gold_before_wave: the variables table does not define `w` or `early_call_bonus`.
+- [RECOMMENDED] Acceptance Criteria 9, 10, 36, 37: they have no WHEN step. They can still be tested, but they do not follow the GIVEN, WHEN, THEN form.
+- [RECOMMENDED] ADR-0010 Decision 6 still says `SlotState` is "updated at each commit". The technical director should line that up with ADR-0011 Decision 4. This review does not edit ADRs.
+- [NOTE] Art director question: the rapid-fire tower is not in MVP. The MVP roles are single_target (triangle), splash (hexagon) and slow (square), as Rule 1 and concept MVP item 2 say. Rule 1 moved the square from rapid fire to slow. A rapid-fire tower comes later (Small Ship has 4 towers) and needs its own shape. The "Deliberately not built for MVP" list now names it.
+Wording edits in this pass: Status line; Last Verified; Rule 7 (concept item 6 now matches); Rule 8 (press time); Rule 17 (reads, `SlotState`); not-built list (rapid fire); ADR note (all settled); Visual intro (`TowerView`); Visual Cooling and Build rows; UX flag; Open Questions (TD row closed).
+Reviewed-Content-Hash: design/gdd/tower-system.md feecd55d693e8bc9c802b4115d51ee494ea5bfba
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md 5fc68e4c2eda531b8ef80a5663b2f33961b139cf
+Reviewed-Content-Hash: design/gdd/combat-damage.md e4df04fab059c0779ec3460522a8b4f0f6605fc1
+Reviewed-Content-Hash: design/gdd/enemy-wave.md adfe9932b1756518dd4219a26cdb9c048950950d
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 8061a4bdcda61243e597c23dc1214d8448ba9119
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md add0f1c5a5b8b8bd7f52b3683fd9985b84c911b2
+Reviewed-Content-Hash: design/gdd/battle-hud.md 9cae820470e28dccf98015d4a423e8c9d9626a5a
+Reviewed-Content-Hash: design/art/art-bible.md 02d54d6b93ccc9656dcfdfdc5e0d888cde99f7d0
+Reviewed-Content-Hash: design/accessibility-requirements.md b0574e2ac2870c485edb5d038e477577e9d46700
+Reviewed-Content-Hash: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md 7e2eab5c72a2dac54126bc49bc49691931d8dda0
+Reviewed-Content-Hash: docs/architecture/adr-0005-stat-accessor-read-context-contract.md 4a2fba915d192605197e55e326f5c867e6354cf2
+Reviewed-Content-Hash: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md ef2faea37127d471a4d99607607e3c3d16804956
+Reviewed-Content-Hash: docs/architecture/adr-0008-input-resolver-core-signal-contract.md 784dd51eecd37f86856684ec15e0672ed0f09866
+Reviewed-Content-Hash: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md 7f9118e71e50d26053cd7a4963f2e2bc21fac7c6
+Reviewed-Content-Hash: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md ea7126f7d91f398ee3b8691058e4a0a01a37b340
+Reviewed-Content-Hash: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md 3b6392fac48d19a4135579da56de56c5730239b9
