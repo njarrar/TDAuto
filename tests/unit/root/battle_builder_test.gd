@@ -38,6 +38,12 @@ class BadSlopCatalogue extends Catalogue:
 	func hero(id: StringName) -> HeroRecord:
 		return inner.hero(id)
 
+	func hero_ids() -> Array[StringName]:
+		return inner.hero_ids()
+
+	func tower_ids() -> Array[StringName]:
+		return inner.tower_ids()
+
 	func snapshot() -> String:
 		return inner.snapshot()
 

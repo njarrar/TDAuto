@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## ADR-0010 Decision 10 / ADR-0008 V8: append mode, one handle, flush per line.
-## Uses a temp user:// file this test deletes. The one place the brief allows file I/O.
+## Uses a temp user:// file this test deletes. Integration, not unit: it does real file I/O (lint TEST-2).
 
 const PATH: String = "user://test_jsonl_sink.jsonl"
 

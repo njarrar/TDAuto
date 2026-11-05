@@ -18,6 +18,8 @@ const P_FATAL: int = 6
 ## One Flow with its fakes. fatal() mimics the FatalRelay: record, latch, hook.
 class Rig extends RefCounted:
 	var flow: Flow
+	## Held here: a method Callable (sim.to_ticks) does not keep its object alive.
+	var sim: SimTime
 	var rec: Fakes.Recorder = Fakes.Recorder.new()
 	var wave: Fakes.WaveStub = Fakes.WaveStub.new()
 	var cancel: Fakes.Counter = Fakes.Counter.new()
@@ -42,6 +44,7 @@ func _rig(lives: int = 3) -> Rig:
 	var stage: StageRecord = StageRecord.from_dict(data)
 	var sim: SimTime = SimTime.new(4)
 	var rig: Rig = Rig.new()
+	rig.sim = sim
 	rig.flow = Flow.new(stage, rig.halt.is_halted, rig.between.is_between, rig.fatal,
 			sim.to_ticks, sim.dt, rig.wave.start_next_wave, rig.cancel.hit, rig.devs.report,
 			rig.wave.wave_index)

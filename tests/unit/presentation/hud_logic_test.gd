@@ -105,8 +105,11 @@ func test_arc_geometry_matches_formula() -> void:
 
 
 func test_no_gold_stays_open_with_nudge_and_gold_changed_updates_dim() -> void:
-	_battle.tower_sim.build(0, &"tower_single")
-	_battle.tower_sim.build(1, &"tower_splash")
+	# Spend 120 down to 35 on slot 1 (slow 40, upgrade 45), so slot 0 is empty and its
+	# single-target disc (50) is too dear. Both slots built would refuse as SLOT_OCCUPIED.
+	_battle.tower_sim.build(1, &"tower_slow")
+	_battle.tower_sim.upgrade(1)
+	assert_int(_battle.tower_sim.gold()).is_equal(35)
 	_hud._on_slot_tapped(0)
 	_hud.advance(100.0)
 	_hud.advance(100.0)

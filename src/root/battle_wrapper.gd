@@ -300,7 +300,8 @@ func _sink_of(sink: JsonlFileSink) -> Callable:
 
 ## Loads the stage look scene, or null if it is missing or has the wrong root.
 func _load_stage_look(path: String) -> StageLook:
-	if path.is_empty():
+	# exists() first: load() on a missing path prints engine errors before returning null.
+	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
 	var scene: PackedScene = ResourceLoader.load(path) as PackedScene
 	if scene == null:

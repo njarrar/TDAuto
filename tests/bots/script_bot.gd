@@ -1,6 +1,8 @@
-class_name ScriptBot extends Bot
+extends "res://tests/bots/bot.gd"
 ## Issues scripted CommandSteps. Each between() call issues every unfired step
 ## with at_tick <= battle.ticks_run(), in array order (ADR-0010 Decision 9).
+
+const CommandStep := preload("res://tests/bots/command_step.gd")
 
 ## Result code of each issued step, as int, in issue order.
 var results: PackedInt32Array = PackedInt32Array()

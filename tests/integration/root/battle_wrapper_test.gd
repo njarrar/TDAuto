@@ -84,6 +84,8 @@ func test_attach_twice_gives_one_connection_per_listener() -> void:
 	wrapper.detach()
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_after_detach_only_wiring_connections_remain() -> void:
@@ -104,6 +106,8 @@ func test_after_detach_only_wiring_connections_remain() -> void:
 		assert_int(emitter.get_signal_connection_list(StringName(parts[1])).size()).is_equal(expected.size())
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_wrapper_has_both_screens_hidden_and_above_the_drawers() -> void:
@@ -124,6 +128,8 @@ func test_wrapper_has_both_screens_hidden_and_above_the_drawers() -> void:
 	wrapper.detach()
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_paused_screen_opens_on_pause_and_closes_on_resume() -> void:
@@ -141,6 +147,8 @@ func test_paused_screen_opens_on_pause_and_closes_on_resume() -> void:
 	wrapper.detach()
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_result_screen_opens_when_the_battle_ends() -> void:
@@ -158,6 +166,8 @@ func test_result_screen_opens_when_the_battle_ends() -> void:
 	assert_bool(result.visible).is_false()
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_attach_after_detach_works_again() -> void:
@@ -171,6 +181,8 @@ func test_attach_after_detach_works_again() -> void:
 	wrapper.detach()
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame
 
 
 func test_missing_stage_look_fails_attach() -> void:
@@ -185,3 +197,5 @@ func test_missing_stage_look_fails_attach() -> void:
 	assert_int(sink.size()).is_greater(0)
 	remove_child(wrapper)
 	wrapper.queue_free()
+	# Let queue_free run before gdUnit4 counts orphan nodes.
+	await get_tree().process_frame

@@ -108,7 +108,8 @@ func test_flash_marker_retrigger_keeps_higher_alpha_and_one_marker() -> void:
 	assert_int(m.flash_count()).is_equal(1)
 	assert_bool(m.flash_is_hero(4)).is_true()
 	m._on_damage_applied(Combat.SourceKind.TOWER, &"t", 1.0, Vector2(1, 1), false, 4)
-	assert_float(m._f_alpha[m._flash_slot(4)]).is_equal(ViewStyles.FLASH_ALPHA_HERO)
+	# _f_alpha is a PackedFloat32Array, so 0.9 comes back as the nearest 32-bit value.
+	assert_float(m._f_alpha[m._flash_slot(4)]).is_equal_approx(ViewStyles.FLASH_ALPHA_HERO, 1e-6)
 
 
 func test_flash_eviction_order() -> void:

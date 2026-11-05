@@ -3,6 +3,8 @@ extends GdUnitTestSuite
 ## grunts, 10 lives, 120 gold, bounty 4): a kill raises gold by the bounty, a
 ## leak drops lives, clearing all waves wins. Also ADR-0010 Validation 5 and 6.
 
+const ScriptBot := preload("res://tests/bots/script_bot.gd")
+const CommandStep := preload("res://tests/bots/command_step.gd")
 const TestBattles := preload("res://tests/helpers/test_battles.gd")
 const Probe := preload("res://tests/helpers/battle_probe.gd")
 const Runner := preload("res://tests/helpers/battle_runner.gd")

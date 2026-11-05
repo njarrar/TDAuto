@@ -1,4 +1,4 @@
-class_name InertHeroSim extends HeroSim
+extends HeroSim
 ## HeroSim whose tick does nothing (ADR-0010 Decision 9): "absent" for the
 ## never-pinned-equals-absent test. _init forwards every argument with super.
 

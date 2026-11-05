@@ -1,6 +1,7 @@
 extends RefCounted
 ## Builds fixture battles through the production Builder. No class_name.
 
+const InertHeroSim := preload("res://tests/helpers/inert_hero_sim.gd")
 const DataFixtures := preload("res://tests/helpers/data_fixtures.gd")
 const Runner := preload("res://tests/helpers/battle_runner.gd")
 const Recording := preload("res://tests/helpers/recording_systems.gd")

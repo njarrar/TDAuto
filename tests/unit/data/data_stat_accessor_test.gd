@@ -156,18 +156,26 @@ func test_reads_on_existing_contexts_allocate_no_objects() -> void:
 
 # ADR-0005 Validation 7 (reduced: the owner holds the context, the entity does not)
 
-func test_entity_and_context_are_freed_when_the_owner_drops_the_context() -> void:
+## Builds the context and reads once inside a helper: GDScript keeps a function's temporaries
+## (the `as ReadContext` cast, the weakref argument) alive until that function returns, so
+## doing this in the test body would hold the context and the test would see a false leak.
+func _owner_reads_once(owner_table: Dictionary) -> Array[WeakRef]:
 	var entity: RefCounted = RefCounted.new()
+	var ctx: ReadContext = ReadContext.make(&"enemy_grunt", 0, entity)
+	owner_table[1] = ctx
+	_acc.stat_float(ctx, StatKeys.MAX_HP)
+	return [weakref(entity), weakref(ctx)]
+
+
+func test_entity_and_context_are_freed_when_the_owner_drops_the_context() -> void:
 	var owner_table: Dictionary = {}
-	owner_table[1] = ReadContext.make(&"enemy_grunt", 0, entity)
-	_acc.stat_float(owner_table[1] as ReadContext, StatKeys.MAX_HP)
-	var entity_ref: WeakRef = weakref(entity)
-	var ctx_ref: WeakRef = weakref(owner_table[1])
-	entity = null
-	assert_object(entity_ref.get_ref()).is_not_null()
+	var refs: Array[WeakRef] = _owner_reads_once(owner_table)
+	assert_object(refs[0].get_ref()).is_not_null()
+
 	owner_table.erase(1)
-	assert_object(ctx_ref.get_ref()).is_null()
-	assert_object(entity_ref.get_ref()).is_null()
+
+	assert_object(refs[1].get_ref()).is_null()
+	assert_object(refs[0].get_ref()).is_null()
 
 
 # GDD Acceptance 8, ADR-0005 Validation 8

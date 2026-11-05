@@ -1,4 +1,4 @@
-class_name CommandStep extends RefCounted
+extends RefCounted
 ## One scripted command (ADR-0010 Decision 9). Values only.
 
 var at_tick: int = 0

@@ -13,6 +13,7 @@ func _long_path() -> PackedFloat64Array:
 func _spawn_ticks(rig: WaveFixtures.Rig, ticks: int) -> Array[int]:
 	var out: Array[int] = []
 	var seen: int = 0
+	rig.wave.start_next_wave()
 	for n: int in ticks:
 		WaveFixtures.step(rig)
 		var now: int = rig.wave.roster().size()
