@@ -56,7 +56,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 
 **Pause.**
 
-17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. These two alone fire the adapter's `lifecycle_paused`; a viewport resize cancels input but does not pause (Input Rule 7). The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. On desktop the click that refocuses the window may also be the resume tap; ADR-0003 checks, and either is acceptable. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
+17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. These two alone fire the adapter's `lifecycle_paused`; a viewport resize cancels input but does not pause (Input Rule 7). The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. On desktop the click that refocuses the window may also be the resume tap; ADR-0003's D9a run records which, and either is acceptable. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
 
 **Fatal.**
 
@@ -175,7 +175,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If a stage scene fails to load or instantiate**: Fatal at stage start; the catalogue stays Ready, though there is no way out at MVP but relaunching.
 - **If a press began before Paused**: it never resumes, and stays dead until lifted.
 - **If the handler fires during `build`**: the partial battle is discarded unticked, and Fatal shows.
-- **If a long frame hits (app hitch)**: the wrapper clamps the ticks owed, so the game slows rather than jumping. The clamp value belongs to ADR-0004.
+- **If a long frame hits (app hitch)**: the wrapper clamps the ticks owed, so the game slows rather than jumping. The cap is `MAX_TICKS_PER_FRAME = 3`, floor 2, provisional until the device run (ADR-0004).
 
 ## Dependencies
 
@@ -272,14 +272,14 @@ A recording fake logs every Flow signal. The log is cleared when GIVEN ends, and
 | Criterion | Owner | Passes when |
 |---|---|---|
 | Retry (Rules 2, 2a, 16) | Game State stories | A retried battle's snapshot equals a fresh one; a `weakref` to the old battle, every system, the accessor and the resolver is null; only the catalogue is the same object. A latch set outside Won or Lost causes no rebuild. A move from a finger held across a retry is dropped until it lifts |
-| Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result |
+| Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result (test and per-host baselines per ADR-0004 Decision 12) |
 | Listener test | Game State stories, once Enemy & Wave and Tower exist | The system count is non-zero, and removing one connection fails naming it; watched failing once, with the output kept |
 | Micro-battle | Game State stories, once Combat, Enemy & Wave and Tower exist | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 | Boot (Rules 1, 2, 18) | Game State stories | Each of a failed load, a stage scene that fails to load, a bad accessor call, a wrapper given a hand-built Input record (`drag_slop` 7) so `create` returns null, a null Stage record to `build`, and the handler fired during `build` leaves the app root in Fatal with the first cause kept and no battle ticking after the latch. The null `create` builds no adapter and raises no script error. The partial build is discarded with 0 ticks. The failed load builds the screen with a null catalogue. A bad accessor call in a retried battle still reaches Fatal, so the handler survives a retry |
 | Cancel wiring (Rule 15) | Game State stories | With a real wrapper and resolver and an aim Dragging, Lost, Won and Fatal each give one `drag_cancelled`, and retry cancels before the old battle is removed. With `set_input_cancel` removed, the Lost case fails; watched failing once. A finger held across Paused sends no tap, and its moves are dead until it lifts |
-| Lifecycle mapping (Rule 17) | ADR-0003 (desktop spike run 2026-11-04; the Android and iOS run is owed) | Focus loss and backgrounding each reach `pause()` once, and a resize does not. Which notifications fire per OS cannot be sourced until then |
+| Lifecycle mapping (Rule 17) | ADR-0003 Decision 8: pause is a Flow state, no `SceneTree.paused` (desktop spike run 2026-11-04; the Android and iOS device run D5 is owed) | Focus loss and backgrounding each reach `pause()` once, and a resize does not. Which notifications fire per OS cannot be sourced until then |
 | Injection of resolver and adapter (Input) | Game State stories | Every owner receives the one resolver, with no global |
-| Clock (Rules 4, 5, 17) | Game State stories, with the cap from ADR-0004 | A frame owing more than the cap runs exactly the cap's ticks. `phase_changed(Paused)` zeroes the accumulator, so a resume runs 0 ticks from time owed before the pause. Systems tick in the listed order |
+| Clock (Rules 4, 5, 17) | Game State stories, with the cap from ADR-0004 (3 ticks per frame, provisional, floor 2) | A frame owing more than the cap runs exactly the cap's ticks. `phase_changed(Paused)` zeroes the accumulator, so a resume runs 0 ticks from time owed before the pause. Systems tick in the listed order |
 | Bonus and live actions (Rules 9, 10) | Tower stories | A bonus is paid per real call only, regardless of burst state; actions work in all three phases; the burst is refused in Build (Hero) |
 | Call-early gates (Rule 9) | Hero stories | Hero's deferred table holds the numbers: on every mixed build, calling when the burst is Ready ends within 2 lives of never calling; a won stage with every wave called runs at least 3.5 minutes; towers-only always-call flips no loss. Mono-role builds that call are reported, and human logs decide (Hero). Re-baselined on the fixed tick |
 | Button arming | Battle HUD stories | A press begun before Start/Call or Retry arms does nothing |
@@ -296,7 +296,7 @@ A recording fake logs every Flow signal. The log is cleared when GIVEN ends, and
 | Question | Owner | Resolve by |
 |---|---|---|
 | Do calling gates hold on real bots, and do human callers lose more than waiters? A fast-forward is meant to be safe, so overlapping waves are not a planned fallback; they return only if the user wants calling to carry risk | qa-lead + Hero stories | First playable |
-| ADR-0003 (pause mechanism, lifecycle notifications; the 2026-11-04 desktop spike verified the event order, a device run is owed) and ADR-0004 (tick rate, order and clamp). Teardown is settled by ADR-0001 (Accepted 2026-11-05) | technical-director | Before the first story |
+| ADR-0003 (pause mechanism, lifecycle notifications; the 2026-11-04 desktop spike verified the event order, a device run is owed) and ADR-0004 (tick rate, order and clamp). Teardown is settled by ADR-0001 (Accepted 2026-11-05). **Resolved 2026-11-05: the pause mechanism by ADR-0003 Decision 8 (a Flow state, no `SceneTree.paused`; device run D5 owed); tick rate, order and clamp by ADR-0004 (60 Hz, the six-slot order, a cap of 3 ticks per frame, provisional, floor 2, owed time dropped)** | technical-director | Resolved (ADR-0003 and ADR-0004 Accepted); device run D5 before the first phone build |
 | Does a doomed stage need an exit? Retry on Paused is deferred | User + first-run test | First playable |
 | Should the result's reads fall back to text, so a bad read cannot turn a Won screen into Fatal? Today Fatal wins (Rule 18). **Resolved 2026-11-05 by ADR-0001 Decision 6: no for MVP.** A bad read is a defect that must surface and nothing is saved, so the cost is one retry; revisit when saves arrive | technical-director | Resolved (ADR-0001 Accepted) |
 | Bots must be re-baselined on the fixed tick; the prototype's 10-vs-3 lives result does not transfer | qa-lead | First playable |

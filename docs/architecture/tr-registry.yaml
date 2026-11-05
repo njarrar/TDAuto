@@ -37,7 +37,7 @@
 #   its fields sit two columns past the dash. Quote a value that holds ": ". A
 #   line in any other shape is reported as unsupported layout, with its number.
 
-version: 5
+version: 6
 last_updated: "2026-11-05"
 
 requirements:
@@ -72,9 +72,9 @@ requirements:
 - id: TR-data-005
   system: data
   gdd: design/gdd/data-config-pipeline.md
-  requirement: "The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references), and checks the Input record's cross-field tap_slop > drag_slop at load"
+  requirement: "The validator collects every error as {code, source, record_id, field} before failing, in tiers (manifest, finiteness, bounds, tags, references), requires exactly one Input record, and checks its cross-field tap_slop > drag_slop at load only when both values are valid"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-data-006
   system: data
@@ -156,9 +156,9 @@ requirements:
 - id: TR-input-002
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "One thin adapter node is the only engine-facing input code; it maps Godot touch and mouse events to the five calls in 540x960 field units"
+  requirement: "One thin adapter node is the only engine-facing input code; it maps Godot touch and mouse events to the five calls in 540x960 field units; HudModals calls the adapter's static read_pointer, so translation exists once"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-003
   system: input
@@ -170,30 +170,30 @@ requirements:
 - id: TR-input-004
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "The adapter runs PROCESS_MODE_ALWAYS and calls cancel() on app pause, focus loss and viewport resize, forwarding one lifecycle signal to Game State"
+  requirement: "The adapter runs PROCESS_MODE_ALWAYS and calls cancel() on app pause, focus loss and viewport resize; it emits lifecycle_paused() on pause and focus loss (to Flow's pause() and HudLogic's modal_cancel()) and viewport_resized() on resize (to modal_cancel() alone)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-005
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Touch and mouse use one event family: emulation settings stop duplicate presses, the mouse pointer index never collides with touch index 0, non-left buttons are dropped"
+  requirement: "Touch and mouse use one event family: emulation settings stop duplicate presses, the mouse pointer index never collides with touch index 0, non-left buttons are dropped; non-left buttons emit no touch under emulation (4.7.2 probe)"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-006
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "The adapter rejects presses inside edge_reject_margin and platform safe-area insets via DisplayServer.get_display_safe_area(), converted to field units"
+  requirement: "The adapter rejects presses strictly inside edge_reject_margin and platform safe-area insets from the platform safe area (source fixed by ADR-0003 D6; zero until then), converted to field units; a press exactly on the bound is accepted"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-007
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "A registry of disc hit targets {id, centre, radius, accepts, priority, enabled, sink}; register, unregister, set_centre and set_enabled are legal in any state and apply at once"
+  requirement: "A registry of disc hit targets {id, kind (TAP, SINK, DRAG), centre, radius, priority, enabled}; register, unregister, set_centre and set_enabled are legal in any state and apply at once"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-008
   system: input
@@ -219,9 +219,9 @@ requirements:
 - id: TR-input-011
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Slops come by injection through static validate() and a create() factory returning null on bad input, and a null create() in the wrapper calls the failure handler; non-finite positions are dropped with push_error"
+  requirement: "Slops come by injection through static validate() and a create() factory returning null on bad input, and a null create() in the wrapper calls the failure handler; non-finite positions are dropped with dev_error"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-input-012
   system: input
@@ -233,9 +233,9 @@ requirements:
 - id: TR-input-013
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Burst button, build arc and world targets are resolver discs, not Controls; HUD Controls consume their events before the adapter, so routing order is fixed"
+  requirement: "Burst button, build arc and world targets are resolver discs, not Controls; the HUD's modal Controls stop presses before the adapter, while moves and releases of a gesture already under way still reach it, so routing order is fixed"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-input-014
   system: input
@@ -254,9 +254,9 @@ requirements:
 - id: TR-input-016
   system: input
   gdd: design/gdd/input-gesture-resolver.md
-  requirement: "Minimum width 360 dp by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
+  requirement: "Field width in dp, min(width_dp, height_dp x 540/960), at least 360 by runtime guard; stretch mode keeps field units equal to viewport units, no Camera2D, and a cancel() on resize"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-state-001
   system: state
@@ -303,23 +303,23 @@ requirements:
 - id: TR-state-007
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Every transition commits state, then acts, then emits in a fixed order, and stops emitting if Fatal latched during an emit; phase fires on every state change; Won, Lost, Paused and Fatal stop the clock and cancel input before they emit; remaining systems skip the rest of that tick"
+  requirement: "Every transition commits state, then acts, then emits in a fixed order; Flow checks the Fatal latch after acting and after each emit and makes no further emit once it is set; phase_changed fires on every state change; Won, Lost, Paused and Fatal stop the clock and cancel input before they emit; remaining systems skip the rest of that tick"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-state-008
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Flow listens to synchronous wave_cleared, waves_completed and enemy_leaked (leak before complete) and emits lives_changed, phase and wave_called_early"
+  requirement: "Flow listens to synchronous wave_cleared, waves_completed and enemy_leaked (leak before complete) and emits lives_changed, phase_changed and wave_called_early"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-state-009
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "Retry destroys the whole battle and builds a new one between ticks, driven by a latch on the app root; a weakref to the old battle must be null"
+  requirement: "Retry destroys the whole battle and builds a new one between ticks, driven by a latch on the app root; the old wrapper is removed with remove_child plus free(), not queue_free; a weakref to the old battle must be null"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-state-010
   system: state
@@ -359,9 +359,9 @@ requirements:
 - id: TR-state-015
   system: state
   gdd: design/gdd/game-state-stage-flow.md
-  requirement: "The battle holds a strong typed field for every helper build creates (each system, the FatalLatch, one StatAccessor per battle) and the builder holds nothing, because a method Callable or signal connection does not keep a RefCounted target alive and .call() on a dead one aborts the caller (observed on the 4.7.2 editor; export and phone unverified)"
+  requirement: "The battle holds a strong typed field for every helper build creates (each system, the FatalLatch, one StatAccessor per battle) and the builder holds nothing, because a method Callable or signal connection does not keep a RefCounted target alive and .call() on a dead one aborts the caller (observed on the 4.7.2 editor; export and phone unverified); injected callables are method Callables only, never a capturing lambda or bind()"
   created: 2026-11-04
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-state-016
   system: state
@@ -443,9 +443,9 @@ requirements:
 - id: TR-combat-011
   system: combat
   gdd: design/gdd/combat-damage.md
-  requirement: "The Combat view draws primitives from one _draw() per kind with no shaders or particles and a 16-marker flash pool on the frame clock"
+  requirement: "The Combat view draws primitives from one _draw() per kind with no shaders or particles and a 16-marker flash pool drawn by the Combat view, no shader, on the frame clock"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-combat-012
   system: combat
@@ -576,9 +576,9 @@ requirements:
 - id: TR-enemy-015
   system: enemy
   gdd: design/gdd/enemy-wave.md
-  requirement: "Views read roster() and the path each frame; fixed three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured"
+  requirement: "Views read roster() and the path each frame; fixed three-pass draw order; a slot array of at least 48 inside the single enemy _draw that grows with a dev error; Reduce Motion honoured"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-enemy-016
   system: enemy
@@ -667,9 +667,9 @@ requirements:
 - id: TR-tower-011
   system: tower
   gdd: design/gdd/tower-system.md
-  requirement: "TowerInput registers slots and the chip disc with the resolver, disables built slots, closes the chip on phase, and ignores taps while halted"
+  requirement: "TowerInput registers slots and the chip disc with the resolver, disables built slots, closes the chip on phase_changed, and ignores taps while halted"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-tower-012
   system: tower
@@ -723,7 +723,7 @@ requirements:
 - id: TR-hero-004
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim; the wrapper injects the same reads from Battle into HeroInput and HudLogic, including the Burst ID for the cooldown wedge (ADR-0001 Decision 3)"
+  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim; Battle exposes to the wrapper what only the builder holds (the hand, the Hero and Burst IDs, dt and to_ticks), and the wrapper injects those reads from Battle into HeroInput and HudLogic, including the Burst ID for the cooldown fill (ADR-0001 Decisions 3 and 4)"
   created: 2026-11-03
   revised: "2026-11-05"
   status: active
@@ -765,16 +765,16 @@ requirements:
 - id: TR-hero-010
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "HeroInput registers hero DRAG, button DRAG and sink TAP discs, updates the walking hero's hit centre each frame, and hit-tests cancel hysteresis"
+  requirement: "HeroInput registers hero DRAG, button DRAG and sink TAP discs, moves the hero's hit centre on every position change (a walk and a Build pin alike) as seen in update(), and hit-tests cancel hysteresis"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-hero-011
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "HeroInput's aim state machine and cooldown_digit() advance through an explicit update(), not engine frames"
+  requirement: "HeroInput's aim state machine and button_press() advance through an explicit update(), not engine frames; cooldown_digit() is computed on read"
   created: 2026-11-03
-  revised: ""
+  revised: "2026-11-05"
   status: active
 - id: TR-hero-012
   system: hero
@@ -814,23 +814,23 @@ requirements:
 - id: TR-hud-001
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD is HudLogic (plain, the only part that decides, registers every HUD disc and issues every command), HudTopBand (display-only Controls), HudField (one _draw, no targets) and HudModals (result and Paused Controls), built before HeroInput, absent headless and rebuilt on retry"
+  requirement: "The HUD is HudLogic (plain and Node-free, injected with every read and command, the only part that decides, registers every HUD disc, issues every command and emits modal_changed), HudTopBand (display-only Controls), HudField (one _draw, no targets) and HudModals (result and Paused Controls); the wrapper builds resolver, TowerInput, HudLogic, HeroInput, then the views; the HUD is absent headless and rebuilt on retry"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-002
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "Result and Paused screens are full-screen modal Controls, built once and toggled visible, that consume every event before the Input adapter sees it; a modal is only hidden inside its own handler, never freed"
+  requirement: "Result and Paused screens are full-screen modal Controls, built once and toggled visible, that take every press before the Input adapter sees it (moves and releases of a gesture already under way still reach the adapter through _input); a modal is only hidden inside its own handler, never freed"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-003
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "HudLogic's modal press model repeats the adapter's rules: a press inside edge_reject_margin or an inset does not count, a tap counts only on the same pointer's release within tap_slop while Armed, a later press replaces an unmoved one, and lifecycle or focus-loss signals clear it"
+  requirement: "HudLogic's modal press model repeats the adapter's rules: a press strictly inside edge_reject_margin or an inset does not count, a tap counts only on the same pointer's release within tap_slop (on a result screen only while Armed; Paused has no arming), a later press replaces an unmoved one on Paused while a result screen ignores another pointer's press while one is held, and lifecycle or focus-loss signals clear it; HudLogic emits modal_changed and HudModals only toggles on it"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-004
   system: hud
@@ -877,9 +877,9 @@ requirements:
 - id: TR-hud-010
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase and lives_changed join the view allowlist"
+  requirement: "The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst fill is the float burst_fill formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID at use; phase_changed and lives_changed join the view allowlist"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-011
   system: hud
@@ -891,9 +891,9 @@ requirements:
 - id: TR-hud-012
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "The result screen and log come from one snapshot built on the first advance(ms) after the outcome, never inside the tick's signal stack; no snapshot is built if phase() is Fatal"
+  requirement: "The result screen and log come from one snapshot built by Node-free HudLogic on the first advance(ms) after the outcome, never inside the tick's signal stack; no snapshot is built if phase() is Fatal"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-013
   system: hud
@@ -926,9 +926,9 @@ requirements:
 - id: TR-hud-017
   system: hud
   gdd: design/gdd/battle-hud.md
-  requirement: "HudField redraws only when a quantised view-model key changes (every value its draw reads, including open-disc and chip affordability) and while a timed visual runs, not every frame"
+  requirement: "HudField redraws only when a quantised PackedInt32Array key from HudRedrawKey.merge changes (every value its draw reads, including open-disc and chip affordability) and while a timed visual runs, not every frame"
   created: 2026-11-04
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hud-018
   system: hud

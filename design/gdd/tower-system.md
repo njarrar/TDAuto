@@ -53,10 +53,11 @@ This confirms the art bible's open proposal, and it changes square's meaning fro
 | Result | Meaning | Checked |
 |---|---|---|
 | `HALTED` | `halted()` is true | 1st, and again after the cost read |
-| `BAD_SLOT` | `slot_index` outside 0 to the slot count minus 1, since a negative index would wrap | 2nd |
-| `BAD_TOWER` | Data's `is_tower(id)` is false, `build` only | 3rd |
-| `SLOT_OCCUPIED` / `NO_TOWER` | `build` on a built slot / `upgrade` on an empty one | 4th |
-| `MAX_LEVEL` | Already at the last level, `upgrade` only | 5th |
+| `REENTERED` | `in_dispatch()` is true; the command refuses and reports through `dev_error` | 2nd |
+| `BAD_SLOT` | `slot_index` outside 0 to the slot count minus 1, since a negative index would wrap | 3rd |
+| `BAD_TOWER` | Data's `is_tower(id)` is false, `build` only | 4th |
+| `SLOT_OCCUPIED` / `NO_TOWER` | `build` on a built slot / `upgrade` on an empty one | 5th |
+| `MAX_LEVEL` | Already at the last level, `upgrade` only | 6th |
 | `NO_GOLD` | Gold below the cost | After the cost read |
 | `OK` | Applied | Last |
 
@@ -64,7 +65,7 @@ IDs and levels are checked before any accessor read, through Data's non-fatal `i
 
 6. **Live in every phase.** The commands work in Build, Wave and Intermission (Flow Rule 10), and no phase refuses them. Paused needs no check, since input is cancelled, a tap only resumes and bots never pause. The cost of building mid-wave is attention: the thumb cannot re-pin at the same time.
 7. **The arc disc builds at once.** Slot tap then disc tap is already two taps, and the discs compete only from the next press, so a double tap on a slot dismisses rather than builds. This corrects the concept's MVP item 6, which also asked for a chip on build. A disc shows its cost, and one the player cannot afford is dimmed and does nothing. The arc belongs to the HUD, which calls `build`.
-8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed by the wrapper to a pure `ChipWindow` with `advance(ms)`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
+8. **The upgrade chip is the safeguard for upgrades.** A tap on a tower below its last level opens the chip for 1.5 s. A tap on the same tower commits when `200 ≤ elapsed < 1500` ms at release. Taps in the first 200 ms are ignored, a hard guard against a bounce (Input Rule 8), and the chip expires at 1500 ms. The window runs on real time, fed each frame by the wrapper's `view_dt` in ms through `TowerInput.advance` to a pure `ChipWindow`, so tests need no engine. While the window is open, TowerInput also registers the chip's own disc (TAP 300, radius 40, at the tower's x, y − 76), and a tap on it counts as a tap on the tower. The HUD draws from `chip_state()`, with a bar draining over the window, so the window has a visible clock (Battle HUD Rule 9). Both durations are presentation constants, not catalogue values (Data Rule 1).
 
 | Event while a chip is open | Result |
 |---|---|
@@ -160,7 +161,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 **Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
 
-→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection.
+→ Becomes an ADR, before any TowerInput story (closed 2026-11-05 by ADR-0010: TowerInput placement, the chip window fed by `view_dt`, signal signatures, `tower_id` is a `StringName`): where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection.
 
 ### States and Transitions
 
@@ -399,7 +400,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 3. (Rule 2) **GIVEN** `A` upgraded and a target, **WHEN** T, **THEN** `attack_fired, deliver(15)`.
 4. (Rule 3) **GIVEN** `C` and a target, **WHEN** T, **THEN** `attack_fired, deliver(0), apply_slow(0.5, 1.0)`.
 5. (Rule 4) **GIVEN** a built slot, **WHEN** `build`, **THEN** `SLOT_OCCUPIED`, gold unchanged, an empty log.
-6. (Rule 5) **GIVEN** a fixture with every fault set at once, **WHEN** each command runs and one fault is cleared per call, **THEN** `build` returns `HALTED`, `BAD_SLOT` (−1 and the count), `BAD_TOWER` (an enemy's ID), `SLOT_OCCUPIED`, `NO_GOLD` in that order, and `upgrade` returns `HALTED`, `BAD_SLOT` (−1 and the count), `NO_TOWER`, `MAX_LEVEL`, `NO_GOLD`. Every refusal leaves gold and slots unchanged and the log empty, and no refusal before the cost read makes an accessor read.
+6. (Rule 5) **GIVEN** a fixture with every fault set at once, **WHEN** each command runs and one fault is cleared per call, **THEN** `build` returns `HALTED`, `BAD_SLOT` (−1 and the count), `BAD_TOWER` (an enemy's ID), `SLOT_OCCUPIED`, `NO_GOLD` in that order, and `upgrade` returns `HALTED`, `BAD_SLOT` (−1 and the count), `NO_TOWER`, `MAX_LEVEL`, `NO_GOLD`. A command called while `in_dispatch()` is true returns `REENTERED` (checked 2nd, after `HALTED`) and reports through `dev_error` once. Every refusal leaves gold and slots unchanged and the log empty, and no refusal before the cost read makes an accessor read.
 7. (Rule 5) **GIVEN** gold 30, **WHEN** `build` `A`, **THEN** `OK`, gold 0, `gold_changed(0), tower_built(0, A)`.
 8. (Rule 5) **GIVEN** gold 29, **WHEN** `build` `A`, **THEN** `NO_GOLD`, gold 29, an empty log.
 9. (Rule 5) **GIVEN** a spy doubling cost between two builds, **THEN** the second build falls by the new cost.
