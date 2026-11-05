@@ -87,6 +87,9 @@ func add_enemy(def_id: StringName, start_distance: float) -> bool:
 	var max_hp: float = _accessor.stat_float(ctx, StatKeys.MAX_HP)
 	if bool(_halted.call()):
 		return false
+	# The running wave's hp_scale (1.0 before any wave, as in tests that add enemies directly).
+	if _wave_index >= 1:
+		max_hp *= _waves[_wave_index - 1].hp_scale
 	if not _combat.attach(e, max_hp):
 		_fatal.call("enemy_wave.add_enemy: attach failed for %s" % String(def_id))
 		return false

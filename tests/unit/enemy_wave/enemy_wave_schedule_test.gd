@@ -278,3 +278,23 @@ func _scripted_log() -> Array[String]:
 
 func test_a_new_battle_replays_identically() -> void:
 	assert_array(_scripted_log()).contains_exactly(_scripted_log())
+
+
+# Wave hp_scale (playtest 2026-11-05): a wave multiplies its enemies' max_hp.
+
+func test_wave_hp_scale_multiplies_max_hp_and_defaults_to_one() -> void:
+	var plain: WaveRecord = WaveFixtures.wave_record([WaveFixtures.group(WaveFixtures.GRUNT, 1, 1.0, 0.0)])
+	var tough: WaveRecord = WaveFixtures.wave_record([WaveFixtures.group(WaveFixtures.GRUNT, 1, 1.0, 0.0)])
+	tough.hp_scale = 2.0
+	var a: WaveFixtures.Rig = WaveFixtures.make_rig(_long_path(), [plain], 60)
+	var b: WaveFixtures.Rig = WaveFixtures.make_rig(_long_path(), [tough], 60)
+
+	a.wave.start_next_wave()
+	b.wave.start_next_wave()
+	WaveFixtures.step(a)
+	WaveFixtures.step(b)
+
+	var hp_a: float = a.combat.max_hp_of(a.wave.roster()[0])
+	var hp_b: float = b.combat.max_hp_of(b.wave.roster()[0])
+	assert_float(hp_b).is_equal(hp_a * 2.0)
+	assert_float(plain.hp_scale).is_equal(1.0)

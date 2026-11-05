@@ -167,6 +167,9 @@ func test_exclusive_floors_reject_zero() -> void:
 	_expect(_with_record("stage", "sell_refund_percent", 101), "out_of_bounds", "stage_a", "sell_refund_percent")
 	_expect(_with_record("stage", "sell_refund_percent", 0), "", "", "")
 	_expect(_with_record("stage", "sell_refund_percent", 100), "", "", "")
+	# hp_scale is optional (default 1.0) and bounded 0.1 to 10.
+	_expect(_with_record("wave", "hp_scale", 0.05), "out_of_bounds", "wave_a", "hp_scale")
+	_expect(_with_record("wave", "hp_scale", 2.5), "", "", "")
 	_expect(_with_record("enemy", "lives_cost", 0), "", "", "")
 
 

@@ -63,6 +63,7 @@ const ROLE_FIELDS: Dictionary = {
 const OPTIONAL_FIELDS: Dictionary = {
 	"tower_level": ["splash_radius", "slow_strength", "slow_duration"],
 	"stage": ["sell_refund_percent"],
+	"wave": ["hp_scale"],
 }
 
 ## Fields of each record type and sub-record. Keys are the JSON names.
@@ -98,6 +99,8 @@ const FIELDS: Dictionary = {
 		"rationale": _TEXT,
 		"groups": ["list:wave_group", null, null, false, false],
 		"intermission_duration": _SECONDS,
+		## Multiplies every enemy's max_hp in this wave. Optional (default 1.0).
+		"hp_scale": ["float", 0.1, 10.0, true, true],
 	},
 	"wave_group": {
 		"enemy_id": ["id_ref:enemy", null, null, false, false],
