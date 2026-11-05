@@ -93,7 +93,7 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 
 | Enemy | `max_hp` | `move_speed` | `bounty` | `lives_cost` | `visual_key` |
 |---|---|---|---|---|---|
-| `normal` | 125 | 60 | 4 | 1 | `enemy_normal` |
+| `normal` | 125 | 60 | 5 | 1 | `enemy_normal` |
 | `fast` | 60 | 110 | 3 | 1 | `enemy_fast` |
 | `heavy` | 750 | 38 | 16 | 3 | `enemy_heavy` |
 
@@ -358,7 +358,7 @@ Starter values are fixtures, not balance (Starter values). Every bound from this
 |---|---|---|---|---|---|
 | `max_hp`, per type | `normal` 125, `fast` 60, `heavy` 750 (starter fixture) | Above 0 to 1,000,000 (field domain) | HP each enemy brings, and so each wave's total HP, which rises 1.26 to 1.64 times per wave | Enemy & Wave | Starter values: HP rose about 3 times, since at the first values a hero alone and towers alone both won |
 | `move_speed`, per type | 60, 110, 38 (starter fixture) | `time_to_exit` 12 to 60 s (proposed), which caps a real stage near 143 units/s on the starter path; above 0 to 2,000 (field domain) | Time to leak, second fronts, where groups meet and packet spacing | Enemy & Wave | Wave rules; `d_next`, `catch_up`, `packet_length` |
-| `bounty`, per type | 4, 3, 16 (starter fixture) | 0 to 100,000 (field domain) | Gold per kill, and so `gold_upper_bound` | Enemy & Wave; the Tower GDD bounds the gold it yields | Starter values: a heavy bounty of 24 let single alone catch the best mixes, so it stays 16 |
+| `bounty`, per type | 5, 3, 16 (starter fixture; normal 4 to 5 after first playable, 2026-11-05) | 0 to 100,000 (field domain) | Gold per kill, and so `gold_upper_bound` | Enemy & Wave; the Tower GDD bounds the gold it yields | Starter values: a heavy bounty of 24 let single alone catch the best mixes, so it stays 16 |
 | `lives_cost`, per type | 1, 1, 3 (starter fixture) | 0 to `ceil(starting_lives / 3)` (proposed), 4 at 10 lives | Lives lost per leak, and so `lives_at_risk` | Enemy & Wave | A heavy costs 3 (user, 2026-11-02): at 2, skipping the heavies in waves 4 and 5 was cheap |
 | `count`, per group | As in the wave table | 1 to 500 (field domain); `peak_alive_ub` at most 48 (proposed); the first wave's `lives_at_risk` below `starting_lives`, every wave's at least 1, the stage total at least `starting_lives` (proposed) | Enemies per group, lives at risk, gold and pool load | Enemy & Wave | Wave rules; `lives_at_risk`, `peak_alive_ub` |
 | `spawn_interval`, per group | 0.4 to 4 s in the starter waves | One tick (1/60) to 600 (field domain); spawn ticks strictly increasing within a group (proposed) | Packet or string: at spacing of 70 or less, a burst hits 3 or more | Enemy & Wave | `spawn_tick`, `packet_length` |
@@ -546,7 +546,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Stretch mode and minimum width are decided (ADR-0003). Still open: real iPhone insets and safe-area units (ADR-0003 SP8). Recheck L3, L5, L6 and L7 once SP8 runs; L6's zero margin at the largest inset is unverified on devices. Android insets are deferred with Android | technical-director | ADR-0003 SP8, first iPhone build |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check (decided in ADR-0009: `Targetable`, one-way Health and Status, public `add_enemy` for tests); and where the Reduce Motion setting lives | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
-| Wave 6 pays 174 of 510 bounty gold. At most 496 is held at its start, 54 short of the cheapest full board and 254 of the dearest, so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
+| Wave 6 pays 194 of 580 bounty gold. At most 546 is held at its start, 4 short of the cheapest full board and 204 of the dearest (normal bounty 5 since 2026-11-05), so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |
 | Nothing restores a lost life, so early leaks shrink the cushion for wave 6. Is that fair? | Playtest | First playable |
 | Wave 2's packets are 12 s apart against a 10.25 s burst recovery, so 1.75 s of slack. Does a real thumb make it? | Pillar 4 phone test | First phone build |

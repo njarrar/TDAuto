@@ -2,10 +2,10 @@
   "enemy": [
     {
       "id": "normal",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. Bounty 4 to 5 after first playable (2026-11-05): wave 1 paid too little to buy a second build.",
       "max_hp": 125.0,
       "move_speed": 60.0,
-      "bounty": 4,
+      "bounty": 5,
       "lives_cost": 1,
       "visual_key": "enemy_normal",
       "tags": []
