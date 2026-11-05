@@ -23,13 +23,16 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 
 **Shape.**
 
-1. **Three pieces, built by the wrapper, absent headless, destroyed on retry.**
+1. **Four pieces, built by the wrapper, absent headless, destroyed on retry.**
 
 | Piece | Holds |
 |---|---|
 | HudLogic | Plain and testable with fakes: the arc model, armed buttons, prompt choice, ring count, result text, formulas |
-| HudTopBand | Display-only Controls for gold, lives and pips, which ignore input |
-| HudField | One `_draw` for arc, chip, Start/Call, burst button art and rings, with its hit targets as Input discs |
+| HudTopBand | One display-only `Control` that ignores input and draws no text: band panel, lives dashes and pips. It owns the gold layout and string as a plain record, and sets `accessibility_name` and `accessibility_live` for gold and lives on change |
+| HudField | One `_draw` above the field for arc, chip, Start/Call, burst button art, prompt panel, ground-tap ring and refusal cues, then all HUD text in one last pass by size (gold too, at HudTopBand's layout). Its hit targets are Input discs |
+| RangeRingView | A second HUD `_draw` node, drawn under the field entities, for HudLogic's range rings |
+
+ADR-0011 Decision 1 sets this split and the draw order; none of these pieces uses a `Label` (modal screens may). TR-hud-001's wording ("display-only Controls", "one _draw") reads as one HudTopBand `Control` and one HudField `_draw` above the field, with `RangeRingView` as the second HUD node.
 
 2. **Modal screens are Controls.** The result and Paused screens are full-screen `TapScreen` Controls that consume every press before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. The endings (move, release, cancel) of a drag the adapter had already forwarded still reach it, so a drag begun before the screen showed ends once. While a modal shows, the wrapper also closes the adapter's press gate, so presses drop there too (ADR-0003 2.4 and Decision 4). So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. The result screen's TapScreen uses `arm_ms` 300, counted from when its text shows, so a press begun before then never fires Retry or Play again (IP-21, IP-23). Paused has no timer (`arm_ms` 0) but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
@@ -330,7 +333,7 @@ This whole document is UI. Tower's and Hero's UI Requirements stand, and are dra
 - 120 ms: arc, presses, arming. 200 ms: dash, 12-unit panel slides, with opacity fixed. Paused is instant.
 - Reduce Motion: AR-V-10 in `design/accessibility-requirements.md` is the one list of what it cuts, freezes and keeps, and this GDD does not restate it. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record.
 - Refusal under Reduce Motion: the nudge is skipped and HudField draws a static cue instead. The refused item (arc polygon, chip or locked burst button) shows a dotted outline and one short line of text naming the reason, "Need N gold" or "Locked", 14 dp on panel, for 1 s of real time, with no motion. N is the cost minus gold at the refusal. Tower and Hero report `NO_GOLD` and Locked; the arc-and-chip and pin-and-aim UX specs place the line (AR-V-11, IP-24).
-- Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size. Modals add about 4. Unverified.
+- Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size, all drawn by HudField's last pass (ADR-0011 Decisions 6 and 10). Modals add about 4. Unverified until M9a.
 - Font: one medium-weight geometric humanist sans with tabular numerals, not yet chosen.
 - Text floor 14 dp, or 21 units at a 360 dp width; hit targets 48 dp, or 72 units, which every target here meets with no margin at that width.
 

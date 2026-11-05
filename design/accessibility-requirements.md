@@ -2,7 +2,7 @@
 
 > **Status**: In Design (tier committed; specialist review owed)
 > **Author**: njarrar + ux-designer (authored in session by `/ux-design accessibility`, autonomous mode; see Audit History)
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Accessibility Tier Target**: Standard, adapted for touch, with three Comprehensive items lifted (see Tier Definition)
 > **Platform(s)**: iOS, Android (portrait, one thumb). Desktop build for development and testing only, with mouse as touch.
 > **External Standards Targeted**:
@@ -135,6 +135,7 @@ The game is read at arm's length on a 360 dp phone in daylight. Text sits only o
   | Build and upgrade overlay | Scale 1.15 to 1, 120 ms | No scale; white overlay fades only | New, Tower UX flag asks for it |
   | Arc collapse | 120 ms | Instant | New, Tower UX flag asks for it |
   | Hero idle breathing | 0.5 Hz, 4% scale | Off | Art bible §5 (the fallback is new) |
+  | Exit leak pop | Chevrons scale to 1.25 and back, 200 ms | A still double outline for 200 ms | Enemy & Wave, ADR-0011 |
   | Enemy motion traits (jitter, bob, lean) | On | **Stay on.** They are gameplay telegraphs; removing them hides information | Art bible §5 |
   | Cooldown sweep, chip drain bar | Linear clock | Stay; a clock is information | Art bible §7 |
 
@@ -303,6 +304,8 @@ These sounds are planned for Small Ship and do not exist yet. Each row names the
 ## Platform Accessibility API Integration
 
 The battle is not made of Control nodes. Every field element and most of the HUD are drawn by `_draw()`, and their hit targets are discs in the Input resolver, not Controls (Battle HUD Rule 1; Input UI Requirements). Godot's AccessKit, added in 4.5, works through Control nodes (engine reference `modules/ui.md`), so a screen reader cannot see the battle. The result and Paused screens are `TapScreen` Controls, not `Button`, so they also lose Button's AccessKit role; ADR-0003 says they should get an accessible name if AccessKit allows one on a plain Control, which is unverified, and that keyboard resume is not supported. Menus arrive at Vertical Slice and are the one place a screen reader could work.
+
+**Drawn HUD text (ADR-0011 Decision 6, 2026-11-05).** The battle HUD uses no `Label`: HudField draws all HUD text, so that text has no AccessKit node and no autowrap. HudTopBand, one `Control`, sets `accessibility_name` and `accessibility_live` for gold and lives when they change. Larger text (AR-V-03) wraps through `TextParagraph` or the UX spec's shortening rule. A screen reader for the battle stays out of scope (Known Intentional Limitations).
 
 - **AR-P-01 Menus use labelled Controls.** New. Menu & Screen Flow builds menus and settings from standard Controls with a visible text label and an accessible name, in a logical focus order, so that TalkBack and VoiceOver can read them if Godot 4.7's AccessKit reaches them on mobile. A best effort, not a promise: whether AccessKit works on Android and iOS in 4.7 is unverified (Open Questions). Vertical Slice, Menu & Screen Flow.
 - **AR-P-02 TapScreen accessible name.** Carried from ADR-0003 (Negative consequences, G16). If a plain Control can carry an accessible name, Paused reads "Paused. Tap to resume" and the result screen reads its text in table order. No keyboard path is added; desktop is a dev build. Vertical Slice (when Menu & Screen Flow replaces the MVP result), Battle HUD and Menu & Screen Flow; verified by the ADR-0003 S0 spike or a later probe.

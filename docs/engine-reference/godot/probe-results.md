@@ -143,6 +143,59 @@ Status key: **verified 4.7.2 headless** means the answer below came from a run. 
 | ADR-0008-R5 | Does an `int` signal parameter report `TYPE_INT`? | Yes: `target` type 2; `release_pos` type 5 (`TYPE_VECTOR2`). | Yes | verified 4.7.2 headless |
 | ADR-0008-R6 | Does a bad int pass into a typed enum parameter? | Yes. `2 as Accepts` and `99 as Accepts` both pass with no error, and so does an untyped `Variant` 7. | Yes | Decision 2's range check is required. verified 4.7.2 headless |
 
+## ADR-0009: Enemy entity, roster and Combat API
+
+Copied from ADR-0009's probe table (desktop debug, 4-core Xeon VM). They join the probe suite as `combat_probe_test.gd` (ADR-0007 Decision 7).
+
+| Probe ID | Question | Result | Matches the ADR's expectation? | Note |
+|---|---|---|---|---|
+| ADR-0009-B1 | Is `Array[Enemy]` accepted where `Array[Targetable]` is expected? | No: typed, it fails at parse time; through a `Variant` the callee aborts silently and the caller goes on. `Array[Targetable]` takes an `Enemy`. `as Enemy` on a plain `Targetable` is null. | Yes | verified 4.7.2 headless |
+| ADR-0009-B2 | Does `for t: Targetable in list` work? | Yes. | Yes | verified 4.7.2 headless |
+| ADR-0009-B3 | Does `Callable.call()` keep the array type? | Yes, and it returns the same instance. | Yes | verified 4.7.2 headless |
+| ADR-0009-B4 | Do `Combat` and `DamageEvent` naming each other parse and load? | Yes. Payload types `int`, `StringName`, `float`, `Vector2`, `bool`, `int`. | Yes | verified 4.7.2 headless |
+| ADR-0009-X1 | What does `+=` on a missing `Dictionary` key do? | It errors and aborts. | Yes | verified 4.7.2 headless |
+| ADR-0009-X2 | Does `var t := max(...)` parse? | No: `inference_on_variant` is an error. | Yes | verified 4.7.2 headless |
+| ADR-0009-X3 | Cost of `remove_at` on 60 items | About 0.36 µs. | Yes | Desktop debug. verified 4.7.2 headless |
+| ADR-0009-X4 | Is GDScript `float` 64-bit? | Yes. | Yes | verified 4.7.2 headless |
+| ADR-0009-X5 | Does `Enemy`'s typed `_init` work? | Yes, because `Targetable` has none. A subclass `_init()` without `super()` silently skips a base `_init`. | Yes | verified 4.7.2 headless |
+| ADR-0009-X6 | Cost of 480 range checks a tick | 157 µs p50, 199 µs p95 (about 0.33 µs a check); 88 µs p95 with `PackedFloat64Array` data. | Yes | Desktop debug, 4-core Xeon VM. verified 4.7.2 headless |
+| ADR-0009-X7 | Is `DamageEvent.target` a strong reference? | Yes; setting it to null frees the enemy. | Yes | verified 4.7.2 headless |
+| ADR-0009-P2 | Targeting bench in a release export | Not run | n/a | not run (needs a release export) |
+
+## ADR-0010: Sim/input split, command results, dev telemetry
+
+Copied from ADR-0010's probe table (Linux, editor binary; T by the author, R and K by godot-specialist).
+
+| Probe ID | Question | Result | Matches the ADR's expectation? | Note |
+|---|---|---|---|---|
+| ADR-0010-T1, R4 | `FileAccess.open` on a missing file, and appends | `open(p, READ_WRITE)`: `null`, error 7. `WRITE` creates it. `READ_WRITE` plus `seek_end()` appends. `get_length()` tracks appends; static `get_size()` exists; dropping a handle without `close()` loses no flushed line. | Yes | verified 4.7.2 headless |
+| ADR-0010-T2, T3 | `open()` in a missing directory; `store_line()` return | `null`, error 7, no engine message. `store_line()` returns `bool`, `false` on a `READ` handle, silently; `flush()` and `close()` return `void`. | Yes | verified 4.7.2 headless |
+| ADR-0010-T4, R7 | `user://` headless; debug flags in the editor binary | `user://` writes headless. `OS.is_debug_build()` and `has_feature("debug")` are true, `template_release` false. | Yes | verified 4.7.2 headless |
+| ADR-0010-T5, R8 | `JSON.stringify` on telemetry values | Sorts keys; `StringName` becomes a string; default precision keeps the values. `NAN` becomes `null` with an engine warning; `INF`, even in a nested `Array`, writes `1e99999`, invalid JSON. | Yes | verified 4.7.2 headless |
+| ADR-0010-T6, R1, R9 | Named enum `OK` against `Error.OK` | `enum E { OK, BUSY }`: `E.OK == 0`, qualified compare works. Bare `OK` in the class is `Error.OK`. Returning bare `OK` from a `-> BuildResult` function is a parse error; a caller's `r == OK` parses silently and is true. | Yes | verified 4.7.2 headless |
+| ADR-0010-T7, K | `store_line` plus `flush` cost and crash safety | About 2 µs a line. A flushed line survives SIGKILL; an unflushed one is lost. | Yes | Desktop. verified 4.7.2 headless |
+| ADR-0010-R2 | `call_bonus` as instance or static method | Both work; `int / int` truncates. | Yes | verified 4.7.2 headless |
+| ADR-0010-R3 | Does a method `Callable` keep its sink alive? | No: the sink frees at once and the `Callable` goes invalid. | Yes | verified 4.7.2 headless |
+| ADR-0010-R5, R6 | `Time`, `Crypto` headless; default version string | `Time.get_unix_time_from_system()` and `Crypto.generate_random_bytes()` work headless; `application/config/version` is `""` by default. | Yes | verified 4.7.2 headless |
+| ADR-0010-M4, M2 | Release-export `OS.is_debug_build()` false; Android `user://` writes | Not run | n/a | not run (needs a release export and a phone) |
+
+## ADR-0011: Battle field rendering and draw-call budget
+
+Copied from ADR-0011's probe table (run 2026-11-05; Linux x86_64, 4 cores, editor binary, debug). ADR-0011 cites R1 to R20; its table has rows for the IDs below. R8 to R12 and R19 have no row there, so none is recorded here.
+
+| Probe ID | Question | Result | Matches the ADR's expectation? | Note |
+|---|---|---|---|---|
+| ADR-0011-R1, R2 | Do the draw-call and frame-time monitors exist? | Yes: `Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME`, `RENDER_TOTAL_OBJECTS_IN_FRAME`, `TIME_PROCESS`, `RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME`, `Performance.add_custom_monitor`. The draw-call monitor reads 0 headless. | Yes | Counts need M9a. verified 4.7.2 headless |
+| ADR-0011-R3, R14 | `draw_circle` signature; default line width | `draw_circle(position, radius, color, filled = true, width = -1.0, antialiased = false)`. `draw_polyline`, `draw_multiline`, `draw_arc`, `draw_line` default `width = -1.0`, a thin line primitive, not a quad. No dashed arc. | Yes | Never pass width -1. verified 4.7.2 headless |
+| ADR-0011-R4, R16 | Does `Geometry2D.offset_polyline` give square path corners? | Yes: `offset_polyline(path, 36 or 34, JOIN_MITER, END_BUTT)` gives exact square 90 degree corners, flush ends, one polygon that triangulates. A sharp turn bevels. A self-crossing path merges into one valid polygon with no error. A loop wider than the path adds a clockwise hole polygon. | Yes | So the bake checks crossings itself. verified 4.7.2 headless |
+| ADR-0011-R5 | Is the RD 2D batcher present? | Yes: `rendering/2d/batching/item_buffer_size` (16384) exists. `msaa_2d` is 0. `project.godot` sets `rendering_method="mobile"`. | Yes | Batching across nodes needs M9a. verified 4.7.2 headless |
+| ADR-0011-R6, R20 | Does `_draw` run headless, and in what order? | Yes, after that frame's `_process`. Sibling `_draw`s run in tree order. A node not queued keeps its old commands. | Yes | verified 4.7.2 headless |
+| ADR-0011-R7, R15 | Fallback font sizes; `TextLine`; radial gradient | `ThemeDB.fallback_font` is a `FontFile`; it draws at 21, 24, 36 (a test string measured 100x30, 115x34, 173x50). `TextLine.add_string(text, font, font_size, ...)` and `TextLine.draw(canvas, pos, color, oversampling)` exist. `GradientTexture2D.FILL_RADIAL` exists. | Yes | Sharpness needs M3. verified 4.7.2 headless |
+| ADR-0011-R13 | Cost of one `_draw` of about 115 commands | 1 polygon, 112 discs, one multiline, one ring, one string: 259 µs p50, 410 µs p95 over 400 frames. Command recording on a dummy renderer: about 2.2 µs a command. | Yes | A floor on GDScript cost, debug. verified 4.7.2 headless |
+| ADR-0011-R17 | Does `MultiMeshInstance2D` exist? | Yes, with `texture`. Per-instance colour cannot be checked headless. | Yes | F1 layout needs a windowed check. verified 4.7.2 headless |
+| ADR-0011-R18 | Which nodes carry AccessKit properties? | `Control` has `accessibility_name`, `accessibility_description`, `accessibility_live`; `Node` has none. | Yes | verified 4.7.2 headless |
+| ADR-0011-M9a, M9b, F1, M3 | Draw calls and batching across nodes, frame time, MultiMesh layout and per-instance colour, text and disc edges | Not run | n/a | not run (needs a GPU: M9a desktop windowed, M9b phone) |
+
 ## Side findings (no ADR probe)
 
 - `debug/gdscript/warnings/inference_on_variant` defaults to 2 (error). `var w := weakref(x)` fails to parse; write `var w: WeakRef = weakref(x)`. verified 4.7.2 headless

@@ -3,7 +3,7 @@
 > **Status**: Approved 2026-11-04 (lean design review 2026-11-03 APPROVED; the `wave_index()` definition added after the cross-GDD review passed the consistency re-check, and the user approved it. Six recommended items remain in the review log)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (towers-only gate no longer requires a win, entry from either side, Pillar 2 bots pointed at wave design, human burst hit counts).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 3 (Every Stage Reads Differently); Pillar 2 (waves are tuned assuming the hero)
 
@@ -134,7 +134,7 @@ Bot gates sit in Acceptance Criteria, since they cannot run until towers and the
 
 → Becomes an ADR: how Health and Status attach to an enemy, and the storage form of `path_points` and `slot_positions`. **Decided by ADR-0009 (Accepted 2026-11-04):** `attach`, and the geometry stays on the Stage record.
 
-**Notes for stories, all unverified on 4.7.** Square path corners may need a baked polygon rather than `draw_polyline`, checked by screenshot. Reused typed buffers for the two lists, with a snapshot when erasing. An injected failure sink rather than `assert`, which release builds strip. No `CONNECT_DEFERRED` on `enemy_leaked` or `enemy_killed`, since Rules 10 and 13 need them synchronous. The roster as sole owner of its enemies, so a retried battle frees. A cached `cum[]`. Three draw passes rather than an unstable sort. `Vector2` is 32-bit, so keep `distance` a float and take care with edge tests.
+**Notes for stories, all unverified on 4.7.** Square path corners: settled by ADR-0011 Decision 2. The path is a polygon baked once from `path_points`, not `draw_polyline`; probe R4 gives exact square corners, and M3 screenshots check them. Reused typed buffers for the two lists, with a snapshot when erasing. An injected failure sink rather than `assert`, which release builds strip. No `CONNECT_DEFERRED` on `enemy_leaked` or `enemy_killed`, since Rules 10 and 13 need them synchronous. The roster as sole owner of its enemies, so a retried battle frees. A cached `cum[]`. Three draw passes rather than an unstable sort. `Vector2` is 32-bit, so keep `distance` a float and take care with edge tests.
 
 ### States and Transitions
 
@@ -353,7 +353,7 @@ The MVP minimum, using primitives with no shaders or particles. All sizes and ti
 | `heavy` | 30 px plain disc with **no ring**; never bobs | §5 |
 | Speed 110 | 3.67 px per frame at the 30 fps floor, under a quarter of its body, with no trail | §8 |
 | Stacked enemies | Drawn heavy, normal, fast, then by `spawn_id`, with a 1 px dark keyline separating equal discs | §1 |
-| Path | Drawn from `path_points`: a line of width 72 at +6% V, then 68 at +3%, leaving 2 px edges. Sharp joints keep 90° corners square, and ends stay off field. The draw-in is deferred | §6, §8 |
+| Path | Baked once from `path_points` into two polygons (ADR-0011): 72 wide at +6% V, then 68 at +3%, leaving 2 px edges. Sharp joints keep 90° corners square, and ends stay off field. The draw-in is deferred | §6, §8 |
 | Free slot | 56 px square, 1 px outline at alpha 0.3, four corner dots | §6 |
 | Occupied slot | Hidden under its tower. No stage rule disables slots at MVP, so the blocked hairline never shows | §6 |
 | Exit strip, dormant | Three downward chevrons at the last path point's x, ending at y 888; static at alpha 0.3 | §6, §7 |
@@ -365,7 +365,7 @@ The MVP minimum, using primitives with no shaders or particles. All sizes and ti
 
 **Danger is presentation only, computed by the view each frame.** `danger_until = now + 1.5 s` if any roster enemy has `path_length − distance ≤ 240`, or if lives just fell. Danger holds while `now < danger_until`, and ends at once on Won or Lost. On the starter stage that line is about y 740, just below the last slots, giving 2.2 s of warning from a fast enemy, 4 s from a normal and 6.3 s from a heavy. With sound off, motion carries it; for colour-blind players, chevron shape, alpha and outline carry it. Reduce Motion freezes it at alpha 1.0 and keeps the outline. The 2 Hz pulse is under WCAG 2.3.1's limit of three flashes per second.
 
-**Reduce Motion, elsewhere.** Bob and jitter stop, and the leak pop becomes a static double outline for 200 ms. Shape cues, the `fast` notch and Combat's drag lines stay.
+**Reduce Motion, elsewhere.** Bob, jitter and lean stay on, since they are telegraphs (AR-V-10; user decision 2026-11-05, ADR-0011 Decision 8). The leak pop becomes a still double outline for 200 ms. Shape cues, the `fast` notch and Combat's drag lines stay.
 
 📌 **Asset Spec:** after the art bible is approved, run `/asset-spec system:enemy-wave`.
 

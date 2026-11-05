@@ -136,3 +136,6 @@ No balance value changed; Status unchanged. The signal `waves_complete` is now `
 
 ## Revision — 2026-11-04 — ADR-0009 sync
 No balance value changed; Status unchanged. Rule 9 and Rule 14: the cached position is stored as `x`, `y` (64-bit `float`); an enemy is a `Targetable`, and both lists are `Array[Targetable]`. Rule 14: the add-enemy step calls Combat's `attach` and calls fatal on `false`. Rule 12: the two tick entries are `advance()` and `reap()`, and `advance()` takes no argument (ADR-0009 Decision 4). Open Questions: the path and slots move is answered, accepted 2026-11-04 (ADR-0009 Decision 4), and the seams row notes what ADR-0009 answers.
+
+## Revision — 2026-11-05 — ADR-0011 sync
+No balance value changed; Status unchanged. Visual/Audio: under Reduce Motion, bob, jitter and lean stay on as telegraphs (AR-V-10; user decision 2026-11-05), and the leak pop becomes a still double outline for 200 ms. The path is a polygon baked once from `path_points` (ADR-0011 Decision 2), so the `draw_polyline` note in Core Rules is settled.

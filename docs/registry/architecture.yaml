@@ -583,6 +583,7 @@ performance_budgets:
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-05
     revised: "2026-11-05"
 
@@ -760,13 +761,15 @@ api_decisions:
     status: active
     # was: one file per rule family, suppression markers allowed (before godot-specialist and TD-ADR review)
     # was: IDs L-LAYER-1 to L-TEST-5 without the command, dev and hero rows (before ADR-0010 acceptance, 2026-11-05)
-    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010); run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
+    # was: no L-VIEW rows (before ADR-0011 acceptance, 2026-11-05)
+    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010) and L-VIEW-1, L-VIEW-2 (ADR-0007 amended with ADR-0011); run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
     not: "Shell or Python regex over source text; gdtoolkit parser; inline lint-allow markers"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"
     referenced_by:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: "2026-11-05"
     notes: "ADR-0007 Accepted 2026-11-04; binding"
@@ -1091,17 +1094,21 @@ forbidden_patterns:
     notes: "ADR-0010 Accepted 2026-11-05; binding"
   - pattern: shader_or_particles_in_battle_views
     status: active
-    description: "No ShaderMaterial, CanvasItemMaterial, Light2D, CanvasModulate, Environment.glow, GPUParticles2D or CPUParticles2D in the field views or battle HUD at MVP; the hit flash is a drawn disc (QQ-10); lint L-VIEW-1, ADR-0007 amendment owed"
+    # was: "lint L-VIEW-1, ADR-0007 amendment owed" (before the ADR-0007 amendment, 2026-11-05)
+    description: "No ShaderMaterial, CanvasItemMaterial, Light2D, CanvasModulate, Environment.glow, GPUParticles2D or CPUParticles2D in the field views or battle HUD at MVP; the hit flash is a drawn disc (QQ-10); lint L-VIEW-1 bans materials, Light2D and particles there; ADR-0007 amended 2026-11-05"
     why: "A material breaks batching; a TIME-driven shader runs through Pause and ignores Reduce Motion"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
+    revised: "2026-11-05"
     notes: "ADR-0011 Accepted 2026-11-05; binding"
   - pattern: tween_or_engine_time_in_battle_views
     status: active
-    description: "Field views and battle HUD primitives animate only from the wrapper's ViewClock (advanced in frame step 3, frozen while PAUSED) and read Reduce Motion only through MotionPolicy; no Tween, create_tween, SceneTree timer, await or Time call there, the debug RenderBudgetProbe apart (lint L-VIEW-2, ADR-0007 amendment owed)"
+    # was: "lint L-VIEW-2, ADR-0007 amendment owed" (before the ADR-0007 amendment, 2026-11-05)
+    description: "Field views and battle HUD primitives animate only from the wrapper's ViewClock (advanced in frame step 3, frozen while PAUSED) and read Reduce Motion only through MotionPolicy; no Tween, create_tween, SceneTree timer, await or Time call there, the debug RenderBudgetProbe apart (lint L-VIEW-1 bans Tween and create_tween, L-VIEW-2 bans Time. but render_budget_probe.gd; ADR-0007 amended 2026-11-05)"
     why: "One clock makes pause, retry and Reduce Motion hold in one place"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
+    revised: "2026-11-05"
     notes: "ADR-0011 Accepted 2026-11-05; binding"
 
 # Example:

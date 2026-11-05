@@ -3,7 +3,7 @@
 > **Status**: Approved (fourth design review 2026-11-03, lean: APPROVED; its recommended items applied afterwards)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (share is a lower bound with burst reported separately, splash gate, burst visual owner, kill-attribution test; the lower-bound wording was retracted in the 2026-11-03 review). User kept the invulnerable hero and instant hits; concept reworded.
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 2 (One Hero, Not an Army: hero share is measured here); Pillar 1 (hits and slows must be visible)
 
@@ -52,7 +52,7 @@ Combat & Damage is where a hit becomes lost health. Towers and the hero decide w
 
    Each helper first checks its radius: not finite or below 0 reports `ERR_BAD_RANGE` and gives null or empty. An empty or null list gives null or empty, silently. In range is the **in_radius** test against an enemy's cached position (`x`, `y`), with `max_range` as the radius (`range` would shadow GDScript's global function), applied before any ranking, so a further-along enemy out of range never wins. The helpers compare exact values, break ties by lowest `spawn_id`, scan rather than sort, and skip the dead through `is_dead`. Attackers re-pick on every attack and hold no target, so no reference can dangle. Policies are fixed, with no upgrade or UI at MVP (Pillar 4): towers use first along the path, a slow tower prefers the first unslowed enemy so it does not waste slow on a slowed leader (the caller filters on `speed_factor` exactly 1, then falls back to all, Tower Rule 9), and the hero uses nearest to itself. The hero stands at its pin, so its target must be inside the leash and nothing else; the prototype skipped the leash check, which let the hero hit far past it.
 11. **Tick order.** Flow, then Enemy & Wave (spawn, move, leak), Status countdown (`tick_status(roster: Array[Targetable]) -> void`; the battle's tick passes Enemy & Wave's roster), Towers by slot index, Hero then burst, then Enemy & Wave's reap (kills, then clear checks). Leaks resolve before fire, as in the prototype, so an enemy reaching the end leaks even if a tower could have killed it that tick, a fatal leak skips the rest of the tick and pays no bounty, and a slow first affects the next tick's move. Enemy & Wave confirms this. `tick_status` takes 1 from every slow in the list and empties any slot at or below 0, for a dead enemy too, which is harmless; removed enemies never reach it (Enemy & Wave Rule 14). It emits nothing.
-12. **Views listen, combat does not wait.** `attack_fired(source_kind: Combat.SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` draws lines and rings, even for a zero-damage slow attack; `radius` is 0 for a single-target attack. `damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int)` draws flashes and the death disc. An attacker calls `report_attack` with `attack_fired`'s five arguments, and it only emits `attack_fired`. `damage_applied` fires after HP, the dead state and the counters are committed, so `killed` reads committed state, and no listener may call `deliver`. Both signals carry plain values only, with no enemy and no `DamageEvent`, because a killed target is reaped before its flash is drawn and a reused event changes under a listener, so views use `hit_position` and `spawn_id`. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them; Visual Feedback & VFX takes it over at Vertical Slice.
+12. **Views listen, combat does not wait.** `attack_fired(source_kind: Combat.SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float)` draws lines and rings, even for a zero-damage slow attack; `radius` is 0 for a single-target attack. `damage_applied(source_kind: Combat.SourceKind, source_id: StringName, applied: float, hit_position: Vector2, killed: bool, spawn_id: int)` draws flashes and the death disc. An attacker calls `report_attack` with `attack_fired`'s five arguments, and it only emits `attack_fired`. `damage_applied` fires after HP, the dead state and the counters are committed, so `killed` reads committed state, and no listener may call `deliver`. Both signals carry plain values only, with no enemy and no `DamageEvent`, because a killed target is reaped before its flash is drawn and a reused event changes under a listener, so views use `hit_position` and `spawn_id`. Both are on Flow's view allowlist, and nothing in gameplay depends on them. At MVP a small Combat view draws them: one `_draw` node, `CombatView`, with one pass per kind inside (splash rings, tracers, hit flashes, death discs). "One `_draw` per kind" means this, never a node per flash or line (ADR-0011 Decision 1). Visual Feedback & VFX takes it over at Vertical Slice.
 
 **Not owned.** Who attacks whom and when: range, attack timers, burst cooldown and telegraph belong to Tower and Hero. Also the enemy roster, movement, gold, lives, and stat reads.
 
@@ -186,7 +186,7 @@ Per the bidirectional rule, each of these GDDs must list this one. All the MVP o
 
 ## Tuning Knobs
 
-Combat has no gameplay knobs: damage, slow strength, slow duration and radius are the callers' values (Rule 9). Its only tunables are the view's presentation constants below, which are the values used in Visual/Audio Requirements. They are named constants on the Combat view with no Data & Config record, since Combat reads no data and none of them can change a result. Safe ranges are proposed and unverified on a device.
+Combat has no gameplay knobs: damage, slow strength, slow duration and radius are the callers' values (Rule 9). Its only tunables are the view's presentation constants below, which are the values used in Visual/Audio Requirements. They live in `ViewStyle` (`src/presentation/view_style.gd`, ADR-0011 Decision 9), the one table of pixel-only values, with no Data & Config record, since Combat reads no data and none of them can change a result. That includes `FLASH_SECONDS`, `TOWER_FLASH_ALPHA` and `FLASH_MARKER_LIMIT`. Safe ranges are proposed and unverified on a device.
 
 | Constant | Value | Safe range | Affects |
 |---|---|---|---|
@@ -200,7 +200,7 @@ Combat has no gameplay knobs: damage, slow strength, slow duration and radius ar
 
 ## Visual/Audio Requirements
 
-The MVP minimum, drawn with primitives from one `_draw()` per kind, with no shaders or particles. All values are unverified on a device.
+The MVP minimum, drawn with primitives from one `_draw()` node with one pass per kind (Rule 12), with no shaders or particles. All values are unverified on a device.
 
 | Event | Visual | Art bible principle |
 |---|---|---|
@@ -301,5 +301,5 @@ A recording fake logs `attack_fired` and `damage_applied`, and each THEN is the 
 | Does uncapped splash, sharpened by slow clumping enemies, erode the burst's spike? Gate set in the Tower GDD; first simulated with a pass | Tower GDD + bots | First playable |
 | Instant hits leave weapon upgrades a thin 100 ms line to show growth on (Pillar 1). What makes them visible? | Weapons GDD (Vertical Slice) | Vertical Slice |
 | Do full-strength hero flashes during a burst hold up on a device, does the 0.6 tower flash read, and does suppressing tower flashes in clearance hide what towers did? If so, dim rather than suppress | art-director | First phone build |
-| Art bible §8 budgets a hit-flash shader while saying zero shaders; this spec uses none | technical-artist | First phone build |
+| Art bible §8 budgets a hit-flash shader while saying zero shaders; this spec uses none. **Answered** by ADR-0011 Decision 7 (QQ-10): zero shaders at MVP; the hit flash is a white disc; art bible §8 synced 2026-11-05 | technical-artist | Done |
 | Is the 400-check targeting worst case fine on a low-end phone, per tick at Flow's catch-up clamp? Estimated under 2 ms, unmeasured | performance-analyst | First phone build |
