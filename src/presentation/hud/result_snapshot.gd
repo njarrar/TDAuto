@@ -15,6 +15,9 @@ var slows_applied: int = 0
 var towers_built: int = 0
 var hero_pinned_ever: bool = false
 var hero_share: float = 0.0
+## Damage dealt per source id (StringName to float), copied from Combat.dealt_by_id for each
+## arc tower id, the hero id and the burst id (Battle HUD Rule 19).
+var dealt_by_source: Dictionary = {}
 var repins: int = 0
 var bursts_fired: int = 0
 var bursts_hit_0: int = 0

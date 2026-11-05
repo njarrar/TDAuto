@@ -174,6 +174,11 @@ func is_dead(t: Targetable) -> bool:
 	return t.health.hp <= 0.0
 
 
+## Maximum HP of the target (the value `attach` seeded). Stays answerable after removal.
+func max_hp_of(t: Targetable) -> float:
+	return t.health.max_hp
+
+
 ## Current HP.
 func hp_left(t: Targetable) -> float:
 	return t.health.hp

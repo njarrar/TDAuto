@@ -9,7 +9,7 @@ class_name RunLog extends Node
 
 ## Names read from the ResultSnapshot by `get`, so a renamed field cannot break parsing.
 const SNAPSHOT_FIELDS: Array[StringName] = [
-	&"slows_applied", &"towers_built", &"hero_pinned_ever", &"hero_share", &"got_through",
+	&"slows_applied", &"towers_built", &"hero_pinned_ever", &"hero_share", &"dealt_by_source", &"got_through",
 	&"repins", &"bursts_fired", &"bursts_hit_0", &"bursts_hit_3", &"bursts_hit_5",
 	&"burst_victims", &"burst_kills", &"kills_per_burst", &"kills_on_hit_3", &"best_victims",
 ]

@@ -33,7 +33,6 @@ var _halted: Callable = Callable()
 var _reduce_motion: bool = false
 var _dev_error: Callable = Callable()
 var _clock_ms: float = 0.0
-var _ctx: Dictionary[StringName, ReadContext] = {}
 var _had_content: bool = false
 
 # flash pool (slots, keyed by spawn id)
@@ -99,7 +98,6 @@ func detach() -> void:
 	_accessor = null
 	_halted = Callable()
 	_dev_error = Callable()
-	_ctx = {}
 	core_n = 0
 
 
@@ -196,13 +194,9 @@ func refresh(view_ms: float) -> bool:
 			_f_pos[s] = t.view_position()
 		if _combat.is_dead(t):
 			continue
-		var enemy: Enemy = t as Enemy
-		if enemy == null:
+		if not (t is Enemy):
 			continue
-		var ctx: ReadContext = _context_for(enemy.def_id)
-		var max_hp: float = _accessor.stat_float(ctx, StatKeys.MAX_HP)
-		if bool(_halted.call()):
-			return false
+		var max_hp: float = _combat.max_hp_of(t)
 		if max_hp <= 0.0:
 			continue
 		var p: Vector2 = t.view_position()
@@ -219,12 +213,6 @@ func refresh(view_ms: float) -> bool:
 	var changed: bool = content or _had_content
 	_had_content = content
 	return changed
-
-
-func _context_for(def_id: StringName) -> ReadContext:
-	if not _ctx.has(def_id):
-		_ctx[def_id] = ReadContext.make(def_id, 0)
-	return _ctx[def_id]
 
 
 func _flash_slot(spawn_id: int) -> int:

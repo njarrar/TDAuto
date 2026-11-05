@@ -84,6 +84,23 @@ func _combat_model() -> CombatViewModel:
 	return m
 
 
+func test_core_fraction_reads_combat_max_hp() -> void:
+	var b: Battle = TestBattles.build()
+	var m: CombatViewModel = CombatViewModel.new()
+	var rec: Roster = Roster.new()
+	m.attach(b.combat, b.enemy_wave, b.accessor, b.halted, _keys(), false, Callable())
+	m._roster = rec.roster
+	var e: Enemy = _enemy(1, &"e_n", 10.0)
+	assert_bool(b.combat.attach(e, 20.0)).is_true()
+	rec.list.append(e)
+	e.health.hp = 5.0
+
+	m.refresh(16.0)
+
+	assert_int(m.core_n).is_equal(1)
+	assert_float(m.core_frac[0]).is_equal(0.25)
+
+
 func test_flash_marker_retrigger_keeps_higher_alpha_and_one_marker() -> void:
 	var m: CombatViewModel = _combat_model()
 	m._on_damage_applied(Combat.SourceKind.TOWER, &"t", 1.0, Vector2(1, 1), false, 4)

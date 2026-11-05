@@ -188,7 +188,7 @@ func _build(dev_logs: DevLogs) -> bool:
 	_adapter.name = ADAPTER_NAME
 	_adapter.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_adapter)
-	_adapter.attach(b.resolver, b.input_record.edge_reject_margin)
+	_adapter.attach(b.resolver, b.input_record.edge_reject_margin, dev_error)
 	b.set_input_canceller(_adapter.cancel_all)
 	var insets: FieldInsets = _adapter.field_insets()
 
@@ -453,6 +453,8 @@ func _on_display_changed() -> void:
 	var insets: FieldInsets = _adapter.field_insets()
 	if _hud_logic != null:
 		_hud_logic.set_insets(insets)
+		if _hero_input != null:
+			_hero_input.set_button_centre(_hud_logic.burst_button_centre())
 	_result_screen.clear_press()
 	_paused_screen.clear_press()
 	_hud_top_band.position = Vector2.ZERO

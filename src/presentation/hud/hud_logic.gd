@@ -795,6 +795,7 @@ func _build_snapshot() -> void:
 	s.towers_built = _count_towers()
 	s.hero_pinned_ever = _hero_sim.pin_state() != HeroSim.PinState.UNPINNED
 	s.hero_share = _combat.hero_share() if _combat != null else 0.0
+	s.dealt_by_source = _dealt_by_source()
 	s.repins = _hero_sim.repins()
 	s.bursts_fired = _hero_sim.bursts_fired()
 	s.bursts_hit_0 = _hero_sim.bursts_hit_0()
@@ -813,6 +814,18 @@ func _build_snapshot() -> void:
 	_snapshot = s
 	if _snapshot_taken.is_valid():
 		_snapshot_taken.call(s)
+
+
+## Damage per source id for the arc towers, the hero and the burst (StringName to float).
+func _dealt_by_source() -> Dictionary:
+	var out: Dictionary = {}
+	if _combat == null:
+		return out
+	for id: StringName in _tower_ids:
+		out[id] = _combat.dealt_by_id(id)
+	out[_hero_sim.hero_id()] = _combat.dealt_by_id(_hero_sim.hero_id())
+	out[_hero_sim.burst_id()] = _combat.dealt_by_id(_hero_sim.burst_id())
+	return out
 
 
 func _next_try(s: ResultSnapshot) -> String:

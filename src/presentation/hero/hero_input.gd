@@ -76,6 +76,17 @@ func attach(resolver: InputResolver, hero_sim: HeroSim, accessor: StatAccessor, 
 	return true
 
 
+## Moves the burst button, its sink disc and the cancel-ring centre after an inset change
+## (ADR-0010 Decision 8, ADR-0003 Decision 5). A non-finite centre is ignored.
+func set_button_centre(c: Vector2) -> void:
+	if _resolver == null or not (is_finite(c.x) and is_finite(c.y)):
+		return
+	_button_x = c.x
+	_button_y = c.y
+	_resolver.set_centre(_button_disc, c)
+	_resolver.set_centre(_sink_disc, c)
+
+
 ## Unregisters the discs and drops every reference.
 func detach() -> void:
 	if _resolver != null:

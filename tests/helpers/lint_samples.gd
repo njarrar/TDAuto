@@ -346,6 +346,13 @@ static func all() -> Dictionary:
 		[enemy, "class_name Enemy\nextends Targetable\nfunc _init(p_spawn_id: int) -> void:\n\tvar s: String = \"super(p_spawn_id)\"\n", 3],
 	])
 
+	# PHYS
+	var phys: String = "res://src/feature/probe.gd"
+	_src(s, "PHYS-1", phys, "func f() -> void:\n\tvar zone := Area2D.new()\n", 2, [
+		[phys, "func f() -> void:\n\t# an Area2D would be wrong here\n\tpass\n"],
+		[phys, "func f() -> void:\n\tvar s: String = \"Area2D\"\n"],
+	])
+
 	# TEST
 	_src(s, "TEST-1", unit, "func test_a() -> void:\n\tassert_signal(obj)\n", 2, [
 		[unit, "func test_a() -> void:\n\tassert_that(1)\n"],

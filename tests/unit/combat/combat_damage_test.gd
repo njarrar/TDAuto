@@ -605,3 +605,15 @@ func test_invariant_fails_when_hp_is_lost_without_a_counter() -> void:
 	_all.append(phantom)
 	assert_bool(CombatFixtures.invariant_holds(_combat, _log, _all)).is_false()
 	_all.pop_back()
+
+
+# ADR-0009 Decision 5: max_hp_of
+
+func test_max_hp_of_is_the_attached_value_and_survives_damage_and_removal() -> void:
+	var t: Targetable = _t(1, 12.0)
+
+	_hit(t, 5.0)
+	assert_float(_combat.max_hp_of(t)).is_equal(12.0)
+	assert_float(_combat.hp_left(t)).is_equal(7.0)
+	t.removed = true
+	assert_float(_combat.max_hp_of(t)).is_equal(12.0)

@@ -29,12 +29,15 @@ var _queue_pointer: PackedInt32Array = PackedInt32Array()
 var _queue_pos: PackedVector2Array = PackedVector2Array()
 var _epoch: int = 0
 var _viewport: Viewport = null
+var _dev_error: Callable = Callable()
 
 
-## Starts reading for one battle. `edge_reject_margin` is in field units.
-func attach(resolver: InputResolver, edge_reject_margin: float) -> void:
+## Starts reading for one battle. `edge_reject_margin` is in field units. `dev_error` reports
+## the 360 dp width warning (ADR-0003 Decision 5); an invalid Callable drops it.
+func attach(resolver: InputResolver, edge_reject_margin: float, dev_error: Callable = Callable()) -> void:
 	detach()
 	_resolver = resolver
+	_dev_error = dev_error
 	_edge_reject_margin = maxf(edge_reject_margin, 0.0)
 	if is_inside_tree():
 		_viewport = get_viewport()
@@ -53,6 +56,7 @@ func detach() -> void:
 	_clear_queue()
 	_forwarded.clear()
 	_resolver = null
+	_dev_error = Callable()
 	_size_known = false
 	_presses_blocked = false
 
@@ -262,7 +266,12 @@ func _check_width_dp() -> void:
 		return
 	var width: int = floori(_field_width_dp)
 	if not FieldMapping.width_supported(width):
-		push_error("input_adapter: field width %d dp is below the %d dp floor" % [width, FieldMapping.MIN_FIELD_WIDTH_DP])
+		_report_width(width)
+
+
+func _report_width(width: int) -> void:
+	if _dev_error.is_valid():
+		_dev_error.call("input_adapter: field width %d dp is below the %d dp floor" % [width, FieldMapping.MIN_FIELD_WIDTH_DP])
 
 
 func _on_viewport_size_changed() -> void:

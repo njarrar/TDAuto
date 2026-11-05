@@ -171,8 +171,8 @@ func _retry() -> void:
 
 
 func _teardown_wrapper() -> void:
-	if _battle != null and _battle.resolver != null:
-		_battle.resolver.cancel()
+	if _battle != null:
+		_battle.cancel_input()
 	if _wrapper != null:
 		if is_instance_valid(_wrapper):
 			if _wrapper.has_method(&"detach"):
