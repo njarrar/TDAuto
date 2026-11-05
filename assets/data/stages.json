@@ -2,7 +2,7 @@
   "stage": [
     {
       "id": "stage_1",
-      "rationale": "Prototype starter values; not balance.",
+      "rationale": "Prototype starter values; not balance. Rebalanced after first playable (user, 2026-11-05): start too poor, kills paid too little, enemies too tough.",
       "scene_ref": "res://assets/stages/stage_1.tscn",
       "wave_ids": [
         "wave_1",
@@ -12,7 +12,7 @@
         "wave_5",
         "wave_6"
       ],
-      "starting_gold": 120,
+      "starting_gold": 160,
       "starting_lives": 10,
       "early_call_seconds_per_gold": 1.8,
       "path_points": [

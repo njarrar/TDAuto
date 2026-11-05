@@ -119,11 +119,11 @@ A tower at its last level opens no chip, and emits `tower_inspected(slot_index)`
 | `tower_slow` | 1 | 60 | 0 | 150 | 0.6 | `slow_strength` 0.4, `slow_duration` 2.0 |
 | | 2 | 70 | 0 | 165 | 0.6 | `slow_strength` 0.5, `slow_duration` 2.5 |
 
-Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold at level 1: 0.57 on the two victims its radius reaches at 36 spacing, and 0.86 on three, against single's 0.40. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 120 buys single and single, single and slow, single and splash or slow and slow, and never splash and slow, so the first buy is a real choice.
+Stage: `early_call_seconds_per_gold` 1.8. On a packet splash is worth more per gold at level 1: 0.57 on the two victims its radius reaches at 36 spacing, and 0.86 on three, against single's 0.40. On a string or a heavy, single wins: 0.40 against 0.29. Mono builds are what the bots below rule out. A full board costs 550 all single, 610 for 3 single, 1 splash and 1 slow, 650 for 2, 2 and 1, or 750 all splash. An opening of 160 (first playable rebalance, 2026-11-05; was 120) buys three level-1 towers in most mixes (single, single and slow is 160; single, single and single 150), or two with an upgrade.
 
 **This run changed the enemies.** At Enemy & Wave's original HP a hero alone with no towers won, which breaks Pillar 2. So HP rose about 3 times, to `normal` 125, `fast` 60 and `heavy` 750, with bounties unchanged, and Enemy & Wave is amended. The full bot table, with the hero values it depends on, is in the Hero GDD (Simulated results), so it is kept in one place. For towers: every build loses without the hero, from wave 2 to wave 5, and no calling flips that. A mid-skill hero wins with 9 lives on all four mixed builds. Slow alone loses even with a hero, and single or splash alone win with only 6 lives, so mixes earn their slots. Calling early helps a towers-only bot, because waiting costs it nothing. A rate of 1.0 s per gold flipped a lost build into a win, and at 1.8 s no build flips.
 
-**Spending the whole opening has a price.** Single and splash, or slow and slow, leave 0 gold and at most 48 after wave 1, below the cheapest purchase of 50, so nothing new arrives until wave 2 pays. Single and single can reach 68, and single and slow 58. **First playable (user, 2026-11-05):** at a normal bounty of 4 the opening felt like a trap ("price per tower is too high compared to the reward"), so the bounty rose to 5, the largest step that keeps `gold_before_last_wave` below the cheapest full board (546 < 550; 6 gives 596). The bot runs above used 4 and have not been rerun: whether a towers-only build can now win without the hero (Pillar 2) is open until they are.
+**Spending the whole opening has a price.** Single and splash, or slow and slow, leave 0 gold and at most 48 after wave 1, below the cheapest purchase of 50, so nothing new arrives until wave 2 pays. Single and single can reach 68, and single and slow 58. **First playable (user, 2026-11-05):** the opening felt like a trap: the start bought only two singles, kills paid too little, and enemies took too many shots. A bounty step to 5 was not enough, so the stage was rebalanced: `starting_gold` 160, bounties 7, 4, 24, and enemy HP down about 30% (Enemy & Wave). The user chose fun over two gates, "gold never fills the board" and "the first buy is a forced choice", which now fail by choice (Formulas). The bot runs above used the old values and have not been rerun: whether towers alone now win without the hero (Pillar 2) is open until a playtest or bot run shows it.
 
 **Where to build and when to upgrade are the decisions (user, 2026-11-02).** Filling every slot before upgrading must not be the answer, which the concept also asks for: players "specialise a few towers deeply". Single's level 2 damage rose from 18 to 21 for this. At 18 neither order led. At 20 upgrading early led, but the hero share median fell to 24.8%, below its band. At 24 single alone caught the best mixes. At 21 upgrading early leads on all four mixes, single alone stays behind and every gate passes. Across every placement of each mix (`tools/balance-sim/hero_bots.py --orders`), mid-skill lives are:
 
@@ -143,11 +143,11 @@ Upgrading in pairs means build two, upgrade both, and repeat. A new single still
 | Levels per tower | Exactly 2 at MVP | 2 |
 | Level 2 against level 1 | `damage`, `range` and role values not lower, `attack_interval` not longer | Pass |
 | `cost` | At least 1 | 50 |
-| Every level-1 `cost` | At most `starting_gold` | 70 ≤ 120 |
-| The two dearest different roles' level-1 costs together, on a stage offering two or more | Above `starting_gold` | 130 > 120 |
-| `gold_before_last_wave` | Below the cheapest full board, which is slot count × the cheapest tower's total level costs | 546 < 550 |
-| Dearest full board, likewise | Above `max_final_gold` | 750 > 740 |
-| Bonus share | At most 10% of `max_final_gold` | 5.4% |
+| Every level-1 `cost` | At most `starting_gold` | 70 ≤ 160 |
+| The two dearest different roles' level-1 costs together, on a stage offering two or more | Above `starting_gold` (**relaxed** by the first playable rebalance, user 2026-11-05) | 130 < 160, fails by choice |
+| `gold_before_last_wave` | Below the cheapest full board, which is slot count × the cheapest tower's total level costs (**relaxed**, user 2026-11-05) | 742 > 550, fails by choice |
+| Dearest full board, likewise | Above `max_final_gold` (**relaxed**, user 2026-11-05) | 750 < 1018, fails by choice |
+| Bonus share | At most 10% of `max_final_gold` | 3.9% |
 | `wave_income`, every wave from the second | At least the cheapest level-1 `cost`, so no later wave funds nothing | 56 ≥ 50 |
 | `wave_income`, every wave | At most twice the dearest `cost`, so a wave funds one or two decisions | 128 ≤ 160 |
 | `damage` | Exactly 0 on `slow`, above 0 otherwise | Pass |
@@ -226,17 +226,17 @@ The **gold_before_wave** formula is defined as:
 | `intermission_duration` | float, seconds | as Wave | data file | The whole intermission, as if called at once |
 
 **Output Range:** 0 and up. It assumes every enemy is killed and every call is instant. `gold_before_last_wave` is this at the last wave, and `max_final_gold` is that plus the last wave's bounties.
-**Example:** 168, 236, 328, 408 and 546 before waves 2 to 6; `max_final_gold` 740, of which the bonus is 40, or 5.4%. (Normal bounty 5 since first playable, 2026-11-05; at 4 these were 160, 216, 296, 368, 496 and 670.)
+**Example:** 224, 316, 440, 552 and 742 before waves 2 to 6; `max_final_gold` 1018, of which the bonus is 40, or 3.9% (first playable rebalance, 2026-11-05: start 160, bounties 7, 4, 24; before it 160, 216, 296, 368, 496 and 670).
 
 | After wave | Bounties | `gold_upper_bound` | Before next wave, with bonus |
 |---|---|---|---|
-| Start | 0 | 120 | 120 |
-| 1 | 40 | 160 | 168 |
-| 2 | 60 | 220 | 236 |
-| 3 | 84 | 304 | 328 |
-| 4 | 72 | 376 | 408 |
-| 5 | 130 | 506 | 546 |
-| 6 | 194 | 700 | 740 at the end |
+| Start | 0 | 160 | 160 |
+| 1 | 56 | 216 | 224 |
+| 2 | 84 | 300 | 316 |
+| 3 | 116 | 416 | 440 |
+| 4 | 104 | 520 | 552 |
+| 5 | 182 | 702 | 742 |
+| 6 | 276 | 978 | 1018 at the end |
 
 The **wave_income** formula is defined as:
 
@@ -483,7 +483,7 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 62. (Rule 10) **GIVEN** the builder and a tower that fired just before the clear, **WHEN** Intermission's ticks run, **THEN** its timer reaches 0.
 63. (Rule 16, Flow row) **GIVEN** the builder at `dt` 1/60, **WHEN** called twice with 900 ticks left, **THEN** gold rises by 8 once, before the first spawn.
 64. (Rule 16) A call with 107 ticks left: no `gold_changed`, and the wave starts. Start in Build pays nothing.
-65. (gold_before_wave, wave_income) A starter-shaped factory at `dt` 1/60 with 900-tick intermissions: 168, 236, 328, 408, 546; final 740; income 48, 68, 92, 80, 138.
+65. (gold_before_wave, wave_income) A starter-shaped factory at `dt` 1/60 with 900-tick intermissions: 224, 316, 440, 552, 742; final 1018; income 64, 92, 124, 112, 190.
 66. (Edge cases) A hero over a slot does not block `build`.
 67. (Edge cases) A fatal leak skips the tick: no `attack_fired` that tick.
 

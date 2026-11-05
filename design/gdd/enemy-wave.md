@@ -89,13 +89,15 @@ Slot 1 sits 1 unit inside L1, and L6 has no margin. Moving slot 1 to y 310 was s
 |---|---|
 | `path_points` | (−40, 210), (430, 210), (430, 400), (110, 400), (110, 570), (270, 570), (270, 980) |
 | `slot_positions` | (270, 305), (190, 485), (350, 485), (170, 700), (370, 700) |
-| `path_width`, `starting_lives`, `starting_gold` | 72, 10, 120 |
+| `path_width`, `starting_lives`, `starting_gold` | 72, 10, 160 |
 
 | Enemy | `max_hp` | `move_speed` | `bounty` | `lives_cost` | `visual_key` |
 |---|---|---|---|---|---|
-| `normal` | 125 | 60 | 5 | 1 | `enemy_normal` |
-| `fast` | 60 | 110 | 3 | 1 | `enemy_fast` |
-| `heavy` | 750 | 38 | 16 | 3 | `enemy_heavy` |
+| `normal` | 90 | 60 | 7 | 1 | `enemy_normal` |
+| `fast` | 45 | 110 | 4 | 1 | `enemy_fast` |
+| `heavy` | 540 | 38 | 24 | 3 | `enemy_heavy` |
+
+**First playable rebalance (user, 2026-11-05).** The user played the starter stage and found the start too poor, kills paid too little and enemies too tough. At 125 HP a level-1 single needs 6.25 s to kill a normal, which spends about 5 s in its range, so one tower could not kill one enemy. HP fell about 30% (125, 60, 750 to 90, 45, 540), bounties rose (4, 3, 16 to 7, 4, 24) and `starting_gold` rose to 160. This overrides the earlier HP rise for Pillar 2 and loosens the Tower GDD's gold gates (Tower, Formulas). The bot runs have not been redone at these values.
 
 **A heavy costs 3 lives (user, 2026-11-02).** At 2, skipping the heavies in waves 4 and 5 cost 8 lives and spared 3,000 HP of tower fire, so they were cheap to leak. A bounty of 24 was also simulated, and single alone then caught the best mixes, so the bounty stays 16 and the gold tables are unchanged.
 
@@ -358,14 +360,14 @@ Starter values are fixtures, not balance (Starter values). Every bound from this
 |---|---|---|---|---|---|
 | `max_hp`, per type | `normal` 125, `fast` 60, `heavy` 750 (starter fixture) | Above 0 to 1,000,000 (field domain) | HP each enemy brings, and so each wave's total HP, which rises 1.26 to 1.64 times per wave | Enemy & Wave | Starter values: HP rose about 3 times, since at the first values a hero alone and towers alone both won |
 | `move_speed`, per type | 60, 110, 38 (starter fixture) | `time_to_exit` 12 to 60 s (proposed), which caps a real stage near 143 units/s on the starter path; above 0 to 2,000 (field domain) | Time to leak, second fronts, where groups meet and packet spacing | Enemy & Wave | Wave rules; `d_next`, `catch_up`, `packet_length` |
-| `bounty`, per type | 5, 3, 16 (starter fixture; normal 4 to 5 after first playable, 2026-11-05) | 0 to 100,000 (field domain) | Gold per kill, and so `gold_upper_bound` | Enemy & Wave; the Tower GDD bounds the gold it yields | Starter values: a heavy bounty of 24 let single alone catch the best mixes, so it stays 16 |
+| `bounty`, per type | 7, 4, 24 (starter fixture; first playable rebalance, 2026-11-05) | 0 to 100,000 (field domain) | Gold per kill, and so `gold_upper_bound` | Enemy & Wave; the Tower GDD bounds the gold it yields | Starter values: a heavy bounty of 24 let single alone catch the best mixes, so it stays 16 |
 | `lives_cost`, per type | 1, 1, 3 (starter fixture) | 0 to `ceil(starting_lives / 3)` (proposed), 4 at 10 lives | Lives lost per leak, and so `lives_at_risk` | Enemy & Wave | A heavy costs 3 (user, 2026-11-02): at 2, skipping the heavies in waves 4 and 5 was cheap |
 | `count`, per group | As in the wave table | 1 to 500 (field domain); `peak_alive_ub` at most 48 (proposed); the first wave's `lives_at_risk` below `starting_lives`, every wave's at least 1, the stage total at least `starting_lives` (proposed) | Enemies per group, lives at risk, gold and pool load | Enemy & Wave | Wave rules; `lives_at_risk`, `peak_alive_ub` |
 | `spawn_interval`, per group | 0.4 to 4 s in the starter waves | One tick (1/60) to 600 (field domain); spawn ticks strictly increasing within a group (proposed) | Packet or string: at spacing of 70 or less, a burst hits 3 or more | Enemy & Wave | `spawn_tick`, `packet_length` |
 | `start_delay`, per group | 0 to 24 s in the starter waves | 0 to 600 (field domain); a wave's first spawn at most 2 s, and the largest gap between spawns at most 12 s (proposed) | When groups overlap and converge | Enemy & Wave | Wave rules; `catch_up` |
 | `intermission_duration` | 15 s on every wave | At least `cooldown + telegraph_duration`, 10.25 s at starter values (proposed); up to 600 (field domain) | Time between waves; waiting restores the burst | Enemy & Wave | Starter values (Hero System, Simulated results) |
 | `starting_lives` | 10 | At least 2 on a real stage (proposed); 1 to 1,000 (field domain) | Cushion against leaks, and the `lives_cost` cap | Enemy & Wave | Wave rules |
-| `starting_gold` | 120 | Buys the cheapest tower (Handed to owning GDDs); 0 to 100,000 (field domain); any other bound is the Tower GDD's | The opening build, and `gold_upper_bound` | Tower (bound); Stage record | `gold_upper_bound` |
+| `starting_gold` | 160 (first playable rebalance, 2026-11-05) | Buys the cheapest tower (Handed to owning GDDs); 0 to 100,000 (field domain); any other bound is the Tower GDD's | The opening build, and `gold_upper_bound` | Tower (bound); Stage record | `gold_upper_bound` |
 | `path_width` | 72 | Above 0 to 2,000 (field domain); L2, L6, L7 and L8 scale with it | Lane width, and the clearances of slots and the burst button | Enemy & Wave | Layout rules |
 | `path_points` | The starter list (Starter values) | L5, L6, L8, L9, L11, L13 and L14 (proposed) | Path length, time to leak and bends to burst | Enemy & Wave | Layout rules |
 | `slot_positions` | 5 slots (Starter values) | L1 to L4, L10 and L12 (proposed): 3 to 5 slots | Tower coverage, and the order towers fire in | Enemy & Wave | Layout rules; slot 1 stays at y 305, since y 310 took the hero share median to 24.4% in simulation |
@@ -546,7 +548,7 @@ A recording fake logs the four signals, and a THEN that names an event or the lo
 | Stretch mode and minimum width are decided (ADR-0003). Still open: real iPhone insets and safe-area units (ADR-0003 SP8). Recheck L3, L5, L6 and L7 once SP8 runs; L6's zero margin at the largest inset is unverified on devices. Android insets are deferred with Android | technical-director | ADR-0003 SP8, first iPhone build |
 | Seams the criteria assume: constructor inputs, the two tick entries, add-enemy, a development-error sink, the content test over in-memory records, the field rectangle, a callable `d_next`, and the snapshot. Also decide: one tick driver with a constant `dt`, and what a stall does; compacting the roster after a loop, on the halt path too; the enemy's base type and no back-references, for the `weakref` check (decided in ADR-0009: `Targetable`, one-way Health and Status, public `add_enemy` for tests); and where the Reduce Motion setting lives | technical-director | App Lifecycle ADR |
 | Does the technical director accept moving path and slots from the scene to the Stage record, and the tick order? | technical-director | App Lifecycle ADR |
-| Wave 6 pays 194 of 580 bounty gold. At most 546 is held at its start, 4 short of the cheapest full board and 204 of the dearest (normal bounty 5 since 2026-11-05), so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
+| Wave 6 pays 276 of 818 bounty gold. At most 742 is held at its start, enough for the cheapest full board and 8 short of the dearest (first playable rebalance, 2026-11-05), so some of it still buys upgrades mid-wave, and what arrives late buys nothing. How much is that? HP per gold in stock runs 8.3, 9.4, 9.2, 8.4, 10.1, 12.3, so it rises only at the end. Is the last wave's reward worth anything? | economy-designer + bots | First playable |
 | There is no heavy-only introduction and no relief wave, and waiting is about 24% of an uncalled stage. Does the curve need either, or less waiting? | Playtest | First playable |
 | Nothing restores a lost life, so early leaks shrink the cushion for wave 6. Is that fair? | Playtest | First playable |
 | Wave 2's packets are 12 s apart against a 10.25 s burst recovery, so 1.75 s of slack. Does a real thumb make it? | Pillar 4 phone test | First phone build |
