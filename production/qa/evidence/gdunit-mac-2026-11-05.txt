@@ -18,4 +18,9 @@ tests, 4 failures; run 5 (this) 589 tests, all pass. Fixes: commits 0c3d24c, 701
 04478e6, 9b4e7ad.
 Import and lint (step 0): no ERROR lines.
 Launch: first launch stopped at BattleWrapper._connect_signals (fixed in 70198ea);
-relaunch not yet reported.
+relaunched twice after the fix with no SCRIPT ERROR or ERROR line. RUNINFO:
+godot="4.7.2-stable (official)" debug_build=true os=macOS os_version=26.6.2 model=Mac16,10
+method=mobile driver=metal adapter="Apple M4 (Apple9)" adapter_api=4.0 refresh_hz=75.0
+max_fps=0 vsync=enabled window_px=540x960 scale=1.0
+(max_fps=0 is expected: the 60 cap lands in project.godot after ADR-0012 is accepted.)
+What the window showed: not yet reported.
