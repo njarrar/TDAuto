@@ -13,9 +13,11 @@ class Roster extends RefCounted:
 
 
 func _keys() -> VisualKeys:
-	var snap: Dictionary = {"enemy": {"e_h": {"visual_key": "enemy_heavy_1"}, "e_n": {"visual_key": "enemy_normal_1"},
-			"e_f": {"visual_key": "enemy_fast_1"}}, "hero": {"h": {"visual_key": "hero_1"}}}
-	return VisualKeys.from_snapshot(snap, &"h")
+	# Built directly: these view tests need only the enemy and hero keys, not a catalogue.
+	var keys: VisualKeys = VisualKeys.new()
+	keys._enemy = {&"e_h": &"enemy_heavy_1", &"e_n": &"enemy_normal_1", &"e_f": &"enemy_fast_1"}
+	keys._hero = &"hero_1"
+	return keys
 
 
 func _enemy(sid: int, def_id: StringName, x: float) -> Enemy:
