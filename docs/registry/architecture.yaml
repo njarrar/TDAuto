@@ -84,6 +84,16 @@ state_ownership:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
     added: 2026-11-05
     revised: ""
+  - state: stat_key_vocabulary
+    status: active
+    owner_system: data-config
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    interface: "StatKeys (src/data/stat_keys.gd; StatAccessor lives in src/battle/stat_accessor.gd, ReadContext in src/data/read_context.gd) is the only place a stat-key name and its int/float type is written; types mirror ADR-0002's schema and are tied to it by a two-way unit test"
+    write_access: data-config-only
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -174,6 +184,50 @@ interfaces:
     signal_signature: "lifecycle_paused() once per focus loss (APPLICATION_FOCUS_OUT, WM_WINDOW_FOCUS_OUT, APPLICATION_PAUSED, deduplicated until a focus-in, ignored until the window has been seen focused); wrapper connects it to Flow.pause and HudLogic.modal_cancel; viewport_resized() on Viewport.size_changed goes to HudLogic.modal_cancel only and never pauses"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+    revised: ""
+  - contract: stat_read
+    status: active
+    pattern: direct_call
+    producer: data-config
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - hud-logic
+      - stat-modifier-vs
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    signal_signature: "StatAccessor.stat_int(ctx: ReadContext, key: StringName) -> int and stat_float(ctx: ReadContext, key: StringName) -> float; key type must match the call; a bad call calls the injected fatal(cause) once and the returned value is unspecified; callers return and check halted() (HUD checks phase() == FATAL); is_tower(id) -> bool and level_count(def_id) -> int are non-fatal"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
+  - contract: read_context
+    status: active
+    pattern: direct_call
+    producer: data-config
+    consumers:
+      - enemy-wave
+      - tower-sim
+      - hero-sim
+      - hud-logic
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    signal_signature: "ReadContext(def_id: StringName, level: int = 0, entity: Object = null): level 0 means none and tower levels are 1..level_count; live_entity is always a WeakRef (weakref(null) for a preview); TowerSim keeps a separate command context for build and upgrade cost reads and writes a built tower's level only in the commit; one context per caller, reused, never shared, never holding a stat value"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
+  - contract: flow_fatal_phase
+    status: active
+    pattern: direct_call
+    producer: game-state-stage-flow
+    consumers:
+      - hud-logic
+      - tower-input
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    signal_signature: "Flow.phase() returns FATAL whenever the battle FatalLatch.is_set is true, as a derived read on the same line, not only after a committed transition; ratified by ADR-0006"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
     added: 2026-11-05
     revised: ""
 
@@ -355,6 +409,26 @@ api_decisions:
       - docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
     added: 2026-11-05
     revised: ""
+  - purpose: stat_read_failure
+    status: active
+    api: "injected fatal Callable (method Callable on the battle FatalLatch) called once per bad accessor call with a cause naming call, def_id, key, level and fault code"
+    not: "assert(), a sentinel return the caller must test, or a result object"
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    reason: "assert does not survive release (ADR-0001 Decision 8); a result object allocates on every read; GDD Rule 10 makes the handler the contract"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: stat_value_read
+    status: active
+    api: "StatAccessor.stat_int / stat_float with an explicit per-kind match on StatKeys constants"
+    not: "reading stat fields off a record directly, Object.get() reflection, or string-literal keys at call sites"
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    reason: "The accessor is the seam the Vertical Slice resolver replaces with no call-site change (TR-data-008)"
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -452,6 +526,36 @@ forbidden_patterns:
     description: "Pause is Flow's PAUSED state; get_tree().paused is never set."
     why: "A second pause mechanism needs process_mode on every always-running node and its Control and input behaviour is not in the engine reference."
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-and-platform-lifecycle.md
+    added: 2026-11-05
+  - pattern: stat_value_caching
+    status: active
+    description: "No consumer stores a value returned by the accessor beyond the tick step that read it. The one exception is max_hp, read once at spawn to seed Health."
+    why: "A cached value would ignore a modifier or a spy change and break the resolver seam (TR-data-008)."
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+  - pattern: shared_read_context
+    status: active
+    description: "Two callers never share a ReadContext, and a new context is never built per read; each owner makes one when its entity comes to exist."
+    why: "Sharing lets one caller change level under another; per-read allocation costs hundreds of objects per tick."
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+  - pattern: strong_live_entity_on_context
+    status: active
+    description: "ReadContext.live_entity is always a WeakRef (weakref(null) for a preview), never null and never a strong reference to the entity."
+    why: "The entity owns its context, so a strong back-reference is a RefCounted cycle (ADR-0001's refcounted_back_reference)."
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+  - pattern: use_value_after_bad_stat_call
+    status: active
+    description: "After a stat read, the caller checks halted() (HUD: phase() == FATAL) before using the value; the value returned after a bad call is never used."
+    why: "Typed GDScript cannot express a number or nothing, so the latch is the only failure signal."
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+  - pattern: built_tower_level_set_before_commit
+    status: active
+    description: "A built tower's ReadContext.level is written only inside the build or upgrade commit, after the gold debit and before any emit; command-time cost reads use TowerSim's separate command context."
+    why: "Setting the tower's own level to L+1 to read a cost corrupts damage and range reads when the command is then refused (TR-tower-003)."
+    adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
     added: 2026-11-05
 
 # Example:
