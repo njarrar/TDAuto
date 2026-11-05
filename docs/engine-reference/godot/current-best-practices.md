@@ -192,6 +192,9 @@ adds suites, reports go to `res://reports/` by default (`-rd` changes it), and
 the documented exit codes are 0 (all passed), 100 (failures) and 101 (warnings).
 The command the framework uses:
 `godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode`.
+**Wrong for 4.7.2**: 4.7.2 rejects `--remote-debug tcp://127.0.0.1:0`. Drop it; add
+`-c` and close stdin (`</dev/null`) in its place:
+`godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c </dev/null`.
 
 gdUnit4 6.2.x lists Godot 4.5 to 4.7.1 as compatible in its README
 (https://github.com/godot-gdunit-labs/gdUnit4#compatibility-overview, checked
@@ -209,7 +212,9 @@ Observed on Godot 4.6.1 with gdUnit4 6.1.3, and the exits again on 4.7.2 with
 - Over zero tests the runner prints `No test cases found` and exits 0.
 - Without `--remote-debug tcp://127.0.0.1:0`, a script error opens the `-d`
   debugger and the run waits at a `debug>` prompt; with it, every run prints two
-  `ERROR:` lines about the remote port, which are expected.
+  `ERROR:` lines about the remote port, which are expected. **Wrong for 4.7.2**:
+  4.7.2 rejects the flag. `-c` and closed stdin (`</dev/null`) replace it, so
+  the `debug>` prompt cannot block the run.
 - A fresh clone has no `.godot/` class cache: run
   `godot --headless --path . --import` first, or `GdUnitCmdTool.gd` does not
   load and the run exits 1 having run nothing.

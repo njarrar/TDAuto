@@ -373,8 +373,10 @@ interfaces:
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
     # was: Combat consumed it and deliver applied 0 outside a tick (dropped after TD-ADR review)
     # was: refuse with an unnamed refusal value (before ADR-0010 acceptance, 2026-11-05)
-    signal_signature: "TickGuard.in_tick() -> bool injected as a method Callable; commands are thin public entry points that, when true, change nothing, report ERR_COMMAND_IN_TICK and return BUSY (ADR-0010); internal transitions call private functions"
+    # was: named only in_tick; ADR-0001 D3's Flow target list left out the guard (before the control manifest build, 2026-11-05)
+    signal_signature: "TickGuard.in_tick() -> bool, enter() and exit() injected as method Callables into Flow, TowerSim and HeroSim (ADR-0001 D3 lists them among Flow's targets); commands are thin public entry points that, when in_tick() is true, change nothing, report ERR_COMMAND_IN_TICK and return BUSY (ADR-0010); internal transitions call private functions"
     referenced_by:
+      - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-04
@@ -631,14 +633,17 @@ api_decisions:
     notes: "ADR-0001 Accepted 2026-11-04; binding"
   - purpose: catalogue_storage_format
     status: active
-    api: "JSON files in res://assets/data/catalogue/, listed in manifest.json, read with FileAccess.open + get_as_text and parsed by a JSON instance; one schema table per record type"
+    # was: Catalogue.load_manifest() named the only FileAccess user, which the L-DEV-1 SIM ban contradicted (before the control manifest build, 2026-11-05)
+    api: "JSON files in res://assets/data/catalogue/, listed in manifest.json, read with FileAccess.open + get_as_text and parsed by a JSON instance; one schema table per record type; Catalogue.load_manifest() is the only FileAccess user outside src/presentation/dev/, and L-DEV-1 exempts src/foundation/data/catalogue.gd (FILE_EXEMPT in scopes.gd)"
     not: ".tres/.res Resources, load() or ResourceLoader for catalogue data"
     adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
     reason: "A .tres load hides a missing field, an unknown property and a fractional int before any check can see them"
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-03
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0002 Accepted 2026-11-04; binding"
   - purpose: catalogue_read_only_snapshot
     status: active
@@ -765,7 +770,8 @@ api_decisions:
     # was: IDs L-LAYER-1 to L-TEST-5 without the command, dev and hero rows (before ADR-0010 acceptance, 2026-11-05)
     # was: no L-VIEW rows (before ADR-0011 acceptance, 2026-11-05)
     # was: L-HERO-1 exempt only battle.gd and battle_builder.gd in src/root/; L-VIEW scope "battle HUD" with no folder (before the fourth architecture review, 2026-11-05)
-    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010) and L-VIEW-1, L-VIEW-2 (ADR-0007 amended with ADR-0011); L-HERO-1 exempts battle.gd, battle_builder.gd and battle_wrapper.gd in src/root/ (the wrapper builds HeroInput with hero_sim; only battle.gd reaches hero_sim on the tick path); L-VIEW-1 and L-VIEW-2 scope src/presentation/field/ and the battle HUD folder src/presentation/hud/, so modal TapScreens outside it may use Label; run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
+    # was: L-DEV-1 banned any FileAccess in SIM, the catalogue loader included (before the control manifest build, 2026-11-05)
+    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010) and L-VIEW-1, L-VIEW-2 (ADR-0007 amended with ADR-0011); L-HERO-1 exempts battle.gd, battle_builder.gd and battle_wrapper.gd in src/root/ (the wrapper builds HeroInput with hero_sim; only battle.gd reaches hero_sim on the tick path); L-VIEW-1 and L-VIEW-2 scope src/presentation/field/ and the battle HUD folder src/presentation/hud/, so modal TapScreens outside it may use Label; run_measures.gd a VIEW scope in scopes.gd; L-DEV-1 exempts FILE_EXEMPT = src/foundation/data/catalogue.gd in SIM (src/foundation stays in SIM); no suppression markers"
     not: "Shell or Python regex over source text; gdtoolkit parser; inline lint-allow markers"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"

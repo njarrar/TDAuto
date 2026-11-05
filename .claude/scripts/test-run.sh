@@ -232,7 +232,7 @@ ABS=$(pwd -W 2>/dev/null || pwd)
 RESULTS=""; BUILD=""; CMD=""; CMD_SRC="default"; PRE_FAIL=""; PRE_ID=""; PRE_WHY=""
 case "$ENGINE" in
   godot)
-    CMD="\"${EXE:-godot}\" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode 2>&1"
+    CMD="\"${EXE:-godot}\" --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c </dev/null 2>&1"
     ;;
   unity)
     if [ "$PLATFORM" = playmode ]; then P=PlayMode; RESULTS=test-results/playmode.xml; else P=EditMode; RESULTS=test-results/editmode.xml; fi

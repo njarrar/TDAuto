@@ -159,7 +159,7 @@ TR-data-001, 002, 003, 005, 007, 013, 015, TR-enemy-001, TR-hero-014 and TR-hud-
 ```gdscript
 class_name Catalogue extends RefCounted
 const DATA_ROOT := "res://assets/data/catalogue/"
-## Reads bytes, then calls from_texts. The only FileAccess user.
+## Reads bytes, then calls from_texts. The only FileAccess user outside src/presentation/dev/.
 static func load_manifest(manifest_path: String, data_root: String = DATA_ROOT) -> LoadResult
 ## Tier 0a with no I/O. file_texts maps path -> text.
 static func from_texts(manifest_text: String, file_texts: Dictionary, data_root: String = DATA_ROOT) -> LoadResult
@@ -204,7 +204,7 @@ static func diff(before: Dictionary, after: Dictionary) -> Array[String]
 
 ### Implementation Guidelines
 1. Catalogue data must be JSON under the data root, read with `FileAccess` and parsed with a `JSON` instance. Records must never be `.tres` or `.res`, and data files must never go through `load()` or `ResourceLoader`.
-2. Only `load_manifest()` may touch `FileAccess`, and it must read only listed files. No runtime code under `src/` may use `DirAccess` (L-DATA-1).
+2. `load_manifest()` must be the only `FileAccess` user outside `src/presentation/dev/`, and it must read only listed files. No runtime code under `src/` may use `DirAccess` (L-DATA-1).
 3. Every record field must be in `schema.gd`; the parser, validator and snapshot must all read that table and nothing else.
 4. Every schema entry must match a declared property of its record class by name and type, in both directions (`test_schema_matches_record_classes`), because `set()` on a wrong name fails silently and leaves a default.
 5. A missing key must give `field_missing`, never a default. An undeclared key must give `unknown_property`. A non-integral number in an `int` field must give `fractional_int`.
@@ -371,3 +371,4 @@ Manual evidence (`production/qa/evidence/`, first phone build):
 ## Amendments
 - **2026-11-04, from verified engine probes** (docs/engine-reference/godot/probe-results.md; Status stays Accepted). V5 now checks `typeof()` of each index key, since `String` and `StringName` keys hit each other in a lookup and a `String` key survives a later `StringName` write. E1, E2 and E3 are marked verified in Engine Compatibility and Validation Criteria.
 - **2026-11-04, from the third architecture review; Status stays Accepted** (`architecture-review-2026-11-04.md`). The accessor-helpers note no longer says QQ-16 may add a prefix: ADR-0007 Decision 10 chose no prefix (QQ-16 resolved). Nothing else in this ADR changes.
+- **2026-11-05, from the control manifest build (confirmed by the user 2026-11-05); Status stays Accepted.** Guideline 2 and Key Interfaces: `load_manifest()` is the only `FileAccess` user outside `src/presentation/dev/`, where ADR-0010's `jsonl_file_sink.gd` writes the dev logs. ADR-0007's L-DEV-1 exempts `catalogue.gd` from the `SIM` ban. Nothing else in this ADR changes.
