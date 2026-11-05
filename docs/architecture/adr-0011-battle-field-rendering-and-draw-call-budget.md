@@ -10,7 +10,7 @@ Proposed
 2026-11-05
 
 ## Decision Makers
-Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer in an autonomous run (no questions asked; every open point is a Verification row). Reviewed 2026-11-05 by godot-specialist (BLOCK: 3 blockers, 8 minors) and technical-director (CONCERNS: 7 concerns, 5 advisories); every finding was applied in the same day's fix round (draw-primitive rule from the windowed probe, tint on the field base, glow, modals inside the 12-call cap, DangerRule, kill styling from `damage_applied`). A re-review of the revised ADR is still owed before Acceptance. Fix round 2026-11-05 after architecture-review-2026-11-05 (items applied: C1 observer row cross-reference, D2, D3, D4, D11, Depends On ADR-0001 and ADR-0007).
+Najeeb Jarrar (owner). Drafted 2026-11-05 by lead-programmer in an autonomous run (no questions asked; every open point is a Verification row). Reviewed 2026-11-05 by godot-specialist (BLOCK: 3 blockers, 8 minors) and technical-director (CONCERNS: 7 concerns, 5 advisories); every finding was applied in the same day's fix round (draw-primitive rule from the windowed probe, tint on the field base, glow, modals inside the 12-call cap, DangerRule, kill styling from `damage_applied`). A re-review of the revised ADR is still owed before Acceptance. Fix round 2026-11-05 after architecture-review-2026-11-05 (items applied: C1 observer row cross-reference, D2, D3, D4, D11, Depends On ADR-0001 and ADR-0007). Fix round 2 2026-11-05 after architecture-review-2026-11-05b (items applied: K1 Depends On no longer lists ADR-0007, which stays under Delegates To; E1 step b order and step letters follow ADR-0004; V1 logs the rendering driver).
 
 ## Summary
 Presentation leaves open how the battle field is drawn, how many draw calls it may cost, how the HUD decides to redraw, and how outcomes tint the field. This ADR makes every field view one node with one `_draw` (enemy, tower, combat, path, hero, `HudField`), turns the "pools" into slot arrays inside those draws rather than into nodes, fixes the redraw key as a pure merge plus a shared quantiser, places the view-model refresh after the ticks, and carries the clearance window, the outcome tint, the no-shader hit flash, the no-interpolation policy and the evidence naming. The 60-call budget stays provisional until a device run.
@@ -44,7 +44,7 @@ Presentation leaves open how the battle field is drawn, how many draw calls it m
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (composition root, wrapper `setup(battle, dev_telemetry)`); ADR-0007 (lint rows, test runner); ADR-0003 (Accepted or Proposed per its file: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
+| **Depends On** | ADR-0001 (composition root, wrapper `setup(battle, dev_telemetry)`); ADR-0003 (Accepted or Proposed per its file: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
 | **Delegates To** | ADR-0007 (lints named in Decision 13; test runner for the pure units); ADR-0010 (the sims' read methods exist as named; input; commands); ADR-0004 (clock, ticks); `technical-artist` / `art-director` (the ring width bias, glyph shapes, tint wording, V3 and V7); `ui-programmer` (HudTopBand Controls) |
 | **Enables** | Every Presentation story: HudField, field views, Combat view, hero view, outcome presentation; ADR-0007's evidence items |
 | **Blocks** | The first HudField or Combat-view story (architecture.md Required ADRs). Only Decision 11's numbers stay provisional |
@@ -85,12 +85,12 @@ Eight requirements are waiting on one rendering decision: TR-combat-011, TR-enem
 **7. Frame order inside `BattleWrapper._process`** (ADR-0004 fixes the slots; this ADR places the rest):
 ```
 a. view_dt                                   (ADR-0004, 8)
-b. TowerInput.advance(view_dt_ms), HeroInput.update(), HudLogic.advance,
+b. HudLogic.advance(view_dt_ms), TowerInput.advance(view_dt_ms), HeroInput.update(),
    RunLog.advance / RunLog.flush (only when dev telemetry is on),
    ClearanceWindow.advance(view_dt), flash timers, tint.advance(view_dt)
-c. Clock.advance(delta)  -> runs the owed ticks itself, each battle.tick(dt) (ADR-0004 Decision on Clock)
-d. (no wrapper tick loop: the ticks already ran inside c)
-e. refresh, once per frame, after the ticks (this ADR):
+   (the order of ADR-0004 Decision 7 step b)
+c. Clock.advance(delta)  -> runs the owed ticks itself, each battle.tick(dt); the wrapper has no tick loop
+d. refresh, once per frame, after the ticks (this ADR; ADR-0004 step d):
    1. EnemySlots.sync(roster, view_dt), DangerRule.observe(...)  -> sets _dirty if any tick ran, a slot is dying, or a timer runs
    2. TowerView / HeroView / CombatView read their surfaces
    3. bonus = tower_sim.early_call_bonus(seconds_left)    -> read here, after the ticks, never cached across frames
@@ -290,7 +290,7 @@ Greenfield. Order of stories: `HudQuantiser` and `HudRedrawKey` with the table t
 
 | # | Claim | Status | Check | Pass when |
 |---|---|---|---|---|
-| V1 | NOT SOURCEABLE: the same draw-call counts on an Android device (desktop Mobile renderer observed, R1, R2); one `Label` is one call (outline, shadow, atlas pages); a run of `draw_texture_rect` calls sharing one texture batches | Open (desktop observed) | Windowed desktop count per evidence screen first, then an Adreno 5xx-class phone; count the Result and Paused frames | At or under 60 on the worst screen; HUD at or under 12 |
+| V1 | NOT SOURCEABLE: the same draw-call counts on an Android device (desktop Mobile renderer observed, R1, R2); one `Label` is one call (outline, shadow, atlas pages); a run of `draw_texture_rect` calls sharing one texture batches | Open (desktop observed) | Windowed desktop count per evidence screen first, then an Adreno 5xx-class phone; count the Result and Paused frames; log `RenderingServer.get_current_rendering_driver_name()` and the `rendering/renderer/rendering_method` in use, since an Adreno 5xx may fall back to the Compatibility renderer, whose batching differs | At or under 60 on the worst screen; HUD at or under 12 |
 | V2 | Consecutive same-type primitives batch into one call, `draw_set_transform` does not break the run | Observed, 4.7.2 probe, 2026-11-05, prototypes/adr-0011-probe/output-review.txt (R2); desktop windowed, Mobile renderer | Re-run `probe4.gd` | 1 call for 48 `draw_primitive` |
 | V3 | What `ring_width_bias = 1.0` looks like with `antialiased = false` on a phone | Open (`antialiased` is not a no-op, R2) | Screenshot of every ring | art-director accepts, or MSAA 2D decided |
 | V4 | NOT SOURCEABLE: an unchanged `_draw` is not re-run and its retained commands are resubmitted without a script cost | Open | Profiler with a static scene | No `_draw` call between key changes |

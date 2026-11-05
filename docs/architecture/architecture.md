@@ -602,6 +602,7 @@ Invariants: commands run only between ticks. State is checked before geometry. A
 | `fatal(cause: String) -> void` | Builder, accessor, all sims | Sets the battle FatalLatch and the AppRoot FatalLatch. Idempotent. |
 | `dev_error(msg: String) -> void` | EnemyWave, others | Development-error sink that survives release builds. Tests replace it. |
 | `to_ticks(seconds: float) -> int` | Combat, EnemyWave, TowerSim, HeroSim, Flow, HudLogic | Rounds half away from zero; `dt` fixed at build. |
+| Combat's `dealt_by_id(id)`, `dealt_by_kind(kind)`, `dealt_total()`, with the stage's tower and hero ids | Flow | Read once when the outcome commits, to fill `StageResult`'s damage fields (ADR-0006 Decision 5, ADR-0009 Decision 8). Flow never holds Combat. |
 | `tap_slop`, `edge_reject_margin`, `reduce_motion`, field width, safe-area insets; Combat's counters, tower IDs and role tags, launch ID, build hash, AppRoot's retry latch | HudLogic | Injected by the wrapper (Battle HUD Rule 1). |
 | `dt: float` | HudLogic | The fixed tick, for `intermission_left × dt` on Tower's bonus read. |
 
