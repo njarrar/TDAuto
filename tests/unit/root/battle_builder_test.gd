@@ -82,7 +82,8 @@ func test_build_returns_battle_with_every_member_and_no_node() -> void:
 	var battle: Battle = TestBattles.build()
 
 	assert_object(battle).is_not_null()
-	assert_bool(battle is Node).is_false()
+	# `battle is Node` does not compile: Battle is a RefCounted, so the parser rejects it.
+	assert_bool(battle.is_class("Node")).is_false()
 	assert_object(battle.flow).is_not_null()
 	assert_object(battle.combat).is_not_null()
 	assert_object(battle.enemy_wave).is_not_null()
