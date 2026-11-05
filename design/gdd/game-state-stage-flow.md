@@ -6,6 +6,7 @@
 > **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 
 ## Summary
 
@@ -16,6 +17,10 @@ Boots the app, holds the catalogue, runs each battle through Build, Wave and Int
 ## Overview
 
 Game State & Stage Flow is what makes a stage begin, advance and end. It boots the app, holds the loaded catalogue, starts each battle, connects the other battle systems to each other, owns the player's lives, and decides when a stage is won or lost. Players meet it as pacing: a stage waits while they read the path, then waves come on a timer they can beat by calling the next wave early for bonus gold, which shortens the burst's recovery. Whether that is a real decision depends on tuning: the field is clear between waves, so a bot gate checks it does not become a free habit. A lost stage retries at once with nothing carried over. It exists so that no other system needs to know about any other, and so a whole battle can run with no scene, no renderer and no real time, which is how the bots and tests measure the game. It owns phases and lives, not enemies, gold or towers.
+
+## Player Fantasy
+
+Players feel this system as pacing. A new stage waits with its clock stopped, so they can read the path before anything moves; starting a stage is never rushed. Waves then come on a timer they can beat: calling the next wave early pays bonus gold and costs recovery and preparation time. The button shows the bonus, the time left and burst readiness, so the player sees both sides. Whether calling early is a real decision depends on tuning, and the always-call bot gate checks it does not become a free habit. A loss is immediate: the game freezes on the tick lives reach 0. Retry is one tap with no confirm and nothing carried over, so a lost stage leads straight into a fresh attempt (Pillar 3). A win gets a short beat before its screen. The result shows numbers without ranking, and hero share is not highlighted, because it is a balance metric and not a goal (Pillar 2).
 
 ## Detailed Design
 
@@ -183,6 +188,24 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 | Save/Load, Menu & Screen Flow (VS) | Join the app machine (soft at MVP) |
 
 Per the bidirectional rule, each of these GDDs must list this one when authored.
+
+## Tuning Knobs
+
+Flow owns lives and phases, but most of the values that shape them sit on other systems' records. They are listed here because they set this system's pacing. Game Feel durations are proposed, untested and presentation only.
+
+| Name | Current or proposed value | Safe range | What it changes | Owner |
+|---|---|---|---|---|
+| `dt`, the fixed tick | 1/60 s, 60 ticks per second (proposed) | range not set in this GDD | Simulation step for humans and bots; an engine constant, not a catalogue value | ADR-0004 |
+| Frame clamp | 3 ticks per frame | 2 to 4 (V6) | Most ticks run in one frame, so a long frame slows the game instead of jumping it | ADR-0004 |
+| Long-frame cutoff | 0.5 s | range not set in this GDD | A frame longer than this runs no ticks | ADR-0004 |
+| `starting_lives` | per Stage record | 1 to 1,000 (Data & Config field domain) | Lives at stage start | Enemy & Wave |
+| `lives_cost` | per Enemy record | 0 to 1,000 (Data & Config field domain; lives_after formula) | Lives lost per leak | Enemy & Wave |
+| `intermission_duration` | per Wave record | 0 to 600 s (Data & Config field domain); 0 to 36,000 ticks (intermission_left formula) | Time between waves, and so the time for burst recovery, re-pinning and building | Enemy & Wave, balanced with Hero |
+| Early-call bonus | Tower GDD formula | range not set in this GDD | Gold for calling a wave early; never depends on burst state | Tower |
+| Lost screen delay | about 0.4 s (proposed) | range not set in this GDD | Time from the freeze to the Lost screen | This system (wrapper, presentation) |
+| Won input-dead beat | about 1 s (proposed) | range not set in this GDD | Time input stays dead before the Won screen | This system (wrapper, presentation) |
+| Retry arming delay | about 0.3 s (proposed) | range not set in this GDD | Time after the button appears before it accepts a press; presses begun earlier never fire it | This system (Game Feel); Battle HUD builds the button |
+| Start/Call arming delay | arms the same way as Retry; no separate value stated | range not set in this GDD | Same guard for a button that may appear under a thumb | This system (Game Feel); Battle HUD builds the button |
 
 ## Visual/Audio Requirements
 

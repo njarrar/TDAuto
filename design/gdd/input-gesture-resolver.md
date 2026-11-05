@@ -7,6 +7,7 @@
 > **Last Updated**: 2026-11-01
 > **Last Verified**: 2026-11-01
 > **Implements Pillar**: Pillar 4 (Thumb-First) directly; enabling system for Pillar 2 (the hero's pin and aimed burst are its two drags)
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 
 ## Summary
 
@@ -17,6 +18,10 @@ Turns one thumb's press, movement and release into exactly one tap, one drag or 
 ## Overview
 
 The Input & Gesture Resolver is the one place a thumb's press becomes a game action. It owns a registry of hit targets, each registered by its owner (the hero, each tower, each build slot, the burst button) with a shape, a priority and the gestures it accepts, and it owns the rule that turns a press, a movement and a release into exactly one of **tap**, **drag** or **nothing**, delivered to exactly one target. It never names a feature system: it emits "tap on target 7" and "drag from target 3, now at (x, y)", and the owner decides what that means — a pin, an aimed burst, a build arc, an upgrade. Every tower defense on a phone lives or dies on this seam: with one thumb, one lane and four verbs, a drag that fires the wrong thing is worse than a miss, because it spends gold or moves the hero without consent. The concept's Pillar 4 (Thumb-First) makes this measurable: a first-phone-build test of 20 attempts per gesture with a non-developer tester allows at most 5% misses and zero mis-fires, and this system is where that number is won or lost. Without a resolver, each feature would read raw events itself, the priority order would live in four places, and the first overlapping hit area would produce a bug no single system owns. The resolver is small by design, the systems index's TD note fixes its scope to the registry and the priority order, and it is the only MVP system that is also a test instrument, since the bot acceptance modes drive the hero through the same press, move and release calls a thumb would.
+
+## Player Fantasy
+
+Players never see the resolver. They feel it as a thumb that does what they meant: a re-pin never buys a tower, a stray touch never fires the burst, and a palm touch never cancels an aim (Pillar 4). Touching the hero shows its leash on the press, before the player has chosen tap or drag, so the first frame already says "this is yours". A drag counts from the first move past slop, with no wait. Once a press is a drag it stays one, so a nervous thumb cannot cancel its own pin by hesitating. There are few verbs and no long press or double tap. A miss is silent except on the ground, so the player keeps watching the lane. The Pillar 4 phone test measures this: 20 attempts per gesture with a non-developer tester, at most 5% misses and zero mis-fires.
 
 Implementation questions raised while framing this section, all deferred: which Godot input path (`_unhandled_input` on a Node vs Control `_gui_input`) carries touch events into the resolver, how desktop mouse maps onto touch, and whether `Area2D` picking or the resolver's own geometry tests find targets → becomes an ADR. The pinned engine reference does not cover touch events, so that ADR must verify them against live 4.7 docs.
 
@@ -278,6 +283,18 @@ The **target_ok** formula is defined as:
 Per the bidirectional rule, each of these GDDs must list this one when authored. The Data & Config GDD and the systems index already list this system.
 
 **Adapter contract (binding on the ADR).** Every `press` the adapter forwards is followed by exactly one `release` of that index, one `cancel_pointer` of that index, or one `cancel()`, whatever Controls lie under the drag and whatever the OS does with the touch. The adapter checks an event's `canceled` flag before treating `pressed = false` as a release, since an Android touch-cancel treated as a release would emit `tapped` or `drag_ended`, a mis-fire. The resolver has no clock and cannot recover a stranded gesture; a different finger pressing afterwards is dropped by Rule 1 until the stranded one is closed.
+
+## Tuning Knobs
+
+The resolver's three tunable values are the fields of the Data & Config Input record (Rule 9). The balance ranges are first-build hypotheses, since no phone data exists (CD-PLAYTEST).
+
+| Name | Current or proposed value | Safe range | What it changes | Owner |
+|---|---|---|---|---|
+| `drag_slop` | 15 field units (default) | hard domain 8–30; balance 12–18 | How far a press with a drag winner and no real tap winner (a clear hero, the burst button) moves before it becomes a drag | Input (this GDD); stored on the Input record |
+| `tap_slop` | 28 field units (default) | hard domain 16–34 and above `drag_slop`; balance 24–30 | How far a press with a real tap winner, or no winner, moves before it stops being a tap; kept below the smallest hit radius of 36 | Input (this GDD); stored on the Input record |
+| `edge_reject_margin` | 36 field units (default) | hard domain 0–48 | Width of the side-edge zone where a press never reaches the resolver; the adapter applies it. The value comes from memory of Android's back-swipe zone and must be checked on devices | Input (this GDD); stored on the Input record |
+
+Not tuned here: hit radii are the owners' values (art bible §3), priorities are structural constants, and the 1.5 s cost-chip window and 200 ms bounce guard are Tower System's. A runtime slop setter and a hit-area scale multiplier are reserved for Settings & Accessibility at Alpha, with nothing built.
 
 ## Visual/Audio Requirements
 

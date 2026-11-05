@@ -6,6 +6,7 @@
 > **Last Updated**: 2026-11-03
 > **Last Verified**: 2026-11-03
 > **Implements Pillar**: Pillar 2 (One Hero, Not an Army: hero share is measured here); Pillar 1 (hits and slows must be visible)
+> Section Player Fantasy added 2026-11-05 from existing content; no rule changed.
 
 ## Summary
 
@@ -16,6 +17,10 @@ The one path for all damage: attackers name a victim, an amount and a dealer, an
 ## Overview
 
 Combat & Damage is where a hit becomes lost health. Towers and the hero decide whom to attack; they hand Combat the victim, the amount and who dealt it, and Combat applies the damage, marks the enemy dead at 0 health, applies slows and records who dealt what. Players feel it as immediate, readable hits: a thin cyan line and a flash for a tower, a heavier white-gold one for the hero. It exists so that there is one path for all damage, which is what makes the hero's share of damage (Pillar 2's 25–30% target, still unproven) an honest number. It is deliberately small: it owns no targeting, range, attack timers, gold, lives or enemy list. The hero cannot be hurt at MVP, as in the prototype that tested well: leaks and lives carry the stakes.
+
+## Player Fantasy
+
+Every hit lands the moment it fires. A tower's thin cyan line and lighter flash read as the machine working; the hero's heavier white-gold line and full flash read as a person acting. The flash shows on the first frame after the hit, and hits and slows are always visible (Pillar 1). Towers never outshine the hero, and during a burst the burst is the brightest thing on screen (Pillar 2). The hero cannot be hurt at MVP, so the stakes the player feels come from leaks and lives. Players do not see the other half of this system: one damage path gives the design an honest hero share, because overkill and dead targets cannot inflate it. The 25–30% target is still unproven. All timings are starting points for the first phone test.
 
 ## Detailed Design
 

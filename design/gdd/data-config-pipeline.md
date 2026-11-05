@@ -6,6 +6,7 @@
 > **Last Verified**: 2026-11-01
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (`visual_key` on Enemy and Hero, art bible mapping, Open Questions widened)
 > **Implements Pillar**: Enabling system for all four pillars (Pillar 1 and 3 most directly: growth and stage variety are data)
+> Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
 
 ## Summary
 
@@ -16,6 +17,10 @@ The read-only catalogue of every authored gameplay value: towers, enemies, waves
 ## Overview
 
 The Data & Config Pipeline is the read-only catalogue of every authored gameplay value in TowerRiot: what each tower costs and does at each level, how tough and how rewarding each enemy is, what each wave sends, what each stage starts with, and how the hero and its burst behave. Players never interact with it directly. They feel what it enables: because no gameplay number lives in code, a tower can be retuned, a wave reshaped or a new stage added by editing data and running the game, which is what makes 20 distinct stages (Pillar 3) and visible growth (Pillar 1) affordable for one developer. It also gives every other system one honest source of truth, so the hero's damage share (Pillar 2) is measured against the designed values and not a stray constant. This system guarantees base values only; the share itself is measured from Combat's DamageEvent. Without it, tuning means editing code and every balance pass risks a regression.
+
+## Player Fantasy
+
+Players never operate this system, so it has no fantasy of its own. They feel what it enables. Towers and stages can be retuned or added by editing data alone, which is what makes visible growth (Pillar 1) and 20 distinct stages (Pillar 3) affordable for one developer. The hero's damage share (Pillar 2) is measured against the designed values, not a stray constant. Bad data never plays on with broken balance: the game stops with a generic fatal screen and leaves the save unopened. For the developer, the experience is the tuning loop: edit a value, save, run, and see the new value in the game within 10 seconds (proposed), with no code touched.
 
 ## Detailed Design
 
@@ -188,6 +193,20 @@ There is no reload transition: a data change applies on the next run.
 | Save/Load (VS) | Stable IDs and retired-ID list |
 
 Per the bidirectional rule, each of these GDDs must list this one when authored.
+
+## Tuning Knobs
+
+This system defines no gameplay knob. Every gameplay value in the catalogue is tuned by its owning GDD, named in the Balance owner column of the field-domain table; Rule 1 only says those values live here. The values this GDD sets itself are two proposed thresholds, its field-domain bounds and two data flags.
+
+| Name | Current or proposed value | Safe range | What it changes | Owner |
+|---|---|---|---|---|
+| Tuning loop time (Rule 13) | 10 s (proposed) | range not set in this GDD | Longest time from saving an edited value to seeing it in the game | producer + performance-analyst |
+| Device load time (Acceptance Criterion 15) | median of at most 1000 ms from Loading to Ready, on one Adreno 5xx-class device (proposed) | range not set in this GDD | Longest accepted cold load | producer + performance-analyst |
+| Field-domain floors and ceilings | as listed in the field-domain table; all ceilings and the floor are proposed | range not set in this GDD | Which authored values boot-fatal validation rejects; they guard against typos and broken simulation, not balance | This system |
+| `left_handed` | false | true or false (bool) | Data flag until Settings exists at Alpha | Hero and Battle HUD |
+| `reduce_motion` | false | true or false (bool) | Data flag until Settings exists at Alpha | Hero and Battle HUD |
+
+The Input record's `drag_slop`, `tap_slop` and `edge_reject_margin` have their domains in the field-domain table; their values and meaning belong to the Input GDD.
 
 ## Visual/Audio Requirements
 
