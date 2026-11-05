@@ -76,7 +76,7 @@ accessibility notes match each pattern's accessibility line.
 | P-05 | Edge and Safe-Area Rejection | Input | All presses | Draft |
 | P-06 | Build Arc | Control | Battle HUD (slot tap) | Draft |
 | P-07 | Upgrade Chip | Control | Battle HUD (tower tap) | Draft |
-| P-08 | Armed Button | Control | Start/Call, Retry, Resume | Draft |
+| P-08 | Armed Button | Control | Start/Call, Retry, Play again | Draft |
 | P-09 | Pin Drag | Control | Hero | Draft |
 | P-10 | Aimed Burst Drag | Control | Hero burst | Draft |
 | P-11 | Modal Screen | Control | Result, Paused, Fatal | Draft |
@@ -232,7 +232,7 @@ accessibility notes match each pattern's accessibility line.
 ### P-08 Armed Button
 
 **Category**: Control
-**Used In**: Start/Call, Retry, Resume
+**Used In**: Start/Call, Retry, Play again (the Paused screen does not arm, P-11)
 **Source**: Battle HUD Rules 10 and 11; Game State Game Feel
 **Status**: Draft
 
@@ -293,8 +293,8 @@ accessibility notes match each pattern's accessibility line.
 
 **Specification**:
 - A full-screen `Control` that consumes every input event before the Input adapter sees it, so a tap cannot reach a tower or the hero.
-- Result: a transparent modal mounts at the outcome, so input is dead at once. Text appears 400 ms after a Lost and 1,000 ms after a Won. Plain text in fixed order, same weight for Won and Lost. A lost stage reads "Broke on wave N of 6". Both show damage by source (Towers, Hero, Burst) as plain numbers with no percentage. Retry uses P-08.
-- Paused: instant. There is no pause button at MVP; Paused comes from focus loss or backgrounding. The resume tap is an Armed Button (P-08) and reaches nothing beneath.
+- Result: a transparent modal mounts at the outcome, so input is dead at once. Text appears 400 ms after a Lost or a Won (Battle HUD Rule 15; Flow, Game Feel). Plain text in fixed order, same weight for Won and Lost. A lost stage reads "Broke on wave N of 6". Both show damage by source (Towers, Hero, Burst) as plain numbers with no percentage. Retry uses P-08.
+- Paused: instant. There is no pause button at MVP; Paused comes from focus loss or backgrounding. The resume tap does not arm: it counts only a press begun after the screen showed, and reaches nothing beneath (Battle HUD Rules 2 and 17).
 - Fatal: a generic, catalogue-free screen that is guaranteed to load.
 - Modals add about 4 draw calls.
 - Accessibility: these are real `Control` nodes, so they are the screens that can carry accessibility labels for TalkBack and VoiceOver (see Accessibility Requirements, Platform API). Nothing auto-dismisses.
@@ -309,7 +309,7 @@ accessibility notes match each pattern's accessibility line.
 **Specification**:
 - A refused tap nudges the element 2 px once for 120 ms. No magenta (magenta is danger only).
 - Skipped under Reduce Motion, which leaves a refused tap with only the standing dim (P-13).
-- **Gap**: the Tower GDD requires a refusal cue that does not rely on motion. Candidate: a one-frame outline flash in neutral, held 120 ms, which is a fade and so survives Reduce Motion. To be decided in the arc and chip spec.
+- **Closed**: the refusal cue that does not rely on motion is Battle HUD Rule 7's cost flash, the struck-through cost at full alpha for 120 ms, which Reduce Motion keeps.
 - Accessibility: a cue must exist that is not motion alone.
 
 ### P-13 Unaffordable

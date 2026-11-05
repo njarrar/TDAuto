@@ -91,3 +91,53 @@ Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d1444
 Applied in autonomous mode: all 4 blocking items (Paused screen does not arm and counts a press begun after it showed, Rule 2, Rule 17, States table, AC21; Won panel claim restated with the inset trade; criteria preamble limited to commands, registrations and log writes, with diagnostics sink and injected values; one clamped HudLogic clock named in Rule 11 and steps of at most 100 ms in the criteria) and recommended: bottom anchoring line, bonus cap of 9 as a content rule, 36% at rest, empty Won row omitted, NO_GOLD cost flash, ticks_per_second as to_ticks(1.0), chip window from ChipWindow, Hero Rules 13 and 15, arc panel hit shape added to Open Questions for /ux-design.
 Not done: criteria splits and new criteria, margin formulas, inset clamps, dead-gesture flag wording, Lost panel, and the items routed to architecture.md B9/B10, ADR-0003 and /ux-design.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: ux-designer, ui-programmer, systems-designer, godot-specialist, qa-lead, creative-director
+Blocking items: 5 | Recommended: 24
+Summary: The four prior blockers are fixed. Five new local blockers remained: a fresh HUD never armed Start/Call, since Flow sends no signal for the opening phase; the layout's bottom-anchoring line, added by the last revision, contradicted its top-origin coordinates; Rule 1 gave HudLogic the chip and burst discs that Tower and Hero own, so AC28 could not run; arc and chip were not shown to exclude each other; and the ground ring had no lifetime. The creative director downgraded the margin domain, Reduce Motion, Won column offsets, the pattern library and the bonus divisor to recommended, and routed the engine conditions to ADR-0003 and ADR-0004.
+Prior verdict resolved: Yes (all 4 prior blocking items)
+Findings:
+- [BLOCKING] Rule 11, States, AC1: HudLogic must read phase() when built and treat it as that phase beginning.
+- [BLOCKING] Layout: "measured from the bottom edge" contradicts top-origin positions; clearances hold in reference space only.
+- [BLOCKING] Rule 1, AC28: HudLogic registers only the backdrop, arc discs and Start/Call.
+- [BLOCKING] Rule 8: state why an arc and a chip are never open together (Tower Rule 8 table; backdrop 250 over towers 200).
+- [BLOCKING] Rule 14: ground ring hold and fade-out.
+- [RECOMMENDED] Content rules: L1 and burst-line bounds as formulas of edge_reject_margin.
+- [RECOMMENDED] Content rules: bonus bound cites Tower's early_call_bonus with its max(1, ...) guard.
+- [RECOMMENDED] Formulas: display_seconds and chip_bar divisor guards; ticks_per_second 30 to 60.
+- [RECOMMENDED] Layout: every Won y value minus B.
+- [RECOMMENDED] UI Requirements: Reduce Motion for the arc's open and collapse; full table of moving elements to /ux-design.
+- [RECOMMENDED] UI Requirements: "no chip behind modals" restated.
+- [RECOMMENDED] Rule 13: prompt hidden in Paused.
+- [RECOMMENDED] Rule 1: full listen list; idle clears Rule 10's flag.
+- [RECOMMENDED] Rule 2: engine conditions named for ADR-0003 and ADR-0004 (_unhandled_input, mouse filter, pause mode, unscaled time).
+- [RECOMMENDED] interaction-patterns.md P-11 (Won text 400 ms, Paused does not arm) and P-12 gap closed.
+- [RECOMMENDED] Acceptance Criteria: AC12 observables, AC19(d) timer start, AC22 can fail, Deferred row for the chip's target.
+- [RECOMMENDED] Acceptance Criteria: split AC4, AC8, AC19; view-model field names; first-match and count-vs-lives fixtures; one cooldown read per Cooling; AC32, AC37; uncovered rules (Rule 13 act-ends, Rule 1 build order, moved press, roll-off build, NO_GOLD flash, other best_drag); manual steps and thresholds.
+- [RECOMMENDED] Layout: gold field overflows at 6 digits; burst digit box; "Call +9" width check.
+- [RECOMMENDED] Safe area in physical pixels, converted and re-read on size_changed (ADR-0003).
+- [RECOMMENDED] Rule 10: frame order is not the engine default when ticks run in _physics_process (ADR-0004).
+- [RECOMMENDED] Rule 2: ScreenTouch canceled, named lifecycle notifications, emulated mouse hides a second pointer (ADR-0003).
+- [RECOMMENDED] Tweens killed on close or free; HudLogic disconnects on exit; redraw keys and animation redraws (ADR-0011).
+- [RECOMMENDED] Dead Start/Call tap feedback, third review running: /ux-design decides or closes it.
+- [RECOMMENDED] Routed: haptics, top-row reach, Paused side-margin taps (/ux-design); insets above about 92 and notch clearance (Mobile Platform); no keyboard, gamepad or screen reader as a tier decision and AccessKit labels (accessibility-requirements.md).
+- [RECOMMENDED] Disagreements: systems-designer's margin domain and the bonus guard, ux-designer's Reduce Motion, Won offsets and pattern library, godot-specialist's input order and Control settings, and qa-lead's chip target were all held as recommended or routed by the creative director; ui-programmer's chip-and-arc blocker was closed by stating existing Tower and Input rules, not by a new mechanism.
+Reviewed-Content-Hash: design/gdd/battle-hud.md 4a8b31f64adc1ad85b770314b77dc0aa5435f39c
+Reviewed-Content-Hash: design/ux/interaction-patterns.md f6520a827ff93e133ec3d331aee664dd578a1f01
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/hero-system.md 22b23c09a786eb7b142e7e998c12cf1b7ff090ce
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 437b5194ddeb6edaf088ad48cc87f07ca7cffc6c
+
+## Revision — 2026-11-05 — after the review above (not a new verdict)
+Applied in autonomous mode: all 5 blocking items (Rule 11 reads phase() when built and arms Start/Call, States and AC1, new clause in AC31 for a HUD built in Wave; layout line replaced with reference-space wording and ADR-0003's choice; Rule 1 lists only HudLogic's own discs, AC28 split to owners; Rule 8 sentence and two edge cases for arc and chip; Rule 14 lifetime of 650 ms, visual row and AC18) and recommended: margin formulas, bonus bound citing Tower, display_seconds and chip_bar guards, Won y values minus B, Reduce Motion for the arc, modal budget wording, prompt hidden in Paused, listen list, engine conditions, AC12, AC19(d), AC22, Deferred chip row, pattern library P-08, P-11 and P-12.
+A ui-programmer spot-check of the revision found that it had wrongly made HudLogic arm the burst button (HeroInput owns it), that AC12's steps summed to 201, an untestable AC7 clause, and a rounded margin given three ways. All four were fixed before commit.
+Not done: criteria splits, new fixtures and criteria, digit and text width checks, and every routed item.
+Re-review pending: the GDD hash above is of the reviewed text, not this revision.
