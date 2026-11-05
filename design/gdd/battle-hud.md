@@ -1,6 +1,6 @@
 # Battle HUD & Build UI
 
-> **Status**: In Review (first design review 2026-11-05 NEEDS REVISION; four wording blockers against ADR-0001, ADR-0006, ADR-0010 and ADR-0011 fixed in the same pass; recommended items await the user; re-review pending)
+> **Status**: APPROVED (design re-review 2026-11-05, requested by the user: first review NEEDS REVISION, its four wording blockers fixed and its recommended items applied; the re-review found one wording leftover in Rule 15's table, fixed in the same pass, and no blocking item remains; text sizes against AR-V-01 stay open in `design/ux/hud.md` H-01 to H-10)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-05
@@ -32,7 +32,7 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 | HudField | One `_draw` above the field for arc, chip, Start/Call, burst button art, prompt panel, ground-tap ring and refusal cues, then all HUD text in one last pass by size (gold too, at HudTopBand's layout). Its hit targets are Input discs |
 | RangeRingView | A second HUD `_draw` node, drawn under the field entities, for HudLogic's range rings |
 
-ADR-0011 Decision 1 sets this split and the draw order; none of these pieces uses a `Label` (modal screens may). The wrapper builds HudTopBand and HudField under one `HudLayer` (a `CanvasLayer` at layer 1, beside `FieldViews`), since a `Control` under a `Node2D` gets no parent area; RangeRingView stays in `FieldViews`. TR-hud-001's wording ("display-only Controls", "one _draw") reads as one HudTopBand `Control` and one HudField `_draw` above the field, with `RangeRingView` as the second HUD node.
+ADR-0011 Decision 1 sets this split and the draw order; none of these pieces uses a `Label` (modal screens may). The wrapper builds HudTopBand and HudField under one `HudLayer` (a `CanvasLayer` at layer 1, beside `FieldViews`), since a `Control` under a `Node2D` gets no parent area; RangeRingView stays in `FieldViews`. TR-hud-001 (registry wording of 2026-11-05) states the same four pieces: one HudTopBand `Control`, one HudField `_draw` above the field, and `RangeRingView` as the second HUD node.
 
 2. **Modal screens are Controls.** The result and Paused screens are full-screen `TapScreen` Controls that consume every press before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. The endings (move, release, cancel) of a drag the adapter had already forwarded still reach it, so a drag begun before the screen showed ends once. While a modal shows, the wrapper also closes the adapter's press gate, so presses drop there too (ADR-0003 2.4 and Decision 4). So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. The result screen's TapScreen uses `arm_ms` 300, counted from when its text shows, so a press begun before then never fires Retry or Play again (IP-21, IP-23). Paused has no timer (`arm_ms` 0) but follows the same rule. ADR-0003's S0 spike (checks S3 and TapScreen) tests the engine side on 4.7, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
@@ -80,7 +80,7 @@ ADR-0011 Decision 1 sets this split and the draw order; none of these pieces use
 
 | Order | Lost | Won |
 |---|---|---|
-| 1 | Broke on wave N of `wave_ids` size | Stage clear |
+| 1 | Broke on wave N of `wave_count` | Stage clear |
 | 2 | Next-try line, if any | Lives N of `starting_lives` |
 | 3 | Got through: glyph and count per enemy type | Same |
 | 4 | Damage: Towers, Hero, Burst, each rounded to a whole number, then Slowed N if a slow tower was built | Same |
@@ -92,7 +92,7 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
     1. Hero never pinned: "Next try: drag the hero"
     2. No tower built: "Next try: tap a slot to build"
     3. No burst fired: "Next try: drag from the big button"
-    4. Otherwise the type with the most lives lost, as count × `lives_cost`, if its role is not yet built: `heavy` "Triangles hit heavies", `normal` "Hexagons hit groups", `fast` "Squares slow fast enemies". Ties go in that order. If its role is built, there is no line, since the hint would have nothing to add. The count is the snapshot's `got_through`. The snapshot does not carry `lives_cost`, so HudLogic reads each enemy type's `lives_cost` from its Enemy record through the accessor in frame step 3, never in a signal handler (ADR-0005 Decision 5).
+    4. Otherwise the type with the most lives lost, as count × `lives_cost`, if its role is not yet built: `heavy` "Triangles hit heavies", `normal` "Hexagons hit groups", `fast` "Squares slow fast enemies". Ties go in that order. If its role is built, there is no line, since the hint would have nothing to add. The count is the snapshot's `got_through`. The snapshot does not carry `lives_cost`, so HudLogic reads each enemy type's `lives_cost` from its Enemy record through the accessor in frame step 3, checks `halted()` after each read, and never reads in a signal handler (ADR-0005 Decision 5's HudLogic read site; that decision names only `cost`, `range` and Burst `cooldown`, so `lives_cost` there is a sync item for ADR-0005).
 
 **Paused.**
 
@@ -279,7 +279,7 @@ The **chip_bar** formula is defined as:
 | System | Interface |
 |---|---|
 | Game State & Stage Flow | `phase_changed`, `lives_changed`, reads of lives, `intermission_left` and result; Start/Call, Retry, resume; the Burst's ID from the builder for the wedge (Rule 12) |
-| Enemy & Wave | `wave_index()` for the pips in every phase and the result; `to_ticks` (Enemy & Wave Formulas) for the wedge; `got_through_by_type()`, `targets()` |
+| Enemy & Wave | `wave_index()` for the pips in every phase, and for the result through the snapshot's `last_wave_started` (Rule 15); `to_ticks` (Enemy & Wave Formulas) for the wedge; `got_through_by_type()`, `targets()` |
 | Tower System | `gold()`, `gold_changed`, `slot_state`, `slot_tapped`, `build`, `chip_state()`, `tower_inspected`, `slows_applied()` |
 | Hero System | `burst_state()`, `cooldown_left()`, `pin_state()`, `position()`, `burst_started`, counters; Flow's `in_build()` |
 | Input & Gesture Resolver | Registry, `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` |
@@ -378,7 +378,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 2. (Rule 4; Pips row) **GIVEN** each phase, **THEN** HudLogic's visible set is exact, with the burst button in all, and the pips match `wave_index()` as that row states.
 3. (Rule 5) **GIVEN** split groups, **THEN** one total per type, in fixed order.
 4. (Rule 6) **WHEN** `slot_tapped`, **THEN** backdrop TAP 250, discs TAP 300 radius 36, triangle, hexagon, square on either hand; Start/Call disabled. A disc press at 199 ms is ignored, and at 200 ms it counts.
-5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges, or under Reduce Motion shows the static cue with "Need N gold" for 1 s; `HALTED` closes; others close and log an error. One tap, one `build`. Under Reduce Motion the same static cue also shows for a refused chip upgrade ("Need N gold") and for a press on the locked burst button ("Locked"): dotted outline, one line, no nudge, up at 999 ms of `advance(ms)` and gone at 1,000 (AR-V-11, IP-24).
+5. (Rule 7; Tower row) `OK` closes and unregisters at once; `NO_GOLD` stays and nudges, or under Reduce Motion shows the static cue with "Need N gold" for 1 s; `HALTED` closes; others close and log an error. One tap, one `build`. Under Reduce Motion the same static cue also shows for a refused chip upgrade ("Need N gold") and for a press on the locked burst button ("Locked"): dotted outline, one line, no nudge, up after 999 ms in total of `advance(ms)` calls and gone at 1,000 (AR-V-11, IP-24).
 6. (Rule 7) Level 1 read in the view step after opening or `gold_changed`, never inside a sim signal handler; dimming flips both ways; a newly affordable disc builds.
 7. (Rule 8; Input row) A press outside closes and unregisters; a later `tapped(backdrop)` does nothing, with no ring. `drag_started` closes. Roll-off and a phase change stay open. Paused, outcome and Fatal close.
 8. (Rule 9) `chip_state()` at 0, 750 and 1,500 ms draws the bar as 1, 0.5 and 0; dimmed below cost. `tower_inspected`: ring for 1,500 ms, no chip.

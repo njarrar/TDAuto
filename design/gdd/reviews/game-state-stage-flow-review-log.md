@@ -39,3 +39,40 @@ Reviewed-Content-Hash: design/gdd/hero-system.md 88c68ce97af3b80dd0dff559a3ab3d6
 Reviewed-Content-Hash: design/gdd/combat-damage.md e4df04fab059c0779ec3460522a8b4f0f6605fc1
 Reviewed-Content-Hash: design/gdd/battle-hud.md 9cae820470e28dccf98015d4a423e8c9d9626a5a
 Reviewed-Content-Hash: design/gdd/game-concept.md 5fc68e4c2eda531b8ef80a5663b2f33961b139cf
+
+## Review: 2026-11-05 (re-review): Verdict: APPROVED
+Review mode: full · Workflow: standard
+Scope signal: L (multi-system composition root, 2 formulas, 9 dependencies; no new ADR needed)
+Specialists: none spawned. This session had no Agent tool, so a fresh main reviewer (not the author of the GDD or of the first review's fixes) gave the game-designer, systems-designer, qa-lead, godot-specialist and creative-director views itself. No specialist agent reviewed or passed this document.
+Blocking items: 0 | Recommended: 10 (6 fixed in this pass as wording, 4 left open)
+Summary: A re-check the user asked for. Each of the first review's eight fixes was checked against the Accepted ADRs and holds: Rule 15 injection (ADR-0001 Decisions 2, 3), Rule 15a dev-error sink (ADR-0001 Decision 7), `TICK_RATE` 60 and `TICK_SECONDS` (ADR-0004 Decision 2), ACs 6, 7, 12, 13 against ADR-0003 2.5, ADR-0006 Decision 4 and ADR-0001 Decision 6, the clamp row, the Open Questions and the Dependencies footer (all seven MVP GDDs list this one). Command result codes and order match ADR-0010 Decisions 2 and 3, retry teardown matches ADR-0001 Decision 5, and the result split matches ADR-0006 Decision 9. No new blocker; the leftovers were wording, fixed here.
+Prior verdict resolved: Yes (prior NEEDS REVISION's 8 blockers confirmed fixed)
+Findings:
+- [RECOMMENDED, fixed] Rule 15: "the phase changes between Build, Wave and Intermission do none of this" could read as no `phase_changed` for them, against ACs 1 and 2 and ADR-0006 Decision 4; now they stop and cancel nothing and only commit, then emit `phase_changed`.
+- [RECOMMENDED, fixed] Acceptance Criteria header: now says a tick is `Battle.tick(dt)` over fakes, not `Flow.tick`, since the Build and Paused gate lives there (ADR-0004 Decision 5), and that dev errors go to ADR-0007's recording sink apart from the log (first review's recommended item).
+- [RECOMMENDED, fixed] Acceptance Criteria 11: each case now also asserts one dev-error report, as Rule 15a requires (first review's recommended item).
+- [RECOMMENDED, fixed] Acceptance Criteria 15: "a call at that moment" was ambiguous (before the tick gives `NO_TIME_LEFT`, after it `NOT_INTERMISSION`) and the THEN gave no log; now `wave_cleared(0.0)`, a call, one tick, log `phase_changed(Intermission), phase_changed(Wave)`, `NO_TIME_LEFT`, 2 starts. It also covers one `CallResult` code.
+- [RECOMMENDED, fixed] Edge Cases: added `pause()` inside a tick (dev error, applies, the tick finishes whole; ADR-0004 Decision 5, ADR-0006 Decision 7), the first review's recommended item.
+- [RECOMMENDED, fixed] UI Requirements: M is now named as the snapshot's `wave_count` (the stage's `wave_ids` size), matching Battle HUD Rule 15's current table.
+- [RECOMMENDED, open] Acceptance Criteria: no criterion asserts `StartResult` codes or `BUSY` and `HALTED` (TR-state-015); AC 15 now covers `NO_TIME_LEFT` only. ADR-0004 V4 covers `BUSY` for every command.
+- [RECOMMENDED, open] Deferred criteria: the Retry row owner and the always-call gate wording versus the Hero GDD's thresholds (cross-review C14, C15), carried from the first review.
+- [RECOMMENDED, open] Design (game-designer view): calling early may be close to free for humans; first-playable question for the user, carried from the first review.
+- [RECOMMENDED, open] Player Fantasy and Tuning Knobs: absent; advisory at `standard`.
+Other document edited: systems index row 3 set to Approved; Core Layer TD note now says the plain builder is "adopted by ADR-0001 Decision 2" in place of "technical-director to confirm"; Progress Tracker "Design docs approved" set to 7 by counting the table's Approved rows (Battle HUD was approved by a parallel session while this ran). "Design docs reviewed" (1) was left as it is: its meaning is unclear.
+Status set: GDD header and systems index to Approved.
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md aafb834a099f79bf46c3d14ec868a3d5c177e54e
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md eb4deee4f73f034bc672f49d569d8d5601822d8e
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 166b1059eda8e25c6ab0dd9e623c021508a64190
+Reviewed-Content-Hash: design/gdd/enemy-wave.md adfe9932b1756518dd4219a26cdb9c048950950d
+Reviewed-Content-Hash: design/gdd/tower-system.md feecd55d693e8bc9c802b4115d51ee494ea5bfba
+Reviewed-Content-Hash: design/gdd/hero-system.md 88c68ce97af3b80dd0dff559a3ab3d65a2cfa1f2
+Reviewed-Content-Hash: design/gdd/combat-damage.md e4df04fab059c0779ec3460522a8b4f0f6605fc1
+Reviewed-Content-Hash: design/gdd/battle-hud.md cd07c983f92f8e1e43dbeb2d17466e009c080739
+Reviewed-Content-Hash: design/gdd/game-concept.md 5fc68e4c2eda531b8ef80a5663b2f33961b139cf
+Reviewed-Content-Hash: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md e763a2ed080432ba6d6856551eb9729b8479ea03
+Reviewed-Content-Hash: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md ab8aab909e64196cd2e7559d142c70aca531d9ad
+Reviewed-Content-Hash: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md c44e7aeb98af348d4b3fa01caec08ddf0df4ab3c
+Reviewed-Content-Hash: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md ef2faea37127d471a4d99607607e3c3d16804956
+Reviewed-Content-Hash: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md cb7ea862db4fcc756d63317b0f5b775d8c4ef936

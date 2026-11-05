@@ -1,6 +1,6 @@
 # Game State & Stage Flow
 
-> **Status**: In Review (first design review 2026-11-05 NEEDS REVISION; all its blockers were stale wording against the Accepted ADRs and are fixed in the same pass; a re-check of those edits, or the user's acceptance, decides Approved)
+> **Status**: APPROVED (design re-review 2026-11-05, requested by the user: the first review's eight wording fixes hold against the Accepted ADRs and no new blocker was found; six wording-only clarifications were made in the re-review)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (call-early cost restated, always-call bot gate, button arming and test coverage, leaks per lane cut). User kept call-early and focus freeze in MVP.
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-05
@@ -46,7 +46,7 @@ Game State & Stage Flow is what makes a stage begin, advance and end. It boots t
 12. **Lost.** The first leak that takes lives to 0 ends the stage on that tick, as Lost.
 13. **Won.** Enemy & Wave's `waves_completed` means every group of every wave has spawned and every enemy has died or leaked. It is the whole win test, because Flow keeps no enemy count that could disagree with the roster. Enemy & Wave must emit leak events synchronously and before `waves_completed`.
 14. **A tie is a loss.** Under Combat's tick order leaks resolve before fire, so a fatal leak ends the tick before any kill. If `waves_completed` still arrives after that, the stage stays Lost and the event is ignored.
-15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit (`phase_changed` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for); the phase changes between Build, Wave and Intermission do none of this. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The Builder injects Flow's `in_build()`, which Hero uses to refuse the burst, and the `HaltGate`'s one `halted()`, true on Won, Lost and Fatal and false while Paused, for systems whose own loops must stop. No sim gets a Callable on the battle itself (ADR-0001 Decisions 2 and 3). Won and Lost are terminal and later ticks do nothing. Flow's result, `StageResult`, holds the outcome, the last wave started (Enemy & Wave's `wave_index()`, injected by the builder, so Flow still keeps no wave count) and lives left. Flow fills it when the outcome commits and never changes it. Per-source damage lives in one `ResultSnapshot` instead: `Battle.take_result_snapshot()` builds it once, on the first frame (frame step 3) after a win or loss, from Flow's result and Combat's counters, and hands the same snapshot to the HUD, which shows it as plain text at MVP. Fatal takes no snapshot (ADR-0006 Decision 9).
+15. **The outcome latches.** Won, Lost, Paused, Fatal and retry commit their state, stop the clock, cancel input, then emit (`phase_changed` names each of Won, Lost, Paused and Fatal, which Tower's chip listens for); the phase changes between Build, Wave and Intermission stop nothing and cancel nothing, and only commit, then emit `phase_changed`. An outcome or Fatal committed mid-tick makes the remaining systems skip that tick, so nothing changes the result afterwards. The Builder injects Flow's `in_build()`, which Hero uses to refuse the burst, and the `HaltGate`'s one `halted()`, true on Won, Lost and Fatal and false while Paused, for systems whose own loops must stop. No sim gets a Callable on the battle itself (ADR-0001 Decisions 2 and 3). Won and Lost are terminal and later ticks do nothing. Flow's result, `StageResult`, holds the outcome, the last wave started (Enemy & Wave's `wave_index()`, injected by the builder, so Flow still keeps no wave count) and lives left. Flow fills it when the outcome commits and never changes it. Per-source damage lives in one `ResultSnapshot` instead: `Battle.take_result_snapshot()` builds it once, on the first frame (frame step 3) after a win or loss, from Flow's result and Combat's counters, and hands the same snapshot to the HUD, which shows it as plain text at MVP. Fatal takes no snapshot (ADR-0006 Decision 9).
 15a. **Events out of phase.** A `wave_cleared` or `waves_completed` in the wrong phase, or an `enemy_leaked` in Build, Paused or after an outcome, is a contract breach by Enemy & Wave: Flow reports it to the dev-error sink, which logs in every build and never halts (ADR-0001 Decision 7), and the event is ignored. An `enemy_leaked` in Intermission is also reported but still applies, because losing a life must never be silently dropped.
 
 **Retry.**
@@ -153,6 +153,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If Start Wave is tapped twice**: the second tap finds no Build and is ignored (`NOT_BUILD`).
 - **If the last wave clears**: `waves_completed` applies; there is no Intermission and the button is gone.
 - **If focus is lost in Won, Lost or Fatal**: no state change.
+- **If `pause()` arrives inside a tick**: it reports a dev error and applies, and the tick finishes whole (ADR-0004 Decision 5, ADR-0006 Decision 7).
 - **If focus is lost and the OS kills the app**: the stage is lost and the next launch boots cold.
 - **If a finger is held across a retry**: the new adapter never saw its press, so its moves are dropped and it must lift first.
 - **If Retry arrives outside Won or Lost**: ignored. Paused is not stuck, because a tap exits it.
@@ -211,7 +212,7 @@ All durations are proposed, untested and presentation only, so the wrapper runs 
 
 ## UI Requirements
 
-None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of M", where M is the stage's `wave_ids` size, 6 on the starter stage (Battle HUD Rule 15); Won and Lost both show damage by source.
+None owned except the fatal screen. Battle HUD owns the Start/Call button, the countdown, lives, the outcome screen and the resume tap. A lost stage shows "Broke on wave N of M", where M is the snapshot's `wave_count`, the stage's `wave_ids` size, 6 on the starter stage (Battle HUD Rule 15); Won and Lost both show damage by source.
 
 The Start/Call button is irreversible, so it must stay clear of the burst corner and of build slots. Art bible §7 now allows it in the bottom band in Build and Intermission only, when the lower lane is empty. It registers as an Input target, since it sits in the field rather than the top band.
 
@@ -228,7 +229,7 @@ The Start/Call button is irreversible, so it must stay clear of the burst corner
 
 ## Acceptance Criteria
 
-A recording fake logs every Flow signal, and each THEN is the entire log; anything unlisted fails. A factory builds `stage()`: 3 lives, 3 waves, intermission 1.0 s, `dt` 0.25 (binary-exact). A fake Enemy & Wave `E` counts wave starts and emits on command. No scene, no random seeds, no time assertions.
+A recording fake logs every Flow signal, and each THEN is the entire log; anything unlisted fails. A factory builds `stage()`: 3 lives, 3 waves, intermission 1.0 s, `dt` 0.25 (binary-exact). A fake Enemy & Wave `E` counts wave starts and emits on command. A tick is `Battle.tick(dt)` over fakes, not `Flow.tick`, because the Build and Paused gate lives there (ADR-0004 Decision 5). Dev errors go to ADR-0007's recording sink, kept apart from the log. No scene, no random seeds, no time assertions.
 
 **CI: Logic**
 1. (Rule 6) **GIVEN** a new flow, **WHEN** 100 ticks, **THEN** an empty log and 0 starts; **WHEN** Start twice, **THEN** `phase_changed(Wave)` and 1 start.
@@ -241,11 +242,11 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 8. (Rule 15) **GIVEN** Won or Lost, **WHEN** ticks, every event, every command and focus loss, **THEN** nothing appended and the result unchanged. Listeners see the state committed, the clock stopped and `cancel()` already called.
 9. (Rule 15) **GIVEN** recording systems A, B, C, **WHEN** B's tick triggers Lost, **THEN** C does not tick that tick.
 10. (Rules 7, 10, 15) **GIVEN** each change among Build, Wave and Intermission, **THEN** `cancel()` is not called.
-11. (Rule 15a) **GIVEN** Build, **WHEN** `enemy_leaked(2)`, **THEN** an empty log and lives unchanged. **GIVEN** Intermission, **WHEN** `enemy_leaked(2)`, **THEN** `lives_changed(1)`.
+11. (Rule 15a) **GIVEN** Build, **WHEN** `enemy_leaked(2)`, **THEN** an empty log, lives unchanged and one dev-error report. **GIVEN** Intermission, **WHEN** `enemy_leaked(2)`, **THEN** `lives_changed(1)` and one dev-error report.
 12. (Rule 17) **GIVEN** each live phase, **WHEN** focus lost, 100 ticks, commands, focus lost again, resume, **THEN** the log is `phase_changed(Paused), phase_changed(<that phase>)` and the countdown is unchanged.
 13. (Rule 18) **GIVEN** recording systems A, B, C, **WHEN** B fires the handler twice, then ticks and events, **THEN** the log is `phase_changed(Fatal)` alone, the first cause is kept, and C never ticks.
 14. (Rule 5) **GIVEN** two flows and one script, **THEN** identical logs.
-15. (Formulas) **GIVEN** a duration of 0, **WHEN** Intermission starts and one tick runs, **THEN** the next wave starts; a call at that moment emits no signal.
+15. (Formulas) **GIVEN** wave 1, **WHEN** `wave_cleared(0.0)`, a call, then one tick, **THEN** the log is `phase_changed(Intermission), phase_changed(Wave)`, the call returns `NO_TIME_LEFT`, and 2 starts.
 
 **Deferred criteria.** Done for this system means every criterion runnable today passes and each of these has its owner.
 

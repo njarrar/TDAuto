@@ -161,3 +161,42 @@ Reviewed-Content-Hash: docs/architecture/adr-0006-battle-signal-contracts-view-a
 Reviewed-Content-Hash: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md 0e5d0aa385e84dad6e121fdb502f84d69adaf5c2
 Reviewed-Content-Hash: docs/architecture/adr-0008-input-resolver-core-signal-contract.md 784dd51eecd37f86856684ec15e0672ed0f09866
 Reviewed-Content-Hash: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md ea7126f7d91f398ee3b8691058e4a0a01a37b340
+
+## Review — 2026-11-05 — Verdict: APPROVED
+Review mode: full · Workflow: standard
+Scope signal: L (producer should verify before sprint planning)
+Specialists: none spawned. This session had no Agent tool, so the game-designer, systems-designer, qa-lead, ux-designer, godot-specialist and creative-director views were taken by the main reviewer, a fresh reviewer who did not write the GDD or the fourth review's edits. No specialist or director passed this review.
+Blocking items: 0 | Recommended: 6 open (carried), 7 wording fixes applied
+Summary: A re-check the user asked for. Every edit the fourth review listed (Rule 1 "under its slop", Rule 8 and the Tower rows, Rule 9's five-field Input record, the Game State Builder and BattleWrapper rows, the `r` range, the modal TapScreen and top-band text, the handler-call edge case, the signal-payload command rule) was traced against ADR-0001 Decisions 2 to 4 and 7, ADR-0002 Decision 4, ADR-0003 Decisions 2.1 to 2.5 and 4, ADR-0006 Decision 3, ADR-0008 Decisions 2 to 9 and Guideline 12, Tower Rule 8, Hero Rules 13 to 15 and Battle HUD Rules 6, 9 to 11 and 14, and each holds. The whole GDD was read by section; criteria 1 to 37 were re-traced by hand against the state table and formulas, and no new blocker was found. The remaining wording leftovers were fixed in this pass with no balance value or design intent changed.
+Prior verdict resolved: Yes. All 8 blockers of the fourth review hold against the Accepted ADRs
+Findings:
+- [RECOMMENDED] Header: the Design Review line said 9 wording blockers; the fourth review's log and commit say 8, and it omitted ADR-0002: fixed
+- [RECOMMENDED] Signal payloads: "only the adapter, Flow's `cancel_input()`, the app root and resolver fixtures" made gesture calls and `cancel()` one list; ADR-0008 Guideline 12 gives gesture calls to the adapter (and fixtures) only and `cancel()` to the adapter, `cancel_input()` and the app root; split, and cites ADR-0008 Decision 6 and Guideline 12 beside ADR-0006 Decision 3: fixed
+- [RECOMMENDED] Edge Cases (State machine, handler calls): cited only ADR-0006 Decision 3, which names `cancel()` but not the gesture methods; added ADR-0008 Decision 6: fixed
+- [RECOMMENDED] Formulas (inside, target_ok `r`): the 36–56 range left out the arc backdrop sink, whose disc covers the field; now "for touch targets (hero 56, chip 40, Start/Call 48)", with the backdrop named as outside the range: fixed
+- [RECOMMENDED] Core Rules (Hit targets, `radius` row): listed only the art bible radii; added the chip 40 (Tower Rule 8), Start/Call 48 (HUD layout table) and the backdrop sink: fixed
+- [RECOMMENDED] Edge Cases (second press) and Open Questions (palm row): "an unmoved hero or burst press" was the wording the fourth review replaced in Rule 1; now "still under its slop": fixed
+- [RECOMMENDED] Interactions (HUD row): ADR-0008 Decision 9 also closes the arc on `drag_started`, which only an edge case stated; added: fixed
+- [RECOMMENDED] Rule 13 / P1 vs Hero Rule 15 re-pin trade (user decision): open, advisory
+- [RECOMMENDED] Acceptance Criteria fixtures: `H` radius 36 against production 56; no criterion covers the 56-radius overlaps: open, advisory
+- [RECOMMENDED] Formulas (field_scale): the 1.481 top assumes width at most 800 dp, while ADR-0003 has no scale cap: open, advisory
+- [RECOMMENDED] Priority table (sink): AR-M-06 Alpha two-tap exception, waiting on the accessibility document's review: open, advisory
+- [RECOMMENDED] Other documents: Data & Config "world units", interaction-patterns "Input Rule 6", concept Pillar 4 tester wording: open, not this GDD's
+- [RECOMMENDED] Player Fantasy and Tuning Knobs absent; advisory at `standard`: open
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 166b1059eda8e25c6ab0dd9e623c021508a64190
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md eb4deee4f73f034bc672f49d569d8d5601822d8e
+Reviewed-Content-Hash: design/gdd/systems-index.md 1706f3a9809970bf48d4211e8be033e764d385af
+Reviewed-Content-Hash: design/art/art-bible.md 02d54d6b93ccc9656dcfdfdc5e0d888cde99f7d0
+Reviewed-Content-Hash: design/gdd/hero-system.md 88c68ce97af3b80dd0dff559a3ab3d65a2cfa1f2
+Reviewed-Content-Hash: design/gdd/tower-system.md feecd55d693e8bc9c802b4115d51ee494ea5bfba
+Reviewed-Content-Hash: design/gdd/battle-hud.md cd07c983f92f8e1e43dbeb2d17466e009c080739
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md aafb834a099f79bf46c3d14ec868a3d5c177e54e
+Reviewed-Content-Hash: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md e763a2ed080432ba6d6856551eb9729b8479ea03
+Reviewed-Content-Hash: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md c83950cd08edbdb81611b454bb4a9dffd0cf4aca
+Reviewed-Content-Hash: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md ab8aab909e64196cd2e7559d142c70aca531d9ad
+Reviewed-Content-Hash: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md ef2faea37127d471a4d99607607e3c3d16804956
+Reviewed-Content-Hash: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md 5cc8e64e5a15c22690ef80f440edc69c2ff772c3
+Reviewed-Content-Hash: docs/architecture/adr-0008-input-resolver-core-signal-contract.md 784dd51eecd37f86856684ec15e0672ed0f09866
+Reviewed-Content-Hash: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md cb7ea862db4fcc756d63317b0f5b775d8c4ef936
