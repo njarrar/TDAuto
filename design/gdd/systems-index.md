@@ -1,6 +1,6 @@
 # Systems Index: TowerRiot
 
-> **Status**: Draft
+> **Status**: Approved (8 MVP GDDs Approved; Systems Design gate passed CONCERNS 2026-11-05)
 > **Created**: 2026-11-01
 > **Last Updated**: 2026-11-05
 > **Source Concept**: design/gdd/game-concept.md (design-review 2026-11-01: NEEDS REVISION — this index follows the *confirmed* hero model from `prototypes/hero-pin-concept/REPORT.md`, not the concept's stale tap-to-move text)
@@ -178,7 +178,7 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 |--------|-------|
 | Total systems identified | 22 |
 | Design docs started | 8 |
-| Design docs reviewed | 1 |
+| Design docs reviewed | 8 |
 | Design docs approved | 8 |
 | MVP systems designed | 8/8 |
 | Vertical Slice systems designed | 0/11 |
@@ -188,6 +188,6 @@ Effort: S = 1 session, M = 2–3, L = 4+. MVP total at `standard`: ~18–24 sess
 ## Next Steps
 
 - [ ] Revise `design/gdd/game-concept.md` per its design review (pin + aim model, Pillar 2 and 4 tests, scarcity, point source)
-- [ ] `/design-system data-config-pipeline` — first in design order
-- [ ] `/design-review` each GDD; `/consistency-check` after the third
-- [ ] `/gate-check technical-setup` when the 8 MVP GDDs are approved
+- [x] `/design-system data-config-pipeline` — first in design order
+- [x] `/design-review` each GDD; `/consistency-check` after the third
+- [x] `/gate-check technical-setup` when the 8 MVP GDDs are approved (CONCERNS, 2026-11-05)
