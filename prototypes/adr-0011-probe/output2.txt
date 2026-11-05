@@ -1,0 +1,11 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+Q1 a==b true a==c false a!=c true
+Q2 draw_arc args=["center", "radius", "start_angle", "end_angle", "point_count", "color", "width", "antialiased"]
+Q2 draw_polyline args=["points", "color", "width", "antialiased"]
+Q2 draw_circle args=["position", "radius", "color", "filled", "width", "antialiased"]
+Q2 draw_colored_polygon args=["points", "color", "uvs", "texture"]
+Q2 draw_string args=["font", "pos", "text", "alignment", "width", "font_size", "modulate", "justification_flags", "direction", "orientation", "oversampling"]
+Q2 draw_multiline args=["points", "color", "width", "antialiased"]
+Q2 draw_set_transform args=["position", "rotation", "scale"]
+Q3 monitor TOTAL_DRAW_CALLS_IN_FRAME=2 Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME=13

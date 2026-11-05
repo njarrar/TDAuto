@@ -621,6 +621,59 @@ interfaces:
     status_note: Proposed
     added: 2026-11-05
     revised: ""
+  - contract: hud_redraw_key_api
+    status: active
+    pattern: pure-function
+    producer: battle-hud
+    consumers:
+      - hud-field
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-017, TR-hud-001]
+    signature: "HudQuantiser extends RefCounted (src/presentation/hud/): static fill_step(fraction) -> int 0..60, seconds_digit(left) -> int, pos_step(v) -> int; HudRedrawKey extends RefCounted: static merge(logic_part: PackedInt32Array, aim_state: int, button_press: int, cooldown_digit: int, aim_cell: Vector2i) -> PackedInt32Array; HudField compares to the last key and calls queue_redraw() only on change"
+    tests: tests/unit/hud/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: clearance_window_api
+    status: active
+    pattern: method-call
+    producer: combat-view
+    consumers:
+      - combat-view
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-combat-015]
+    signature: "ClearanceWindow extends RefCounted (src/presentation/combat_view/); _init(tail_seconds); on_burst_started(); on_burst_released(); on_outcome_phase(); advance(view_dt: float); is_open() -> bool"
+    tests: tests/unit/combat_view/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: field_tint_api
+    status: active
+    pattern: method-call
+    producer: field-views
+    consumers:
+      - path-view
+      - hero-view
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hero-016]
+    signature: "FieldTint extends RefCounted (src/presentation/field/); _init(seconds, reduce_motion); commit(outcome: int) (WON or LOST, later calls ignored); advance(view_dt); backdrop(base: Color) -> Color (field base Value +0.04 Won, -0.04 and saturation x0.4 Lost, scaled by t); glow_scale() -> float; is_identity() -> bool; outcome() -> int"
+    tests: tests/unit/field/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: enemy_slots_and_danger_rule_api
+    status: active
+    pattern: method-call
+    producer: field-views
+    consumers:
+      - enemy-view
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-enemy-015]
+    signature: "EnemySlots extends RefCounted: sync(roster: Array[Targetable], view_dt: float), mark_killed(spawn_id: int); DangerRule extends RefCounted: observe(now, nearest_remaining, lives_fell), is_danger(now) -> bool, on_outcome() (240 units, 1.5 s from data)"
+    tests: tests/unit/field/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -699,6 +752,24 @@ performance_budgets:
     notes: "About 400 range checks per tick (TR-combat-013), unmeasured until a phone build; pass condition MAX_TICKS_PER_FRAME (3) x p99 tick cost <= 4.0 ms inside ADR-0004's simulation slice; Combat.range_checks counter records the real figure"
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-and-combat-api.md
+    added: 2026-11-05
+    revised: ""
+  - system: battle_field_draw_calls
+    status: active
+    budget_calls: 60
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    notes: "Design target 27 worst-case in play and with a modal open (type runs, observed on desktop Mobile renderer), HUD at the 12 cap, at most 3 text draws; provisional until an Android device run (V1); measured with RenderingServer.get_rendering_info(RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME) and Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+  - system: views_and_hud_frame_time
+    status: active
+    budget_ms: 3.0
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    notes: "p99 of view refresh plus HUD and field _draw on an Adreno 5xx-class device with 48 enemies; unmeasured (V9)"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
     added: 2026-11-05
     revised: ""
 
@@ -1047,6 +1118,66 @@ api_decisions:
     tr: [TR-hud-013, TR-hud-018]
     referenced_by:
       - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: field_views_single_draw_with_slot_arrays
+    api: "one Node2D with one _draw per view kind (PathView, TowerView, EnemyView, CombatView, HeroView incl. glow sprite and burst-glow pool of 8, HudField); EnemySlots (RefCounted) ENEMY_SLOTS >= 48 keyed by spawn_id; CombatView FLASH_MARKERS = 16; no child node per entity"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001]
+    added: 2026-11-05
+  - purpose: enemy_spawn_and_end_detection_by_roster_compare
+    api: "EnemySlots.sync(roster, view_dt) copies fields each frame; unknown spawn_id acquires a slot, a vanished id becomes DYING_KILL (marked by damage_applied(killed, spawn_id) only; enemy_killed carries no id and is not connected) or DYING_LEAK; roster() result never stored"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-enemy-015]
+    added: 2026-11-05
+  - purpose: view_refresh_after_ticks
+    api: "BattleWrapper._process: view_dt, real-time models and view clocks, ticks, then one refresh (roster compare, early_call_bonus read, HudRedrawKey.merge, queue_redraw only when dirty)"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-017, TR-hud-005]
+    added: 2026-11-05
+  - purpose: hit_flash_polygon_markers_no_shader
+    api: "CombatView draws a polygon marker per flash for FLASH_SECONDS on view_dt; no ShaderMaterial and no modulate in the MVP scene (QQ-10 closed)"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-combat-011]
+    added: 2026-11-05
+  - purpose: field_digits_as_glyph_polygons
+    api: "DigitGlyphs table of 3-point primitives per digit; only HudTopBand draws text (3 Labels); while a modal is open the band Labels hide and the modal Labels take the 3 text slots"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-015]
+    added: 2026-11-05
+  - purpose: rings_as_multiline_segment_lists
+    api: "rings are precomputed segment-pair PackedVector2Arrays per radius class, one draw_multiline per colour group, antialiased = false, width = GDD width + ring_width_bias (data, default 1.0); fallback MSAA 2D (NOT SOURCEABLE)"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-tower-015]
+    added: 2026-11-05
+  - purpose: no_enemy_interpolation_at_mvp
+    api: "views draw Targetable.position as read; no Clock.alpha, no previous-position buffer; revisit with Verification V5"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-enemy-015]
+    added: 2026-11-05
+  - purpose: field_draw_primitive_type_runs
+    api: "field _draw uses draw_primitive (3-4 points), draw_rect, draw_line/draw_multiline, draw_texture_rect grouped by type; calls = type runs (observed 4.7.2 Mobile, windowed desktop, output-review.txt R1, R2)"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-015, TR-combat-011]
+    added: 2026-11-05
+  - purpose: outcome_tint_on_field_base
+    api: "FieldTint.backdrop(base) offsets the stage base Value by +/-0.04 (Lost also saturation x0.4) over TINT_SECONDS on view_dt; glow_scale() falls to 0 on Lost; PathView draws the backdrop rect"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hero-016]
+    added: 2026-11-05
+  - purpose: evidence_screenshot_naming
+    api: "production/qa/evidence/<story-id>_<screen>_<yyyy-mm-dd>[_<device>].png; EvidenceCapture.evidence_name(story_id, screen, date_iso, device) -> String is pure"
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: []
     added: 2026-11-05
 
 # Example:
@@ -1536,6 +1667,42 @@ forbidden_patterns:
     adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
     tr: [TR-tower-006]
     rule: "tower_sim.gd and hero_sim.gd must never call ReadContext.new inside tick, build, upgrade, pin or burst; contexts are built in _init or when the Tower exists"
+    added: 2026-11-05
+  - pattern: per_entity_canvas_node_in_field
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-enemy-015]
+    rule: "Field views must never create a Node2D or Control per enemy, tower or flash, and must never set a material, shader, z_index or per-entity modulate"
+    added: 2026-11-05
+  - pattern: view_reads_engine_delta_or_steers_sim
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hero-016]
+    rule: "Views must never read the engine delta, Time or Engine, never call a mutating sim method, and must listen only to the ADR-0006 allowlist; frame-clock consumers receive view_dt"
+    added: 2026-11-05
+  - pattern: per_entity_polygon_arc_circle_draw
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-015]
+    rule: "draw_colored_polygon, draw_arc and filled draw_circle must never be called in a per-entity loop under src/presentation/field/ (one draw call each, probe R1); use draw_primitive, draw_rect and draw_multiline"
+    added: 2026-11-05
+  - pattern: view_connects_enemy_killed
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-enemy-015]
+    rule: "No view connects to enemy_killed or enemy_leaked (no id, TowerSim is the only allowlisted listener of enemy_killed); kills come from damage_applied(killed, spawn_id)"
+    added: 2026-11-05
+  - pattern: cached_call_bonus_or_stored_roster
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-017]
+    rule: "early_call_bonus() must be read after the frame's ticks and never cached across frames; roster() and targets() results must never be stored"
+    added: 2026-11-05
+  - pattern: hud_unconditional_queue_redraw
+    status: active
+    adr: docs/architecture/adr-0011-battle-field-rendering-and-draw-call-budget.md
+    tr: [TR-hud-017]
+    rule: "HudField must call queue_redraw() only when HudRedrawKey changed or a timed visual runs; draw_string must never be used inside HudField or a field view"
     added: 2026-11-05
 
 # Example:

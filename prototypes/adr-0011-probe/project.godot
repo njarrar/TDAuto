@@ -1,0 +1,5 @@
+; Engine configuration
+config_version=5
+
+[application]
+config/name="adr-0011-probe"
