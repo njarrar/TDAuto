@@ -1,7 +1,7 @@
 # ADR-0010: Sim/Input Split, Command Result Codes and Dev Telemetry
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-05
@@ -10,6 +10,7 @@ Proposed
 2026-11-05, against `architecture.md` v7, `tr-registry.yaml` v6 (123 entries), ADR-0001 to ADR-0009 (all Accepted) with their amendments, and the 4.7.2 headless probes below.
 
 ## Decision Makers
+- Accepted: 2026-11-05 by the user (njarrar), with its amendments to ADR-0004 to ADR-0008, the Hero AC 28 and HUD Rule 19 GDD changes, and the 8 MiB dev log cap
 Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`). Reviews: godot-specialist APPROVE, TD-ADR CONCERNS, resolved below. Acceptance: the user.
 
 ## Summary

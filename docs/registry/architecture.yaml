@@ -189,7 +189,7 @@ state_ownership:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
   - state: hero_run_counters
     status: active
     owner_system: hero-sim
@@ -200,7 +200,7 @@ state_ownership:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
     revised: ""
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
 
 # Example:
 #
@@ -493,7 +493,7 @@ interfaces:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
   - contract: dev_line_sink
     status: active
     pattern: direct_call
@@ -509,7 +509,7 @@ interfaces:
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
 
 # Example:
 #
@@ -566,6 +566,16 @@ performance_budgets:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
     added: 2026-11-04
+    revised: ""
+  - system: views-and-hud
+    status: active
+    budget_ms: 3.0
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    notes: "Frame step 3 refresh plus every _draw body, p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst); draw calls 60 a frame: field views 36, HUD 12 (about 8, text batches 3), modals 4, engine 4, spare 4; desktop bench P-V1 trigger 0.2 ms p95 in a release export; fallback F1 MultiMesh per enemy body shape and flashes; measured M9a desktop windowed and M9b phone. ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
+    added: 2026-11-05
     revised: ""
 
 # Example:
@@ -793,7 +803,40 @@ api_decisions:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
+  - purpose: battle_field_drawing
+    status: active
+    api: "One _draw node per view family under one FieldViews Node2D, tree order is draw order (Backdrop, ExitStrip, RangeRings, Towers, HeroZones, Enemies, Combat, Hero, HudTopBand, HudField); enemies in three passes by size in spawn_id order; Vector2(t.x, t.y) built only at the draw call; queue_redraw only on change; antialiased false"
+    not: "a node per enemy, tower or effect; z_index, CanvasLayer or materials between field views"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    reason: "TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001; fewest batch breaks; probe R6 shows _draw runs only when queued and runs headless"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+  - purpose: path_geometry
+    status: active
+    api: "Geometry2D.offset_polyline(path_points, path_width / 2, JOIN_MITER, END_BUTT) for the edge and path_width / 2 - 2 for the body, baked once at wrapper build, drawn with draw_colored_polygon; triangulate_polygon check, else one dev error and a draw_polyline fallback"
+    not: "draw_polyline or Line2D as the main path"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    reason: "Probe R4, verified 4.7.2 headless: exact square 90 degree corners at width 72 and 68; no dependence on the 4.7 line feather change"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+  - purpose: battle_hud_text
+    status: active
+    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); one font loaded once by the wrapper, ThemeDB.fallback_font until chosen"
+    not: "Label nodes in the battle HUD (modal TapScreens may use them)"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    reason: "Holds TR-hud-015's at most 3 text batches whatever the engine does across nodes; probes R3 and R7"
+    referenced_by:
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
@@ -1017,14 +1060,28 @@ forbidden_patterns:
     why: "OK is 0 and falsy; bare OK is the global Error.OK, which is 0 by definition, so r == OK parses and is true and the bug is silent (probes T6, R9); the lint covers hud_logic.gd, tower_input.gd, hero_input.gd and tests/helpers/bots/"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
   - pattern: command_call_outside_owner
     status: active
     description: "Keyed on receivers in src/: tower_sim.build(, flow.start_wave(, flow.call_early( only in hud_logic.gd; tower_sim.upgrade( only in tower_input.gd; hero_sim.pin(, hero_sim.burst( only in hero_input.gd (lint L-CMD-1); no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false; no sim-folder file outside src/feature/hero/ and no src/root/ file but battle.gd and battle_builder.gd names hero_sim or HeroSim (lint L-HERO-1); ADR-0007 amendment owed"
     why: "Inputs must act only through their commands so the bot path equals the human path; telemetry must never change a result"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
-    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0010 Accepted 2026-11-05; binding"
+  - pattern: shader_or_particles_in_battle_views
+    status: active
+    description: "No ShaderMaterial, CanvasItemMaterial, Light2D, CanvasModulate, Environment.glow, GPUParticles2D or CPUParticles2D in the field views or battle HUD at MVP; the hit flash is a drawn disc (QQ-10); lint L-VIEW-1, ADR-0007 amendment owed"
+    why: "A material breaks batching; a TIME-driven shader runs through Pause and ignores Reduce Motion"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+  - pattern: tween_or_engine_time_in_battle_views
+    status: active
+    description: "Field views and battle HUD primitives animate only from the wrapper's ViewClock (advanced in frame step 3, frozen while PAUSED) and read Reduce Motion only through MotionPolicy; no Tween, create_tween, SceneTree timer, await or Time call there, the debug RenderBudgetProbe apart (lint L-VIEW-2, ADR-0007 amendment owed)"
+    why: "One clock makes pause, retry and Reduce Motion hold in one place"
+    adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
