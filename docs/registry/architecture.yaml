@@ -74,6 +74,16 @@ state_ownership:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-05
     revised: ""
+  - state: catalogue_records
+    status: active
+    owner_system: data-config
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    interface: "Typed RefCounted records held by Catalogue after a READY load; read through Catalogue lookups (stage, tower, enemy, wave, hero, burst, input, ids; is_tower and level_count are data-level primitives, the caller-facing surface and failure handling are ADR-0005's) that return the live record and null for an unknown ID; fields assigned only by CatalogueBuilder, arrays made read-only"
+    write_access: catalogue-builder-only
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -140,6 +150,19 @@ interfaces:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
     added: 2026-11-05
     revised: ""
+  - contract: catalogue_load
+    status: active
+    pattern: direct_call
+    producer: data-config
+    consumers:
+      - app-root
+      - tests-and-bots
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    signal_signature: "Catalogue.load_from(manifest_path: String = MANIFEST_PATH) -> CatalogueLoadResult (ok, errors: Array[CatalogueError], cause() -> String); pure core Catalogue.load_parsed(manifest_files: Array[String], docs: Dictionary) -> CatalogueLoadResult; synchronous, main thread, called once by AppRoot in _ready (integration tests may call it on a fresh Catalogue); a second call returns already_loaded; the threaded fallback is a revision of ADR-0002 Decision 7"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -168,7 +191,16 @@ interfaces:
 # Register a budget when an ADR explicitly claims a frame time allocation.
 # The registry lets /architecture-review verify the total doesn't exceed the target.
 
-performance_budgets: []
+performance_budgets:
+  - system: catalogue_load
+    status: active
+    budget_ms: 1000
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    notes: "Median Loading to Ready over 5 cold launches on one Adreno 5xx-class device (TR-data-015); fallback to a worker if the median exceeds 1000 ms or any launch exceeds 2500 ms; unmeasured until a phone build"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -228,6 +260,46 @@ api_decisions:
     reason: "a missing file under a preloaded scene fails AppRoot's own script and the fatal screen never appears; a broken script in a preloaded scene gives a script-less instance (4.7.2 probe)"
     referenced_by:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: catalogue_storage_format
+    status: active
+    api: "JSON files under assets/data/ listed in assets/data/manifest.json, parsed and checked by CatalogueValidator, built into typed RefCounted records"
+    not: "typed Resource (.tres) records as the source of truth, or any directory scan"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    reason: "The validator must see raw keys and raw numbers to detect a missing field, a fractional integer and an unknown property (TR-data-002); a .tres with 1.5 in an int export loads as 1, a missing field as its default and an unknown property is dropped, with no error (4.7.2 probe, 2026-11-05)"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: json_parse
+    status: active
+    api: "JSON.new().parse(text) with get_error_line(), get_error_message() and get_data()"
+    not: "JSON.parse_string"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    reason: "parse_string returns null for a failure, an empty text and a literal null alike, reports no line or message and prints an ERROR with a backtrace on every failure (4.7.2 probe, 2026-11-05)"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: record_id_type
+    status: active
+    api: "StringName for def_id and every reference field, lookup parameter and (inherited by ADR-0006) signal payload ID"
+    not: "String or int IDs in code"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    reason: "One ID type end to end avoids String/StringName key mismatches; raw strings are converted once in CatalogueBuilder"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: catalogue_snapshot
+    status: active
+    api: "hand-rolled to_dict() on each record, Catalogue.snapshot() -> Dictionary and a field-path diff"
+    not: "duplicate_deep() on RefCounted records"
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    reason: "duplicate_deep() is documented only for Resource trees; the diff must name the changed field (GDD criterion 11)"
+    referenced_by:
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
     added: 2026-11-05
     revised: ""
 
@@ -291,6 +363,30 @@ forbidden_patterns:
     description: "Nothing under src/presentation/ or in the wrapper names AppRoot as a type; the wrapper receives AppRoot.request_retry as a Callable."
     why: "A reference back to AppRoot is a preload cycle and couples the fatal path to presentation scripts."
     adr: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
+    added: 2026-11-05
+  - pattern: catalogue_directory_scan
+    status: active
+    description: "The catalogue loads only the files named in assets/data/manifest.json; no runtime directory listing, no load of an unlisted file."
+    why: "Exported builds rename and package files, and an unlisted stray file would silently join the catalogue (Data Rule 4, TR-data-003)."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+  - pattern: catalogue_fallback_value
+    status: active
+    description: "No default, clamp, round or truncation of a catalogue value in the validator, builder or any reader; a bad value is a collected error and a Failed load."
+    why: "A silently defaulted value corrupts balance and the hero-share metric (Data Rule 8, TR-data-006)."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+  - pattern: catalogue_record_mutation
+    status: active
+    description: "No code outside CatalogueBuilder assigns a record field or mutates a record's arrays; there is no reload after READY."
+    why: "Definitions are read-only after load (Data Rule 6); the engine does not enforce it, so a deep-snapshot test and a lint do."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+  - pattern: catalogue_scene_load_at_boot
+    status: active
+    description: "scene_ref is a String path; the catalogue never loads or instances a scene. The content test and ADR-0001's runtime load() null check cover it."
+    why: "Checking scenes at load would mean instancing every stage (Data Rule 9)."
+    adr: docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
     added: 2026-11-05
 
 # Example:
