@@ -16,3 +16,7 @@ config/features=PackedStringArray("4.7", "Mobile")
 [rendering]
 
 renderer/rendering_method="mobile"
+
+[gdunit4]
+
+report/godot/push_error=true

@@ -1,0 +1,43 @@
+Harness smoke evidence: gdUnit4 runs a real suite headless
+Date: 2026-11-05 (UTC)
+Closes gate blocker: "no example test file confirms the framework works"
+ADR: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md (Decisions 1, 2, 5)
+
+Godot version line: 4.7.2.stable.official.ed1daf0bf
+Binary: official Godot_v4.7.2-stable_linux.x86_64 (Linux x86_64)
+gdUnit4: 6.2.0 (addons/gdUnit4/plugin.cfg; ADR-0007 Migration 0 upgrade to 6.2.2 still open)
+Setting: project.godot [gdunit4] report/godot/push_error=true
+Suite: res://tests/unit/harness/harness_smoke_test.gd
+Working copy: a scratch copy of the repo without .git and .godot (fresh clone state)
+
+1. Import
+   Command: godot --headless --import --path .
+   Exit code: 0
+
+2. Tests (coding-standards CI command)
+   Command: godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c </dev/null
+   Exit code: 0
+   test_integer_sum_returns_expected_value PASSED
+   test_string_join_returns_expected_text PASSED
+   test_claimed_push_error_passes PASSED
+   Overall Summary: 3 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans |
+   Executed test suites: (1/1)
+   Executed test cases : (3/3)
+   results.xml: 3 testcase elements
+   The claimed push_error prints an ERROR line to the console and the test still passes, as ADR-0007 Decision 5 expects.
+
+3. Negative control: deliberate failing assert (scratch copy only, then reverted)
+   Change: assert_int(total).is_equal(EXPECTED_SUM + 1)
+   Exit code: 100
+   test_integer_sum_returns_expected_value FAILED (Expecting: 6 but was 5)
+   Overall Summary: 3 test cases | 0 errors | 1 failures | 0 flaky | 0 skipped | 0 orphans |
+
+4. Negative control: unclaimed push_error (scratch copy only, then reverted)
+   Change: an extra test that calls push_error("unclaimed") with no assert_error claim
+   Exit code: 100
+   Overall Summary: 4 test cases | 1 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans |
+   Shows report/godot/push_error=true is live (ADR-0007 H2 (c)).
+
+5. Rerun after revert
+   Exit code: 0
+   Overall Summary: 3 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans |
