@@ -1,0 +1,21 @@
+gdUnit4 full suite, Mac run 4 (DESKTOP-RUN.md step 0), 2026-11-05
+Machine: Mac16,10, Apple M4, macOS 26.6.2, Godot 4.7.2.stable.official.ed1daf0bf
+Branch: claude/stoic-maxwell-7mbfeu at 9b4e7ad
+Command: $GODOT --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode
+
+Overall Summary: 589 test cases | 0 errors | 0 failures | 0 flaky | 0 skipped | 0 orphans |
+Executed test suites: (49/49)
+Executed test cases : (589/589)
+Exit code: 0
+
+Engine shutdown lines after the run (not test results):
+WARNING: 141 ObjectDB instances were leaked at exit
+ERROR: 17 resources still in use at exit
+
+History: run 1 stopped at a parse error (battle_builder_test.gd:85); run 2 536 tests,
+7 errors, 21 failures; run 3 542 tests, 6 errors, 12 failures, 85 orphans; run 4 575
+tests, 4 failures; run 5 (this) 589 tests, all pass. Fixes: commits 0c3d24c, 70198ea,
+04478e6, 9b4e7ad.
+Import and lint (step 0): no ERROR lines.
+Launch: first launch stopped at BattleWrapper._connect_signals (fixed in 70198ea);
+relaunch not yet reported.
