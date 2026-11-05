@@ -7,7 +7,7 @@ Accepted
 2026-11-05
 
 ## Last Verified
-2026-11-05, against `architecture.md` v7, `tr-registry.yaml` (123 entries), ADR-0001 to ADR-0010 (all Accepted) with their amendments, and probes R1 to R20 run on 4.7.2 headless (below).
+2026-11-05, against `architecture.md` v7, `tr-registry.yaml` (123 entries), ADR-0001 to ADR-0010 (all Accepted) with their amendments, and probes R1 to R7, R13 to R18 and R20 run on 4.7.2 headless (below). R8 to R12 and R19 have no recorded result (not run).
 
 ## Decision Makers
 - Accepted: 2026-11-05 by the user (njarrar), with the dated ADR-0009 and ADR-0010 amendments and the HUD, Enemy and art bible syncs
@@ -25,10 +25,10 @@ The battle field and HUD must draw up to 48 enemies, the towers, the hero, comba
 | **Layer** | Presentation |
 | **Knowledge Risk** | MEDIUM: 4.7 removed the line feather; RD 2D batching across CanvasItems and the 2D draw-call count are not in the pinned reference |
 | **References Consulted** | `VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `modules/rendering.md`, `modules/ui.md`, `probe-results.md` (ADR-0004 E2, E7, E8; ADR-0003 S9) |
-| **Post-Cutoff APIs Used** | `draw_circle(..., filled, width, antialiased)` (4.4, R3); `Control.accessibility_name`, `accessibility_live` (4.5, R18). Relied-on change: no line feather (4.7) |
-| **Verification Required** | R1 to R20 verified 4.7.2 headless. Needs a GPU: draw calls and batching across nodes (M9a desktop windowed, M9b phone), frame time (M9b), the MultiMesh layout and per-instance colour (F1), text sharpness and disc edges (M3), 90 and 120 Hz pacing (ADR-0004 V13) |
+| **Post-Cutoff APIs Used** | `draw_circle(..., filled, width, antialiased)` (4.4, R3); `Control.accessibility_name`, `accessibility_live` (4.5, R18; in 4.7 `accessibility_live` takes `AccessibilityServer.AccessibilityLiveMode`, not `DisplayServer.AccessibilityLiveMode`). Relied-on change: no line feather (4.7) |
+| **Verification Required** | R1 to R7, R13 to R18 and R20 verified 4.7.2 headless. R8 to R12 and R19 have no recorded result (not run). Needs a GPU: draw calls and batching across nodes (M9a desktop windowed, M9b phone), frame time (M9b), the MultiMesh layout and per-instance colour (F1), text sharpness and disc edges (M3), 90 and 120 Hz pacing (ADR-0004 V13) |
 
-All verified 4.7.2 headless (Linux x86_64, 4 cores, editor binary, debug):
+Each row below is verified 4.7.2 headless (Linux x86_64, 4 cores, editor binary, debug). R8 to R12 and R19 have no row:
 
 | Probe | Result |
 |---|---|
@@ -46,7 +46,7 @@ All verified 4.7.2 headless (Linux x86_64, 4 cores, editor binary, debug):
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0009 (Accepted 2026-11-04), ADR-0010 (Accepted 2026-11-05) |
+| **Depends On** | ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007 (Accepted 2026-11-04; this ADR amends it), ADR-0009 (Accepted 2026-11-04), ADR-0010 (Accepted 2026-11-05) |
 | **Enables** | Visual Feedback & VFX (Vertical Slice) inherits the Combat view; the Mobile Platform & Performance GDD inherits the budget |
 | **Blocks** | Every field view story and the HudField and HudTopBand stories. No story exists yet |
 | **Ordering Note** | At acceptance the user confirms the dated amendments already written into ADR-0009 (`hp_ratio`) and ADR-0010 (`cooldown_full`, B10 Combat row); ADR-0007 takes Migration item 2 |
@@ -117,10 +117,10 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 ### 6. Text
 - **No `Label` in the battle HUD.** `HudField` draws every HUD string in one final pass after its primitives, grouped by size: 21 units (14 dp), 24 (16 dp), 36 (24 dp, the burst digit). One atlas per size is expected, not guaranteed, so this is at most 3 text batches if it holds; M9a counts them.
 - **Gold digits** (MVP): `HudTopBand` owns the gold layout and string as a plain record; `HudField` only draws it there (V2 checks). If M9a shows text batches merge across nodes, the digits go back to `HudTopBand`.
-- **Accessibility**: drawn text has no AccessKit node, so `HudTopBand` (a `Control`, R18) sets `accessibility_name` and `accessibility_live` for gold and lives on change.
+- **Accessibility**: drawn text has no AccessKit node, so `HudTopBand` (a `Control`, R18) sets `accessibility_name` and `accessibility_live` (an `AccessibilityServer.AccessibilityLiveMode` value in 4.7) for gold and lives on change.
 - **Fonts**: the wrapper loads one font once (the chosen font, or `ThemeDB.fallback_font`, R15). Tabular numerals need a `FontVariation` with `tnum` in `opentype_features`; the fallback may not honour it. Each text slot caches one `TextLine`, re-shaped only when its string or size changes, drawn with `TextLine.draw(get_canvas_item(), pos, colour)`.
 - **Larger text (AR-V-03, Alpha)**: the 125% step scales the three sizes, still 3 batches. Wrapping uses `TextParagraph` or the UX spec's shortening rule.
-- Modal TapScreens may use `Label`s (about 4 draw calls).
+- Modal TapScreens may use `Label`s (about 4 draw calls). The rule: no `Label` in `src/presentation/field/` or the battle HUD folder `src/presentation/hud/` (L-VIEW-1); ResultScreen, PausedScreen and `tap_screen.gd` sit outside both, so L-VIEW-1 does not reach them.
 - Text sizes are at least 21 units; text meets 4.5:1 on its panel in every state (AR-V-04, AR-V-05).
 
 ### 7. No shaders (QQ-10)
@@ -139,7 +139,7 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 `ViewStyle` (`src/presentation/view_style.gd`) holds every colour, alpha, width, size, radius and duration the views draw. **Rule**: a value is gameplay if it changes a sim result or how a tap resolves; those live in the catalogue or with their input owner (hit radii stay with HeroInput, TowerInput and HudLogic). A value that only changes pixels is a presentation constant in this one table. Combat's `FLASH_SECONDS`, `TOWER_FLASH_ALPHA` and `FLASH_MARKER_LIMIT` live here (sync item). The contrast test and V5 read it.
 
 ### 10. Budget and measurement (QQ-11, draw-call and render parts)
-**GPU draw calls, 60 a frame at the design point** (48 enemies, 6 towers, 16 flashes, burst firing). Provisional until M9a; no per-node cap.
+**GPU draw calls, 60 a frame at the design point** (48 enemies, 5 towers and the hero, 16 flashes, burst firing). This is ADR-0009 Decision 8's scene: a stage has at most 5 slots (Enemy & Wave L12). Provisional until M9a; no per-node cap.
 
 | Part | Share |
 |---|---|
@@ -150,7 +150,7 @@ Made once at wrapper build, reset by the rebuild on retry, never shared, no `sta
 
 **CPU, views and HUD 3.0 ms p95 on the phone** (Data Flow 10): step 3's refresh plus every `_draw` body, counted in draw commands.
 
-- **P-V1 `bench_views`** (`tests/performance/`, headless, R6): times step 3 and each `_draw` at the design point. **Trigger**: 3.0 / 15 = **0.2 ms p95 in a release export** (ADR-0009's factor). About 230 commands at 2.2 µs (R13) is about 0.5 ms p50 and 0.8 ms p95 in debug, so debug fails the trigger by 2.5 to 4 times. **F1 is the likely path.** The first `EnemyView` story runs P-V1 in a release export before it builds the per-disc path. A cheaper first cut: drop the keyline disc under 22 px.
+- **P-V1 `bench_views`** (`tests/performance/`, headless, R6): times step 3 and each `_draw` at the design point. **Trigger**: 3.0 / 15 = **0.2 ms p95 in a release export** (ADR-0009's factor). About 227 commands (the old 6-tower count of 230, less one tower's body, inset and ring) at 2.2 µs (R13) is still about 0.5 ms p50 and 0.8 ms p95 in debug, so debug fails the trigger by 2.5 to 4 times. **F1 is the likely path.** The first `EnemyView` story runs P-V1 in a release export before it builds the per-disc path. A cheaper first cut: drop the keyline disc under 22 px.
 - **F1 MultiMesh**: one `MultiMeshInstance2D` per pass (heavy, normal, fast), children of `EnemyView` with `show_behind_parent`, so they take its slot and the cues still draw on top. The mesh is a disc `ArrayMesh` fan whose rim vertices are dark and centre white, so each instance draws its own keyline and the overlap order stays per enemy; only cues move after all bodies, which is acceptable. `use_colors = true` before `instance_count`; the buffer is one `PackedFloat32Array` a frame, believed 12 floats an instance (8 transform, 4 colour; unverified, check windowed). Flashes use one more. This cuts about 100 commands.
 - **M9a, desktop windowed** (Vulkan, Mobile renderer): a debug-only `RenderBudgetProbe` logs `RENDER_TOTAL_DRAW_CALLS_IN_FRAME` through the design-point scene in two runs, all views then HUD only. If it reads 0 for 2D, count from a RenderDoc capture. Batching across separate CanvasItems is unverified; M9a is where it is seen.
 - **M9b, phone** (ADR-0007 M9): the same two runs on the Adreno phone, plus p95 of step 3, `_draw` and `TIME_PROCESS`, retained in `production/qa/evidence/`.
@@ -232,8 +232,8 @@ var edge: Array[PackedVector2Array]; var body: Array[PackedVector2Array]; var fa
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
 | combat-damage.md | TR-combat-011: Combat view draws primitives from one `_draw()` per kind, no shaders or particles, 16-marker flash pool on the frame clock | Decisions 1, 5, 7, 8: `CombatView`, one pass per kind; zero shaders; 16 markers; `ViewClock` |
-| enemy-wave.md | TR-enemy-015: views read `roster()` and the path each frame; three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured | Decisions 2, 4, 5, 8. **Full once** the Enemy GDD's Reduce Motion line is synced to the user's decision |
-| tower-system.md | TR-tower-015: all towers from one `_draw()` node, primitive polygons, level inset and a cooldown ring, with Reduce Motion fallbacks | Decisions 1, 4, 8: `TowerView`; ring from `cooldown_full`; overlay scale cut. **Full once** the ADR-0010 amendment is confirmed |
+| enemy-wave.md | TR-enemy-015: views read `roster()` and the path each frame; three-pass draw order; a view pool of at least 48 that grows with a dev error; Reduce Motion honoured | Decisions 2, 4, 5, 8. The Enemy GDD's Reduce Motion line is synced to the user's decision |
+| tower-system.md | TR-tower-015: all towers from one `_draw()` node, primitive polygons, level inset and a cooldown ring, with Reduce Motion fallbacks | Decisions 1, 4, 8: `TowerView`; ring from `cooldown_full`; overlay scale cut. The user confirmed the ADR-0010 amendment |
 | battle-hud.md | TR-hud-001: HudLogic, HudTopBand (display-only Controls), HudField (one `_draw`, targets as resolver discs), absent headless, rebuilt on retry | Decisions 1, 6: HudTopBand one display-only `Control`; HudField one `_draw` above the field; `RangeRingView` a second HUD node under entities (sync item); wrapper-built (ADR-0001) |
 | battle-hud.md | TR-hud-015: HUD about 8 (max 12) of 60 draw calls, at most 3 text draws; targets at least 72 units, text at least 21 | Decisions 6, 9, 10: one text pass by 3 sizes; V5 reads sizes from `ViewStyle` and hit radii from their owners; M9a counts |
 
@@ -245,7 +245,7 @@ Also settled: QQ-10 (closes with Decision 7); QQ-11's draw-call and render parts
 ## Migration Plan
 No code exists. At acceptance:
 1. **ADR-0009 and ADR-0010**: the user confirms their 2026-11-05 amendments (`hp_ratio`; `cooldown_full` and the B10 Combat row).
-2. **ADR-0007** (dated amendment): L-VIEW-1 bans `Tween`, `create_tween`, materials, `z_index`, `CanvasLayer`, `Light2D`, particles and `Label` in `src/presentation/field/` and the battle HUD; L-VIEW-2 bans `Time.` there but `render_budget_probe.gd`; M9 splits into M9a and M9b.
+2. **ADR-0007** (dated amendment): L-VIEW-1 bans `Tween`, `create_tween`, materials, `z_index`, `CanvasLayer`, `Light2D`, particles and `Label` in `src/presentation/field/` and the battle HUD (`src/presentation/hud/`; modal TapScreens sit outside it); L-VIEW-2 bans `Time.` there but `render_budget_probe.gd`; M9 splits into M9a and M9b.
 3. **architecture.md**: Presentation table (nine nodes), Data Flow 10 (shares, P-V1), rendering gap row (R1 to R20), Required ADRs, QQ-10 closed, QQ-11.
 4. **Enemy & Wave GDD** (game-designer): the Reduce Motion line reads "bob, jitter and lean stay on; the leak pop becomes a still double outline for 200 ms"; the `draw_polyline` note is settled.
 5. **Battle HUD GDD** (game-designer signs off): Rule 1 table: HudTopBand is one display-only `Control` with no text; HudField draws all HUD text; `RangeRingView` is a second HUD node under entities; TR-hud-001's wording follows. Combat GDD: Rule 12's "per kind" reading; `ViewStyle` named as the home of the three flash knobs.
@@ -289,6 +289,9 @@ No code exists. At acceptance:
 GDD sync (5 GDDs checked): no renamed names; content sync items in Migration 4 to 7.
 
 ## Related
-- Depends on ADR-0001, 0003, 0004, 0005, 0006, 0009, 0010; amends ADR-0009 and ADR-0010 (confirmed 2026-11-05), ADR-0007 at acceptance.
+- Depends on ADR-0001, 0003, 0004, 0005, 0006, 0007, 0009, 0010; amends ADR-0009 and ADR-0010 (confirmed 2026-11-05), ADR-0007 at acceptance.
 - GDDs above; art bible §5 to §8; accessibility AR-V-03, 04, 08, 10, 13; interaction patterns IP-26 and Animation Standards.
 - Open items for the user: none beyond confirming the two amendments.
+
+## Amendments
+- **2026-11-05, from the fourth architecture review; Status stays Accepted** (`architecture-review-2026-11-05.md`, Conflict 2 and Should fix 4 to 6). Decision 10's design point is 5 towers and the hero, the same scene as ADR-0009 Decision 8 (a stage has at most 5 slots, Enemy & Wave L12); the P-V1 estimate becomes about 227 commands, still about 0.5 ms p50 and 0.8 ms p95 in debug, and the 60 draw calls and their split do not change. Last Verified, Verification Required and the probe table say R8 to R12 and R19 have no recorded result (not run). Post-Cutoff APIs Used and Decision 6 name the 4.7 enum for `accessibility_live`: `AccessibilityServer.AccessibilityLiveMode`. Depends On and Related add ADR-0007. The TR-enemy-015 and TR-tower-015 rows drop "Full once": both syncs have landed. Decision 6 and Migration item 2 name the battle HUD folder, `src/presentation/hud/`; modal TapScreens sit outside it and may use `Label`. Nothing else in this ADR changes.

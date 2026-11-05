@@ -80,7 +80,7 @@ Classes, files, fields and writers are in Key Interfaces. Outside `src/core/comb
 - `wave_index()` (1-based, 0 before the first start, set when `start_next_wave` commits, unchanged by a clear or outcome) and `got_through_by_type()` (internal untyped `Dictionary`, enemy `def_id` to `int`, keys added on first leak, never reset) are view-only. The snapshot deep-copies the latter.
 
 ### 4. Path, stage geometry and EnemyWave entries (TR-enemy-010; QQ-08)
-- `path_points`, `slot_positions`, `path_width` stay on the Stage record as ADR-0002 stores them; the scene keeps only the look. **This settles QQ-08's stage-geometry part, pending the user's acceptance.**
+- `path_points`, `slot_positions`, `path_width` stay on the Stage record as ADR-0002 stores them; the scene keeps only the look. **This settles QQ-08's stage-geometry part, accepted by the user 2026-11-04.**
 - EnemyWave builds one `PathTable` at build: `px`, `py`, `cum` as `PackedFloat64Array`, and `length`. Position is looked up from `distance` and the enemy's `seg` hint, so one step can cross several segments, and clamps to the last point at `length`. Each component is computed apart (L-VEC-1); `x`, `y` are rebuilt each tick, so no rounding builds up.
 - The source points are `Vector2` (32-bit). A sync item asks the CI content test to fail a path point that float32 cannot hold exactly; the starter points are integers.
 - **`advance() -> void` takes no argument** (ADR-0004 Decision 5 allowed it). EnemyWave owns `wave_tick` (Rule 7); `tick_count()` runs through Intermission, and a second counter could disagree. `advance()` spawns, moves (`move_speed x speed_factor x dt`), leaks by `spawn_id`, rebuilds `_targets`; `reap()` handles corpses by `spawn_id`, then the clear check.
@@ -112,7 +112,7 @@ signal damage_applied(source_kind: Combat.SourceKind, source_id: StringName, app
 - **QQ-10** (hit-flash shader) goes to ADR-0011; the payload already carries what a flash needs.
 
 ### 7. Projectiles (QQ-08 ProjectileSpawner part)
-No ProjectileSpawner at MVP; every hit is instant. A future spawner is a caller in front of `deliver` that owns flight; `deliver` stays the one HP path, and its removed and dead guards cover a target that left mid-flight. **This settles QQ-08's spawner part, pending the user's acceptance.**
+No ProjectileSpawner at MVP; every hit is instant. A future spawner is a caller in front of `deliver` that owns flight; `deliver` stays the one HP path, and its removed and dead guards cover a target that left mid-flight. **This settles QQ-08's spawner part, accepted by the user 2026-11-04.**
 
 ### 8. Per-tick budget (TR-combat-013)
 **Catch-up, in ADR-0004's terms.** A normal frame owes one tick: 2.0 ms p95 inside the 4.0 ms sim slice. At the first phone build `MAX_TICKS_PER_FRAME = clamp(floori(8.0 / p95_tick_ms), 2, 4)`: at 2.0 ms that is 4 ticks, 8.0 ms in a catch-up frame. Above 4.0 ms per tick the clamp sits at 2, 30 fps cannot hold full speed, and this budget reopens. So TR-combat-013's "at the catch-up clamp" is a per-tick limit, spent once per owed tick.
@@ -313,3 +313,4 @@ GDD sync (4 GDDs checked): combat-damage.md (Rules 3, 10, 11, 12, Core Rules), e
 
 ## Amendments
 - **2026-11-05, with ADR-0011 (confirmed by the user 2026-11-05 at ADR-0011 acceptance); Status stays Accepted.** Combat gains `func hp_ratio(enemy: Targetable) -> float`, a view-only read: `hp / max_hp` from the enemy's `Health`, which already holds `max_hp`, and 1.0 for an unattached enemy. Decision 1's list of `Health` reads outside `src/core/combat/` becomes `hp_left`, `is_dead`, `speed_factor`, `hp_ratio`. It changes no state, reports nothing and is not called by the sim. Nothing else in this ADR changes.
+- **2026-11-05, from the fourth architecture review; Status stays Accepted** (`architecture-review-2026-11-05.md`, Should fix 5). Decisions 4 and 7 now say each QQ-08 part was accepted by the user 2026-11-04, as Decision Makers records, in place of "pending the user's acceptance". Nothing else in this ADR changes.

@@ -193,8 +193,8 @@ All fakes are hand-written `RefCounted` scripts loaded by `preload`; never gdUni
 | L-CMD-1 | 0010 G7 (amendment) | C3 | `src/` | On its receiver: `tower_sim.build(`, `flow.start_wave(`, `flow.call_early(` outside `hud_logic.gd`; `tower_sim.upgrade(` outside `tower_input.gd`; `hero_sim.pin(`, `hero_sim.burst(` outside `hero_input.gd` |
 | L-CMD-2 | 0010 G3 (amendment) | C3 | those three files, `tests/helpers/bots/` | `if`, `not`, `and`, `or` right before a command call; bare `OK` beside a result |
 | L-DEV-1 | 0010 G9 (amendment) | T3 | `src/presentation/dev/`; `SIM` | `FileAccess` outside `jsonl_file_sink.gd`; any `FileAccess` in `SIM` |
-| L-HERO-1 | 0010 D7 (amendment) | T2 | `SIM` but `feature/hero/`; `src/root/` but `battle.gd`, `battle_builder.gd` | `hero_sim`, `HeroSim` |
-| L-VIEW-1 | 0011 G2, G3, G8 (amendment) | T3 | `src/presentation/field/`, battle HUD | `Tween`, `create_tween(`, a material, `z_index`, `CanvasLayer`, `Light2D`, particles, `Label` |
+| L-HERO-1 | 0010 D7 (amendment) | T2 | `SIM` but `feature/hero/`; `src/root/` but `battle.gd`, `battle_builder.gd`, `battle_wrapper.gd` | `hero_sim`, `HeroSim` |
+| L-VIEW-1 | 0011 G2, G3, G8 (amendment) | T3 | `src/presentation/field/`, `src/presentation/hud/` | `Tween`, `create_tween(`, a material, `z_index`, `CanvasLayer`, `Light2D`, particles, `Label` |
 | L-VIEW-2 | 0011 G3 (amendment) | T3 | same, but `render_budget_probe.gd` | `Time.` |
 | L-NAME-1 | QQ-16; 0005 E7 | C1 | `src/` | A `class_name` that `ClassDB.class_exists()` knows, or whose `get_global_class_list()` entry names another path (the list holds one entry per name) |
 | L-NAME-2 | QQ-16 | T1 | `tests/`, `tools/` | Any `class_name` |
@@ -416,6 +416,7 @@ Harness tests:
 - **2026-11-04, with ADR-0009** (confirmed by the user at ADR-0009 acceptance); Status stays Accepted. Lint rows L-COMBAT-1 to L-COMBAT-4 (ADR-0009 Migration 4). `combat_invariant.gd` reads `applied` from the plain-value `damage_applied` (argument 3). `combat_probe_test.gd` runs ADR-0009 B1 to B4 and X1 to X7 in the probe suite.
 - **2026-11-05, with ADR-0010 (confirmed by the user at ADR-0010 acceptance); Status stays Accepted.** Lint rows L-CMD-1 (keyed on the receiver), L-CMD-2 (scoped to the three caller files and the bots), L-DEV-1 (scoped to `src/presentation/dev/`, plus sim folders never name `FileAccess`; the full list waits for the save ADR) and L-HERO-1 (ADR-0010 Migration 4). L-STAT-4's owner list adds `hero_input.gd`. `scopes.gd` names `run_measures.gd` as a VIEW scope.
 - **2026-11-05, with ADR-0011 (confirmed by the user at ADR-0011 acceptance); Status stays Accepted.** Lint rows L-VIEW-1 and L-VIEW-2 (ADR-0011 Migration 2). M9 splits into M9a (desktop) and M9b (phone).
+- **2026-11-05, from the fourth architecture review; Status stays Accepted.** L-HERO-1 exempts `battle_wrapper.gd` (it builds HeroInput); only `battle.gd` ticks `hero_sim`. L-VIEW-1, 2: HUD is `src/presentation/hud/`; TapScreens sit outside, may use `Label`.
 
 ## Related
 - Depends on ADR-0001 to ADR-0006 (Accepted). Amends ADR-0003 (`setup(..., is_mobile: bool)`, Amendments, confirmed 2026-11-04). Adds L-STAT-4 for the registry's `read_context_per_read`.
