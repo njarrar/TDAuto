@@ -1,0 +1,2 @@
+4.7.2 probe, 2026-11-05 (godot-specialist, headless desktop debug editor): signal emit synchrony, connection order, nested emit, introspection, typed-handler checks, duplicate connect, listener release. Run `Godot --headless --path prototypes/adr-0006-probe -s res://probe.gd` and `-s res://probe2.gd`.
+Retained outputs: `output.txt`, `output2.txt`. Desktop only; a release-export re-run is owed (ADR-0006 Verification Required).

@@ -1,0 +1,23 @@
+extends SceneTree
+func _init() -> void:
+	var p := "user://adr0010_probe.jsonl"
+	if FileAccess.file_exists(p): DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
+	print("P1 is_debug_build=", OS.is_debug_build())
+	var f := FileAccess.open(p, FileAccess.WRITE_READ)
+	print("P2 open1 null=", f == null)
+	f.seek_end(); var r1: Variant = f.store_line("{\"a\":1}"); print("P3 store_line returns ", r1, " type=", typeof(r1), " err=", f.get_error())
+	f.close()
+	var g := FileAccess.open(p, FileAccess.WRITE_READ)
+	print("P4 WRITE_READ on existing: length=", g.get_length())
+	g.close()
+	var h := FileAccess.open(p, FileAccess.WRITE_READ); h.store_line("x"); h.close()
+	var k := FileAccess.open(p, FileAccess.READ_WRITE)
+	print("P5 READ_WRITE on existing null=", k == null, " len=", k.get_length() if k else -1)
+	k.seek_end(); var r2: Variant = k.store_line("y"); k.close()
+	print("P6 after append store=", r2, " text=", FileAccess.get_file_as_string(p).c_escape())
+	var bad := FileAccess.open("user://no_such_dir/x.jsonl", FileAccess.WRITE_READ)
+	print("P7 bad path null=", bad == null, " open_error=", FileAccess.get_open_error())
+	var m := FileAccess.open("user://nonexist_rw.jsonl", FileAccess.READ_WRITE)
+	print("P8 READ_WRITE on missing null=", m == null, " open_error=", FileAccess.get_open_error())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
+	quit()

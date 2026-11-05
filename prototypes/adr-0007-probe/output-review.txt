@@ -1,0 +1,47 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Could not find type "NoSuchClassXyz" in the current scope.
+          at: GDScript::reload (res://missing_type.gd:2)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://review_probe.gd:4)
+ERROR: Failed to load script "res://missing_type.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://review_probe.gd:4)
+SCRIPT ERROR: Parse Error: Could not find type "NoSuchClassXyz" in the current scope.
+          at: GDScript::reload (res://missing_type.gd:2)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://review_probe.gd:8)
+REVIEW res://missing_type.gd can_instantiate=false reload=43 global_name=
+SCRIPT ERROR: Parse Error: Not all code paths return a value.
+          at: GDScript::reload (res://child_typed.gd:2)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://review_probe.gd:4)
+ERROR: Failed to load script "res://child_typed.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://review_probe.gd:4)
+SCRIPT ERROR: Parse Error: Not all code paths return a value.
+          at: GDScript::reload (res://child_typed.gd:2)
+          GDScript backtrace (most recent call first):
+              [0] _init (res://review_probe.gd:8)
+REVIEW res://child_typed.gd can_instantiate=false reload=43 global_name=
+REVIEW res://named.gd can_instantiate=true reload=0 global_name=ReviewProbeNamed
+REVIEW res://good.gd can_instantiate=true reload=0 global_name=
+ERROR: Attempt to open script 'res://does_not_exist.gd' resulted in error 'File not found'.
+   at: load_source_code (modules/gdscript/gdscript.cpp:1139)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://review_probe.gd:9)
+ERROR: Failed loading resource: res://does_not_exist.gd.
+   at: _load (core/io/resource_loader.cpp:317)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://review_probe.gd:9)
+ERROR: res://broken.tscn:6 - Parse Error: [ext_resource] referenced non-existent resource at: res://does_not_exist.gd.
+   at: _printerr (scene/resources/resource_format_text.cpp:41)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://review_probe.gd:9)
+REVIEW broken.tscn load=(res://broken.tscn):<PackedScene#-9223372008736160305> can_inst=true
+REVIEW os=macOS arch=arm64 ver={ "major": 4, "minor": 7, "patch": 2, "hex": 263938, "status": "stable", "build": "official", "hash": "ed1daf0bf001b61586d9930840f2f1394092c079", "timestamp": 0, "string": "4.7.2-stable (official)" }
+REVIEW env=true
+REVIEW classlist=[]
+exit=0

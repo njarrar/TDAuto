@@ -1,5 +1,7 @@
 # TowerRiot: Master Architecture
 
+> **Merge note (2026-11-05).** `main` held a second ADR set 0001 to 0011 with its own reviews. The user chose this set on merge; `main`'s is kept in `docs/architecture/superseded/` for history (see its README).
+
 ## Document Status
 - Version: 3 (brought up to date with ADR-0001 to ADR-0011 after `/architecture-review` 2026-11-05)
 - Last Updated: 2026-11-05

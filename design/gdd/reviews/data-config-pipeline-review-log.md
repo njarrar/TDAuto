@@ -114,3 +114,79 @@ Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43
 Reviewed-Content-Hash: design/gdd/game-concept.md 2eb89302dc6d316c2f3f8c74c11f10d44219e5b2
 Reviewed-Content-Hash: design/gdd/systems-index.md 941dc953b87336a149fe249c484a103dcba5531e
 Reviewed-Content-Hash: design/art/art-bible.md f27f37cc8274e7edee283103be2c318dc98e43d7
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. `requires_bend` in Rule 10, HUD rows, Input record note, cross-references, QQ-20 in Open Questions.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader)
+Blocking items: 1 | Recommended: 6
+Summary: Lean re-review. Rule 7's new cross-field check has no order against field checks, so one typo can give two errors or blame a valid field. No new lower bound is needed; Flow's are covered. The reader had no shell, so the sim, diffs and scripts were not run by it.
+Prior verdict resolved: See summary
+Findings:
+- [BLOCKING] Rule 7, AC3: run the `tap_slop` check only when both fields are present, finite and in domain, and add those cases.
+- [RECOMMENDED] Input singleton: "one Input record" is enforced nowhere.
+- [RECOMMENDED] Edge Cases: no `tap_slop` ≤ `drag_slop` entry.
+- [RECOMMENDED] Rule 7: "one cross-field check", though `pin_rect` is also cross-field; "empty lists" against empty Enemy tags.
+- [RECOMMENDED] Criteria: inverted `pin_rect`, `pin_exclusion` radius 0, out-of-range coordinates, empty `groups[]`.
+- [RECOMMENDED] AC3: table-drive floors per domain row.
+- [RECOMMENDED] Interactions: Flow also reads `left_handed` and the Hero ID.
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 5e5df4a50191c71f81644957fb43ef96b38ab6d5
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User accepted every recommendation ("Implement all recomended"). Applied: the blocker (Rule 7's cross-field check runs only when both fields are valid) and recommended items, including the one-Input-record check, the Enemy `tags` exception, new edge cases and criteria, and Flow's reads. `tests/README.md` was corrected for gdUnit4, so that Open Questions row is gone.
+Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader with a shell)
+Blocking items: 2 | Recommended: 2
+Summary: The Rule 7 guard is fixed, but AC3's positive case cannot reach it: `tap_slop` 15 is below its floor. A tower with empty tags gives two errors where AC2 demands one. Fixtures were not run.
+Prior verdict resolved: Partly
+Findings:
+- [BLOCKING] AC3: use `drag_slop` 20 with `tap_slop` 20 for the error, and 20 with 21 for the pass.
+- [BLOCKING] Rule 7, AC2: a Tower with empty or missing `tags` reports one error; name its code and add the missing case.
+- [RECOMMENDED] AC3: state the base for inclusive bounds, `drag_slop` 15 with `tap_slop` 31.
+- [RECOMMENDED] Rule 7: run `pin_rect`'s ordering only on finite values; say which extra Input record is reported.
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 05e3e8f4ca5b1c2a34b39d2ebc9215b0d5342861
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 0804873149506940e730239e7998a943f8bcc5cd
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c67e5441a28be83b92efa4b903b15c4e76918a6b
+Reviewed-Content-Hash: design/gdd/tower-system.md 86f753dacdcc4d904575ab5d6bdfffb8fd4f6415
+Reviewed-Content-Hash: design/gdd/hero-system.md d075d8207bffb1b7f4a23a2f0467da21c2509528
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md b869a7ca338cf3100f72219f98e64207b252dec6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 044488039c9a221f998173317300db5f3cd7ab5b
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied: both blocking (AC3's values; one error for empty or missing Tower tags) and both recommended.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean check; one reader with a shell)
+Blocking items: 0 | Recommended: 0
+Summary: Both blockers resolved: `drag_slop` 20 with `tap_slop` 20 reaches only the cross-field check, and a Tower's empty or missing `tags` gives one error. No fixtures were run.
+Prior verdict resolved: Yes
+Findings:
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 85f7616bf55e163f7ef55c61de49bf99b593b7ce
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md c1fd31adac239441dbdae3fe76d40b24379b3e5d
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md fda517f00006319d13c59450aeec9d155bb70c8f
+Reviewed-Content-Hash: design/gdd/tower-system.md 14b131b888ccec57b15294ebb57b928615b890d0
+Reviewed-Content-Hash: design/gdd/hero-system.md c9f2fd38018ff70731690e5aaaa7bd148c397746
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md f2ad63e7bb8cf880695e73dc0a744bc91b56fe70
+Reviewed-Content-Hash: design/gdd/battle-hud.md 53e31996a65be6476eb2e700352e027701c1b760
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f

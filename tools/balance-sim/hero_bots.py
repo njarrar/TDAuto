@@ -5,6 +5,7 @@ Run: python3 tools/balance-sim/hero_bots.py          (table and clamp self-check
      python3 tools/balance-sim/hero_bots.py --left   (the same table, left hand)
      python3 tools/balance-sim/hero_bots.py --sweeps (radius, reach, thumb and skill sweeps)
      python3 tools/balance-sim/hero_bots.py --orders (fill first against upgrading in pairs, every placement)
+     python3 tools/balance-sim/hero_bots.py --calls  (mid-skill: never calling, calling when the burst is Ready, always calling, each with and without the bonus)
 """
 # Throwaway balance sim of the starter stage. Tick order per Combat Rule 11. Not game code.
 import itertools
@@ -115,6 +116,7 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
     if hero:
         hx=list(START); pin=hero.get('pin',START)
         pinned=hero['mode']=='once' or (hero['mode']=='driven' and not hero.get('repin',True))
+        if pinned: hx=list(pin)  # Hero Rule 2: a pin in Build places the hero at once
     hcd=0; bcd=0; bwait=0; bq=None; tick=0; wt=[]
     goldhist=[]
     for wi,(groups,inter) in enumerate(WAVES):
@@ -207,8 +209,9 @@ def run(F,order,hero=None,early=False,bonus=1.8,lives=10,gold=120,burst_d=130,bu
         if wi<len(WAVES)-1:
             # intermission
             n=tk(inter)
-            wait=0 if early else n
-            if early: gold+=int(n//tk(bonus))
+            # early: True calls at once; 'ready' calls the moment the burst is Ready (Flow Rule 9's gate)
+            wait=(min(bcd,n) if early=='ready' else 0) if early else n
+            if early: gold+=int((n-wait)//tk(bonus))
             tick+=wait
             for _ in range(wait):
                 for t in towers.values():
@@ -319,6 +322,9 @@ if __name__=='__main__':
             print(lab,[(b,fm(r:=run(F,o,hero=dict(MID,reach=160.0,**mm))),round(r['hs']*100)) for b,o in MIXED.items()])
     elif '--orders' in sys.argv:
         orders()
+    elif '--calls' in sys.argv:
+        for b,o in BUILDS.items():
+            print(f"{b:27}",' | '.join(f"{lab} {fm(r:=run(F,o,early=e,bonus=bn,hero=dict(MID,reach=160.0)))} {r['mins']:.1f}m gold {r['gold']}" for lab,e,bn in (('never',False,1.8),('ready','ready',1.8),('ready no bonus','ready',1e9),('always',True,1.8),('always no bonus',True,1e9))))
     elif '--left' in sys.argv:
         HAND='left'; table()
     else:

@@ -1,0 +1,23 @@
+=== probe3 2026-11-05 windowed, --rendering-method mobile, desktop macOS ===
+(eval):42: command not found: timeout
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward Mobile - Using Device #0: Apple - Apple M4 (Apple9)
+R1 mode=0 draw_calls=0 objects=0 prims=0
+R1 mode=1 draw_calls=1 objects=1 prims=1
+R1 mode=2 draw_calls=48 objects=48 prims=48
+R1 mode=3 draw_calls=48 objects=48 prims=48
+R1 mode=4 draw_calls=48 objects=48 prims=1440
+R1 mode=5 draw_calls=96 objects=96 prims=1488
+R1 mode=6 draw_calls=1 objects=3 prims=6
+R1 mode=7 draw_calls=1 objects=48 prims=96
+R1 mode=8 draw_calls=1 objects=96 prims=96
+=== probe4 2026-11-05 windowed, --rendering-method mobile, desktop macOS ===
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+Metal 4.0 - Forward Mobile - Using Device #0: Apple - Apple M4 (Apple9)
+R2 mode=0 draw_calls=0 objects=0
+R2 mode=1 draw_calls=1 objects=48
+R2 mode=2 draw_calls=1 objects=96
+R2 mode=3 draw_calls=1 objects=96
+R2 mode=4 draw_calls=3 objects=192
+R2 mode=5 draw_calls=1 objects=864
+R2 mode=6 draw_calls=48 objects=48

@@ -1,0 +1,31 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+connect A:0
+connect B:0
+connect C.inner:0
+P1-3 log: ["before emit", "A:fired:start", "C:inner:101", "A:fired:end", "B:fired:start", "B:fired:end", "after emit"]
+P4 get_signal_connection_list(fired): [{ "signal": RefCounted(emitter.gd)::[signal]fired, "callable": RefCounted(listener.gd)::on_fired, "flags": 0 }, { "signal": RefCounted(emitter.gd)::[signal]fired, "callable": RefCounted(listener.gd)::on_fired, "flags": 0 }]
+P4 Signal.get_connections() count: 2
+P4 keys: ["signal", "callable", "flags"]
+P4 target obj==a: true obj==b: false method: on_fired flags: 0 signal: RefCounted(emitter.gd)::[signal]fired is_connected: true
+P4 keys: ["signal", "callable", "flags"]
+P4 target obj==a: false obj==b: true method: on_fired flags: 0 signal: RefCounted(emitter.gd)::[signal]fired is_connected: true
+P5 nobody connections: 0
+P5 emit with no listener returned, no output above this line expected
+P6 handler saw: String = not an int log=["T:typed:String:not an int"]
+ERROR: Signal 'fired' is already connected to given callable 'RefCounted(listener.gd)::on_fired' in that object.
+   at: connect (core/object/object.cpp:1562)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe.gd:40)
+P7 duplicate connect returned: 31 (ERR_INVALID_PARAMETER=31) count now: 2
+P8 before release count: 1
+P8 after release count: 0
+P8 emit after release: log=[] count: 0
+ERROR: Error calling from signal 'fired' to callable: 'RefCounted(listener.gd)::on_inner': Cannot convert argument 1 from String to int.
+   at: emit_signalp (core/object/object.cpp:1311)
+   GDScript backtrace (most recent call first):
+       [0] _init (res://probe.gd:55)
+P6b typed handler got: []
+PX Signal-as-field keeps emitter alive: false
+PX after holder released: false
+PX StringName == String: true String == StringName: true typeof: StringName dict key hit: true

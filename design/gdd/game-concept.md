@@ -129,7 +129,7 @@ One stage: 8–12 waves. Between waves a timer runs: place, upgrade, re-pin the 
 - **Curiosity**: the next stage preview; untried tree branches; synergies hinted by node descriptions.
 - **Investment**: trees and stars are permanent; the hero you built.
 - **Social**: none (v1).
-- **Mastery**: 3-star clears; kills per burst as a personal metric (hero damage share is a balance metric, not a player goal: Pillar 2 caps it).
+- **Mastery**: 3-star clears; kills per burst as a personal metric (hero damage share is a balance metric, not a player goal: Pillar 2 tracks it).
 
 ---
 
@@ -140,8 +140,8 @@ Every skill point changes something visible on screen within one wave, and reada
 *Design test*: a "+3% damage" node vs a node that makes shots chain → chain wins. A VFX that hides the hero or a path → cut.
 
 ### Pillar 2: One Hero, Not an Army
-Towers hold ground; the hero decides fights. Target: hero + burst ≈ 25–30% of stage damage at balanced investment — **unproven** (bot measured 39% in hero-pin with bot-fitted values; no human data yet; measured from the damage-by-source log, burst included; damage from towers the hero buffs is counted as tower damage, tagged by the dealing entity).
-*Design test*: when hero and tower power compete, towers keep sustained DPS, the hero keeps the spike. A max-Hero, zero-Tower build still fails a stage (confirmed: hero-only lost at wave 4). What keeps the hero necessary late, when trees multiply tower power: waves are tuned **assuming the hero's contribution**, and from Vertical Slice some waves carry leak pressure or tower-resistant enemies that only an aimed burst or a re-pin answers. The hero-pin prototype showed towers-only can win narrowly once any upgrade exists, so this is a wave-design rule, not an assumption. Bot acceptance criteria: a *pinned-once, never-touched* hero must clearly lose to active play; a *never-pinned* hero must equal towers-only; towers-only may win at MVP but must lose from Vertical Slice, once the wave rule is in.
+Towers hold ground; the hero decides fights. Expected: hero + burst ≈ 25–30% of stage damage at balanced investment, tracked rather than gated, with gates on the burst's own damage and on lives (user decision, 2026-11-04; Hero GDD) — **unproven** (bot measured 39% in hero-pin with bot-fitted values; no human data yet; measured from the damage-by-source log, burst included; damage from towers the hero buffs is counted as tower damage, tagged by the dealing entity). Read across a tier's stages, not per stage, so Pillar 3's stages can differ; the burst is not tuned per stage.
+*Design test*: when hero and tower power compete, towers keep sustained DPS, the hero keeps the spike. A max-Hero, zero-Tower build still fails a stage (confirmed: hero-only lost at wave 4 in the prototype, and on wave 3 on the MVP stage in bots). What keeps the hero necessary late, when trees multiply tower power: waves are tuned **assuming the hero's contribution**, and from Vertical Slice some waves carry leak pressure or tower-resistant enemies that only an aimed burst or a re-pin answers. The hero-pin prototype showed towers-only can win narrowly once any upgrade exists, so this is a wave-design rule, not an assumption. Bot acceptance criteria: a *pinned-once, never-touched* hero must clearly lose to active play (today the best single pin ends only 1 to 4 lives lower, accepted for MVP until human logs exist; Hero GDD); a *never-pinned* hero must equal towers-only; towers-only may win at MVP but must lose from Vertical Slice, once the wave rule is in.
 
 ### Pillar 3: Every Stage Reads Differently
 Path geometry or attack pattern changes each stage, so a solved build doesn't carry — and the player adapts rather than grinds.
@@ -149,7 +149,7 @@ Path geometry or attack pattern changes each stage, so a solved build doesn't ca
 
 ### Pillar 4: Thumb-First
 Every action is one tap or one drag; no target under 44 pt (iOS) / 48 dp (Android).
-*Design test*: taps and drags are distinct gestures (drag slop ~10–12 dp on phones). Tap priority: Start/Call > build arc > arc backdrop (while an arc is open, so a press outside the discs only dismisses) > tower = slot (nearest wins). Drag priority: burst > hero. A tap on the burst button does nothing and reaches nothing beneath. A press with a tap target needs the larger tap slop before it can become a drag, so a thumb roll on a tower never moves a hero parked on it. A ground tap does nothing (a tiny rejection ring, no sound). A drag from a slot or tower alone is not a pin. Minimum supported width: 360 dp. Full rules: `design/gdd/input-gesture-resolver.md`. The burst button sits in the bottom corner on the dominant-hand side, inside the safe area, with a left-handed mirror. **UNTESTED on a phone**: all evidence is one developer on a mouse (CD-PLAYTEST). A tap on the hero does nothing but show its leash. Pass/fail for the first phone build with a non-developer tester, 20 attempts each of slot tap, arc disc tap, tower tap, Start/Call tap, pin drag and burst drag, then five minutes of unprompted play (protocol: Input GDD, Pillar 4 gate P1): for each gesture separately, a *miss* (gesture does nothing) is allowed on ≤5%; a *mis-fire* (gesture triggers a different action, including an accidental upgrade inside the cost-chip window) is allowed zero times. This test is the MVP+ exit criterion. A feature needing two thumbs → cut or redesigned.
+*Design test*: taps and drags are distinct gestures (drag slop ~10–12 dp on phones). Tap priority: Start/Call > build arc > arc backdrop (while an arc is open, so a press outside the discs only dismisses) > tower = slot (nearest wins). Drag priority: hero > burst, since a hero grabbed by mistake is re-pinned in a moment and a burst spent cannot be undone (Hero Rule 15). A tap on the burst button does nothing and reaches nothing beneath. A press with a tap target needs the larger tap slop before it can become a drag, so a thumb roll on a tower never moves a hero parked on it. A ground tap does nothing (a tiny rejection ring, no sound). A drag from a slot or tower alone is not a pin. Minimum supported width: 360 dp. Full rules: `design/gdd/input-gesture-resolver.md`. The burst button sits in the bottom corner on the dominant-hand side, inside the safe area, with a left-handed mirror. **UNTESTED on a phone**: all evidence is one developer on a mouse (CD-PLAYTEST). A tap on the hero does nothing but show its leash. Pass/fail for the first phone build with a non-developer tester, 20 attempts each of slot tap, arc disc tap, tower tap, Start/Call tap, pin drag and burst drag, then five minutes of unprompted play (protocol: Input GDD, Pillar 4 gate P1): for each gesture separately, a *miss* (gesture does nothing) is allowed on ≤5%; a *mis-fire* (gesture triggers a different action, including an accidental upgrade inside the cost-chip window) is allowed zero times. This test is the MVP+ exit criterion. A feature needing two thumbs → cut or redesigned.
 
 Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplicity). That tension is intended.
 
@@ -185,7 +185,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 
 | Reference | What We Take From It | What We Do Differently | Why It Matters |
 | ---- | ---- | ---- | ---- |
-| Kingdom Rush | Lane TD with fixed build slots and a controllable hero | Three persistent trees with cross-buffs; free respec; the hero is a pinned, aimed unit targeted at ~25–30% of damage (unproven, see Pillar 2), not a side unit | Validates hero + towers on mobile |
+| Kingdom Rush | Lane TD with fixed build slots and a controllable hero | Three persistent trees with cross-buffs; free respec; the hero is a pinned, aimed unit expected at ~25–30% of damage (unproven, see Pillar 2), not a side unit | Validates hero + towers on mobile |
 | Plants vs. Zombies | Phone-scale readability; one new variable per level | Free-form lane paths instead of a fixed grid; hero unit | Validates "every stage introduces one thing" |
 | Vampire Survivors | One hero holding the line; growth you feel immediately | Persistent trees, not per-run drafts; towers carry sustain | Validates immediate visible growth as a retention hook |
 | Bloons TD 6 | Hero + tower knowledge trees interplay | Far smaller tree count; free respec; 20 authored stages | Validates cross-tree synergy as an Explorer hook |
@@ -226,7 +226,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 ## Risks and Open Questions
 
 ### Design Risks
-- The hero may trivialise or be irrelevant to towers: towers-only won narrowly in hero-pin once one upgrade existed, though on the MVP starter stage every towers-only bot now loses (Hero GDD, Simulated results); the 25–30% target is unproven until measured from human runs (damage-by-source log from MVP).
+- The hero may trivialise or be irrelevant to towers: towers-only won narrowly in hero-pin once one upgrade existed, though on the MVP starter stage every towers-only bot now loses (Hero GDD, Simulated results); the expected 25–30% is unproven until measured from human runs (damage-by-source log from MVP).
 - Pin drag, burst drag and slot tap may collide at fingertip size; the priority order needs the 20-attempt phone validation in Pillar 4 with a non-developer tester.
 - Cross-tree buffs may create a dominant build that makes the one-tree scarcity rule moot; the lattice waits for Small Ship for that reason, with one buff proven at Vertical Slice.
 - Signal Board may read as sterile without careful hero-burst VFX.
@@ -246,7 +246,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 - Store release work (devices, listing, certification) is not in any estimate yet.
 
 ### Open Questions
-- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? In simulation it is worth about 2 lives on one path, with burst reach limited to 160 units. The user accepted about 3 for MVP on an earlier run, so the current figure awaits confirmation (Hero GDD). Re-pin cadence: a straight-line walk at 240, which needs no pathfinding. Does the drag model hold on a phone?
+- Answered 2026-11-01: a driven hero beats an untouched one (10 vs 3 lives, hero-pin bot) and tap-to-move is not the fantasy; *positioning* is. Open: does **repeated** re-pinning matter, or does pinning once suffice? In simulation it is worth about 2 lives on one path, with burst reach limited to 160 units. The user accepted about 2 for MVP at that reach (2026-11-03; Hero GDD). Re-pin cadence: a straight-line walk at 240, which needs no pathfinding. Does the drag model hold on a phone?
 - Is one tree enough to feel the meta loop? — Vertical slice ships the Hero tree alone.
 - Portrait confirmed? — First phone build; check thumb coverage of the lower third.
 - Monetization — decide before Small Ship; affects store listing and nothing in the loop.
@@ -264,7 +264,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 4. 6 waves from a data file; Start Wave and call-early button; gold, lives, win/lose screen with instant retry
 5. Damage-by-source log at stage end (towers vs hero + burst), shown as plain text since the report screen is deferred
 6. Input priority per Pillar 4 (ground does nothing); an arc disc builds on its tap, a cost chip + second tap upgrades, no modal popup
-7. Bot acceptance modes: towers-only, hero-only, never-pinned, pinned-once, towers-only always-call; the lvl-2 upgrade changes the tower's shape within one wave
+7. Bot acceptance modes: towers-only, hero-only, never-pinned, pinned-once, towers-only always-call, mid-skill call-when-Ready; the lvl-2 upgrade changes the tower's shape within one wave
 
 Days 1–2: one map, one tower, hero pin + leash, one wave. Towers 2–3, the skill and the upgrade follow only once that runs.
 

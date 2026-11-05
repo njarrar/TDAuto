@@ -313,3 +313,61 @@ Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 9ab10a8976932d538c3e9e
 Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2472acdaae66522a2fba0
 Reviewed-Content-Hash: design/gdd/tower-system.md 0585c980cc24320d71f48360b7c452812b4e0df6
 Reviewed-Content-Hash: design/gdd/battle-hud.md 8353173991a0de3cd1ef4522de1abfe8f5b42af2
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Hero view named as drawer of field-anchored visuals (C4, new wording), `visual_key`, L11 condition, L14 row, always-call clause, 100 offset. No rule value changed; Approved stands, pending the user's view.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader)
+Blocking items: 1 | Recommended: 6
+Summary: Lean re-check after the 2026-11-04 Rule 2 amendment. The instant pin leaves the hero's grab disc behind: Rule 15, criterion 15 and Input's Interactions row update the centre only while walking. The other readers of `in_build()` hold. The reader had no shell, so the sim, diffs and scripts were not run by it.
+Prior verdict resolved: See summary
+Findings:
+- [BLOCKING] Rule 15, criterion 15; Input Interactions: update the hero's centre on every position change, and test a press after a Build pin.
+- [RECOMMENDED] Rule 11, Ready ticks row: name `in_build()`, not phases, and state HeroInput's injection.
+- [RECOMMENDED] Simulated results, Open Questions: still name overlapping waves as the fallback, against Flow.
+- [RECOMMENDED] Always-call, humans: "lose much more" has no threshold.
+- [RECOMMENDED] Visual table, Game Feel: no row covers a Build pin; a Build re-pin has no Arrival transition.
+- [RECOMMENDED] Criterion 30: Build re-pin, Build pin at own position, and the fixture's `in_build()` default.
+- [RECOMMENDED] States table: Unpinned row omits the own-position pin.
+Reviewed-Content-Hash: design/gdd/hero-system.md 377e450bbee022ae776076cebdd1ed1c092a02fc
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User accepted every recommendation ("Implement all recomended"). Applied: the blocker (the registered centre follows every position change, tested after a Build pin) and recommended items, including removing overlapping waves as the fallback, a threshold for humans, and the mono-role gate while calling with a zero-bonus table from `hero_bots.py --calls`. Not done: Rule 11's Ready ticks wording.
+Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader with a shell)
+Blocking items: 0 | Recommended: 4
+Summary: The prior blocker is fixed, and `--calls` matches the table. A sweep from 0.3 to 8 s per gold shows the rate cannot pass the new mono-role gate, which may need a design change. Battle HUD's review adds a blocker on Rule 16's reads, tracked in its log.
+Prior verdict resolved: Yes
+Findings:
+- [RECOMMENDED] Mono-role while calling: "a rate change is the first lever" is false; single only stays at 9 calling when Ready at every rate.
+- [RECOMMENDED] Same row: state it is reported only until first playable, where it blocks, so CI does not go red.
+- [RECOMMENDED] Rule 16: name the source of a held press (see Battle HUD's `button_press()`).
+- [RECOMMENDED] Always-call row says "below"; the mono row is above.
+Reviewed-Content-Hash: design/gdd/hero-system.md d075d8207bffb1b7f4a23a2f0467da21c2509528
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 05e3e8f4ca5b1c2a34b39d2ebc9215b0d5342861
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 0804873149506940e730239e7998a943f8bcc5cd
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c67e5441a28be83b92efa4b903b15c4e76918a6b
+Reviewed-Content-Hash: design/gdd/tower-system.md 86f753dacdcc4d904575ab5d6bdfffb8fd4f6415
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md b869a7ca338cf3100f72219f98e64207b252dec6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 044488039c9a221f998173317300db5f3cd7ab5b
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User chose to keep the mono-role gate while calling, reported only until first playable. Applied: `button_press()`, the digit decision, the corrected rate claim and stage-length wording. Status stands; the hashes above no longer match.
+
+## Revision — 2026-11-04 — after a lean read (not a new verdict)
+One adversarial reader checked the day's added rules (S1, S2, the four cross-review decisions) and returned NEEDS REVISION with 18 findings. All five rated BLOCKING were fixed (Flow Rule 9, Thumb cost pass condition, redraw key, criterion 6, HUD 0.55 evidence). Recommended items 3, 7, 9 to 14, 16 to 18 and part of 8 were fixed. Not done: concept `towers-only` unit at Vertical Slice (15). The fix pass was not re-read, per the one-review, one-fix cap the producer recommended. No hash stamped, because this text has no review verdict.

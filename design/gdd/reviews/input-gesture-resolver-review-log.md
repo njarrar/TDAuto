@@ -97,3 +97,86 @@ Reviewed-Content-Hash: design/gdd/systems-index.md bdde32bd2e24d37db0ad44a7fa731
 
 ## Revision — 2026-11-03 — Two cross-GDD blockers applied, re-review still pending
 From design/gdd/gdd-cross-review-2026-11-03.md. B1: the deferred row and edge case now say headless bots call commands directly, matching Rule 11. B3: Rule 13's harness logs `tower_upgraded` and `chip_state()`, and P1 no longer cites a Tower chip log.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Overview's bot claim, N4's `burst_started` in Rule 13, C3, C4, C6, C7, C11, C12 and stale rows. QQ-19 and QQ-20 added to Open Questions. Header set to In Review to match the index.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader)
+Blocking items: 2 | Recommended: 7
+Summary: Lean re-review. Rule 7's widened cancel and the null `create` route hold. The lifecycle signal's events are undefined, so a resize could pause the game, and radius 56 conflicts with the Overview's definition of a mis-fire, which needs a user decision. The reader had no shell, so the sim, diffs and scripts were not run by it.
+Prior verdict resolved: See summary
+Findings:
+- [BLOCKING] Interactions, Rule 7: name the lifecycle signal's events and listeners; Flow Rule 17 pauses only on focus loss or backgrounding.
+- [BLOCKING] Overview, Rule 3, P1: with radius 56, a hero within 92 of a slot takes a 28-unit roll as a re-pin, which P1 counts as a mis-fire. User decision: script placement or reclassify.
+- [RECOMMENDED] Controls: make press consumption binding; "every event" conflicts with reading moves and releases.
+- [RECOMMENDED] Rule 9, Interactions: HudLogic's slop and margin reads, Start/Call, and its listeners.
+- [RECOMMENDED] Adapter contract: "exactly one" terminator is false after widening.
+- [RECOMMENDED] Rule 7 tables: Flow's `cancel_input()` and the app root; Flow Rules 17 and 18 in references.
+- [RECOMMENDED] Radius range: 36 to 56 excludes the backdrop; fixture `H` still r 36.
+- [RECOMMENDED] AC19: a non-finite centre is dropped, so the log is empty.
+- [RECOMMENDED] Stale wording: "except non-finite"; the chip's settled "or".
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 4c34ae187a1d77212e8c66bd6454c8d7a170ad95
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+User accepted every recommendation ("Implement all recomended"). Decision: P1 scripts the hero clear of prompted targets, and the unprompted segment still counts a flagged re-pin. Applied: both blockers (`lifecycle_paused` fires on pause and focus loss only, with `viewport_resized` separate) and the recommended wording, table and criterion repairs. Fixture `H` keeps r 36, now marked as a fixture value.
+Re-review pending: the hashes above no longer match this document.
+
+## Review — 2026-11-04 — Verdict: NEEDS REVISION
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean; one reader with a shell)
+Blocking items: 1 | Recommended: 8
+Summary: The lifecycle signals are fixed. P1 clears the hero only before tap prompts, and a direct pin in Wave only starts a walk, so burst prompts can be charged for script faults. One clause fixes it. Simulations and tests not run.
+Prior verdict resolved: Partly (1 of 2)
+Findings:
+- [BLOCKING] P1: before each tap or burst prompt the hero is Pinned and clear of the target; before a burst prompt the phase is not Build.
+- [RECOMMENDED] P1: pin prompt needs a clear start and destination past `tap_slop`.
+- [RECOMMENDED] P1: 20 builds and 20 calls do not fit one battle; add a harness reset per prompt.
+- [RECOMMENDED] Open Questions: overlap evidence is now the unprompted segment or a separate run.
+- [RECOMMENDED] Architecture line 433, TR-input-003 still say "exactly one" terminator.
+- [RECOMMENDED] Edge Cases, resize: "or calls `cancel()`" is a stale choice.
+- [RECOMMENDED] ADR paragraph: "or synthesise `cancel_pointer`" against the binding contract.
+- [RECOMMENDED] Adapter contract: "any later one finds Idle" fails if a new gesture has started; the replaceable-press exception.
+- [RECOMMENDED] Radius tables still say 36 to 56; Last Updated is stale.
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 0804873149506940e730239e7998a943f8bcc5cd
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 05e3e8f4ca5b1c2a34b39d2ebc9215b0d5342861
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md c67e5441a28be83b92efa4b903b15c4e76918a6b
+Reviewed-Content-Hash: design/gdd/tower-system.md 86f753dacdcc4d904575ab5d6bdfffb8fd4f6415
+Reviewed-Content-Hash: design/gdd/hero-system.md d075d8207bffb1b7f4a23a2f0467da21c2509528
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md b869a7ca338cf3100f72219f98e64207b252dec6
+Reviewed-Content-Hash: design/gdd/battle-hud.md 044488039c9a221f998173317300db5f3cd7ab5b
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Revision — 2026-11-04 — after the review above (not a new verdict)
+Applied: the P1 blocker (Pinned and clear before tap and burst prompts) and the recommended items.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: M
+Specialists: none (lean check; one reader with a shell)
+Blocking items: 0 | Recommended: 0
+Summary: The hero and burst clauses hold. The reader raised 2 more script faults (a leftover arc or chip, Start/Call prompted in Wave); both were fixed from its own text and not re-read. No tests were run; P1 itself waits for the first phone build.
+Prior verdict resolved: Yes
+Findings:
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md c1fd31adac239441dbdae3fe76d40b24379b3e5d
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 85f7616bf55e163f7ef55c61de49bf99b593b7ce
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/enemy-wave.md fda517f00006319d13c59450aeec9d155bb70c8f
+Reviewed-Content-Hash: design/gdd/tower-system.md 14b131b888ccec57b15294ebb57b928615b890d0
+Reviewed-Content-Hash: design/gdd/hero-system.md c9f2fd38018ff70731690e5aaaa7bd148c397746
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md f2ad63e7bb8cf880695e73dc0a744bc91b56fe70
+Reviewed-Content-Hash: design/gdd/battle-hud.md 53e31996a65be6476eb2e700352e027701c1b760
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f

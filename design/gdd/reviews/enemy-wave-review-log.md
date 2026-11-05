@@ -124,3 +124,46 @@ Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 133c303cce1942462fc2
 
 ## Revision — 2026-11-03 — `wave_index()` defined after the cross-GDD review, re-check pending
 Cross-GDD review blocker (design/gdd/gdd-cross-review-2026-11-03.md, scenario 4). Rule 14 now gives its base and update time; the Flow interface row and criteria 24, 30 and 33 follow. No balance value changed. Status returns to In Review until `/review-all-gdds consistency` passes.
+
+## Revision — 2026-11-03 — cross-GDD warning pass
+From design/gdd/gdd-cross-review-2026-11-03.md, Consistency Re-run. Rule 10 now counts a leak before `enemy_leaked` (N5, criterion 16), `requires_bend` starter value, C6, C10, C14 owners moved to Hero stories, stale references. No balance value changed.
+
+## Review — 2026-11-04 — Verdict: APPROVED
+Review mode: lean · Workflow: standard
+Scope signal: L
+Specialists: none (lean, single-session)
+Blocking items: 0 | Recommended: 13
+Summary: Whole-document re-review after the cross-GDD fixes. `wave_index()` (Rule 14) and counting a leak before `enemy_leaked` (Rule 10, criterion 16) hold and agree with Flow and the HUD; layout rows, wave totals, lives, gold, catch_up, coverage and many criteria were recomputed, and hero_bots.py's default run reproduces Hero's table. Remaining findings are wording, table drift and test placement. Not re-run: the script's sweeps, orders and left-hand modes; sibling GDDs were read by section.
+Prior verdict resolved: Yes (`requires_bend` closed; five of the six recommended items remain)
+Findings:
+- [RECOMMENDED] States table, Rule 14: Dead is "not targetable" but an in-field corpse is in `targets()` until the reap.
+- [RECOMMENDED] Rules 10 and 12, Edge Cases: the advance slot's order is only implied.
+- [RECOMMENDED] Acceptance Criteria 47, 48, 58, 59: 47 and 48 test nothing; 58 does not name the deferred rows.
+- [RECOMMENDED] Acceptance Criteria 61: "761, 784 and 758" re-measures as 765, 787 and 760 at 1/60 s.
+- [RECOMMENDED] Player Fantasy, Tuning Knobs: absent (advisory at standard).
+- [RECOMMENDED] Open Questions, Handed to Hero: "bursts hitting 3 or more" is stale; the "Stage 1 has one tower type" row is partly settled.
+- [RECOMMENDED] Acceptance Criteria 42: sits in CI: Logic but runs through the builder.
+- [RECOMMENDED] Rule 14, Acceptance Criteria 22: `wave_index()` unchanged by an outcome has no criterion.
+- [RECOMMENDED] Interactions, Dependencies: HUD row omits reads and says "may read"; Flow row credits `to_ticks` to Rule 4.
+- [RECOMMENDED] Starter values: "die about 60% along the path" gives 4.4 min by arithmetic, not 5.2; name the mid-skill bot.
+- [RECOMMENDED] Layout L14: "74 at worst" computes as 72; Hero's row repeats 74.
+- [RECOMMENDED] Layout L3, L7: 92 and 64 are written numbers derived from owners' constants.
+- [RECOMMENDED] Status line: its count of remaining items went out of date (updated with this review).
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 780379132e91e72db9206809509ec5b4381372ee
+Reviewed-Content-Hash: design/gdd/battle-hud.md 1d9cb4faf2507cd8e9bb0c1328bc4fc9d291608f
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 1a1ff7b3a75e514e0b299f59f42e60e3fbff29fc
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md efca210206aac0ad9edac1737852de990ba42de5
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 5e5df4a50191c71f81644957fb43ef96b38ab6d5
+Reviewed-Content-Hash: design/gdd/combat-damage.md bf6997474386b88583de7a3789dd0f3ea938ad9a
+Reviewed-Content-Hash: design/gdd/tower-system.md 29b611f32294caeca03b4114b86d3bd9ebe260ee
+Reviewed-Content-Hash: design/gdd/hero-system.md f6addad6559296cd1f8f60724b24f7c0db0284df
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 4c34ae187a1d77212e8c66bd6454c8d7a170ad95
+Reviewed-Content-Hash: design/art/art-bible.md 56d68c718c99871a28b826b22a8dc87694ab2d7f
+
+## Amendment — 2026-11-04 — not a new verdict
+L1 gains the upper bound y 924 and "clear of the band at inset 0", from the Battle HUD's second review. The starter stage still passes. Status stays Approved; the hashes above no longer match this document.
+
+## Amendment — 2026-11-04 — not a new verdict
+The stage-length note no longer applies the concept's 5 to 8 minutes to MVP's 6 waves. Status stays Approved.
