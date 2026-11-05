@@ -6,6 +6,8 @@ class_name DevLogs extends RefCounted
 
 const RUN_LOG_PATH: String = "user://run_log.jsonl"
 const GESTURE_LOG_PATH: String = "user://gesture_log.jsonl"
+## Kind of the first run-log record (ADR-0012 Decision 4, ADR-0010 Decision 10).
+const RUN_INFO_KIND: String = "run_info"
 
 ## Milliseconds since the Unix epoch at launch.
 var launch_id: int = 0
@@ -16,6 +18,8 @@ var run_sink: JsonlFileSink = null
 ## Sink for GestureLog lines. Null if the open failed or in release builds.
 var gesture_sink: JsonlFileSink = null
 
+var _run_info_written: bool = false
+
 
 ## Opens both sinks. A failed open in a debug build is reported once per file
 ## through `dev_error` (if valid); it is never fatal.
@@ -23,6 +27,23 @@ func _init(dev_error: Callable = Callable(), run_path: String = RUN_LOG_PATH, ge
 	launch_id = int(Time.get_unix_time_from_system() * 1000.0)
 	run_sink = _open(run_path, dev_error)
 	gesture_sink = _open(gesture_path, dev_error)
+
+
+## Writes the run record as the first line of the run log and prints its console
+## form once. `window_px` and `scale` are what InputAdapter read (ADR-0003). Call
+## it before any RunLog record is written. Debug builds only; a second call, a
+## release build or a closed sink does nothing. Returns true if the line was stored.
+func write_run_info(window_px: Vector2i, scale: float) -> bool:
+	if _run_info_written or not OS.is_debug_build():
+		return false
+	_run_info_written = true
+	var info: Dictionary = RunInfo.collect(window_px, scale)
+	print(RunInfo.line(info))
+	if run_sink == null:
+		return false
+	var record: Dictionary = {"kind": RUN_INFO_KIND, "launch_id": launch_id, "build_hash": build_hash}
+	record.merge(info)
+	return run_sink.write_line(JSON.stringify(record, "", true, true))
 
 
 ## Closes both files. Safe to call twice.

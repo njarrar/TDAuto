@@ -189,6 +189,9 @@ func _build(dev_logs: DevLogs) -> bool:
 	_adapter.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_adapter)
 	_adapter.attach(b.resolver, b.input_record.edge_reject_margin, dev_error)
+	# ADR-0012 run record: the run log's first line names the machine and renderer.
+	if dev_logs != null:
+		dev_logs.write_run_info(_adapter.window_px(), _adapter.screen_scale())
 	b.set_input_canceller(_adapter.cancel_all)
 	var insets: FieldInsets = _adapter.field_insets()
 

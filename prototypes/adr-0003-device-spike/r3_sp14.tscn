@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://sp14_stall.tscn" id="1"]
+[ext_resource type="Script" path="res://run_probe.gd" id="2"]
+
+[node name="R3Sp14" type="Node"]
+
+[node name="Probe" type="Node" parent="."]
+script = ExtResource("2")
+
+[node name="SP14" parent="." instance=ExtResource("1")]

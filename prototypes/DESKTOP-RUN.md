@@ -57,6 +57,47 @@ text and go on with the next step. Do not fix it.
 11. Fill in `Date`, `godot --version` and each results table, or paste the
     files and let the session fill them.
 
+12. **ADR-0012 R1 to R5** (Mac, windowed unless noted). `$GODOT` as above.
+    Start every evidence file with the `RUNINFO` line the probe prints.
+    - **R1, ADR-0011 kit**: `cd adr-0011-render-budget && $GODOT --path . res://r1_run.tscn`.
+      Wait 70 s, then close. Compare the `RUNINFO` line with the engine's Output
+      banner (renderer, driver, GPU). Paste `user://run_probe_log.txt`
+      (`~/Library/Application Support/Godot/app_userdata/adr-0011-render-budget/`):
+      the `RUNINFO` line and the `R1 frame=` and `R1 nonzero` lines. Any field
+      that reads `unknown` that the banner shows: copy the banner value.
+    - **R1, ADR-0003 kit**: `cd ../adr-0003-device-spike && $GODOT --path . res://r1_spike.tscn`.
+      Wait 10 s, close. Paste its `run_probe_log.txt` the same way
+      (`.../app_userdata/ADR-0003 device spike/`).
+    - **R2 (headless)**: `cd ../adr-checks && $GODOT --headless --path . --import > /dev/null 2>&1; $GODOT --headless --path . -s res://check_project_keys.gd`.
+      Paste every `RESULT R2-` line, then name the Branch (A, B or C) or "none".
+    - **R3 (cap on the desktop)**: in `adr-0003-device-spike`, run
+      `$GODOT --path . --max-fps 60 res://r3_sp14.tscn`. Press Cadence 10 s, touch
+      nothing for 10 s, close. Paste both logs: `sp14_log.txt` (the `DISPLAY` and
+      `CADENCE` lines) and the `RUNINFO` line (`max_fps=60` must show). Repeat on
+      any display above 60 Hz you can drive (move the window to it, or use the
+      120 Hz ProMotion panel); write "none available" if there is none.
+    - **R4 (renderer baseline)**: in `adr-0011-render-budget`:
+      1. `$GODOT --path . res://r1_run.tscn`. Within the first 5 s do nothing
+         (the cold-start line prints at 5 s). Press 6, press R, wait for two
+         `R4 window` lines, press 7, press R, wait for two more. Press P once
+         for the draw calls line of the main log. Close.
+         Paste `run_probe_log.txt` and `adr0011_log.txt`.
+      2. `./make_compat_copy.sh`, then `cd ../adr-0011-render-budget-compat`
+         and repeat step 1 there (same keys). Paste both logs again, labelled
+         Compatibility. Check `method=gl_compatibility` in its `RUNINFO` line.
+      If Mobile fails to start or draws wrongly, stop and say so (escalation).
+    - **R5 (Shader Baker, needs the 4.7.2 iOS export templates)**:
+      `cd ../adr-checks && GODOT=$GODOT ./r5_ios_baker.sh prepare`. Open
+      `~/r5-ios-project/project.godot` in the editor, Project > Export > Add... >
+      iOS; set a dummy Bundle Identifier (`com.example.r5`) and a dummy App Store
+      Team ID, look in the options for a Shader Baker entry (note its exact label,
+      whether it is shown, and its default), save and close.
+      `GODOT=$GODOT ./r5_ios_baker.sh read` and paste the output.
+      If it lists a baker key whose name is not `shader_baker/enabled`, rerun the next
+      step with `BAKER_KEY=<that key>`. Then `GODOT=$GODOT ./r5_ios_baker.sh export`
+      and paste the output (exit codes and `size_kb` lines; if Xcode export
+      fails, paste the log tail and say so). Finish with `./r5_ios_baker.sh clean`.
+
 ## What to paste back
 
 One message per step, in order, starting with the step number. Logs as text,

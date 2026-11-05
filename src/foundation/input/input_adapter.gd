@@ -22,6 +22,7 @@ var _insets: FieldInsets = FieldInsets.new()
 var _window_size: Vector2 = Vector2.ZERO
 var _size_known: bool = false
 var _field_width_dp: float = -1.0
+var _screen_scale: float = -1.0
 var _presses_blocked: bool = false
 var _forwarded: Dictionary[int, bool] = {}
 var _queue_kind: PackedInt32Array = PackedInt32Array()
@@ -58,6 +59,7 @@ func detach() -> void:
 	_resolver = null
 	_dev_error = Callable()
 	_size_known = false
+	_screen_scale = -1.0
 	_presses_blocked = false
 
 
@@ -113,6 +115,19 @@ func field_insets() -> FieldInsets:
 ## Field width in dp, or -1.0 on desktop or when the density is unknown.
 func field_width_dp() -> float:
 	return _field_width_dp
+
+
+## Window size in pixels as last read, or (-1, -1) before the first read. For RunInfo
+## (ADR-0012 Decision 4); no other code may read the window size (lint INPUT-8).
+func window_px() -> Vector2i:
+	if not _size_known:
+		return Vector2i(-1, -1)
+	return Vector2i(_window_size)
+
+
+## Screen scale as last read, or -1.0 before the first read. For RunInfo.
+func screen_scale() -> float:
+	return _screen_scale
 
 
 ## Number of queued calls (tests and logs).
@@ -248,6 +263,7 @@ func _read_display() -> void:
 	if mobile:
 		safe = Rect2(DisplayServer.get_display_safe_area())
 		window_pos = Vector2(DisplayServer.window_get_position())
+	_screen_scale = DisplayServer.screen_get_scale()
 	apply_display_metrics(window_size, window_pos, safe, mobile)
 
 
