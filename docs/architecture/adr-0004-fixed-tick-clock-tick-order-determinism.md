@@ -47,6 +47,12 @@ Proposed
 > (2 to 4, Decision 2) with no new ADR; above 2.0 ms it is escalated to `technical-director`
 > with the measurements. V5 and V8 change no decision.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 7: view `RandomNumberGenerator` option dropped, lint MATH-4. Implementation
+> Guidelines: `src/root/dev_logs.gd` joins the `Time.*` exceptions. Decision 10: the whole-tick
+> budget replaces TR-combat-013's 2 ms. Tick order unchanged; the recording-fake seam for the
+> tick slots is ADR-0007 Decision 5.)
+>
 > Accepting this ADR records technical-director acceptance of QQ-08's "one tick order"
 > item, on the user's confirmation.
 
@@ -127,7 +133,7 @@ No code exists. `architecture.md` Data Flow 1, 2, 6, 10 and B4, B5, B9 hold ADR-
 
 - Godot 4.7.2, GDScript, main thread only.
 - No autoloads, no mutable `static var`, method Callables only, no lambdas or `bind()` (ADR-0001).
-- Gameplay classes never read `Engine`, `Time`, `OS`, a timer or `await` (B4), and use no `_process` or physics areas (Flow Rule 4).
+- Gameplay classes never read `Engine`, `Time`, `OS`, a timer or `await` (B4), and use no `_process` or physics areas (Flow Rule 4; the physics ban is lint PHYS-1, owned by ADR-0007).
 - The sim runs headless: bots and tests call `battle.tick` directly.
 - `project.yaml`: 60 fps target (16.6 ms), 30 fps floor on low-end Android (Adreno 5xx class).
 - The Data & Config interval floor is one tick, 1/60 s.
@@ -247,7 +253,7 @@ func to_ticks(seconds: float) -> int:
 - **Sim.** `SimRng` (`src/foundation/sim_rng.gd`, `RefCounted`) is a 32-bit xorshift in integers, masked after each left shift, no multiplication, so nothing overflows, state stays non-negative and no float enters: `x ^= (x << 13) & M; x ^= x >> 17; x ^= (x << 5) & M`, `M = 0xFFFFFFFF`, starting at `rng_seed & M` (0 becomes `0x6D2B79F5`). The Builder creates one per battle (`Battle.sim_rng`), injected only where a GDD states a random rule. **No MVP GDD has one** (waves are authored; ties break by `spawn_id`), so `draw_count()` stays 0, which tests Enemy & Wave Acceptance 42.
 - Sim code never uses `RandomNumberGenerator`, `randi`, `randf`, `randi_range`, `randf_range`, `randomize` or `seed` (unsourced algorithm; could change under the baselines).
 - **Session seed (refines ADR-0001 Decision 2).** AppRoot picks `int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF` (V8; 1 if 0) once per session and reuses it on retry; `configure({rng_seed})` overrides it; dev builds log it (ADR-0010).
-- **Cosmetic** randomness (±1.5 px jitter, VFX) lives in Presentation: a view's own `RandomNumberGenerator` with a fixed seed so screenshots repeat, or offsets from `spawn_id` and the view's frame count. It never reads `rng_seed` or `sim_rng` and feeds nothing back (TR-enemy-007).
+- **Cosmetic** randomness (±1.5 px jitter, VFX) lives in Presentation as offsets computed from `spawn_id` and the view's clock (ADR-0011 Decision 8), so screenshots repeat. No view uses a `RandomNumberGenerator` or a global random function (lint MATH-4). It never reads `sim_rng`, never uses `rng_seed` as a seed, and feeds nothing back (TR-enemy-007). (Amended 2026-11-05: the view `RandomNumberGenerator` option is dropped to match MATH-4.)
 
 ### 8. Real-time presentation clocks
 
@@ -279,12 +285,14 @@ Data Flow 10 confirmed as a proposal; unmeasured until V6.
 | Slice | Budget at 60 fps | With this ADR |
 |---|---|---|
 | Input callbacks, steps 0 and 1 | 0.5 ms | One finger; two small updates |
-| Ticks, steps 2 and 3 | 4.0 ms | 1 tick normally; 3 at the clamp, so one worst-case tick fits **1.33 ms**, with ADR-0005's 0.5 ms reads and ADR-0009's targeting inside it. 30 fps floor: 2 ticks in 33.3 ms |
+| Ticks, steps 2 and 3 | 4.0 ms | 1 tick normally; 3 at the clamp, so one worst-case tick fits **1.33 ms** (4.0 / N), with ADR-0005's 0.5 ms reads and ADR-0009's targeting inside it. 30 fps floor: 2 ticks in 33.3 ms |
 | Step 4 and `_draw` | 3.0 ms | Draw calls are ADR-0011's |
 | Engine, render, OS | 7.0 ms | Mobile, 2D |
 | Headroom | 2.1 ms | Allocation spikes |
 
 Dev builds time steps 0 to 4 in the wrapper and log them; release builds do not.
+
+**Whole-tick budget replaces TR-combat-013 (amended 2026-11-05).** The Combat GDD's "under 2 ms per tick for targeting" is not a budget of this project. The binding figure is the whole tick, 4.0 / N ms (1.33 ms at N = 3), with targeting inside it (ADR-0009 Decision 9). V6 measures the whole tick on the device and records the targeting share beside it. TR-combat-013 is satisfied by that measurement, not by a separate 2 ms check.
 
 ### 11. Choices pending user confirmation
 
@@ -375,7 +383,7 @@ For `/create-control-manifest` and `/dev-story`:
 - Must advance sim time only through `Battle.tick(dt)`; tick entries are called only from `Battle._run_steps()`, in Decision 4's order, with `halted()` checked before steps 2 to 6.
 - `Battle.tick` must check re-entrancy, `dt`, `halted()`, phase in that order, set `_ticking`, call `_run_steps()`, clear `_ticking` on its one return path.
 - Must never override `_physics_process` in `src/`; `_process` only in `BattleWrapper`, `AppRoot` and (SP12 poll only) `InputAdapter`.
-- Must never use `Timer`, `SceneTree.create_timer`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.*` or `OS.get_ticks_*` anywhere in `src/` (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers and `src/presentation/dev/` (ADR-0008 `GestureLog`).
+- Must never use `Timer`, `SceneTree.create_timer`, `await`, `Engine.time_scale`, `Engine.get_frames_drawn`, `Engine.get_process_frames`, `Engine.get_physics_frames`, `Time.*` or `OS.get_ticks_*` anywhere in `src/` (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers, `src/presentation/dev/` (ADR-0008 `GestureLog`, ADR-0010 `RunLog`) and `src/root/dev_logs.gd` (`Time.get_unix_time_from_system` for the launch id, ADR-0010 Decision 10; lint TIME-3 already allows it; amended 2026-11-05).
 - Must never set `get_tree().paused` or enable `low_processor_mode`; must set `delta_smoothing` off; the wrapper uses `PROCESS_MODE_ALWAYS`.
 - `BattleClock` must start and reset at `0.5 * dt`.
 - Must run Decision 5's frame order: `flush()` first in step 0, `hero_input.update()` first in step 4.

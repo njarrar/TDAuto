@@ -45,6 +45,11 @@ Proposed
 > The V7 keystore leg is Android-only (see V7). The phone parts of the manual evidence list
 > (Decision 12) are after acceptance, on the iPhone.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Depends On: ADR-0006 moved to the Ordering Note. Decision 5: recording-fake seam for the
+> tick slots. Decision 8: lint PHYS-1, physics-area ban. Decision 9: the between-ticks check
+> runs in every build.)
+>
 > **Two-part activation.** Acceptance switches on everything except the ADR-0006-dependent parts.
 > Decision 6 (listener-count harness) and the lint rules marked *pending ADR-0006* in
 > `adr-0007-lint-rules.md` (WIRE-5 to WIRE-12) switch on when ADR-0006 is Accepted; rules marked
@@ -189,6 +194,7 @@ godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin
 ### 5. Battle probes: enumerate, snapshot, run (TR-state-013, ADR-0004 Validation 6)
 
 - **Enumerate** through `Battle.emitters()` and `EMITTER_KEYS` (ADR-0006): `battle_probe.gd` `system(battle, key)`. No new `Battle` API.
+- **Recording fakes in the tick slots** (TR-state-013; Game State Acceptance 9 and 13; decided 2026-11-05). The seam is member replacement after build, the pattern of ADR-0010 Decision 9's `InertHeroSim`. `tests/helpers/test_battles.gd` `with_recording(battle, keys, log)` builds with `BattleBuilder.build`, then for each key makes a recording subclass of the real system (`RecordingFlow extends Flow`, and so on, in `tests/helpers/`), built from the battle's public members as the Builder builds the real one, and assigns it to the `Battle` member before the first tick. Each subclass forwards `_init` with `super(...)` (lint INIT-1), and its tick entry (`tick()`, `advance()`, `tick_status()`, `reap()`) appends `[key, entry]` to the one shared log, then calls `super`. The helper then remakes the Builder's connections for each replaced member from `battle_signal_contract.gd` and asserts `wiring_check.check(battle, contract)` is empty, so a swap that drops a wire fails the test. No new `Battle` API, no Builder option, and ADR-0004 Decision 4's six steps do not change.
 - **Snapshot**: `battle_probe.gd` `digest(battle) -> String`, `JSON.stringify` with sorted keys and full precision (ADR-0002's `snapshot()` form) of read-only queries only (phase, lives, gold, `ticks_run()`, then each system's queries as its ADR adds them). A digest never reads a private field.
 - **Run**: `battle_runner.gd` `run(battle, ticks, between: Callable)` calls `between(i)` (the command script; ADR-0010 fixes the format), then `battle.tick(battle.sim_time.dt)`, and records `digest` per tick.
 - **Baselines**: `baselines.gd` names `res://tests/baselines/<arch>/<name>.json` (ADR-0004 V4 names the architecture call). A comparing test with no baseline for its architecture **fails** with `NOT ASSESSED: no baseline for <arch>` (C7). Baselines are written only by `tools/baseline/record_baselines.gd` in a reviewed change (TEST-4).
@@ -215,7 +221,8 @@ godot --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin
 - **Self-tests.** `tests/unit/lint/lint_rules_test.gd` iterates the rule table and feeds in-memory sources with fake paths to `check_source`: each active rule needs a seeded bad sample yielding exactly its finding, and a near miss yielding none, plus the lexer cases the catalogue lists. A rule with no bad sample fails the suite.
 - **Scope rule.** Each lint rule takes its owning ADR's scope (Decision 13 D1). A rule stricter than its owner exists only as a confirmed Decision 13 item whose owner ADR is amended; otherwise the catalogue's bracketed owner scope applies. This also protects the ten-exception budget.
 - **No inline suppressions.** Exceptions are `FILE_EXCEPTIONS` rows naming the rule, the file and the ADR decision allowing it.
-- **Derived and kept sets**, the lexer, every rule with its source, and the known blind spots are in **`docs/architecture/adr-0007-lint-rules.md`**, which changes only through this ADR's review. Categories: LAYER (5 rules, including LAYER-5 `uid://` ban, engine check E2), NAME (5), WIRE (12, of which 8 pending ADR-0006), STATE and STAT (11), TIME and MATH (10), INPUT (9, of which 2 pending ADR-0008), ERR (4), TEST (6), PROJ (7).
+- **Physics ban (TR-state-003).** This ADR owns lint PHYS-1: no physics areas, bodies, shapes or space queries anywhere in `src/`. ADR-0004 states the constraint; the rule is decided here, so it is not a Decision 13 stricter-than-owner item. Added 2026-11-05.
+- **Derived and kept sets**, the lexer, every rule with its source, and the known blind spots are in **`docs/architecture/adr-0007-lint-rules.md`**, which changes only through this ADR's review. Categories: LAYER (5 rules, including LAYER-5 `uid://` ban, engine check E2), NAME (5), WIRE (12, of which 8 pending ADR-0006), STATE and STAT (11), TIME and MATH (10), PHYS (1, owned here: TR-state-003), INPUT (9, of which 2 pending ADR-0008), ERR (4), TEST (6), PROJ (7).
 
 ### 9. Rules checked by tests or code review, not the lint
 
@@ -236,7 +243,7 @@ The lint rows are in the companion catalogue. These deferred rules are left to o
 | ADR-0003 | Modal screens read events in `_gui_input` | **Code review**; SCENE-1 proves other Controls ignore input |
 | ADR-0003 | Canceled touch is `cancel_pointer`, never `release` | Adapter unit tests (ADR-0003 Validation) |
 | ADR-0004 | No order from `Dictionary` iteration, instance IDs or hashes | **Determinism test** (Decision 5); MATH-5 withdrawn as not crisp |
-| ADR-0004 | No command inside a tick at run time | ADR-0004's `between_ticks()` development check (lint WIRE-9 covers listeners) |
+| ADR-0004 | No command inside a tick at run time | The `between_ticks()` check, which runs in every build (ADR-0010 Decision 2; amended 2026-11-05); lint WIRE-9 covers listeners |
 | ADR-0004 | Determinism against `tests/baselines/<arch>/` | Battle runner and baselines (Decision 5) |
 | ADR-0005 | No cached stat value | **Spy tests** per consumer plus code review |
 | ADR-0006 | No sim listens to a view signal; non-emitters declare no signal | Listener-count test steps 4, 5 |

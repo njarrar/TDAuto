@@ -8,7 +8,7 @@ below differ. A rule whose owning ADR is not Accepted is marked **pending** and 
 off in `lint_rules.gd` until that ADR is Accepted; a pending rule prints
 `pending: <RULE> (<ADR>)` on every run, so it is never silent.
 
-Last updated: 2026-11-04 (INIT-1 added from ADR-0009 V7 result).
+Last updated: 2026-11-05 (PHYS-1 added after /architecture-review, TR-state-003). Before: 2026-11-04 (INIT-1 added from ADR-0009 V7 result).
 
 ## 1. How the lint reads code
 
@@ -120,6 +120,14 @@ in brackets.
 | MATH-6 | In the sim scope, a member typed `Vector2` or initialised `:= Vector2(` | ADR-0009 `sim_position_representation` |
 
 (MATH-5 is withdrawn: ADR-0004 bans instance IDs and hashes only in ordering and payloads, which text cannot tell; the determinism test covers it.)
+
+### Physics
+
+| ID | Fails when | Source |
+|---|---|---|
+| PHYS-1 | Anywhere in `src/` (in `.gd`, or as a `.tscn` node type): `Area2D`, `CollisionShape2D`, `CollisionPolygon2D`, `PhysicsBody2D`, `StaticBody2D`, `RigidBody2D`, `CharacterBody2D`, `AnimatableBody2D`, `RayCast2D`, `ShapeCast2D`, `PhysicsServer2D`, `direct_space_state`, `PhysicsDirectSpaceState2D`, `PhysicsPointQueryParameters2D`, `PhysicsRayQueryParameters2D`, `PhysicsShapeQueryParameters2D`, or a call to `intersect_point(`, `intersect_ray(`, `intersect_shape(` | ADR-0007 Decision 8 (owner; TR-state-003; ADR-0004 Constraints "no physics areas") |
+
+PHYS-1 self-test (Section 5). Bad sample: `var zone := Area2D.new()` in a file under `src/feature/`; the finding is on that line. Near misses: `Area2D` in a comment, and in a string.
 
 ### Input and display
 

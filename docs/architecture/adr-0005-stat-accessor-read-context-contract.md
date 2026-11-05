@@ -8,6 +8,10 @@ Proposed
 > user's explicit confirmation. No other agent, and no skill on its own.
 > Acceptance preconditions: ADR-0001 and ADR-0002 are Accepted.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 7: the HUD gets the Burst ID from `hero_sim.burst_id()`. Decision 8: the resolver
+> and HeroSim take plain `InputRecord` values; `Battle.wave_records` added for the HUD.)
+>
 > Phone checks (user instruction, 2026-11-04): phone testing is set aside for
 > now, and the future device is an iPhone. The one device item, the per-tick
 > read cost (Verification Required 2), is after acceptance, on the iPhone. A
@@ -180,7 +184,7 @@ These never call `fatal`. A command or a bot that holds an untrusted ID or level
 
 ### 7. Read at use time; read before mutate
 
-- **Never cache.** A system reads a stat at the moment it uses it, every time (TR-data-008). A tower reads `ATTACK_INTERVAL` when it resets its cooldown, `RANGE` when it targets, `DAMAGE` when it fires; an enemy reads `MOVE_SPEED` each tick it moves; Tower reads `COST` inside `build` and `upgrade`; the HUD reads costs on arc open and on each `gold_changed` while open (TR-hud-011), range rings (`RANGE` by `def_id` and level) when it shows them, and the Burst's `COOLDOWN` every frame for the cooldown wedge, through its burst context made from the Burst ID the Builder injects (Battle HUD Rule 12 and read table). The HUD's reads run from the frame, not the tick; they follow the same rules.
+- **Never cache.** A system reads a stat at the moment it uses it, every time (TR-data-008). A tower reads `ATTACK_INTERVAL` when it resets its cooldown, `RANGE` when it targets, `DAMAGE` when it fires; an enemy reads `MOVE_SPEED` each tick it moves; Tower reads `COST` inside `build` and `upgrade`; the HUD reads costs on arc open and on each `gold_changed` while open (TR-hud-011), range rings (`RANGE` by `def_id` and level) when it shows them, and the Burst's `COOLDOWN` every frame for the cooldown wedge, through its burst context made from `hero_sim.burst_id()` (ADR-0010 Decision 7; Battle HUD Rule 12 and read table). The Builder does not inject the Burst ID into the HUD (amended 2026-11-05). The HUD's reads run from the frame, not the tick; they follow the same rules.
 - **One exception.** `MAX_HP` is read once at spawn to seed Health (Data & Config Interactions; Combat). No other stat is stored.
 - **Read before mutate.** A command or step that needs several stats reads all of them, and checks `halted()`, before it changes any state, so a bad read halts with nothing half done (TR-tower-006, Tower Rule 5).
 - **Check after every read.** `halted()` is checked after every read and before the value is used. A HUD read that finds `halted()` true abandons the refresh; the Fatal screen follows (TR-hud-011).
@@ -188,7 +192,7 @@ These never call `fatal`. A command or a bot that holds an untrusted ID or level
 
 ### 8. Direct reads are given, not looked up
 
-Structural data is not read through the accessor (GDD Rule 10). The Builder looks up the records a system reads directly and passes them in at construction: the `StageRecord` to Flow, EnemyWave, TowerSim and HeroSim; the stage's `WaveRecord`s to EnemyWave; the `InputRecord` to the resolver and HeroSim, and it sets the read-only `Battle.input_record`, `Battle.stage_record` and `Battle.visual_keys` (ADR-0011), from which the BattleWrapper gives it to the wrapper-built HeroInput, HUD and InputAdapter (ADR-0003 Decision 1; ADR-0001 B9 `left_handed`). Sims never hold the `Catalogue`; they hold the accessor and the specific records they were given. Records are read-only (ADR-0002); no system writes to them (TR-enemy-006).
+Structural data is not read through the accessor (GDD Rule 10). The Builder looks up the records a system reads directly and passes them in at construction: the `StageRecord` to Flow, EnemyWave, TowerSim and HeroSim; the stage's `WaveRecord`s to EnemyWave; plain values from the `InputRecord`, not the record: `drag_slop` and `tap_slop` to the resolver (ADR-0008 Decision 2) and `left_handed` to HeroSim (ADR-0010 Key Interfaces). It sets the read-only `Battle.input_record`, `Battle.stage_record` and `Battle.visual_keys` (ADR-0011), from which the BattleWrapper gives the values each wrapper-built class needs to HeroInput, the HUD and InputAdapter (ADR-0003 Decision 1; ADR-0001 B9 `left_handed`). It also sets the read-only `Battle.wave_records: Array[WaveRecord]`, the stage's Wave records in `wave_ids` order (TR-hud-017). The wrapper builds the HUD's next-wave preview from it (per-wave enemy counts, `HudLogic.set_wave_preview`) in `attach`; HudLogic holds no record. (Amended 2026-11-05.) Sims never hold the `Catalogue`; they hold the accessor and the specific records they were given. Records are read-only (ADR-0002); no system writes to them (TR-enemy-006).
 
 ### 9. Test spies
 
