@@ -6,7 +6,7 @@
 - Engine: Godot 4.7.2 (GDScript, Mobile renderer, Godot Physics 2D). Pinned in `docs/engine-reference/godot/VERSION.md`.
 - GDDs Covered (8 MVP systems): `data-config-pipeline`, `input-gesture-resolver`, `game-state-stage-flow`, `combat-damage`, `enemy-wave`, `tower-system`, `hero-system`, `battle-hud`. Context only: `game-concept`, `systems-index`.
 - Vertical Slice and Alpha systems (14 of 22) have no GDD yet. They appear in the layer map as reserved slots with the seams MVP code must leave for them. This document is revised when those GDDs exist.
-- ADRs Referenced: ADR-0001 to ADR-0011 exist, all **Proposed**, none Accepted (plus the companion `adr-0007-lint-rules.md`). All eleven were amended 2026-11-05 after `/architecture-review` (cycle cut, nine minor conflicts, Required ADRs item 2). ADR-0012 "Renderer and First Target Device" is planned (Required ADRs). Where a section below and an ADR disagree, the ADR wins; "ADR-pending" in older text now means "decided by the named ADR, still Proposed".
+- ADRs Referenced: ADR-0001 to ADR-0012 exist, all **Proposed**, none Accepted (plus the companion `adr-0007-lint-rules.md`). All eleven were amended 2026-11-05 after `/architecture-review` (cycle cut, nine minor conflicts, Required ADRs item 2). ADR-0012 "Renderer and First Target Device" is Proposed. Where a section below and an ADR disagree, the ADR wins; "ADR-pending" in older text now means "decided by the named ADR, still Proposed".
 - Technical Requirements: 158, all registered in `docs/architecture/tr-registry.yaml` (120 before 2026-11-05, 38 added by that review). Coverage at the 2026-11-05 review: 0 Accepted, 145 Proposed, 11 partial, 2 gaps. The 2026-11-05 amendments address 9 of the 11 partials in text (TR-data-003 and TR-data-015 wait for ADR-0012; TR-input-005 waits for spike SP5); the next `/architecture-review` recounts.
 - TD-ARCHITECTURE: 2026-11-03, REVISED after CONCERNS. v1 findings B1 to B4 and A3 (blocking) and A1, A2, A4 to A10 (advisory) applied in v2. A11 (acceptance of the four GDD amendments) waits for the ADRs (QQ-08). v2 has not been re-reviewed.
 - LP-FEASIBILITY: 2026-11-03, REVISED after CONCERNS. v1 findings 1 to 7 (blocking) applied in v2, except finding 1's note that `sink` was invented: the Input GDD defines it as a TAP-only `bool`, and v2 keeps it with that type. Advisory 8 to 15 applied or carried into the named ADRs. v2 has not been re-reviewed.
@@ -29,7 +29,7 @@ The model's training covers Godot up to about 4.3. Versions 4.5, 4.6 and 4.7 are
 
 Rule for this document: any engine behaviour that sits in a HIGH row is written as **NEEDS VERIFICATION** until an ADR author has checked it against the live 4.7 documentation or a device.
 
-Owner of each HIGH row: Input and app lifecycle, ADR-0003 (verification spike first). UI and display, ADR-0003. GDScript language, ADR-0007 and the control manifest (QQ-15). Medium rows: rendering, ADR-0011; resources and file access, ADR-0002 and ADR-0010; audio, the Audio GDD (Alpha).
+Owner of each HIGH row: Input and app lifecycle, ADR-0003 (verification spike first). UI and display, ADR-0003. GDScript language, ADR-0007 and the control manifest (QQ-15). Medium rows: rendering, ADR-0011 (renderer choice, frame cap and device-run record: ADR-0012); resources and file access, ADR-0002 and ADR-0010; audio, the Audio GDD (Alpha).
 
 ## System Layer Map
 
@@ -633,7 +633,7 @@ These run only in the editor or on a device. ADR-0007 Decision 12 lists them (M1
 
 Eleven ADRs exist (ADR-0001 to ADR-0011), all **Proposed**; `adr-dep-graph.sh` reports `ADRS: 11`, no cycle and no `NO_DEPS_SECTION` (the companion `adr-0007-lint-rules.md` is skipped because its first line is not an ADR title). `/architecture-review` 2026-11-05 checked them: every ADR has Status, Context, Decision, Consequences, ADR Dependencies, Engine Compatibility and GDD Requirements Addressed; 11 of 11 have an Engine Compatibility section pinned to 4.7.2; no deprecated API is used; no data-ownership or state-authority conflict. Its findings were applied on 2026-11-05: the ADR-0006 and ADR-0008 cycle was cut, ADR-0007's ADR-0006 edge moved to its Ordering Note, the nine minor conflicts and three wording risks were fixed, and the Required ADRs item 2 amendments were made (each ADR's Status note says "Amended 2026-11-05 after /architecture-review."). Still open: no ADR decides the renderer or the first target device (engine finding E1; planned ADR-0012), and the HIGH engine items E2 to E5 wait for their spikes.
 
-Acceptance order (from `adr-dep-graph.sh`): ADR-0001, ADR-0002, ADR-0007, ADR-0005, ADR-0003, ADR-0009, ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0011. Only the user, or `technical-director` on the user's explicit confirmation, moves an ADR to Accepted.
+Acceptance order (from `adr-dep-graph.sh`, 2026-11-05 with ADR-0012): ADR-0001, ADR-0012, ADR-0002, ADR-0007, ADR-0005, ADR-0003, ADR-0009, ADR-0004, ADR-0006, ADR-0008, ADR-0010, ADR-0011. Only the user, or `technical-director` on the user's explicit confirmation, moves an ADR to Accepted.
 
 ### Traceability Coverage Check
 
@@ -665,9 +665,9 @@ Eleven ADRs exist and are Proposed; one more is planned. The review labels P01 t
 | ADR-0009 | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0002, ADR-0005 | Proposed | P11, P12 | MEDIUM |
 | ADR-0010 | Sim/Input Split, Command Result Codes and Dev Telemetry | Core | ADR-0001, ADR-0002, ADR-0004 to ADR-0009 | Proposed | P13, part of P15 | LOW |
 | ADR-0011 | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0001, ADR-0003 to ADR-0007, ADR-0009, ADR-0010 | Proposed | P14 | MEDIUM |
-| ADR-0012 | Renderer and First Target Device | Foundation | ADR-0001 (expected) | **Planned** (`/architecture-decision renderer and first target device`) | review 2026-11-05, Required ADRs item 1 | HIGH |
+| ADR-0012 | Renderer and First Target Device | Foundation | none | Proposed | review 2026-11-05, Required ADRs item 1 | HIGH |
 
-ADR-0012 decides Mobile versus Compatibility for a canvas-only game, and iPhone first versus Android first, with which renderer each device run records. It resolves engine finding E1 and TR-data-003 and TR-data-015, and may reopen ADR-0011's batching measurements. A later ADR on save-data ID stability and migration (TR-data-021) is due at Vertical Slice with Save/Load.
+ADR-0012 (Proposed) decides the Mobile renderer with a triggered Compatibility fallback, the run header every device result carries, a 60 fps cap, Shader Baker for iOS, and iPhone first with Android deferred. It addresses engine findings E1, E7 and E16 and TR-data-003 and TR-data-015, and ADR-0011 now depends on it. A later ADR on save-data ID stability and migration (TR-data-021) is due at Vertical Slice with Save/Load.
 
 ### What each ADR decides and which requirements it covers
 
@@ -710,7 +710,7 @@ Covers (5): TR-combat-011, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015.
 
 **Must have before any code is written (Foundation, 8):** ADR-0001 to ADR-0008. ADR-0003 starts with a short verification spike on a device (event order, touch fields, lifecycle notifications, safe area), because ADR-0004 and ADR-0008 rely on what it finds. Treat that spike as real work, not paperwork.
 
-**Planned, before the first device run (Foundation, 1):** ADR-0012 Renderer and First Target Device. It fixes which renderer every device result records, so ADR-0011's batching numbers mean something.
+**Before the first device run (Foundation, 1):** ADR-0012 Renderer and First Target Device (Proposed). ADR-0011 now waits on it (cascade a8.3): ADR-0012 must be Accepted (R1 to R5 recorded and the user's answers to its Decision 9) before ADR-0011 can be. It fixes which renderer every device result records, so ADR-0011's batching numbers mean something.
 
 **Must have before the named system's first story (Core, 2):** ADR-0009 before any Combat or Enemy & Wave story (the Combat GDD names the enemy object kind and Health/Status attachment as a prerequisite). ADR-0010 before any Hero or Tower story (HeroInput and TowerInput placement).
 
@@ -743,7 +743,7 @@ These follow directly from the GDDs and the gate reviews, and the ADRs above cit
 | QQ-08 | Technical-director acceptance of four changes the GDDs make to earlier notes: composition root as a scene-free builder; ProjectileSpawner cut; the one tick order; path and slots moved from the stage scene to the Stage record. The TD-ARCHITECTURE review judged all four sound on technical merit; acceptance is recorded only when the ADRs are Accepted, on the user's confirmation. ADR-0009 Decision 8 states the ProjectileSpawner cut (a future spawner calls `deliver`) and the stage-record move. | High | ADR-0001, ADR-0004, ADR-0009; ADR-0004 Decision 4 states the one tick order (Proposed) |
 | QQ-09 | Where the Reduce Motion setting lives, before Settings (Alpha) exists. | Low | ADR-0001 Decision 8 (Proposed): the Input record's `reduce_motion`, read by AppRoot and passed to `wrapper.attach` |
 | QQ-10 | Art bible §8 budgets a hit-flash shader; the Combat GDD uses none. | Low | ADR-0011 (Proposed): zero CanvasItem shaders and particles at MVP; flash is an alpha disc; V5 measures shader cost for a Vertical Slice reopen. Art bible §8 edit applied 2026-11-04, confirmed by the user as project owner (art-director and technical-artist not consulted separately) |
-| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on an Adreno 5xx-class device. All need a device run at the first phone build. | Medium | ADR-0004 (frame split, per-tick 1.33 ms, V6), ADR-0011 (Proposed: per-node draw-call ceilings summing to 34 of 60, V1/V2 before acceptance, A1 at the first phone build), performance-analyst |
+| QQ-11 | Unmeasured budgets: the frame split in Data Flow 10, 60 draw calls, 256 MB, about 400 range checks under 2 ms per tick, catalogue load at most 1000 ms median on the first iPhone (ADR-0012 Decision 8; Adreno 5xx at Android reopen). All need a device run at the first phone build. | Medium | ADR-0004 (frame split, per-tick 1.33 ms, V6), ADR-0011 (Proposed: per-node draw-call ceilings summing to 34 of 60, V1/V2 before acceptance, A1 at the first phone build), performance-analyst |
 | QQ-12 | No Mobile Platform & Performance GDD yet. A large top inset collides the HUD band with the arc's top panel and prompt. | Medium | Mobile Platform GDD |
 | QQ-13 | `tests/README.md` is stale: gdUnit4 is now in `addons/` and the class cache is tracked in git. Whether the CI test command needs a prior `--import` step on a fresh clone. | Low | ADR-0007 Decision 2 (Proposed): import before every run, retry once on an exit above 128; 101 and zero tests fail; README rewritten; V4, V5 |
 | QQ-14 | Stage tooling: a converter or editor for point-list stages before about 20 stages exist. | Low | tools-programmer, after MVP |

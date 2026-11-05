@@ -17,6 +17,7 @@ else), or `recorded` (the ADR asked only for the value).
 | Evidence | `production/qa/evidence/adr-checks-mac-2026-11-04.txt` |
 | Totals | 186 RESULT lines; 2 FAIL (both ADR-0009 V7); 0 NOT_RUN; 0 INCOMPLETE |
 | Run by | the user (njarrar) |
+| Renderer | none (headless); recorded before ADR-0012's run header (2026-11-05), so its results still count |
 
 Some ADRs name `current-best-practices.md` (ADR-0006, 0007, 0008, 0010) or
 `modules/rendering.md` (ADR-0011) as the place for results. This file is that
@@ -199,3 +200,6 @@ device; the iPhone run covers the iOS equivalent where one exists).
 - **ADR-0010**: V3 desktop windowed run (write one line, find the file at the recorded path): before acceptance, Mac. V2 release half (from ADR-0001 V4): after acceptance, iPhone. V3 phone run (file from the app container via Xcode): after acceptance, iPhone. V3 `adb exec-out run-as` leg: after acceptance, Android-only deferred.
 - **ADR-0011**: V1 to V5 desktop legs (render-budget prototype): before acceptance, Mac. V1 to V4 phone legs (Xcode Metal frame capture for V1): after acceptance, iPhone. Android GPU Inspector leg: after acceptance, Android-only deferred.
 - **ADR-0003** (spike results live in `prototypes/adr-0003-device-spike/README.md`): SP0 to SP13 desktop legs: before acceptance, Mac. Phone legs: after acceptance, iPhone. SP4 predictive back, SP8 Android export dialog, SP9 Android density, SP10 Android backgrounding and back gesture (C1), SP12 split screen: after acceptance, Android-only deferred.
+- **ADR-0012**: R1 run-info reads (windowed, both prototypes); R2 project keys (headless script); R3 cap on the Mac display; R4 Mobile and Compatibility baseline (ADR-0011 prototype and its copy); R5 Shader Baker in the iOS preset (with ADR-0007 V7): all before acceptance, Mac. D1 to D5: after acceptance, iPhone. Android legs: at Android reopen (ADR-0012 Decision 7).
+
+From 2026-11-05 every windowed, export or device result carries ADR-0012 Decision 4's run header; results without it are unattributed (earlier results still count). This extends every still-open Mac windowed item above (ADR-0003 SP0 to SP13 desktop legs, ADR-0004 V1, V2, V7 desktop legs and V9 SP14 compare, ADR-0010 V3 desktop run, ADR-0011 V1 to V5) and all phone legs. Future Run N header tables add rows: Renderer, Rendering driver, GPU adapter and API version, Device model, OS version, Refresh rate, max_fps, Vsync, Shader Baker, Low Power Mode (ADR-0012 Decision 4); headless runs write "none (headless)" in the renderer fields.

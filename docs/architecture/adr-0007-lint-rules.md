@@ -46,7 +46,7 @@ Last updated: 2026-11-05 (PHYS-1 added after /architecture-review, TR-state-003)
 | Battle scope | Every file under `src/` except `src/root/app_root.gd`, `src/root/fatal_screen.tscn` and folders in `NON_BATTLE` (empty at MVP; the Vertical Slice Menu and Settings stories add theirs) | Kept: "battle code" is the owning ADRs' term, not a folder |
 | Commands | `pin`, `burst`, `build`, `upgrade`, `start_wave`, `call_early`, `pause`, `resume` | Kept: registry `command_inside_tick` (ADR-0004); ADR-0010 extends it |
 | Gesture signals that may command | `pressed`, `tapped`, `ground_tapped`, `drag_started`, `drag_moved`, `drag_ended` (G1 to G6) | Kept: ADR-0006 Decision 7 rule 3 |
-| Project keys | The rows of PROJ-2 to PROJ-5 | Kept: copied from ADR-0001, ADR-0003, ADR-0004 and this ADR |
+| Project keys | The rows of PROJ-2 to PROJ-5 and PROJ-8 | Kept: copied from ADR-0001, ADR-0003, ADR-0004, ADR-0012 and this ADR |
 
 Whoever changes an ADR that a kept row cites changes that row, and `lint_rules.gd`, in the same change.
 
@@ -145,6 +145,7 @@ PHYS-1 self-test (Section 5). Bad sample: `var zone := Area2D.new()` in a file u
 | REND-1 | Under `src/presentation/` or in the BattleWrapper scene: `material =`, `ShaderMaterial`, `CanvasItemMaterial`, a `.gdshader` reference, `Light2D`, `PointLight2D`, `CanvasModulate`, `GPUParticles2D`, `CPUParticles2D` | ADR-0011 Decision 7 |
 | REND-2 | Under `src/presentation/` (dev overlay excepted) or in the BattleWrapper scene: `CanvasLayer`, `z_index =` with a non-zero value, `z_as_relative`, `top_level = true`, `Line2D`, `Polygon2D`, `Sprite2D` (modal screen scenes excepted) | ADR-0011 Decision 1 |
 | REND-3 | Under `src/presentation/`: `instantiate(` outside an `attach` method; `antialiased = true` or a literal `true` in the antialiased argument position is code review | ADR-0011 Decisions 4, 6 (partial) |
+| REND-4 | Anywhere in `src/` or `assets/`: a `.gdshader` file, `ShaderMaterial`, `Shader.new(`, `WorldEnvironment`, `Environment.new(`, `use_hdr_2d`, `RenderingDevice` or `DrawableTexture2D`. A shader or `ShaderMaterial` passes only with a recorded windowed run under each renderer (Mobile and a Compatibility copy) named in the change; the others fail at MVP | ADR-0012 Decision 2 (**pending ADR-0012**) |
 
 (INPUT-2 is withdrawn: ADR-0003 says modal screens read events in `_gui_input`, not that no other Control may; SCENE-1 proves the other Controls ignore input.)
 
@@ -189,6 +190,7 @@ INIT-1 self-test (Section 5). Bad sample: `extends Targetable` (whose `_init(p_s
 | PROJ-5 | `[gdunit4]` lacks `report/godot/push_error=true` or `report/verbose_orphans=true`, or sets `report/godot/script_error=false` | ADR-0007 Decision 7; engine check E1 (exit 101 needs orphan reporting) |
 | PROJ-6 | `export_presets.cfg` exists and a `[preset.N]` `include_filter` lacks `*.json` | ADR-0002 Validation 10 (key V7) |
 | PROJ-7 | `export_presets.cfg` exists and a preset's `exclude_filter` lacks `tests/*`, `tools/*`, `addons/gdUnit4/*` or `prototypes/*` | ADR-0007 Decision 1 (key and relative form V7) |
+| PROJ-8 | `[rendering]` lacks `renderer/rendering_method="mobile"`, or a `renderer/rendering_method.*` override has another value, or the auto-fallback key ADR-0012 R2 names is not `false`; `[application]` lacks `run/max_fps=60` (unless R2 Branch A moved the cap to AppRoot); once ADR-0012 R5 names the key, `export_presets.cfg` exists and the iOS preset lacks Shader Baker on | ADR-0012 Decisions 1, 5, 6 (keys NEEDS VERIFICATION there, R2, R5) (**pending ADR-0012**) |
 
 ## 4. Known blind spots
 

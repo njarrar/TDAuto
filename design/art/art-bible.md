@@ -199,7 +199,7 @@ Contrast ratios are against the base field #0B1020 (hand-calculated approximatio
 
 **Naming** (`[category]_[name]_[variant]_[size].[ext]`, snake_case): `char_hero`, `tower_tri_l2`, `enemy_fast`, `slot_build`, `path_stage01`, `zone_leash`, `ui_btn_burst_ready`, `vfx_burst_ring`. Scenes use the stem only (`tower_tri.tscn`) with level and state as exported properties, never one scene per level. Size suffix omitted for code assets, required for PNG (`_2x`). A data record's `visual_key` (`design/gdd/data-config-pipeline.md`) holds this asset stem, e.g. `tower_tri_l2`, `enemy_fast`, `char_hero`.
 
-**Budgets (written to `project.yaml` → `performance`):** 60 fps, 16.6 ms frame (30 fps / 33 ms floor), **60 draw calls** per frame, **256 MB** memory ceiling, textures ≤ 16 MB, 300 particles. Target class: Adreno 5xx.
+**Budgets (written to `project.yaml` → `performance`):** 60 fps, 16.6 ms frame (30 fps / 33 ms floor), **60 draw calls** per frame, **256 MB** memory ceiling, textures ≤ 16 MB, 300 particles. Target class: Adreno 5xx for Android (deferred, ADR-0012); measured first on the iPhone.
 
 **Per-element checklist.**
 

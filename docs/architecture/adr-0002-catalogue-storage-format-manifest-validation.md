@@ -101,12 +101,12 @@ No code and no data files exist. The GDD recommends typed Godot Resources, keeps
 ### Requirements
 
 - Detect missing fields, fractional integers, unknown properties, wrong types, non-finite numbers and out-of-domain values, and collect all of them before failing (TR-data-002, TR-data-005).
-- Load only the files an explicit manifest names, and load the same way from an Android export (TR-data-003).
+- Load only the files an explicit manifest names, and load the same way from the iOS export (Android at reopen, ADR-0012) (TR-data-003).
 - Typed records keyed by a stable snake_case ID unique across all record types, referencing each other by typed ID (TR-data-001).
 - Read-only after load, proven by a deep snapshot test (TR-data-007).
 - Stage geometry on the Stage record, not in a scene (TR-enemy-001).
 - Content tests in CI for the rules owning GDDs define (TR-data-013, TR-hero-014, TR-hud-016).
-- Loading to Ready at most 1000 ms median on an Adreno 5xx-class device (TR-data-015, proposed).
+- Loading to Ready at most 1000 ms median on the first iPhone (ADR-0012) (TR-data-015, proposed).
 
 ## Decision
 
@@ -443,11 +443,11 @@ For `/create-control-manifest` and `/dev-story`:
 |------------|-------------|--------------------------|
 | data-config-pipeline.md | TR-data-001: typed read-only records keyed by stable snake_case ID unique across types; references by typed ID, never by path | Decision 4 (ID format, uniqueness, reference checks), 5 (typed classes, `StringName` IDs) |
 | data-config-pipeline.md | TR-data-002: the format or a check on it detects a missing field, a fractional integer and an unknown property | Decision 1 (JSON), 4 (schema-driven checks, per-type unknown property) |
-| data-config-pipeline.md | TR-data-003: loads from an explicit manifest, never a directory scan, and loads on an Android export | Decision 1 (manifest, `FileAccess`, export filter), 2, W2 |
+| data-config-pipeline.md | TR-data-003: loads from an explicit manifest, never a directory scan, and loads from an export of the first target platform (iOS; ADR-0012) | Decision 1 (manifest, `FileAccess`, export filter), 2, W2 |
 | data-config-pipeline.md | TR-data-005: collect every error as `{code, source, record_id, field}` before failing, in tiers | Decision 3, 4 (only tier 1 stops; all else collected) |
 | data-config-pipeline.md | TR-data-007: read-only after load; deep snapshot test proves the catalogue unchanged after a battle | Decision 5 (rule), 7 (snapshot, detector and coverage self-tests), W3 |
 | data-config-pipeline.md | TR-data-013: CI content test opens each Stage `scene_ref`, applies layout and wave rules, checks rationale and balance ranges | Decision 8 |
-| data-config-pipeline.md | TR-data-015: Loading to Ready median at most 1000 ms on an Adreno 5xx-class device; edit-to-in-game at most 10 s | Decision 1, 2 (small synchronous JSON load, no import step); W4 measures it |
+| data-config-pipeline.md | TR-data-015: Loading to Ready median at most 1000 ms on the first iPhone (ADR-0012 Decision 8; Adreno 5xx at Android reopen); edit-to-in-game at most 10 s | Decision 1, 2 (small synchronous JSON load, no import step); W4 measures it |
 | enemy-wave.md | TR-enemy-001: the Stage record holds gameplay geometry; the scene holds only the look | Decision 1 (Stage fields and encoding), 5 (`StageRecord` geometry) |
 | hero-system.md | TR-hero-014: content tests enforce hero and burst rules, each proven on a broken fixture | Decision 8 (rule functions plus broken fixtures), 9 |
 | battle-hud.md | TR-hud-016: content tests enforce HUD layout rules | Decision 8 |
@@ -484,7 +484,7 @@ Automated, headless (gdUnit4 under `tests/unit/data/`, `tests/integration/data/`
 
 Manual evidence in `production/qa/evidence/`: W2 and GDD Acceptance 13 (release build with one invalid record shows the generic fatal screen; screenshot), W4 and GDD Acceptance 15 (load-time log), GDD Acceptance 14 (tuning loop).
 
-The decision is wrong if: an Android export cannot read the data files in any form (W2 with both mitigations failing), or a required detection cannot be made from the parsed dictionaries.
+The decision is wrong if: the iOS export (Android at reopen, ADR-0012) cannot read the data files in any form (W2 with both mitigations failing), or a required detection cannot be made from the parsed dictionaries.
 
 ## Related
 

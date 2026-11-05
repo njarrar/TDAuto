@@ -643,6 +643,20 @@ interfaces:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
     revised: ""
+  - contract: run_info
+    status: active
+    pattern: direct_call
+    producer: run-info
+    consumers:
+      - dev-logs
+      - prototypes
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    signal_signature: "RunInfo.collect(window_px: Vector2i, scale: float) -> Dictionary (keys in order: godot, debug_build, os, os_version, model, method, driver, adapter, adapter_api, refresh_hz, max_fps, vsync, window_px, scale; JSON-native; \"unknown\" when not reported); RunInfo.line(info: Dictionary) -> String (\"RUNINFO key=value ...\"). Static, no state, debug builds only. Record contract ADR-0012 Decision 4; implementation ADR-0010 Decision 10 (src/root/run_info.gd); window_px and scale come from InputAdapter"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -682,31 +696,37 @@ performance_budgets:
     status: active
     budget_ms: 4.0
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
-    notes: "Per frame at 60 fps, including catch-up: MAX_TICKS_PER_FRAME (3) whole ticks, so one worst-case tick must fit 1.33 ms (ADR-0005's 0.5 ms stat-read ceiling and ADR-0009's targeting inside it). Proposed, unmeasured until ADR-0004 V6 on an Adreno 5xx-class device"
+    # Revised 2026-11-05 (ADR-0012 cascade a16). Old notes: "Per frame at 60 fps, including catch-up: MAX_TICKS_PER_FRAME (3) whole ticks, so one worst-case tick must fit 1.33 ms (ADR-0005's 0.5 ms stat-read ceiling and ADR-0009's targeting inside it). Proposed, unmeasured until ADR-0004 V6 on an Adreno 5xx-class device"
+    notes: "Per frame at 60 fps, including catch-up: MAX_TICKS_PER_FRAME (3) whole ticks, so one worst-case tick must fit 1.33 ms (ADR-0005's 0.5 ms stat-read ceiling and ADR-0009's targeting inside it). Proposed, unmeasured until ADR-0004 V6 on the first iPhone (ADR-0012), Adreno 5xx class at Android reopen"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0012-renderer-first-target-device.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - system: stat-reads
     status: active
     budget_ms: 0.5
     adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
-    notes: "All stat reads in one tick, Adreno 5xx class (ADR-0005 Performance). Sits inside ADR-0004's 1.33 ms whole-tick figure. Proposed, unmeasured; registered here because ADR-0005 claimed it but registered no budget"
+    # Revised 2026-11-05 (ADR-0012 cascade a16). Old notes: "All stat reads in one tick, Adreno 5xx class (ADR-0005 Performance). Sits inside ADR-0004's 1.33 ms whole-tick figure. Proposed, unmeasured; registered here because ADR-0005 claimed it but registered no budget"
+    notes: "All stat reads in one tick, the first iPhone (ADR-0012), Adreno 5xx class at Android reopen (ADR-0005 Performance). Sits inside ADR-0004's 1.33 ms whole-tick figure. Proposed, unmeasured; registered here because ADR-0005 claimed it but registered no budget"
     referenced_by:
       - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+      - docs/architecture/adr-0012-renderer-first-target-device.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - system: whole-tick
     status: active
     budget_ms: 1.33
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
-    notes: "One worst-case battle.tick (48 alive, five towers, hero and burst), p99 on Adreno 5xx class = 4.0 / MAX_TICKS_PER_FRAME (3, provisional). Contains stat-reads (0.5 ms) and ADR-0009 targeting. This whole-tick budget replaces TR-combat-013's 2 ms targeting figure (ADR-0004 Decision 10, ADR-0009 Decision 9; revised 2026-11-05, old text: ADR-0009 targeting with a GDD ceiling of 2.0 ms, TR-combat-013, so a GDD-compliant tick can still miss this). Reopen: p99 > 1.33 ms sets N = 2 (2.0 ms) in place; > 2.0 ms escalates. Measured by ADR-0004 V6 / ADR-0009 V4 after acceptance"
+    # Revised 2026-11-05 (ADR-0012 cascade a16). Old notes: "One worst-case battle.tick (48 alive, five towers, hero and burst), p99 on Adreno 5xx class = 4.0 / MAX_TICKS_PER_FRAME (3, provisional). Contains stat-reads (0.5 ms) and ADR-0009 targeting. This whole-tick budget replaces TR-combat-013's 2 ms targeting figure (ADR-0004 Decision 10, ADR-0009 Decision 9; revised 2026-11-05, old text: ADR-0009 targeting with a GDD ceiling of 2.0 ms, TR-combat-013, so a GDD-compliant tick can still miss this). Reopen: p99 > 1.33 ms sets N = 2 (2.0 ms) in place; > 2.0 ms escalates. Measured by ADR-0004 V6 / ADR-0009 V4 after acceptance"
+    notes: "One worst-case battle.tick (48 alive, five towers, hero and burst), p99 on the first iPhone (ADR-0012), Adreno 5xx class at Android reopen = 4.0 / MAX_TICKS_PER_FRAME (3, provisional). Contains stat-reads (0.5 ms) and ADR-0009 targeting. This whole-tick budget replaces TR-combat-013's 2 ms targeting figure (ADR-0004 Decision 10, ADR-0009 Decision 9; revised 2026-11-05, old text: ADR-0009 targeting with a GDD ceiling of 2.0 ms, TR-combat-013, so a GDD-compliant tick can still miss this). Reopen: p99 > 1.33 ms sets N = 2 (2.0 ms) in place; > 2.0 ms escalates. Measured by ADR-0004 V6 / ADR-0009 V4 after acceptance"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0012-renderer-first-target-device.md
     added: 2026-11-04
     revised: 2026-11-05
   - system: input-and-realtime-models
@@ -1165,6 +1185,71 @@ api_decisions:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
       - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
     added: 2026-11-04
+    revised: ""
+  - purpose: renderer
+    status: active
+    api: "renderer/rendering_method=\"mobile\" on every target at MVP, the renderer auto-fallback key (per ADR-0012 R2) false; renderer-neutral code (no HDR output, use_hdr_2d, WorldEnvironment, glow, RenderingDevice, compute, DrawableTexture2D); Compatibility only through ADR-0012 Decision 3 triggers T1 to T3 on the iPhone"
+    not: "Forward+, gl_compatibility without a recorded trigger, per-platform renderer overrides with another value, a silent automatic fallback"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "One renderer behind every device number; the fallback stays a settings change"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: frame_rate_cap
+    status: active
+    api: "application/run/max_fps=60 in project.godot (or Engine.max_fps = 60 in AppRoot if R2 finds no key); vsync at engine default; no interpolation; if D3 shows uneven pacing on ProMotion, display-locked 60 Hz pacing before the sleep limiter"
+    not: "uncapped or 0, a cap above 60, view interpolation at MVP"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "ADR-0004's 60 Hz tick and 16.6 ms split; one tick per frame on 120 Hz adaptive panels (review E7). Reverses ADR-0004 item 14 under the user's standing instruction; open for the user to overturn"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: device_run_record
+    status: active
+    api: "Every windowed, export or device run whose result an ADR uses starts with a RUNINFO line and a verification-results Run N header with ADR-0012 Decision 4's fields (device, OS and version, Godot build, renderer, driver, GPU and API version, refresh rate, max_fps, vsync, window and scale, Shader Baker, Low Power Mode); a field no source reports is unknown, never omitted; debug builds write the record as run_log.jsonl's first line through RunInfo (contract run_info, implemented by ADR-0010)"
+    not: "results with no header (unattributed: they close no verification item or story; results before 2026-11-05 still count), two renderers in one run, collecting the record in release builds"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "Batching, timing and load numbers differ by renderer and device"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: platform_order
+    status: active
+    api: "MVP desktop (Mac); MVP+ first phone build is an iOS debug export on the user's iPhone; Android deferred until: an Android device is available, an Android release is scheduled, or the Vertical Slice gate (whichever first)"
+    not: "Android export preset or Android-only stories before the reopen"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "User instruction 2026-11-04: only an iPhone is available"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: shader_precompile
+    status: active
+    api: "Shader Baker on in the iOS export preset (key per ADR-0012 R5); a one-frame Boot-screen warm-up only if D4 shows a frame over 50 ms in the first 5 s of the first battle after a cold launch"
+    not: "a warm-up inside the battle subtree; a warm-up with no D4 evidence"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "Mobile compiles canvas pipelines on first draw (review E16); the battle has no custom shader; baker believed Forward+ and Mobile only"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: catalogue_load_budget
+    status: active
+    api: "Loading to Ready, median of 5 cold launches, at most 1000 ms on the first iPhone (ADR-0012 Decision 8, D5; ADR-0002 W4); advisory at MVP+, a miss opens a load-time task; edit to in-game at most 10 s on the Mac"
+    not: "a per-frame budget row (it is boot time); an Adreno 5xx claim from an iPhone run"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    reason: "TR-data-015 re-scoped to the first real device; Adreno 5xx-class leg at Android reopen"
+    referenced_by:
+      - docs/architecture/adr-0012-renderer-first-target-device.md
+      - docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md
+    added: 2026-11-05
     revised: ""
 
 # Example:
@@ -1627,6 +1712,18 @@ forbidden_patterns:
     why: "assert is stripped in release; free() in a live call runs on freed objects (ERR-1, ERR-4)"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     added: 2026-11-04
+  - pattern: renderer_specific_feature
+    status: active
+    description: "No HDR output, use_hdr_2d, WorldEnvironment, glow, Environment, RenderingDevice, compute shader or DrawableTexture2D at MVP; a shader or ShaderMaterial added anywhere needs a recorded windowed run under Mobile and Compatibility (lint REND-4)."
+    why: "Keeps ADR-0012's Compatibility fallback a settings change"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    added: 2026-11-05
+  - pattern: unattributed_device_result
+    status: active
+    description: "A device or windowed-run result from 2026-11-05 on without ADR-0012 Decision 4's run header closes no verification item or story."
+    why: "Numbers from different renderers or devices are not comparable"
+    adr: docs/architecture/adr-0012-renderer-first-target-device.md
+    added: 2026-11-05
 
 # Example:
 #

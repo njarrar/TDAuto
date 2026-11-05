@@ -6,7 +6,7 @@
 > **Author**: user + ux-designer
 > **Last Updated**: 2026-11-05
 > **Accessibility Tier Target**: Basic, plus the elevated items listed under This Project's Commitment
-> **Platform(s)**: iOS and Android phones, portrait, one thumb. MVP runs on desktop with mouse-as-touch (`design/gdd/game-concept.md`, Core Identity, MVP Definition)
+> **Platform(s)**: iPhone (iOS) first, Android deferred (ADR-0012 Decision 7); portrait, one thumb. MVP runs on desktop with mouse-as-touch (`design/gdd/game-concept.md`, Core Identity, MVP Definition)
 > **External Standards Targeted**:
 > - WCAG 2.1 Level AA, for text contrast, non-text contrast and flash limits only (proposed)
 > - AbleGamers CVAA Guidelines: N/A (no voice chat or messaging)
@@ -325,7 +325,7 @@ release and no communication features.
 | Question | Owner | Deadline | Resolution |
 |----------|-------|----------|-----------|
 | Is Basic the right tier? This draft took it in autonomous mode; the user picks. | user | Pre-Production gate | Unresolved |
-| Which phone comes first? The brief named iPhone first; the concept says the first phone build is Android debug, with one iOS test build in the vertical slice (Concept Technical Risks, MVP+). Targets are 44 pt and 48 dp either way. | user, producer | MVP+ | Unresolved |
+| Which phone comes first? Resolved: the iPhone (ADR-0012 Decision 7, user instruction 2026-11-04); Android deferred. Targets are 44 pt and 48 dp either way. | user, producer | MVP+ | Resolved (ADR-0012, Proposed) |
 | Does Godot 4.7 expose the OS Reduce Motion flag, and do AccessKit names reach VoiceOver and TalkBack in a mobile export? NOT SOURCEABLE in `docs/engine-reference/godot/`. | technical-director | Before the Settings GDD | Unresolved |
 | Dimmed cost alpha: accept the proposed 0.6? | art-director, ux-designer | Before HUD stories | Unresolved |
 | Adjacent arc discs are 4 units apart, under the proposed 8 dp gap. Larger `R` first (HUD Open Questions). | ux-designer | First phone build | Unresolved |
