@@ -141,3 +141,45 @@ Applied in autonomous mode: all 5 blocking items (Rule 11 reads phase() when bui
 A ui-programmer spot-check of the revision found that it had wrongly made HudLogic arm the burst button (HeroInput owns it), that AC12's steps summed to 201, an untestable AC7 clause, and a rounded margin given three ways. All four were fixed before commit.
 Not done: criteria splits, new fixtures and criteria, digit and text width checks, and every routed item.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: ux-designer, ui-programmer, systems-designer, qa-lead, godot-specialist, creative-director
+Blocking items: 11 | Recommended: 24
+Summary: The design, its layout numbers and every settled decision held: systems confirmed the 36% dead overlap, 7.2, 17.3, 60, 4 and the bonus of 8 at 30 and 60 per second. The blockers were interfaces to the now-approved siblings and criteria that could not fail: the Hero Locked-press flash and prompt repeat had no trigger; the chip lacked window_ms, a def_id and a position, and tower_upgraded had no consumer; a 0 from Data's accessor after a bad call could draw a free disc; Paused could not know the phase it left; Rule 2 put releases in _unhandled_input against Input's ADR note; the arc disc range was wrong; prompt 1 against an open arc was unstated; criteria 3, 30, 32 and 37 could not fail or asserted unstated rules, and idle clearing Rule 10's flag was untested; and the chip's fixed window broke P-07 without saying so. The creative director prescribed spot-checks.
+Prior verdict resolved: Yes (all 5 prior blocking items)
+Findings:
+- [BLOCKING] Rule 12: a Locked press is a pressed whose best_drag is the button; outline flash either way; prompt 1 flashes before a first pin.
+- [BLOCKING] Rule 13: prompts 1 and 3 stay while an arc is open; criteria for first hero_pinned, Paused and first match.
+- [BLOCKING] Rules 1 and 9: window_ms; a slot-to-tower map from tower_built and tower_upgraded; slot positions from the Stage record.
+- [BLOCKING] Rule 7: after any accessor read, a Fatal phase discards it; spy-returns-0 criterion.
+- [BLOCKING] Rule 4: HudLogic latches the phase Paused left.
+- [BLOCKING] Rule 2: presses through _unhandled_input, moves and releases where a modal cannot swallow them, HudModals calls cancel(); fallback named.
+- [BLOCKING] Formulas, arc_disc: centre x from m + 36.86 to 503.14 − m; criterion 24.
+- [BLOCKING] Criterion 37 table-driven per content row with a row count.
+- [BLOCKING] Criteria 3 and 32 can fail; criterion 30 cut to stated rules.
+- [BLOCKING] Criterion 9: idle clears Rule 10's flag.
+- [BLOCKING] Rule 9: the chip's fixed window is a stated MVP limitation against P-07.
+- [RECOMMENDED] UX: Arming look beyond colour; whole-digit countdown; the 400 ms before result text; minimum font sizes; keyboard, gamepad and screen reader as a stated accessibility exception and modal labels at MVP; brush resume risk.
+- [RECOMMENDED] "strictly less than" m; injected margin and slop in the preamble; stale payloads under Fatal; a fake-resolver hero-walking criterion; the 7.2 derivation.
+- [RECOMMENDED] chip_bar guard in the expression; 1.5 s restatements as window_ms; 30 per second cases; burst cooldown units and the digit's owner; the zero-clearance arc-to-burst row; arc panel width.
+- [RECOMMENDED] QA splits and branches: AC1, 4, 8, 18, 19, 21, 23, 31; view-model names; AC20 fixture; NO_GOLD flash, roll-off build, other best_drag, build order, Arming while disabled; AC22 latch owner; numeric manual pass conditions.
+- [RECOMMENDED] Routed: P-14 in the pattern library to match Hero's flash (/ux-design); Paused side-margin taps (/ux-design, already routed).
+- [RECOMMENDED] Disagreements: ux-designer's chip window blocker taken as a stated limitation, not a hold, since Tower owns the window; P-14 routed rather than blocking; qa-lead's long list held to criteria that cannot fail; AC30 cut rather than adding Fatal-precedence rules to the HUD.
+Reviewed-Content-Hash: design/gdd/battle-hud.md a09c6a4ff7b6425c7b492c285a0cbe36d1aa1c39
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 9d6ec8138446d49ffa36df14ddb9b3c9d9fa1ce7
+Reviewed-Content-Hash: design/ux/interaction-patterns.md a7e53d8b72c20506717566ca4dc1f5ae1e2adb79
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/hero-system.md bd87a602bb57c480cdce569ba15a981e81385bac
+Reviewed-Content-Hash: design/gdd/tower-system.md c21461c32025d4d3786f5d4297eab83d3095856b
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 2b84b18638e6e2330d40b4e731351ebd7b7cdec1
+Reviewed-Content-Hash: design/gdd/combat-damage.md 419744f670fbcc60bd061e151e86446f2ff53d1f
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 0b9123b5896138cd1318d895d8d6a6eb69c0e1c9
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+Reviewed-Content-Hash: design/accessibility-requirements.md 242a19c940223adef8657a7924f039327b9c797a
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+Applied in autonomous mode: all 11 blocking items as above. A qa-lead spot-check closed seven criteria and found criterion 37 missing three rows and the L1 upper bound, criterion 16's "never returns" unable to fail against real state, criterion 31's ring duration against Rule 9, and criterion 32's tap needing an Armed Start/Call; all fixed. A ui-programmer spot-check closed five blockers and found that "the button or its sink" would fire the Locked flash on a hero drag over the button; Rule 12 now requires best_drag to be the button. It also asked for tower_built recording level 1, a latch value if built in Paused, the Dependencies rows for tower_upgraded and cancel(), and keeping the advance caller running when the tree pauses on Won or Lost; all applied. Follow-on edit: Input Rule 7 lists HudModals among cancel()'s callers.
+Verdict: APPROVED, on the creative director's ruling that spot-checks decide approval. Not done: every recommended and routed item above.
