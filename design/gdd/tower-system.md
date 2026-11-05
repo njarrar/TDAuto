@@ -3,9 +3,10 @@
 > **Status**: In Review (first design review 2026-11-02 NEEDS REVISION; eight blockers, one user decision and all recommended items applied, re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (burst outcome gate, share gate on a mid-skill bot, always-call with a hero, dominant-build gate, price of no refund).
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-02
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-02
 > Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
+> Revised 2026-11-05 to match ADR-0001 to ADR-0011 after /architecture-review.
 > **Implements Pillar**: Pillar 1 (Growth You Can See: upgrades add geometry); Pillar 2 (One Hero, Not an Army: towers keep sustained DPS)
 
 ## Summary
@@ -165,7 +166,7 @@ Enemy & Wave's L10 reads level-1 range 150 and passes at 223 for the tightest sl
 
 **Deliberately not built for MVP.** Selling, undo, level 3, targeting options, unlocks, per-role gold bonuses, interest, stipends, tower damage to the hero, and a chip on build.
 
-→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection.
+→ Becomes an ADR, before any TowerInput story: where TowerInput sits in the wrapper, who owns the real-time feed to `ChipWindow` given Flow Rule 4's ban on `_process` in gameplay systems, the order of input against that feed, typed signal signatures including `tower_id`'s type, and retry teardown, so that no old battle stays alive through a connection. Decided: ADR-0010 builds TowerInput in `BattleWrapper.attach` with its own `ChipWindow` fed by `advance(ms)` (Decisions 1 and 8); ADR-0004 Decision 5 runs input before the ticks; ADR-0006 Decision 4 types `tower_id` as `StringName`; ADR-0001 Decision 7 owns retry teardown.
 
 ### States and Transitions
 
@@ -518,4 +519,4 @@ A recording fake logs Tower's signals, `attack_fired`, `deliver` and `apply_slow
 | Does a wrong plan that surfaces at wave 6 feel fair without selling? | Playtest | First playable |
 | Does the hexagon read apart from the square at quarter scale? | art-director | First render |
 | Are 3 px insets enough to rank levels on a phone? The fallback is 4 px | art-director | First phone build |
-| Does the technical director accept the TowerSim and TowerInput split, and the rest of the ADR above? | technical-director | Input ADR, before TowerInput stories |
+| Closed: ADR-0010 decides the TowerSim and TowerInput split (Decisions 1 and 8), and ADR-0006 Decision 4 types `tower_id` as `StringName`. Both ADRs are Proposed until accepted | technical-director | ADR acceptance, before TowerInput stories |

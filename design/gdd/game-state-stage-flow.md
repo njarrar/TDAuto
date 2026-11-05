@@ -7,6 +7,7 @@
 > **Last Verified**: 2026-11-02
 > **Implements Pillar**: Enabling system for all four pillars; Pillar 3 most directly (a new stage gets time to be read, and a lost stage retries at once)
 > Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
+> Revised 2026-11-05 to match ADR-0001 to ADR-0011 after /architecture-review.
 
 ## Summary
 
@@ -35,7 +36,7 @@ Players feel this system as pacing. A new stage waits with its clock stopped, so
 **Time.**
 
 4. **One way in.** Simulation time enters only through `battle.tick(dt)`. Gameplay systems use no `_process`, engine timers, `await`, wall clock or physics areas, only countdowns and distance checks. Humans and bots run the same fixed tick (60 per second, ADR-0004, matching the Data & Config interval floor); the wrapper accumulates real time and clamps a long frame. Prototype numbers came from variable time for humans and 1/30 for bots, so they do not transfer and bots must be re-baselined. Authored durations become whole ticks through one conversion, `to_ticks` (Enemy & Wave GDD), since a repeated float countdown drifts: 5.0 s took 301 ticks.
-5. **Fixed order, commands between ticks.** Systems tick in a fixed order, each owning GDD agreeing its place. Player and bot commands apply only between ticks, never during one. Randomness uses the injected seed: the same stage, seed and command script give an identical result.
+5. **Fixed order, commands between ticks.** Systems tick in a fixed order, each owning GDD agreeing its place. Player and bot commands apply only between ticks, never during one. Randomness uses the injected seed: on one CPU architecture and engine build, the same stage, seed and command script give an identical result, bit for bit (ADR-0004 Decision 9). Across architectures nothing is promised, so baselines are kept per architecture.
 
 **Stage phases.**
 
@@ -60,7 +61,7 @@ Players feel this system as pacing. A new stage waits with its clock stopped, so
 
 **Pause.**
 
-17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is zeroed, so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
+17. **Focus loss freezes.** There is no pause button at MVP. Losing focus or backgrounding the app enters Paused on desktop and phone alike, so the path is proven before the first phone build. The clock stops, so `battle.tick` returns at once, and input cancels. Paused never ends by itself: a tap resumes and reaches nothing beneath, with no countdown. The tick accumulator is reset to half a tick on entering and on leaving Paused (ADR-0004 Decisions 2 and 3), so no time jump follows, and a finger down across the pause stays dead until lifted. Pausing a terminal state does nothing. An app killed by the OS loses the stage, since nothing is saved at MVP. There is no quit button.
 
 **Fatal.**
 
@@ -93,12 +94,13 @@ Players feel this system as pacing. A new stage waits with its clock stopped, so
 
 | State | Clock | Transitions |
 |---|---|---|
-| Build | Stopped | Start Wave → Wave 1. Focus loss → Paused. Failure handler → halted, from any state |
+| Build | Stopped | Start Wave → Wave 1. Focus loss → Paused. Failure handler → Fatal, from any state |
 | Wave | Running | `wave_cleared` → Intermission. `waves_completed` → Won. Lives 0 → Lost. Focus loss → Paused |
 | Intermission | Running | Countdown 0 or call early → next Wave. Lives 0 → Lost (a contract breach, Rule 15a). Focus loss → Paused |
 | Paused | Stopped | Resume tap → the phase it left |
 | Won | Stopped, latched | Retry → new battle |
 | Lost | Stopped, latched | Retry → new battle |
+| Fatal | Stopped, latched | None: absorbing. Flow commits FATAL, then emits `phase_changed(FATAL)` (ADR-0001 Decision 3); the app root shows the fatal screen |
 
 ### Interactions with Other Systems
 
@@ -167,6 +169,7 @@ The bonus for calling early is the Tower GDD's formula, not this one.
 - **If the failure handler fires twice**: the first cause is kept.
 - **If a stage scene is broken**: Fatal at stage start; the catalogue stays Ready, though there is no way out at MVP but relaunching.
 - **If a press began before Paused**: it never resumes, and stays dead until lifted.
+- **If a platform sends no loss notification before the app is suspended**: Paused is entered only when the app resumes (ADR-0003 SP10 Branch C). That first frame back is bounded by the stall rule (a frame over 0.5 s runs no ticks) or the clamp (at most 3 ticks), so at most 3 ticks run before Paused. Unverified on the iPhone until SP10 runs.
 - **If the handler fires during `build`**: the partial battle is discarded unticked, and Fatal shows.
 - **If a long frame hits (app hitch)**: the wrapper clamps the ticks owed, so the game slows rather than jumping. The clamp is 3 ticks per frame (ADR-0004; V6 sets 2 to 4), and a frame over 0.5 s runs none.
 
@@ -275,7 +278,7 @@ A recording fake logs every Flow signal, and each THEN is the entire log; anythi
 | Criterion | Owner | Passes when |
 |---|---|---|
 | Retry (Rules 2, 16) | Enemy & Wave stories | A retried battle's snapshot equals a fresh one; a `weakref` to the old battle is null; only the catalogue is the same object |
-| Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result |
+| Full determinism (Rule 5) | Combat stories | The same stage, seed and script give an identical result on one CPU architecture and engine build (ADR-0004 Decision 9) |
 | Listener test | Enemy & Wave, Tower stories | The system count is non-zero, and removing one connection fails naming it; watched failing once, with the output kept |
 | Micro-battle | Combat stories | A kill raises gold by the bounty, a leak drops lives, and clearing all waves wins |
 | Boot (Rules 1, 18) | Game State stories | A failed load and a broken scene both reach the fatal screen |

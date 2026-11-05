@@ -6,6 +6,7 @@
 > **Last Updated**: 2026-11-02
 > **Last Verified**: 2026-11-02
 > Sections Player Fantasy and Tuning Knobs added 2026-11-05 from existing content; no rule changed.
+> Revised 2026-11-05 to match ADR-0001 to ADR-0011 after /architecture-review.
 > **Implements Pillar**: Pillar 4 (Thumb-First); Pillar 2 (the result shows damage by source, with no ranking)
 
 ## Summary
@@ -36,7 +37,7 @@ The player should feel calm. Only what a decision needs is on screen, and nothin
 | HudTopBand | Display-only Controls for gold, lives and pips, which ignore input |
 | HudField | One `_draw` for arc, chip, Start/Call, burst button art and rings, with its hit targets as Input discs |
 
-2. **Modal screens are Controls.** The result and Paused screens are full-screen Controls that consume every event before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
+2. **Modal screens are Controls.** The result and Paused screens are full-screen modal Controls that take every new press before the adapter sees it (ADR-0003 Decision 8), so a tap on them cannot reach a tower or the hero. They do not end a press already held: the adapter reads the moves and releases of held presses itself (ADR-0003 Decision 2), and a held drag is ended by Flow's `cancel_input` when the phase commits, not by the modal. So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. Paused has no timer but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
 
 **What is on screen, and when.**
@@ -68,7 +69,7 @@ The player should feel calm. Only what a decision needs is on screen, and nothin
 13. **One prompt line, first match, for this battle only, in Build, Wave and Intermission.** It hides on the act and never on a timer. There are no arrows, pauses or captured input. Because conditions are read per battle, nothing has to survive a rebuild.
     1. Hero unpinned: "Drag the hero"
     2. No tower built, in Build or Intermission: "Tap a slot to build"
-    3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started`
+    3. In Wave, once the burst is Ready and none has started: "Drag from the big button", latched until `burst_started` (HudLogic listens to it; ADR-0006's listener table is being amended to add HudLogic, TR-hud-010)
 
     These teach verbs only, never where or when, which leaves room for the user's first-run target. This amends the Hero GDD, which called the first the only tutorial text.
 
@@ -320,7 +321,7 @@ Every value here is presentation, so none reaches the battle. Every bound from t
 | `ticks_per_second` | 60 (proposed) | range not set in this GDD | Seconds shown by `display_seconds` | Flow (fixed tick) | `display_seconds` |
 | Motion timings | 120 ms for arc, presses and arming; 200 ms for dash and 12-unit panel slides | range not set in this GDD | How fast the HUD answers | Battle HUD | UI Requirements |
 | Text floor and hit targets | 14 dp, 48 dp | No target under 48 dp (Pillar 4); text floor range not set in this GDD | Legibility and thumb fit | Battle HUD | UI Requirements; `design/gdd/game-concept.md` Pillar 4 |
-| Draw budget | Expected 8, at most 12 of 60 draw calls; text at most 3 | At most 12 (unverified) | Render cost of the HUD | Battle HUD | UI Requirements |
+| Draw budget | Expected 8, at most 12 of 60 draw calls; text at most 3 | At most 12 (provisional until ADR-0011 V1, V2) | Render cost of the HUD | Battle HUD | UI Requirements |
 
 ## Visual/Audio Requirements
 
@@ -355,7 +356,7 @@ This whole document is UI. Tower's and Hero's UI Requirements stand, and are dra
 
 - 120 ms: arc, presses, arming. 200 ms: dash, 12-unit panel slides, with opacity fixed. Paused is instant.
 - Reduce Motion cuts slides, while fades and clock bars stay. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record.
-- Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size. Modals add about 4. Unverified.
+- Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size. Modals add about 4. Provisional until ADR-0011 V1 and V2 measure how the Mobile renderer batches `_draw` polygons (engine finding E2).
 - Font: one medium-weight geometric humanist sans with tabular numerals, not yet chosen.
 - Text floor 14 dp, or 21 units at a 360 dp width; hit targets 48 dp, or 72 units, which every target here meets with no margin at that width.
 
@@ -444,3 +445,4 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 | At a large top inset, the band meets the arc's top panel and the prompt | Mobile Platform GDD | Mobile Platform |
 | Every game action is a disc, so there is no keyboard, gamepad or screen-reader path, and touch alone is a motor barrier | Settings & Accessibility GDD | Alpha |
 | Is 7.2 enough clearance beside the left-hand button? | Pillar 4 phone test | First phone build |
+| Rule 19 logs damage by source and kind, but ADR-0010 Decision 11's `ResultSnapshot` holds only per-kind totals (TR-hud-013). Rule 19 stands; ADR-0010 needs an amendment adding per-source damage | technical-director | Before the first HUD log story |
