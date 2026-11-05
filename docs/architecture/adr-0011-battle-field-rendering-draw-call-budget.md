@@ -43,6 +43,10 @@ Proposed
 > now, and the future device is an iPhone. The phone legs of V1 to V4 moved
 > after acceptance and run on the iPhone.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 3: CombatViewModel reads `Combat.max_hp_of`, not the accessor; `StageLook` is
+> released with `queue_free()`. Decision 10: the wrapper's `attach` creates the dev overlay.)
+>
 > After acceptance: the phone legs of V1 to V4 (iPhone), and A1 (the real
 > game's worst-case frame on the phone, shared with ADR-0004 V6 and ADR-0007
 > M7). Reopen trigger: Decision 9. A phone result that contradicts this ADR
@@ -164,7 +168,7 @@ Models read state by polling in `refresh`, which needs no connection and cannot 
 
 - EnemyViewModel: `roster()`, `Enemy.def_id`, `view_position()`.
 - TowerViewModel: `slot_count()`, `slot_tower(i)`, `slot_level(i)`, `slot_cooldown_left(i)`, `slot_position(i)` (ADR-0010 Decision 7); the cooldown total and range through its own per-slot `ReadContext`s and the accessor at use time, with `halted()` after each read, as HudLogic does for the burst cooldown (ADR-0010 Decision 7).
-- CombatViewModel: `Combat.is_dead`, `hp_left`, `speed_factor` per roster entry; `max_hp` through one `ReadContext` per enemy `def_id` made in `attach`, read in `refresh` only, one read per roster entry (up to 48 a frame). These reads are frame-side cost: they count in step 4's 3.0 ms, not in ADR-0005's 0.5 ms per-tick read ceiling, and V2's synthetic case includes them.
+- CombatViewModel: `Combat.is_dead`, `hp_left`, `max_hp_of`, `speed_factor` per roster entry (ADR-0009 Decision 5). `max_hp_of` returns the spawn seed stored in Health, so the view makes no `ReadContext` and no accessor read (amended 2026-11-05; it was up to 48 accessor reads a frame). These reads are frame-side cost and count in step 4's 3.0 ms.
 - FieldBackdropModel: `roster()` distances, `Flow.lives()` and `phase()`, `slot_tower(i)`, `HeroSim.burst_state()` (field dip).
 - HeroViewModel: HeroSim queries and HeroInput's `aim_state()`, `aim_point()`.
 
@@ -175,7 +179,7 @@ Structural data reaches the views through two new read-only `Battle` members tha
 - `Battle.stage_record: StageRecord` (path points, path width, slot positions, `scene_ref`; HeroInput's `stage` argument in ADR-0010 Decision 8 comes from here too).
 - `Battle.visual_keys: VisualKeys`, a `RefCounted` holding only `StringName`s: `enemy(def_id)`, `tower(tower_id, level)`, `hero()`, built from the records' `visual_key` fields (Data & Config). It holds no record and no Callable, so it forms no cycle.
 
-The field look (hue, base value, grid tilt) stays in the stage scene (Data & Config: "Stage visuals are not catalogue values"). `scene_ref` names a scene whose root is `StageLook extends Node` with three exported values and no drawing; the wrapper instantiates it in `attach`, hands the values to FieldBackdropModel and frees it.
+The field look (hue, base value, grid tilt) stays in the stage scene (Data & Config: "Stage visuals are not catalogue values"). `scene_ref` names a scene whose root is `StageLook extends Node` with three exported values and no drawing; the wrapper instantiates it in `attach`, hands the values to FieldBackdropModel and releases it with `queue_free()`. It is a `Node` outside the tree, so dropping the reference alone would leak it, and ADR-0001 bans `free()` (amended 2026-11-05; it said "frees").
 
 `attach` returns false (fatal, ADR-0001 Decision 6) if the stage scene fails to load, a look value is outside art bible §6's ranges, a `visual_key` has no entry in `ViewStyles`, or the path bake fails. The path rule itself is a Stage validation rule (Decision 5), so real content fails at catalogue load and in CI, for bots and headless tests too; the `attach` check guards code-built stages only. An integration content test runs the remaining checks (stage scene, look ranges, `visual_key` styles) on every Stage record so a player never sees one.
 
@@ -252,7 +256,7 @@ Time: step 4 (`hero_input.update()`, every `refresh`, including CombatViewModel'
 
 ### 10. Development measurement
 
-Development builds show an overlay (in `src/presentation/dev/`, created by `DevLogs` like the run log, ADR-0010 Decision 10) with frame time, step 4 time (the wrapper's dev timers, ADR-0004 Decision 10) and V1's draw-call counter if V1 finds one. Release builds create none of it.
+Development builds show an overlay (in `src/presentation/dev/`, created by `BattleWrapper.attach` only when its `dev_logs` argument is non-null, like the run log, ADR-0010 Decision 10; `DevLogs` holds session data and creates no node; amended 2026-11-05) with frame time, step 4 time (the wrapper's dev timers, ADR-0004 Decision 10) and V1's draw-call counter if V1 finds one. Release builds create none of it.
 
 ### 11. Choices made in autonomous mode
 

@@ -50,6 +50,10 @@ Proposed
 > is escalated to `technical-director` with Decision 9's levers. A phone result
 > that contradicts this ADR reopens it before the next story in its area closes.
 >
+> Amended 2026-11-05 after /architecture-review.
+> (`Combat.max_hp_of(t)` added to the read surface, Decision 5; Decision 9 states that the
+> whole-tick budget replaces TR-combat-013's 2 ms targeting budget.)
+>
 > Accepting it also records the
 > technical director's acceptance of two QQ-08 items: the ProjectileSpawner cut
 > and the move of path and slots from the stage scene to the Stage record.
@@ -177,7 +181,7 @@ This matches the existing choices. ADR-0002 stores geometry as `PackedFloat64Arr
 ```gdscript
 class_name Health extends RefCounted
 var hp: float        # current HP, never below 0
-var max_hp: float    # the spawn seed, kept for the invariant check and the damaged-core view; never re-read
+var max_hp: float    # the spawn seed, kept for the invariant check and the damaged-core view (read through Combat.max_hp_of); never re-read
 
 class_name Status extends RefCounted
 var strength: float = 0.0   # slow strength in the one slot; 0.0 when empty
@@ -234,7 +238,7 @@ Only the first failing guard reports. `deliver` runs only inside a tick; that is
 
 `apply_slow(t, strength, seconds) -> void` runs the same order: removed (`ERR_REMOVED`), then values, then dead (silent). The value test is written so NaN fails it: `not is_finite(strength) or not (strength > 0.0 and strength < 1.0) or not is_finite(seconds) or not (seconds > 0.0)` reports `ERR_BAD_SLOW`. Then `ticks = maxi(1, int(_to_ticks.call(seconds)))`, using the typed `maxi` because `max()` and `Callable.call()` return `Variant`. An empty slot or a stronger slow replaces both fields; an equal strength keeps `max(ticks_left, ticks)`; a weaker one changes nothing. Strengths compare exactly.
 
-`speed_factor(t) -> float` is `1.0 - strength` while `ticks_left > 0`, else `1.0`. `tick_status(roster: Array[Targetable])` subtracts 1 from every non-empty slot and empties any at or below 0 (`strength = 0.0`, `ticks_left = 0`); it emits nothing. `is_dead(t)` is `health.hp <= 0.0` and stays answerable after removal; `hp_left(t)` is `health.hp`.
+`speed_factor(t) -> float` is `1.0 - strength` while `ticks_left > 0`, else `1.0`. `tick_status(roster: Array[Targetable])` subtracts 1 from every non-empty slot and empties any at or below 0 (`strength = 0.0`, `ticks_left = 0`); it emits nothing. `is_dead(t)` is `health.hp <= 0.0` and stays answerable after removal; `hp_left(t)` is `health.hp`; `max_hp_of(t)` is `health.max_hp`, the spawn seed. Views read `max_hp_of` (ADR-0011 Decision 3), not the accessor, so the damaged-core view and the invariant check use the same value (amended 2026-11-05).
 
 ### 6. Targeting helpers
 
@@ -309,7 +313,7 @@ Removal happens at once, in place, before the signal, so a listener reading `ros
 
 The helpers scan linearly with no spatial structure. At the GDD's worst case (48 alive, five towers, hero and burst) one tick does about 340 range checks, each a few multiplies and one compare, plus one `_targets` rebuild over at most 48 entries, plus the per-hit allocations (one `DamageEvent` per victim, one `all_in_radius` result per splash or burst).
 
-The GDD's figure, under 2 ms per tick for targeting, is a ceiling, not a target, and it does not fit the frame budget at its full value. Data Flow 10 gives the whole simulation 4.0 ms per frame, so at `MAX_TICKS_PER_FRAME = N` one whole tick (Flow, movement, accessor reads, status, towers, hero, reap and targeting) must fit `4.0 / N` ms. If targeting alone took 2.0 ms, N could be at most 2, and at N = 2 nothing would be left for the rest of the tick. So this ADR registers no targeting slice of its own. V4 measures the whole tick at the worst case, with the helpers' share recorded beside it, and ADR-0004 sets N from the whole-tick figure. Levers if the measurement is too high: first ADR-0004's N (3 by default, never below 2, ADR-0004 Decision 2); second a bucketing scheme inside the helpers that keeps their signatures and their results, proven against the scan; third reusing the per-hit allocations.
+The GDD's figure, under 2 ms per tick for targeting (TR-combat-013), is replaced by the whole-tick budget below; the GDD now keeps 2 ms only as an Open Question. It does not fit the frame budget at its full value. Data Flow 10 gives the whole simulation 4.0 ms per frame, so at `MAX_TICKS_PER_FRAME = N` one whole tick (Flow, movement, accessor reads, status, towers, hero, reap and targeting) must fit `4.0 / N` ms. If targeting alone took 2.0 ms, N could be at most 2, and at N = 2 nothing would be left for the rest of the tick. So this ADR registers no targeting slice of its own. V4 measures the whole tick at the worst case, with the helpers' share recorded beside it, and ADR-0004 sets N from the whole-tick figure. Levers if the measurement is too high: first ADR-0004's N (3 by default, never below 2, ADR-0004 Decision 2); second a bucketing scheme inside the helpers that keeps their signatures and their results, proven against the scan; third reusing the per-hit allocations.
 
 ### Choices pending user confirmation
 
@@ -384,6 +388,7 @@ func nearest_in(list: Array[Targetable], origin_x: float, origin_y: float, max_r
 func all_in_radius(list: Array[Targetable], impact_x: float, impact_y: float, radius: float) -> Array[Targetable]
 func is_dead(t: Targetable) -> bool
 func hp_left(t: Targetable) -> float
+func max_hp_of(t: Targetable) -> float            # health.max_hp, the spawn seed (ADR-0011 Decision 3)
 func report_attack(source_kind: SourceKind, source_id: StringName, origin: Vector2, impact: Vector2, radius: float) -> void
 func dealt_by_id(id: StringName) -> float          # 0.0 for an unknown ID
 func dealt_by_kind(kind: SourceKind) -> float
