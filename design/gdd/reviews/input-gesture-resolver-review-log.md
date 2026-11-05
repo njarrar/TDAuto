@@ -110,3 +110,54 @@ Wording and tables only; no balance value changed; re-review still pending.
 
 ## Revision — 2026-11-04 — ADR-0004 to ADR-0008 sync
 No balance value changed; Status unchanged. Signal renames in every code form, test logs included: `tap` to `tapped`, `ground_tap` to `ground_tapped`, `idle` to `became_idle` (ADR-0006 Decision 5). Rules 2, 5, 6 and 7 use the payload names `press_pos`, `release_pos`, `pos` and `target`, and a new Signal payloads paragraph lists them (ADR-0008 Decision 5). Rule 9 adds the rejects for a bad `accepts` and a DRAG sink (ADR-0008 Decision 2). Rule 11 says the Builder builds the resolver (ADR-0001). Rule 13 names `GestureLog`, `last_trace()` and `GestureTrace` (ADR-0008 Decisions 7 and 8). States and Transitions: the replacement order is the whole cancel first, then the new press, and the queue cap of 64 is noted, with `cancel()` exempt (ADR-0008 Decisions 3 and 4). The AC preamble puts the recording fake in `tests/helpers/fakes/` and the factories in `tests/helpers/fixtures/` (ADR-0007 Decision 2).
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L (producer should verify before sprint planning)
+Specialists: none spawned. This session had no Agent tool, so the game-designer, systems-designer, qa-lead, ux-designer, godot-specialist and creative-director views were taken by the main reviewer in one session. No specialist or director passed this review. The wording fixes below were made in the same session, so this review is not independent of them.
+Blocking items: 8 (all wording, all applied in this pass) | Recommended: 7 applied, 6 open
+Summary: The core model is unchanged and still holds: frozen winners per class, sticky per-press slop, the replacement rule, the queue and the host-only cancel all match ADR-0008, and all 37 criteria trace by hand against the rules and the state table. The blockers were stale text that contradicted the Accepted ADRs or the owner GDDs written since the last review: what modal Controls take from the adapter, who may call `cancel()`, how Tower's bounce guard counts, what the Input record holds, who builds the resolver and adapter, the hit-radius range, and "unmoved" in Rule 1. Each was fixed as wording with no balance value or design intent changed, so a short re-check of these edits, or the user's acceptance, can decide Approved. The open items are user calls (P1 and Hero Rule 15's re-pin trade) or other documents' fixes.
+Prior verdict resolved: Yes. The third review's one blocker (Dead sink-only press) holds (criterion 37 traces); its recommended items are closed or carried below
+Findings:
+- [BLOCKING] UI Requirements: modal screens "consume every event before the adapter" contradicted ADR-0003 2.1, 2.4 and 4 (they take presses; a forwarded drag's endings still reach the adapter): applied
+- [BLOCKING] Interactions (HUD row): "top-band Controls consume their own events" contradicted UI Requirements and ADR-0003 Decision 4 (non-interactive Controls ignore input): applied
+- [BLOCKING] Edge Cases (State machine): "an owner calls `cancel()` or `press` inside a handler" contradicted ADR-0006 Decision 3 and ADR-0008 Decision 6 and Guideline 12; now Flow's `cancel_input()` or a resolver fixture: applied
+- [BLOCKING] Rule 8, Interactions and Dependencies (Tower rows): the bounce guard counted "after the chip opens" and the chip disc was an "or"; Tower Rule 8 and ADR-0008 Decision 9 count from the commit's press and register the chip disc (TAP 300, radius 40) as well: applied
+- [BLOCKING] Rule 9: the three slop and margin fields were "the fields" of the Input record; ADR-0002 Decision 4 gives it five, with `left_handed` and `reduce_motion`: applied
+- [BLOCKING] Interactions and Dependencies (Game State rows): Game State "constructs the resolver and the adapter"; ADR-0001 Decisions 2 and 4 have the Builder create the resolver and the BattleWrapper build the adapter and the three owners: applied
+- [BLOCKING] Formulas (inside, target_ok): `r` range 36–48 contradicted the hero's DRAG 56 (own registration table, Hero Rule 15, art bible §3) and the chip's 40 (Tower Rule 8); now 36–56: applied
+- [BLOCKING] Core Rules (Rule 1) and Edge Cases: "an unmoved press" is replaceable, but the state table and ADR-0008 Decision 3 make any Pressed gesture (travel under slop) replaceable; now "a press still under its slop": applied
+- [RECOMMENDED] Signal payloads: added ADR-0008 Decision 6 (no command from `drag_cancelled` or `became_idle`) and ADR-0006 Decision 3 (no owner calls a gesture method or `cancel()`): applied
+- [RECOMMENDED] Dependencies: "none has a GDD yet" was stale; Game State, Hero, Tower and Battle HUD GDDs exist and list this one: applied
+- [RECOMMENDED] Overview and Core Rules: the "becomes an ADR" text still posed questions ADR-0003 and ADR-0008 decided ("the adapter must synthesise", "project.godot has none yet"); now states the decisions, and the [Sn] items stay unverified until S0: applied
+- [RECOMMENDED] Cross-References: added ADR-0006, ADR-0007, ADR-0008 and ADR-0010 rows; ADR-0001 now cites Decisions 2, 4, 5 and 7; ADR-0003 Decisions 1 to 4; radii 36 / 48 / 56: applied
+- [RECOMMENDED] Interactions (HUD row): added Start/Call TAP 350, disabled while an arc is open, and its ignored tap when the press also named the hero (ADR-0008 Decision 9, HUD Rule 10); ground ring "first few per session" is "first three per battle" (HUD Rule 14): applied
+- [RECOMMENDED] Overview: "a non-developer tester" now names P1's at least two: applied
+- [RECOMMENDED] Acceptance Criteria (deferred table): added the resolver contract that ADR-0008 Validation Criteria V2 to V12 test beyond criteria 1 to 37: applied
+- [RECOMMENDED] Rule 13 / P1 (user decision): Hero Rule 15 accepts that a hero within 92 of a slot or tower turns a thumb roll of `tap_slop` or more into a re-pin; P1 counts that as a mis-fire during a slot or tower prompt, and Rule 3's claim covers only rolls under `tap_slop`. Decide whether P1 counts it, or keep it and watch the phone test: open
+- [RECOMMENDED] Acceptance Criteria fixtures: `H` has radius 36, production 56; logic is radius-free, but no criterion covers the 56-radius overlaps (hero over Start/Call, the 92 distance to a slot): open
+- [RECOMMENDED] Formulas (field_scale): the 0.667–1.481 range assumes width at most 800 dp; ADR-0003 has no scale cap, so a 900 × 1,600 dp screen gives 1.667. Say the top is open or name 800 dp as an assumption: open
+- [RECOMMENDED] Overview/priority table (sink): accessibility AR-M-06 (In Design) asks that "reaches nothing beneath" name the Alpha two-tap mode as its exception; wait for that document's review: open
+- [RECOMMENDED] Other documents: Data & Config says "world units" for the Input fields; interaction-patterns cites "Input Rule 6" for sticky drag (Rule 3); the systems index lists Battle HUD In Review while its GDD says Designed; the concept's Pillar 4 still says "a non-developer tester"; open, not this GDD's
+- [RECOMMENDED] Player Fantasy and Tuning Knobs are absent; advisory at `standard` (the Formulas tables and Input record domains carry the knobs): open
+Note: the receipt below stamps the GDD as reviewed (before this pass's edits, git blob c39179fe), so the next run sees it CHANGED and re-checks the edits.
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md c39179fe9c482ec442c264a3294c20fec4e74065
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md fb484d24990461f0800de4d022afa95997ee512d
+Reviewed-Content-Hash: design/gdd/game-concept.md 93a774e02d9d14747e67ead5ce82140d1718b81f
+Reviewed-Content-Hash: design/gdd/systems-index.md c5f5a462ae11c1d10135730b927519a14b7dde47
+Reviewed-Content-Hash: design/art/art-bible.md 02d54d6b93ccc9656dcfdfdc5e0d888cde99f7d0
+Reviewed-Content-Hash: design/gdd/hero-system.md 88c68ce97af3b80dd0dff559a3ab3d65a2cfa1f2
+Reviewed-Content-Hash: design/gdd/tower-system.md 0d7fc21d197c7b1ae4c7bc6f6749df6d58d7b886
+Reviewed-Content-Hash: design/gdd/battle-hud.md 39c88b57183b7d8d33c33a5faa5b802499925045
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md d0971ae2056275d68099e04af472c70bac83009d
+Reviewed-Content-Hash: design/accessibility-requirements.md b0574e2ac2870c485edb5d038e477577e9d46700
+Reviewed-Content-Hash: design/ux/interaction-patterns.md 553b98a50424056d8eab720bb9269c9ea15efc8e
+Reviewed-Content-Hash: docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md a6ca1e2b2ea8e2e7de6fbce9b379c24590747650
+Reviewed-Content-Hash: docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md 65a5fbdd0606124b20b1370a4065a5453c3378c3
+Reviewed-Content-Hash: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md ab8aab909e64196cd2e7559d142c70aca531d9ad
+Reviewed-Content-Hash: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md ef2faea37127d471a4d99607607e3c3d16804956
+Reviewed-Content-Hash: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md 0e5d0aa385e84dad6e121fdb502f84d69adaf5c2
+Reviewed-Content-Hash: docs/architecture/adr-0008-input-resolver-core-signal-contract.md 784dd51eecd37f86856684ec15e0672ed0f09866
+Reviewed-Content-Hash: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md ea7126f7d91f398ee3b8691058e4a0a01a37b340

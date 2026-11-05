@@ -1,10 +1,10 @@
 # Input & Gesture Resolver
 
-> **Status**: Revised (pending re-review)
-> **Design Review**: NEEDS REVISION 2026-11-01 three times (the third, lean and not independent, found one blocker: Dead sink-only press replaceable, applied) (9, then 8 blocking), revised each time the same day. Second pass: tap_slop whenever a real tap winner exists, palm replacement extended, burst TAP sink, phone test moved to the Pillar 4 milestone gate and counted per gesture (all user decisions); queue, snapshot, validation and adapter fixes.
+> **Status**: In Review (fourth design review 2026-11-05 NEEDS REVISION for stale text against the Accepted ADRs; all its blockers were wording and are applied; a short re-check of those edits, or the user's acceptance, decides Approved)
+> **Design Review**: NEEDS REVISION 2026-11-05 (fourth, full mode run as one session with no specialist agents; 9 wording blockers against ADR-0001, 0003, 0006, 0008 and Tower Rule 8, all applied). Earlier: NEEDS REVISION 2026-11-01 three times (the third, lean and not independent, found one blocker: Dead sink-only press replaceable, applied) (9, then 8 blocking), revised each time the same day. Second pass: tap_slop whenever a real tap winner exists, palm replacement extended, burst TAP sink, phone test moved to the Pillar 4 milestone gate and counted per gesture (all user decisions); queue, snapshot, validation and adapter fixes.
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (unprompted fires count, visible cancel state, reticle on `drag_started` and press response, verb claim corrected; burst tap later removed by the drag-only decision)
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-01
 > **Implements Pillar**: Pillar 4 (Thumb-First) directly; enabling system for Pillar 2 (the hero's pin and aimed burst are its two drags)
 
@@ -147,7 +147,7 @@ and a target is a **candidate** at press when `enabled AND inside(c, r, p)`. A t
 |----------|------|-------|--------|-------------|
 | `p` | Vector2, field units | inside the field | calculated | Press position |
 | `c` | Vector2, field units | inside the field | registered by owner | Target centre |
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP (hero 56, chip 40) | registered by owner | Target hit radius |
 | `enabled` | bool | true or false | set by owner | Target participates in hit tests |
 
 **Output Range:** true or false, inclusive of the boundary. With at most about 15 MVP discs the cost is irrelevant, and squared distances keep the boundary exact for the integer positions tests use (adapter-converted positions are fractional and sit on no boundary). Non-finite inputs never reach it (Rule 9).
@@ -195,7 +195,7 @@ The **target_ok** formula is defined as:
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
-| `r` | float, field units | 36–48 at MVP | registered by owner | Target hit radius |
+| `r` | float, field units | 36–56 at MVP (hero 56, chip 40) | registered by owner | Target hit radius |
 | `field_scale` | float | 0.667–1.481 | calculated | From field_scale |
 | `width_dp`, `height_dp` | int after floor | at least 360 and 640 | calculated | Device size in dp, as in field_scale |
 
@@ -225,7 +225,7 @@ The table below assumes a width-limited phone (height at least 960/540 of the wi
 - **If the active pointer presses again without a release**: `cancel()` then the new press; Dragging emits `drag_cancelled` first (Rule 1).
 - **If the finger lifts in place over the hero alone**: nothing but `became_idle()`; the hero hides its leash on `became_idle()`, not on a tap it never receives.
 - **If an owner registers, unregisters, disables or moves a target inside a handler**: it takes effect at once, and `register` returns its id, but the gesture in flight is unaffected because its winners and discs are frozen.
-- **If an owner calls `cancel()` or `press` inside a handler**: the call joins the queue and runs after the current batch reaches every listener, its `became_idle()` included. A queued `cancel()` from a `pressed` handler means every listener hears `pressed` then `became_idle`, and the eventual release is dropped in Idle. A `press` from a `tapped` handler (a resolver fixture) starts after that gesture's `became_idle()`.
+- **If `cancel()` or a gesture call arrives from inside a handler** (Flow's `cancel_input()` when a command in a handler raises a fatal, or a resolver fixture; owners never make these calls, ADR-0006 Decision 3): the call joins the queue and runs after the current batch reaches every listener, its `became_idle()` included. A queued `cancel()` from a `pressed` handler means every listener hears `pressed` then `became_idle`, and the eventual release is dropped in Idle. A `press` from a `tapped` handler (a resolver fixture) starts after that gesture's `became_idle()`.
 - **If a target is moved, unregistered or disabled mid-gesture**: it still receives that gesture's remaining signals under its old id, and a release is tested against its frozen disc; the owner ignores what it no longer wants. Ids are never reused, so a stale id cannot alias a new target.
 - **If a target is registered mid-gesture under the finger**: it receives nothing from the current gesture, even if it is the only disc under the release point. The arc discs the HUD registers in response to a slot tap compete from the next press.
 - **If `cancel()` ran and the OS later delivers the same pointer's move or release**: dropped in Idle; the finger must lift and press again. Focus-return on Android does exactly this.
@@ -254,7 +254,7 @@ The table below assumes a width-limited phone (height at least 960/540 of the wi
 - **If a press lands on the burst button while cooling**: `pressed(sink, button, p)`; Hero ignores both, so nothing fires and nothing beneath is reached.
 - **If cooling ends during that press**: it stays dead until a new press, because Hero samples cooling at `pressed`.
 - **If the burst button is pressed while an arc is open**: `pressed(sink, button, p)` closes the arc; a release in place is `tapped(sink)`, which Hero ignores; a drag aims the burst.
-- **If a second press arrives while an unmoved or Dead press with no real tap winner is down (a palm on the hero, the burst button, the arc backdrop or the ground, then the thumb)**: the second press becomes active, the first emits only `became_idle()`, and any leash shown for it hides on that `became_idle()`. A palm on a real tap target still holds until it lifts, and the same rule means a second touch can replace an unmoved hero or burst press; the phone test watches for both (Rule 1, Open Questions).
+- **If a second press arrives while a press under its slop, or a Dead press, with no real tap winner is down (a palm on the hero, the burst button, the arc backdrop or the ground, then the thumb)**: the second press becomes active, the first emits only `became_idle()`, and any leash shown for it hides on that `became_idle()`. A palm on a real tap target still holds until it lifts, and the same rule means a second touch can replace an unmoved hero or burst press; the phone test watches for both (Rule 1, Open Questions).
 - **If a press lands inside a rejected zone**: the resolver never hears it, even if it drags onto a target (Rule 12).
 - **If the ready burst button is pressed and released in place**: `pressed(sink, button, p)`, `tapped(sink)`, `became_idle()`; nothing fires, because Hero ignores the sink. A resting thumb lifted off the button can never spend the cooldown.
 - **If a drag from the ready burst button slips within the button and releases there**: `drag_ended` on the button; Hero cancels. A miss, never a mis-fire.
@@ -270,18 +270,18 @@ The table below assumes a width-limited phone (height at least 960/540 of the wi
 
 **Upstream (hard):** Data & Config Pipeline, for the Input record. It relies on the engine only through the adapter node, which the ADR specifies.
 
-**Downstream (hard unless noted; none has a GDD yet, so every interface is provisional until that GDD confirms it):**
+**Downstream (hard unless noted).** Game State, Hero, Tower and Battle HUD now have GDDs, and each lists this one; an interface stays provisional until its GDD is Approved (status: systems index). Settings & Accessibility and Mobile Platform have none yet:
 
 | System | Interface | Hard / soft |
 |---|---|---|
-| Game State & Stage Flow | Constructs and injects the resolver and the adapter; the adapter owns lifecycle and OS-cancel wiring; Flow calls `cancel()` through its injected `cancel_input()`, and the app root calls it at teardown (Rule 7) | Hard — nothing receives input without it |
-| Hero System | Registers hero, burst button and its sink; listens to `pressed`, `drag_*`; owns the aim-point offset and what a burst drag means; refuses invalid pins. The Hero GDD adopts the DRAG radius of 56 and the cancel hysteresis, and keeps a pin offset of 0 until the phone test | Hard — pin and burst are this system's two drags |
-| Tower System | Registers towers and slots as TAP targets; listens to `tapped` and `pressed`; owns the cost-chip window and a hard (not proposed) bounce guard of at least 200 ms before a commit tap, or gives the chip its own TAP target. The Rule 13 gesture log (the test harness story's, not the resolver's) also listens to Tower's `tower_upgraded` and reads `chip_state()` | Hard — build and upgrade are its two taps |
-| Battle HUD & Build UI | Registers arc discs and the arc backdrop while an arc is open, and closes the arc on `pressed` unless `best_tap` is one of its discs; listens to `pressed` and `ground_tapped`, ignores `tapped(backdrop)`; its Controls sit above the adapter | Hard for the build arc and rejection ring |
+| Game State & Stage Flow | Its Builder creates the resolver and its BattleWrapper builds the adapter and the three owners (ADR-0001); the adapter owns lifecycle and OS-cancel wiring; Flow calls `cancel()` through its injected `cancel_input()`, and the app root calls it at teardown (Rule 7) | Hard — nothing receives input without it |
+| Hero System | Registers hero, burst button and its sink; listens to `pressed`, `drag_*`; owns the aim-point offset and what a burst drag means; refuses invalid pins. The Hero GDD has adopted the DRAG radius of 56 and the cancel hysteresis (Hero Rules 13 and 15), and keeps a pin offset of 0 until the phone test (Hero Rule 14) | Hard — pin and burst are this system's two drags |
+| Tower System | Registers towers and slots as TAP targets; listens to `tapped` and `pressed`; owns the cost-chip window, a hard bounce guard that ignores a commit tap whose press begins within 200 ms of the chip opening, and the chip's own TAP disc, a tap on which counts as a tap on the tower (Tower Rule 8). The Rule 13 gesture log (the test harness story's, not the resolver's) also listens to Tower's `tower_upgraded` and reads `chip_state()` | Hard — build and upgrade are its two taps |
+| Battle HUD & Build UI | Registers Start/Call, and the arc discs and arc backdrop while an arc is open, and closes the arc on `pressed` unless `best_tap` is one of its discs; listens to `pressed` and `ground_tapped`, ignores `tapped(backdrop)`; its modal TapScreens take presses before the adapter | Hard for the build arc and rejection ring |
 | Settings & Accessibility (Alpha) | Runtime slop setter, hit-area scale | Soft — reserved in prose, nothing built |
 | Mobile Platform & Performance (VS) | Safe-area and gesture insets feed the adapter and the HUD's button placement, not the resolver | Soft |
 
-Per the bidirectional rule, each of these GDDs must list this one when authored. The Data & Config GDD and the systems index already list this system.
+Per the bidirectional rule, each of these GDDs must list this one. The Data & Config, Game State, Hero, Tower and Battle HUD GDDs and the systems index already do; Settings & Accessibility and Mobile Platform must when authored.
 
 **Adapter contract (binding on the ADR).** Every `press` the adapter forwards is followed by exactly one `release` of that index, one `cancel_pointer` of that index, or one `cancel()`, whatever Controls lie under the drag and whatever the OS does with the touch. The adapter checks an event's `canceled` flag before treating `pressed = false` as a release, since an Android touch-cancel treated as a release would emit `tapped` or `drag_ended`, a mis-fire. The resolver has no clock and cannot recover a stranded gesture; a different finger pressing afterwards is dropped by Rule 1 until the stranded one is closed.
 
@@ -319,7 +319,7 @@ The quantitative feel criterion is the concept's phone test (the Pillar 4 gate),
 
 None owned. This system has no screen, panel or widget; it supplies gestures to the systems that do. Two constraints on UI that other systems must honour are recorded here because the resolver assumes them:
 
-- The burst button is a registered disc owned by Hero System and placed by the HUD, not a Control, so it competes in this system's priority order rather than the engine's Control ordering; the HUD's top band ignores input, and its result and Paused screens are Controls that consume every event before the adapter sees them. There is no pause button at MVP.
+- The burst button is a registered disc owned by Hero System and placed by the HUD, not a Control, so it competes in this system's priority order rather than the engine's Control ordering; the HUD's top band ignores input. Its result and Paused screens are `TapScreen` Controls that take every press before the adapter, and the wrapper also closes the adapter's press gate while one shows. The moves and release of a drag the adapter already forwarded still reach it, so that drag ends once (ADR-0003 Decisions 2.4 and 4). There is no pause button at MVP.
 - No build slot may sit so close to the burst button that their hit discs overlap at any supported safe-area inset: the button's priority would make part of that slot untappable. Owner: the Enemy & Wave GDD's layout rule L3, enforced by the content test on the Stage record's `slot_positions`.
 
 ## Cross-References
@@ -328,14 +328,18 @@ None owned. This system has no screen, panel or widget; it supplies gestures to 
 |---|---|---|---|
 | Priority order, slop range, 48 dp targets, phone test (0 mis-fires, ≤5% misses) | `design/gdd/game-concept.md` | Pillar 4, Core Mechanic 2, MVP item 6 | Rule dependency |
 | Registry-only scope; owners register themselves; Input never names a feature | `design/gdd/systems-index.md` | Foundation Layer TD note (item 2); High-Risk Systems row | Rule dependency |
-| Hit radii 36 / 48 units; 1.5 units per dp at 360 dp | `design/art/art-bible.md` | §3 Minimum sizes | Value dependency |
+| Hit radii 36 / 48 / 56 units; 1.5 units per dp at 360 dp | `design/art/art-bible.md` | §3 Minimum sizes | Value dependency |
 | Reticle offset, ground-tap ring, cost chip, build arc, panel band | `design/art/art-bible.md` | §7 | Ownership handoff |
 | Input record, added under the extension rule by this GDD | `design/gdd/data-config-pipeline.md` | Extension rule; Interactions (Input row); Dependencies | Rule dependency |
 | Injection by the composition root | `design/gdd/data-config-pipeline.md` | Rule 12 | Pattern reuse |
 | Gesture log reads `tower_upgraded` and `chip_state()` (test harness story) | `design/gdd/tower-system.md` | Rule 17 | Rule dependency |
-| `cancel()` callers, Builder null-resolver fatal | `docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md` | Decision 5 to 7 | Rule dependency |
+| `cancel()` callers, Builder null-resolver fatal, wrapper builds the adapter and owners | `docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md` | Decisions 2, 4, 5 and 7 | Rule dependency |
 | Content test slop rule | `docs/architecture/adr-0002-catalogue-storage-format-manifest-validation.md` | Decision 7 | Rule dependency |
-| Adapter, stretch, `field_scale`, rejected zones, lifecycle | `docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md` | Decisions 1 to 3 | Rule dependency |
+| Adapter, stretch, `field_scale`, rejected zones, lifecycle, modal screens | `docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md` | Decisions 1 to 4 | Rule dependency |
+| Signal names, INPUT listener role, no listener calls `cancel()` | `docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md` | Decisions 3 and 5 | Rule dependency |
+| Test paths, recording fakes, fixtures | `docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md` | Decisions 2 to 4 | Pattern reuse |
+| Resolver class, registry, state machine, queue, payloads, `GestureTrace`, `GestureLog`, owner registration rules | `docs/architecture/adr-0008-input-resolver-core-signal-contract.md` | Decisions 1 to 9; Validation Criteria | Rule dependency |
+| HeroInput and TowerInput, bots on commands, equivalence test, gesture log sink | `docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md` | Decisions 1, 7 and 8 | Rule dependency |
 | Press priority as prototyped; mouse-only evidence | `prototypes/hero-pin-concept/main.gd`, `REPORT.md` | `_press`/`_release`; Pillar 4 untested on a phone | Evidence |
 
 ## Acceptance Criteria
@@ -400,6 +404,7 @@ P1. **GIVEN** the Rule 13 gesture log, at least two non-developer testers (one l
 | Injection of resolver and adapter | Game State stories | Every owner receives the one resolver, with no global |
 | Adapter contract | Input ADR and first phone build | Every press ends in exactly one release or cancel across Controls; a `canceled` touch never emits `tapped` or `drag_ended`; rejected zones drop presses; one physical press gives one gesture on mouse and touch |
 | Gesture log contents (Rule 13) | Test harness story | Every Rule 13 field is present for each gesture, and the P1 table computes from it |
+| Resolver contract beyond these criteria: payload types, replacement trace, dev guard and its `cancel()` exemption, `register` rejects, `GestureTrace`, stuck-drain recovery, no command from cleanup edges | Resolver stories | ADR-0008 Validation Criteria V2 to V12 pass |
 
 ## Open Questions
 
