@@ -182,12 +182,13 @@ state_ownership:
     status: active
     owner_system: tower-sim
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
-    interface: "TowerSim.gold() -> int, never negative; gold_changed(current: int) only on a change; call_bonus(ticks_left: int) -> int, pure, ticks_left div to_ticks(early_call_seconds_per_gold), the same function the HUD previews and the wave_called_early handler pays"
+    # was: call_bonus "pure", shape unstated (before godot-specialist and TD-ADR review)
+    interface: "TowerSim.gold() -> int, never negative; gold_changed(current: int) only on a change; call_bonus(ticks_left: int) -> int, a side-effect-free instance method, ticks_left / to_ticks(early_call_seconds_per_gold) truncating, the same function the HUD previews and the wave_called_early handler pays"
     write_access: "tower-sim only: _init (starting_gold from Stage), _on_enemy_killed, _on_wave_called_early, build, upgrade; each checks halted() first"
     referenced_by:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
   - state: hero_run_counters
     status: active
@@ -487,11 +488,11 @@ interfaces:
       - hero-input
       - bots
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
-    signal_signature: "Every command enum starts OK = 0, BUSY = 1 (inside a tick or another command; dev-error text stays ERR_COMMAND_IN_TICK), then the GDD check order: BuildResult OK, BUSY, HALTED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD; UpgradeResult OK, BUSY, HALTED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD; PinResult OK, BUSY, HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE; BurstResult OK, BUSY, HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH; Flow.start_wave() -> StartResult OK, BUSY, HALTED, NOT_BUILD; Flow.call_early() -> CallResult OK, BUSY, HALTED, NOT_INTERMISSION, NO_TIME_LEFT; lookups, then accessor reads each followed by halted() (HALTED), before the first write; a refusal changes and emits nothing; callers compare to the qualified OK"
+    signal_signature: "Every command enum starts OK = 0, BUSY = 1 (inside a tick or another command; dev-error text stays ERR_COMMAND_IN_TICK), then the GDD check order (Flow HALTED means WON, LOST or FATAL, as HaltGate.halted()): BuildResult OK, BUSY, HALTED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD; UpgradeResult OK, BUSY, HALTED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD; PinResult OK, BUSY, HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE; BurstResult OK, BUSY, HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH; Flow.start_wave() -> StartResult OK, BUSY, HALTED, NOT_BUILD; Flow.call_early() -> CallResult OK, BUSY, HALTED, NOT_INTERMISSION, NO_TIME_LEFT; lookups, then accessor reads each followed by halted() (HALTED), before the first write; a refusal changes and emits nothing; callers compare to the qualified OK (bare OK returned from a command is a parse error, but a caller's r == OK parses and is true, so lint L-CMD-2 is the only guard)"
     referenced_by:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
   - contract: dev_line_sink
     status: active
@@ -501,12 +502,13 @@ interfaces:
       - run-log
       - gesture-log
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
-    signal_signature: "JsonlFileSink(path, max_bytes = 8 MiB).append_line(line: String) -> bool, passed as a method Callable; false on a release build, failed open, failed store_line or full file; never reports or halts; the caller reports its first false once to dev_error; user://run_log.jsonl and user://gesture_log.jsonl; built by the wrapper only when OS.is_debug_build()"
+    # was: the sink also refused in a release build; cap check unstated (before godot-specialist and TD-ADR review)
+    signal_signature: "JsonlFileSink(path, max_bytes = 8 MiB).append_line(line: String) -> bool, passed as a method Callable; false on a failed open, failed store_line, or when a byte counter seeded from get_length() plus the line plus 1 passes max_bytes (checked before the store; no rotation); never reports or halts; the caller reports its first false once to dev_error; user://run_log.jsonl and user://gesture_log.jsonl; the wrapper builds it only when OS.is_debug_build() (the one gate; debug exports write by intent), holds it in a field until teardown (a Callable alone does not keep it alive) and then calls close()"
     referenced_by:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
@@ -783,14 +785,14 @@ api_decisions:
     notes: "ADR-0008 Accepted 2026-11-04; binding"
   - purpose: dev_log_file_write
     status: active
-    api: "FileAccess in JsonlFileSink only (besides the catalogue): open READ_WRITE plus seek_end() if the file exists, else WRITE; store_line() (returns bool since 4.4) then flush() per line; one JSON object per line from JSON.stringify (sorted keys) with non-finite floats replaced by null first"
+    api: "FileAccess in JsonlFileSink only (besides the catalogue): open READ_WRITE plus seek_end() if the file exists, else WRITE; store_line() (returns bool since 4.4) then flush() per line; one JSON object per line from JSON.stringify (sorted keys) with non-finite floats replaced by null first, nested Arrays and Dictionaries included; a flushed line survives a process kill; launch_id = unix time plus Crypto.generate_random_bytes(4).hex_encode(), made once per launch by AppRoot; build = application/config/version, else Engine.get_version_info().string"
     not: "ignoring the store_* bool; buffered writes flushed per frame; JSON.stringify of NAN or INF (engine warning, invalid JSON)"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
-    reason: "Probes T1 to T7, verified 4.7.2 headless: failed open returns null with no engine message, store_line false on failure, about 2 us a line with flush"
+    reason: "Probes T1 to T7 and the godot-specialist's R1 to R9 and K, verified 4.7.2 headless: failed open returns null with no engine message, store_line false on failure, about 2 us a line with flush, INF inside a nested Array still writes 1e99999"
     referenced_by:
       - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
-    revised: ""
+    revised: "2026-11-05"
     notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
@@ -1012,13 +1014,13 @@ forbidden_patterns:
   - pattern: command_result_truthiness
     status: active
     description: "No if r:, not r or bare OK against a command result; compare to the qualified enum value, e.g. TowerSim.BuildResult.OK (lint L-CMD-2, ADR-0007 amendment owed)"
-    why: "OK is 0 and falsy; bare OK is the global Error.OK, which equals 0 only by chance (probe T6)"
+    why: "OK is 0 and falsy; bare OK is the global Error.OK, which is 0 by definition, so r == OK parses and is true and the bug is silent (probes T6, R9); the lint covers hud_logic.gd, tower_input.gd, hero_input.gd and tests/helpers/bots/"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
     notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
   - pattern: command_call_outside_owner
     status: active
-    description: "In src/, only HudLogic calls build, start_wave and call_early, only TowerInput calls upgrade, only HeroInput calls pin and burst; no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false (lint L-CMD-1, ADR-0007 amendment owed)"
+    description: "Keyed on receivers in src/: tower_sim.build(, flow.start_wave(, flow.call_early( only in hud_logic.gd; tower_sim.upgrade( only in tower_input.gd; hero_sim.pin(, hero_sim.burst( only in hero_input.gd (lint L-CMD-1); no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false; no sim-folder file outside src/feature/hero/ and no src/root/ file but battle.gd and battle_builder.gd names hero_sim or HeroSim (lint L-HERO-1); ADR-0007 amendment owed"
     why: "Inputs must act only through their commands so the bot path equals the human path; telemetry must never change a result"
     adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
     added: 2026-11-05
