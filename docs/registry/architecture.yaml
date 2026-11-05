@@ -178,6 +178,28 @@ state_ownership:
     added: 2026-11-04
     revised: ""
     notes: "ADR-0009 Accepted 2026-11-04; binding"
+  - state: gold
+    status: active
+    owner_system: tower-sim
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    interface: "TowerSim.gold() -> int, never negative; gold_changed(current: int) only on a change; call_bonus(ticks_left: int) -> int, pure, ticks_left div to_ticks(early_call_seconds_per_gold), the same function the HUD previews and the wave_called_early handler pays"
+    write_access: "tower-sim only: _init (starting_gold from Stage), _on_enemy_killed, _on_wave_called_early, build, upgrade; each checks halted() first"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+  - state: hero_run_counters
+    status: active
+    owner_system: hero-sim
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    interface: "HeroSim.counters() -> HeroCounters, one reused instance, read-only by contract: ever_pinned, repins, bursts_fired, bursts_hit_0, bursts_hit_3, bursts_hit_5, burst_victims, burst_kills, kills_per_burst: Array[int], kills_on_hit_3: Array[int] (Hero Rule 16); copied read-only into ResultSnapshot with TowerSim towers_built"
+    write_access: "hero-sim only: pin() commit (ever_pinned, repins), burst release after its delivers (the rest)"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
@@ -455,6 +477,37 @@ interfaces:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0009 Accepted 2026-11-04; binding"
+  - contract: command_results
+    status: active
+    pattern: direct_call
+    producer: flow-tower-sim-hero-sim
+    consumers:
+      - hud-logic
+      - tower-input
+      - hero-input
+      - bots
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    signal_signature: "Every command enum starts OK = 0, BUSY = 1 (inside a tick or another command; dev-error text stays ERR_COMMAND_IN_TICK), then the GDD check order: BuildResult OK, BUSY, HALTED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD; UpgradeResult OK, BUSY, HALTED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD; PinResult OK, BUSY, HALTED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE; BurstResult OK, BUSY, HALTED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH; Flow.start_wave() -> StartResult OK, BUSY, HALTED, NOT_BUILD; Flow.call_early() -> CallResult OK, BUSY, HALTED, NOT_INTERMISSION, NO_TIME_LEFT; lookups, then accessor reads each followed by halted() (HALTED), before the first write; a refusal changes and emits nothing; callers compare to the qualified OK"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+  - contract: dev_line_sink
+    status: active
+    pattern: direct_call
+    producer: jsonl-file-sink
+    consumers:
+      - run-log
+      - gesture-log
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    signal_signature: "JsonlFileSink(path, max_bytes = 8 MiB).append_line(line: String) -> bool, passed as a method Callable; false on a release build, failed open, failed store_line or full file; never reports or halts; the caller reports its first false once to dev_error; user://run_log.jsonl and user://gesture_log.jsonl; built by the wrapper only when OS.is_debug_build()"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+      - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
@@ -728,6 +781,17 @@ api_decisions:
     added: 2026-11-04
     revised: "2026-11-04"
     notes: "ADR-0008 Accepted 2026-11-04; binding"
+  - purpose: dev_log_file_write
+    status: active
+    api: "FileAccess in JsonlFileSink only (besides the catalogue): open READ_WRITE plus seek_end() if the file exists, else WRITE; store_line() (returns bool since 4.4) then flush() per line; one JSON object per line from JSON.stringify (sorted keys) with non-finite floats replaced by null first"
+    not: "ignoring the store_* bool; buffered writes flushed per frame; JSON.stringify of NAN or INF (engine warning, invalid JSON)"
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    reason: "Probes T1 to T7, verified 4.7.2 headless: failed open returns null with no engine message, store_line false on failure, about 2 us a line with flush"
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    revised: ""
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
@@ -945,6 +1009,20 @@ forbidden_patterns:
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
     notes: "ADR-0009 Accepted 2026-11-04; binding"
+  - pattern: command_result_truthiness
+    status: active
+    description: "No if r:, not r or bare OK against a command result; compare to the qualified enum value, e.g. TowerSim.BuildResult.OK (lint L-CMD-2, ADR-0007 amendment owed)"
+    why: "OK is 0 and falsy; bare OK is the global Error.OK, which equals 0 only by chance (probe T6)"
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
+  - pattern: command_call_outside_owner
+    status: active
+    description: "In src/, only HudLogic calls build, start_wave and call_early, only TowerInput calls upgrade, only HeroInput calls pin and burst; no telemetry object (RunMeasures, RunLog, GestureLog, JsonlFileSink) calls a command or writes sim state, and none is built when OS.is_debug_build() is false (lint L-CMD-1, ADR-0007 amendment owed)"
+    why: "Inputs must act only through their commands so the bot path equals the human path; telemetry must never change a result"
+    adr: docs/architecture/adr-0010-sim-input-split-command-results-dev-telemetry.md
+    added: 2026-11-05
+    notes: "ADR-0010 Proposed 2026-11-05; not binding until Accepted"
 
 # Example:
 #
