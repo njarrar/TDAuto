@@ -716,9 +716,9 @@ requirements:
 - id: TR-hero-004
   system: hero
   gdd: design/gdd/hero-system.md
-  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim, HeroInput and the HUD, and the Burst ID into the HUD for the cooldown wedge"
+  requirement: "The builder injects halted(), in_build(), the hand flag, the Hero record ID and burst_id into HeroSim; the wrapper injects the same reads from Battle into HeroInput and HudLogic, including the Burst ID for the cooldown wedge (ADR-0001 Decision 3)"
   created: 2026-11-03
-  revised: "2026-11-04"
+  revised: "2026-11-05"
   status: active
 - id: TR-hero-005
   system: hero
