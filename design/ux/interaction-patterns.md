@@ -2,7 +2,7 @@
 
 > **Status**: In Design (revised after `/ux-review` NEEDS REVISION, 2026-11-04; re-review owed)
 > **Author**: njarrar + ux-designer (authored in session by `/ux-design patterns`, autonomous mode)
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Platform Target**: iOS and Android, portrait, one thumb, touch only; desktop build for testing with mouse as touch
 > **Linked Documents**: `design/accessibility-requirements.md`, `design/gdd/input-gesture-resolver.md`, `design/gdd/battle-hud.md`, `design/gdd/tower-system.md`, `design/gdd/hero-system.md`, `design/gdd/game-state-stage-flow.md`, `design/art/art-bible.md`, ADR-0003, ADR-0008
 > **Template**: Interaction Pattern Library
@@ -421,12 +421,12 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 - `TapScreen`: full rect, takes every pointer event, no focus. Fires `tapped` only on the release of a press it saw; a cancelled release does not fire. Clears held presses after firing, on show and on the lifecycle signal.
 - While it shows, the adapter's press gate is closed. A drag begun before it showed still ends once.
 - A finger down when it appears, or across a focus loss, cannot fire it.
-- Optional arming delay `arm_ms` (default 0), counted from when the owning screen starts it. A press counts only if it began after arming; one begun earlier is ignored even if released after. The screen that builds the TapScreen owns the value: the wrapper's result screen sets 300 for Retry and Play again; Paused keeps 0. Proposed; needs an ADR-0003 amendment (OI-10).
+- Optional arming delay `arm_ms` (default 0), counted from when the owning screen starts it. A press counts only if it began after arming; one begun earlier is ignored even if released after. The screen that builds the TapScreen owns the value: the wrapper's result screen sets 300 for Retry and Play again; Paused keeps 0. Decided by the ADR-0003 amendment of 2026-11-04, confirmed by the user 2026-11-04 (OI-10).
 **When to Use**: any screen that stops play.
 **When NOT to Use**: in-battle choices (arc, chip); they are field discs.
 **Sources**: HUD Rule 2; ADR-0003 Decisions 2.4, 4.
 **Accessibility**: AR-P-02: an accessible name if a plain Control can carry one; no keyboard path.
-**Implementation Notes**: `TapScreen` per ADR-0003 D4, plus `arm_ms` once the amendment lands (OI-10).
+**Implementation Notes**: `TapScreen` per ADR-0003 D4, with `arm_ms` and `start_arming(now_ms)` from its 2026-11-04 amendment (OI-10).
 
 #### IP-22 Tap to resume
 
@@ -457,7 +457,7 @@ None at MVP. From Alpha every sound repeats a visual; none carries meaning alone
 **When NOT to Use**: Vertical Slice replaces it with Stage Progression's report.
 **Sources**: HUD Rules 15, 16, 18, Layout; Flow Rule 16, Game Feel; AR-C-06.
 **Accessibility**: AR-C-06: plain, blame-free text; the button is 85 x 48 dp; armed, not confirmed.
-**Implementation Notes**: The result screen sets `arm_ms` 300 from text show (OI-10); the retry latch sits in Flow.
+**Implementation Notes**: The result screen sets `arm_ms` 300 from text show (OI-10). The retry latch sits on the app root, not in Flow: Retry calls `AppRoot.request_retry()` (ADR-0001 Decision 5).
 
 ### Feedback and cross-cutting patterns
 
@@ -588,7 +588,7 @@ Each item names the sources that disagree and what this library follows. It edit
 | OI-07 | Input burst sink, concept Pillar 4, Hero Rules 11 and 15 vs AR-M-06 | "A tap on the burst button does nothing" holds only in the default mode | IP-05 for default; IP-28 as the named exception | Input, Hero GDDs, concept (AR change 9) |
 | OI-08 | HUD UI Requirements Reduce Motion line (slides only) vs AR-V-10 | The HUD line omits four rows | AR-V-10 (IP-26) | Resolved 2026-11-04: HUD UI Requirements point to AR-V-10 |
 | OI-09 | Tower Rule 7 ("dimmed and does nothing") vs HUD Rule 7 (the disc calls `build`; NO_GOLD nudges) and Tower UI Requirements | Whether a refused disc tap shows a refusal | HUD Rule 7: the disc calls `build` and shows IP-24 | Resolved 2026-11-04: Tower Rule 7 matches HUD Rule 7 |
-| OI-10 | HUD Rules 2 and 11, Flow Game Feel (Retry arms after 300 ms) vs ADR-0003 Decision 4 (`TapScreen` has no arming state) | No arming gate, and no owner for it | IP-21: TapScreen takes optional `arm_ms` (default 0) and ignores presses begun before arming; the result screen sets 300 (IP-23). **Proposed; needs an ADR-0003 amendment** | GDD side resolved 2026-11-04 (HUD Rules 2 and 11, Flow Game Feel); ADR-0003 amendment still owed (technical-director) |
+| OI-10 | HUD Rules 2 and 11, Flow Game Feel (Retry arms after 300 ms) vs ADR-0003 Decision 4 (`TapScreen` has no arming state) | No arming gate, and no owner for it | IP-21: TapScreen takes optional `arm_ms` (default 0) and ignores presses begun before arming; the result screen sets 300 (IP-23). **Decided by the ADR-0003 amendment of 2026-11-04** | Resolved. GDD side 2026-11-04 (HUD Rules 2 and 11, Flow Game Feel); ADR-0003 amendment done, confirmed by the user 2026-11-04 |
 | OI-11 | HUD Rule 6 and AC 4 (arc guard on press time) vs Tower Rule 8 (chip guard on release time) | Two 200 ms guards on different clocks. A press at 150 ms released at 250 ms upgrades on a chip and is ignored on an arc | Both count from the press (IP-09, IP-10) | Resolved 2026-11-04 (user decision): Tower Rule 8 and its criteria now count from the press |
 | OI-12 | AR-M-06 (owners change, resolver signals do not) vs Input Rules 4 and 5 | The hero has no TAP disc, so a tap on it emits nothing; a second tap reaches whatever lies beneath. No signal means "tap at any point" | IP-28 restates AR-M-06 only | Input, Hero GDDs; Settings & Accessibility (Alpha) |
 | OI-13 | `.claude/docs/technical-preferences.md` Platform Notes ("skill button > tower > build slot > walkable ground") vs Input priority table | Legacy order is wrong and incomplete | Input priority (IP-04) | Project config owner (`/setup-engine`) |

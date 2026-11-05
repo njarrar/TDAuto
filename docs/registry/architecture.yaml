@@ -579,7 +579,8 @@ performance_budgets:
     budget_ms: 3.0
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     # was: fixed caps field 36, modals 4, spare 4; F1 per shape (before godot-specialist and TD-ADR review)
-    notes: "CPU: frame step 3 refresh plus every _draw body (draw commands), p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst). GPU: 60 draw calls a frame, provisional until M9a: HUD at most 12 (about 8, text batches at most 3), engine 4, spare 8 (a modal's about 4 come from spare), field views what is left (36), no per-node cap. Desktop bench P-V1 trigger 0.2 ms p95 in a release export; debug runs about 0.5 to 0.8 ms, so fallback F1 (one MultiMeshInstance2D per enemy pass with rim-keyline disc mesh, plus flashes) is the likely path. Measured M9a desktop windowed and M9b phone. ADR-0011 Accepted 2026-11-05; binding"
+    # was: design point 48 enemies, 6 towers, 16 flashes, burst (before the fourth architecture review, 2026-11-05)
+    notes: "CPU: frame step 3 refresh plus every _draw body (draw commands), p95 on an Adreno 5xx-class phone at the design point (48 enemies, 5 towers and the hero, 16 flashes, burst; the same scene as ADR-0009 Decision 8, a stage has at most 5 slots; about 227 draw commands). GPU: 60 draw calls a frame, provisional until M9a: HUD at most 12 (about 8, text batches at most 3), engine 4, spare 8 (a modal's about 4 come from spare), field views what is left (36), no per-node cap. Desktop bench P-V1 trigger 0.2 ms p95 in a release export; debug runs about 0.5 to 0.8 ms, so fallback F1 (one MultiMeshInstance2D per enemy pass with rim-keyline disc mesh, plus flashes) is the likely path. Measured M9a desktop windowed and M9b phone. ADR-0011 Accepted 2026-11-05; binding"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
@@ -762,7 +763,8 @@ api_decisions:
     # was: one file per rule family, suppression markers allowed (before godot-specialist and TD-ADR review)
     # was: IDs L-LAYER-1 to L-TEST-5 without the command, dev and hero rows (before ADR-0010 acceptance, 2026-11-05)
     # was: no L-VIEW rows (before ADR-0011 acceptance, 2026-11-05)
-    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010) and L-VIEW-1, L-VIEW-2 (ADR-0007 amended with ADR-0011); run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
+    # was: L-HERO-1 exempt only battle.gd and battle_builder.gd in src/root/; L-VIEW scope "battle HUD" with no folder (before the fourth architecture review, 2026-11-05)
+    api: "GDScript SceneTree lint run by Godot headless with a hand-written token scanner (comments dropped, strings kept); one table-driven token_rules.gd for banned-token rows plus own-code rules in tools/ci/lint/rules/; scopes and exempt files only in tools/ci/lint/scopes.gd; settings checks as tests/unit/app/app_settings_test.gd; IDs L-LAYER-1 to L-TEST-5, plus L-CMD-1, L-CMD-2, L-DEV-1, L-HERO-1 (ADR-0007 amended with ADR-0010) and L-VIEW-1, L-VIEW-2 (ADR-0007 amended with ADR-0011); L-HERO-1 exempts battle.gd, battle_builder.gd and battle_wrapper.gd in src/root/ (the wrapper builds HeroInput with hero_sim; only battle.gd reaches hero_sim on the tick path); L-VIEW-1 and L-VIEW-2 scope src/presentation/field/ and the battle HUD folder src/presentation/hud/, so modal TapScreens outside it may use Label; run_measures.gd a VIEW scope in scopes.gd; no suppression markers"
     not: "Shell or Python regex over source text; gdtoolkit parser; inline lint-allow markers"
     adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
     reason: "Settings, class lists, StatKeys tables and built scenes are visible only from inside the engine"
@@ -848,8 +850,9 @@ api_decisions:
   - purpose: battle_hud_text
     status: active
     # was: no gold-record, AccessKit or tnum conditions (before godot-specialist and TD-ADR review)
-    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); gold layout and string owned by HudTopBand as a plain record; HudTopBand sets accessibility_name and accessibility_live for gold and lives; one font loaded once by the wrapper, ThemeDB.fallback_font until chosen; tabular numerals through a FontVariation with tnum"
-    not: "Label nodes in the battle HUD (modal TapScreens may use them)"
+    # was: no accessibility_live enum named; not: "Label nodes in the battle HUD (modal TapScreens may use them)" (before the fourth architecture review, 2026-11-05)
+    api: "All battle HUD text drawn by HudField's final pass after its primitives, grouped by size (21, 24, 36 units), from cached TextLine objects re-shaped only on change, drawn with TextLine.draw(get_canvas_item(), pos, colour); gold layout and string owned by HudTopBand as a plain record; HudTopBand sets accessibility_name and accessibility_live (an AccessibilityServer.AccessibilityLiveMode value in 4.7, not DisplayServer) for gold and lives; one font loaded once by the wrapper, ThemeDB.fallback_font until chosen; tabular numerals through a FontVariation with tnum"
+    not: "Label nodes in the battle HUD folder src/presentation/hud/ or in src/presentation/field/ (modal TapScreens sit outside both and may use them)"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     reason: "Aims at TR-hud-015's at most 3 text batches (one atlas per size expected, counted in M9a; digits return to HudTopBand if batches merge across nodes); probes R3, R15, R18"
     referenced_by:
