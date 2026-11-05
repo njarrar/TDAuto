@@ -1,0 +1,10 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+P1 is_debug_build=true
+P2 open1 null=false
+P3 store_line returns true type=1 err=0
+P4 WRITE_READ on existing: length=0
+P5 READ_WRITE on existing null=false len=2
+P6 after append store=true text=x\ny\n
+P7 bad path null=true open_error=7
+P8 READ_WRITE on missing null=true open_error=7

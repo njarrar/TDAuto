@@ -573,6 +573,54 @@ interfaces:
     path: tests/support/targetable_factory.gd
     added: 2026-11-05
     revised: ""
+  - contract: tower_sim_commands
+    status: active
+    pattern: method-call
+    producer: tower-sim
+    consumers: [tower-input, hud-logic, bots, command-player]
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-001, TR-tower-002, TR-tower-008, TR-tower-009]
+    signature: "build(slot_index: int, tower_id: StringName) -> BuildResult; upgrade(slot_index: int) -> UpgradeResult; BuildResult {OK = 0, HALTED, REENTERED, BAD_SLOT, BAD_TOWER, SLOT_OCCUPIED, NO_GOLD}; UpgradeResult {OK = 0, HALTED, REENTERED, BAD_SLOT, NO_TOWER, MAX_LEVEL, NO_GOLD}; gold(), tower_at(i) -> Tower, early_call_bonus(seconds_left) -> int, in_command()"
+    tests: tests/unit/tower/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: hero_sim_commands
+    status: active
+    pattern: method-call
+    producer: hero-sim
+    consumers: [hero-input, bots, command-player, run-log]
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-hero-001, TR-hero-002, TR-hero-009, TR-hero-012]
+    signature: "pin(pos: Vector2) -> PinResult; burst(pos: Vector2) -> BurstResult (unpacked to 64-bit floats at entry); PinResult {OK = 0, HALTED, REENTERED, BAD_POSITION, OUT_OF_BOUNDS, BUTTON_ZONE}; BurstResult {OK = 0, HALTED, REENTERED, BUILD_PHASE, NOT_PINNED, NOT_READY, BAD_POSITION, OFF_FIELD, OUT_OF_REACH}; counters repins(), bursts(), bursts_hit_0(), kills_per_burst(), best_victims()"
+    tests: tests/unit/hero/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: tower_input_signals
+    status: active
+    pattern: signal
+    producer: tower-input
+    consumers: [hud-logic, gesture-log]
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-011, TR-hud-009]
+    signal_signature: "slot_tapped(slot_index: int), tower_inspected(slot_index: int); presentation signals, not battle signals"
+    tests: tests/unit/input/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
+  - contract: run_log_sink
+    status: active
+    pattern: method-call
+    producer: run-log
+    consumers: [hud-logic, file-run-log-sink, fake-run-log-sink]
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-hud-013, TR-hud-018]
+    signature: "RunLog.begin(launch, build_id, stage, seed, attempt); advance(view_dt); flush(); write_line: Callable (String) -> bool; sink write_lines(PackedStringArray) -> bool appends to user://run_log.jsonl with one READ_WRITE open per flush (WRITE first to create), null-checking both opens; seed and launch are strings; wrapper calls advance(view_dt) and flush()"
+    tests: tests/unit/hud/
+    status_note: Proposed
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -952,6 +1000,54 @@ api_decisions:
     tr: [TR-data-012, TR-state-013]
     status: active
     path: tools/ci/reserved-names.txt
+  - purpose: command_guard_and_flag
+    api: "Every guarded command checks HALTED, then REENTERED (in_dispatch), then pure refusals, then sets _in_command, runs a private commit (reads, halted check, mutate, emit) and clears the flag at the wrapper's single return; refusals mutate and emit nothing"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-002, TR-tower-006, TR-hero-002]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: live_entity_objects_and_contexts
+    api: "Tower and Hero are RefCounted objects owning one ReadContext each (WeakRef back); TowerSim owns one command context (live_entity null); Burst context has no object at MVP; no ReadContext is allocated per tick or per command"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-006]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: gold_ownership
+    api: "TowerSim owns gold (non-negative int), emits gold_changed only on change, pays on_enemy_killed(bounty) and on_wave_called_early(seconds_left) via early_call_bonus; both reactors return when halted"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-008, TR-tower-009]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: input_registrations_table
+    api: "Authoritative registrations with radius consts on input objects: slot/tower TAP 200 r36 (SLOT_RADIUS), chip TAP 300 r40 (CHIP_RADIUS), hero DRAG 200 r56 (HERO_RADIUS), burst button DRAG 100 r48 (BUTTON_RADIUS), button sink SINK 400 r48 (SINK_RADIUS), arc backdrop SINK 250 r600 (ARC_BACKDROP_RADIUS), arc discs TAP 300 r36 (ARC_DISC_RADIUS), Start/Call TAP 350 r48 (START_CALL_RADIUS)"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-input-012, TR-tower-011, TR-hero-010, TR-hud-008]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: bot_roster_and_replay
+    api: "Reactive bots in src/battle/bots/ emit ScriptedCommand entries recorded by BotRunner and applied only through CommandPlayer; bot_id in {towers-only, pinned-once, mid-skill, ceiling, mid-skill-calling}; replay of the recorded script must equal the baseline snapshots"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-hero-012]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
+  - purpose: dev_telemetry_run_log
+    api: "RunLog is built by the wrapper only when OS.is_debug_build(); events buffer, the wrapper flushes once per frame through an injected (String) -> bool sink; buffer dropped when is_fatal(); write failure non-fatal; attempt and call JSON-line records per TR-hud-018"
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-hud-013, TR-hud-018]
+    referenced_by:
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    added: 2026-11-05
 
 # Example:
 #
@@ -1423,6 +1519,24 @@ forbidden_patterns:
     status: active
     path: src/presentation/input/input_resolver.gd
     enforced_by: tools/ci/layer-lint.sh
+  - pattern: observer_calls_guarded_command
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-002, TR-hero-002]
+    rule: "run_log.gd, gesture_log.gd and views must never call build, upgrade, pin, burst, start_wave or call_early"
+    added: 2026-11-05
+  - pattern: run_log_reads_engine_or_files
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-hud-013]
+    rule: "run_log.gd must never reference OS, Time or FileAccess; only file_run_log_sink.gd touches FileAccess, and it never opens user://run_log.jsonl with WRITE_READ (it truncates an existing file)"
+    added: 2026-11-05
+  - pattern: read_context_allocated_per_tick_or_command
+    status: active
+    adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-and-dev-telemetry.md
+    tr: [TR-tower-006]
+    rule: "tower_sim.gd and hero_sim.gd must never call ReadContext.new inside tick, build, upgrade, pin or burst; contexts are built in _init or when the Tower exists"
+    added: 2026-11-05
 
 # Example:
 #
