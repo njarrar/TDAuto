@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/presentation/field/stage_look.gd" id="1_look"]
+
+[node name="Stage1Look" type="Node"]
+script = ExtResource("1_look")
+field_hue = 220.0
+base_value = 0.1
+grid_tilt_deg = 0

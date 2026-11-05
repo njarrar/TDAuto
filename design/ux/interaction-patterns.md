@@ -1,585 +1,437 @@
 # Interaction Pattern Library
 
-> **Status**: In Design
-> **Author**: ux-designer (autonomous mode; user to review)
-> **Last Updated**: 2026-11-04
-> **Version**: 0.6 (arc and chip proposals accepted; pin and aim review fixes; 0.5 pin and aim spec linked; 0.4 arc and chip proposals added; 0.3 aligned with the Battle HUD GDD approved in PR #7: Paused has no arming, Won omits Got through, burst fill, arming steps)
-> **Engine**: Godot 4.7.2
-> **UI Framework**: Two surfaces. Everything that can be tapped or dragged in the field is a registered disc in the Input & Gesture Resolver, drawn by `CanvasItem._draw`. Only the modal screens (Result, Paused, Fatal) and the top information band are Godot `Control` nodes.
+> Authoring guidance: .claude/docs/templates/guidance/interaction-pattern-library-guide.md (load per-section as you author, do not read entirely).
+
+> **Status**: In Design (draft, autonomous mode)
+> **Author**: user + ux-designer
+> **Last Updated**: 2026-11-05
+> **Version**: 0.1
+> **Engine**: Godot 4.7
+> **UI Framework**: Custom `_draw()` hit discs on the Input & Gesture Resolver for every battle action; Godot Control nodes for the two modal screens only
 > **Related Documents**:
-> - `design/art/art-bible.md` sections 3, 4, 7 (shapes, colour, UI direction)
-> - `design/accessibility-requirements.md` (tier and per-feature commitments)
-> - `design/gdd/battle-hud.md`, `input-gesture-resolver.md`, `tower-system.md`, `hero-system.md`, `game-state-stage-flow.md`
-> - `design/ux/[screen].md` (none yet; the Battle HUD, arc and chip, and pin and aim specs are still to be written)
+> - `design/art/art-bible.md`: visual standards (colours, type, iconography)
+> - `design/accessibility-requirements.md`: accessibility commitments per feature (tier: Basic plus elevated items)
+> - `design/ux/[screen].md`: none written yet
+>
 > **Template**: Interaction Pattern Library
 
-> **Source of this draft.** No UX spec exists yet, so every pattern below is
-> extracted from the approved or in-review GDDs and the art bible, not from a
-> screen spec. Numbers are copied from those documents; where a document leaves
-> a value open it is listed in Open Questions rather than invented here. All
-> patterns are **Draft** (specified, not implemented or validated on a device).
+> **Why this document exists**: Every screen spec should be able to say "uses
+> Armed Button" rather than restate press, arming, refusal and Reduce Motion
+> rules. This library is the single source for reusable interaction behaviour.
+> When the behaviour changes, it changes here first.
+>
+> **Status definitions**:
+> - **Draft**: specified, not yet built or tested
+> - **Stable**: built, tested and validated in at least one shipped screen
+> - **Deprecated**: being phased out
+
+**Source key.** "Concept" is `design/gdd/game-concept.md`. "HUD", "Input",
+"Hero", "Tower" and "Flow" are `battle-hud.md`, `input-gesture-resolver.md`,
+`hero-system.md`, `tower-system.md` and `game-state-stage-flow.md` in
+`design/gdd/`. "AB" is `design/art/art-bible.md`. ADR-0003, 0008, 0010 and
+0011 in `docs/architecture/` are all **Proposed**. **Proposed** in this document
+means no source sets the value and this draft suggests one. Units are field
+units on the 540 x 960 reference; 1.5 units = 1 dp at 360 dp.
 
 ---
 
 ## Overview
 
-TowerRiot is portrait, one thumb, touch first (a mouse stands in for touch on the
-desktop development build). Pillar 4 ("Thumb-First") sets the rule every pattern
-obeys: every action is one tap or one drag, and no target is smaller than
-44 pt (iOS) or 48 dp (Android). The art bible converts that to field units:
-540 units is about 360 dp, so 48 dp is 72 units.
+TowerRiot has two verbs, tap and drag, done with one thumb on a portrait phone
+(Concept Pillar 4). Nearly every interactive thing is a disc registered on the
+Input & Gesture Resolver, not a Godot Control (Input Hit targets; HUD Rule 2).
+The only Controls are the full-screen result and Paused screens, which take
+every event before the resolver sees it (HUD Rule 2; ADR-0003 Decision 2).
+So the patterns here are mostly gesture patterns, not standard widgets.
 
-The library has four parts:
+**Where the list came from.** No UX specs exist yet in `design/ux/`, so
+Phase 1 of the skill (catalog patterns from existing specs) found nothing.
+Every pattern below is taken from the GDDs and ADRs named in the source key.
 
-1. **Input patterns** (P-01 to P-05): how a touch becomes a tap, a drag or nothing, and which target wins.
-2. **Control patterns** (P-06 to P-11): the build arc, the upgrade chip, the Start/Call button, pin, aim, and the modal screens.
-3. **Feedback patterns** (P-12 to P-17): refusal, unaffordable, locked, cooldown, ground tap, prompt.
-4. **Display patterns** (P-18 to P-20): counters, lives, wave pips.
+### Rules every pattern follows
+
+These come from the resolver and apply to all patterns, so they are not
+repeated in each entry.
+
+1. **One pointer.** The first press owns the gesture. Other fingers are dropped. A resting palm on nothing real is replaced by the next press (Input Rule 1).
+2. **Winners fixed at press.** The best tap target and best drag target are chosen at press and never change for that gesture (Input Rule 2). A gesture reaches only its own class winner, or nothing (Input Rule 4).
+3. **Tap vs drag is distance only.** No duration limit, no long press, no double tap. `tap_slop` 28 units when a real tap target is under the press, `drag_slop` 15 otherwise (Input Rule 3, Tuning Knobs).
+4. **Slide off to abort.** A tap released outside its frozen disc does nothing (Input Rule 5).
+5. **A miss is silent, except on the ground.** Wrong-class presses produce no feedback (Input Game Feel). Only Ground Tap Rejection draws a cue.
+6. **Press feedback on the press** for the hero and the ready burst button; everything else answers the classified gesture (Input Game Feel).
+7. **Host cancel only.** App pause, focus loss, Android back and resize cancel the gesture; nothing ever fires from a cancel (Input Rule 7; ADR-0003 Decision 6).
+8. **Touch target floor 48 dp (72 units)**, checked by `target_ok` (Concept Pillar 4; Input Formulas).
+9. **Reduce Motion** removes slides, nudges, snaps and pulses; fades and clock bars stay (HUD UI Requirements; ADR-0011 Decision 8).
+10. **Left-handed** mirrors only the burst button and its digit (HUD Edge Cases; Hero UI Requirements).
+11. **Edge and safe-area presses** never reach the resolver (Input Rule 12; ADR-0003 Decision 5).
 
 ### How to Use This Library
 
-**Designing a screen:** browse the catalogue, reference a pattern by its ID
-(for example "uses P-04 Armed Button"), and do not restate its behaviour. If no
-pattern fits, add one here or flag it in Gaps before writing the spec.
+**Designing a screen**: check the catalog before inventing an interaction. Reference patterns by name. If none fits, add one here first.
 
-**Implementing:** the pattern's Specification is the contract. The GDD named in
-"Source" is the authority if the two ever differ; fix this document.
+**Implementing a screen**: look up the named pattern here. Accessibility notes are not optional.
 
-**Reviewing:** `/ux-review` checks that a spec uses these names and that its
-accessibility notes match each pattern's accessibility line.
+**Reviewing a spec**: every interactive element must name a pattern from this library or carry its own full spec.
 
-### Global rules
-
-| Rule | Value | Source |
-|---|---|---|
-| Minimum hit target | 48 dp (72 units at 360 dp). Every MVP target meets it with no margin at the narrowest width | Art bible 3; Battle HUD UI Requirements |
-| Minimum text | 14 dp (21 units) body; 16 dp gold, lives, labels, costs; 24 dp burst digit (floor 18 dp) | Art bible 7 |
-| Text surface | Neutral `#C8D0E0` on panel `#141B30` (85% opacity) only; never on the raw field at small sizes | Art bible 7 |
-| Press and state-change animation | 120 ms | Art bible 7 |
-| Panel slide | 200 ms, opacity fixed | Art bible 7 |
-| Never animated | Leash (dash density switches), panel opacity, counter values (digits swap, never bounce). Nothing in screen space loops or glows | Art bible 7 |
-| Reduce Motion | Cuts slides and nudges; fades and clock bars stay; the 2 Hz danger pulse freezes and the 0.4 s burst dip is skipped. Data flag `reduce_motion` on the Input record until Settings exists | Battle HUD; art bible 7 |
-| Handedness | `left_handed` mirrors the burst button and its digit only; never the leash kite or the aim offset | Hero UI Requirements |
-| Hover | None. No hover-only interaction anywhere | Technical preferences |
-| Destructive actions | None exist (no selling, no respec in battle), so no confirmation dialogs. The mis-spend guards are P-06 and P-07 | Tower, Battle HUD |
-
-
-### Animation Standards
-
-| Use | Duration | Easing | Reduce Motion | Source |
-|---|---|---|---|---|
-| Press feedback, state change, arc collapse | 120 ms | ease-out in, ease-in out | Cut to the end state | Art bible 7 |
-| Refusal nudge (P-12, P-14) | 2 px once, 120 ms | linear | Skipped; a non-motion cue is still to be specified (P-12) | Tower, Hero UI Requirements |
-| Panel in and out | 200 ms slide, opacity fixed | ease-out in, ease-in out | Cut | Art bible 7 |
-| Lost life dash | 200 ms fade to alpha 0.2 | linear | Kept (a fade) | Art bible 7 |
-| Ground-tap ring (P-16) | 150 ms fade in | linear | Kept (a fade) | Art bible 7 |
-| Cooldown sweep, chip drain bar | real time | linear (it is a clock) | Kept | Art bible 7; HUD Rule 9 |
-| Armed button arming (P-08) | 300 ms, then a step to full alpha | n/a (state, not motion) | Kept | HUD Rule 11 |
-| Paused | instant | none | n/a | HUD Rule 17 |
-| Danger pulse | 2 Hz, at most 25% alpha swing | sine | Frozen | Art bible 7 |
-| Never animated | Leash, panel opacity, counter values | | | Art bible 7 |
-
-### Sound Standards
-
-| Rule | Value | Source |
-|---|---|---|
-| UI sound at MVP | None. Audio is an Alpha system | Systems index |
-| Audio-only cues | Forbidden. Every state a sound carries must also be visible | `design/accessibility-requirements.md` |
-| When Audio arrives | Each pattern gets a press, confirm or refuse sound; a refusal sound must not be harsh, and no sound may be the only refusal cue | Audio GDD (not yet written) |
+**Changing a pattern**: search all specs for its name, check the impact, get ux-designer approval, and update this file first.
 
 ---
 
 ## Pattern Catalog
 
-| ID | Pattern | Category | Used in | Status |
-|---|---|---|---|---|
-| P-01 | Disc Hit Target | Input | Every tappable or draggable thing in the field | Draft |
-| P-02 | Tap vs Drag Classification | Input | All gestures | Draft |
-| P-03 | Tap Priority Order | Input | All overlapping targets | Draft |
-| P-04 | Sink Target | Input | Burst button, arc backdrop | Draft |
-| P-05 | Edge and Safe-Area Rejection | Input | All presses | Draft |
-| P-06 | Build Arc | Control | Battle HUD (slot tap) | Draft |
-| P-07 | Upgrade Chip | Control | Battle HUD (tower tap) | Draft |
-| P-08 | Armed Button | Control | Start/Call, Retry, Play again | Draft |
-| P-09 | Pin Drag | Control | Hero | Draft |
-| P-10 | Aimed Burst Drag | Control | Hero burst | Draft |
-| P-11 | Modal Screen | Control | Result, Paused, Fatal | Draft |
-| P-12 | Refused Action | Feedback | Arc disc, chip, burst button | Draft |
-| P-13 | Unaffordable | Feedback | Arc disc, chip | Draft |
-| P-14 | Locked Outline | Feedback | Burst button | Draft |
-| P-15 | Cooldown Display | Feedback | Burst button, towers | Draft |
-| P-16 | Ground Tap Rejection | Feedback | Empty field | Draft |
-| P-17 | First-Time Prompt | Feedback | Hero pin, build | Draft |
-| P-18 | Swap Counter | Display | Gold | Draft |
-| P-19 | Lives Dashes | Display | Lives | Draft |
-| P-20 | Wave Pips | Display | Wave progress | Draft |
+### Pattern Catalog Index
+
+| Pattern Name | Category | Description | Used In (Screens) | Status |
+|-------------|----------|-------------|------------------|--------|
+| Slot Tap | Input | Tap an empty slot to open the build arc | Battle | Draft |
+| Build Arc | Input / Overlay | Three role discs above a slot; tap one to build | Battle | Draft |
+| Arc Dismiss | Input | Any press outside the discs closes the arc and does nothing else | Battle | Draft |
+| Tower Tap and Cost Chip | Input / Feedback | Tap a tower to show its upgrade cost and a 1.5 s window | Battle | Draft |
+| Chip Commit | Input | Second tap on the tower or chip inside the window upgrades | Battle | Draft |
+| Max-Level Inspect | Feedback | Tap a level-2 tower to show its range ring | Battle | Draft |
+| Refused Purchase | Feedback | What a tap on something you cannot afford does | Battle | Draft |
+| Hero Press (Leash Show) | Feedback | Touching the hero shows its leash at once | Battle | Draft |
+| Hero Pin Drag | Input | Drag the hero and release to pin it | Battle | Draft |
+| Burst Aim Drag | Input | Drag from the burst button to aim, release to fire | Battle | Draft |
+| Burst Cancel | Input | Drag back onto the button and release to cancel | Battle | Draft |
+| Burst Dead Press | Feedback | Tap, cooling press or locked press on the burst button | Battle | Draft |
+| Armed Button | Input | A button that ignores presses for 300 ms after appearing | Start/Call, Retry, Play again | Draft |
+| Start / Call | Input | One button: start wave 1, or call the next wave early | Battle | Draft |
+| Ground Tap Rejection | Feedback | Dim ring for the first three empty taps of a battle | Battle | Draft |
+| Prompt Line | Feedback | One line naming the next verb, hidden on the act | Battle | Draft |
+| Modal Screen | Modal | Full-screen Control that takes every event | Result, Paused | Draft |
+| Result and Retry | Modal | Plain result text with one filled button | Result (Lost, Won) | Draft |
+| Resume Tap | Modal | Tap anywhere to leave Paused | Paused | Draft |
+| Lifecycle Cancel | Navigation | Focus loss or back cancels any gesture and pauses | All | Draft |
+
+**Template patterns not used at MVP.** Button (Primary, Secondary,
+Destructive), Toggle, Slider, Dropdown, List Item, Grid Item, Confirmation
+Dialog, Toast, Tooltip, Progress Bar, Input Field, Tab Bar, Scroll Container,
+Inventory Slot, Health Bar, Minimap, Quest Tracker, Dialogue Box, Context Action
+Prompt, Damage Number, Status Effect Icon, Notification Banner, Screen
+Push/Pop/Replace, Tab Switch, Focus Management, Escape/Cancel (keyboard form),
+Loading State, Empty State, Error State, Optimistic UI. MVP has no menus,
+settings or text entry (HUD Deliberately not built; Flow Deliberately not
+built). Tooltip in particular is ruled out on touch (template: "touch-only
+platforms without hover"). Damage Number is ruled out by HUD Rule 4. They
+return with Menu & Screen Flow and Settings (Gaps section).
 
 ---
 
 ## Patterns
 
-### P-01 Disc Hit Target
+Each entry gives **Trigger**, **Feedback**, **Failure** (what happens when the
+gesture is wrong, late or refused) and **Accessibility**.
+
+### Slot Tap
 
 **Category**: Input
-**Used In**: every field target (hero, burst button, slots, towers, arc discs, chip, Start/Call, backdrop)
-**Source**: Input & Gesture Resolver, Hit targets
 **Status**: Draft
+**Used In**: Battle
+**Source**: Tower Rule 7, Rule 17 (`slot_tapped`); HUD Rule 6; Input priority table (slot TAP 200)
 
-**Description**: A target is a disc: a centre, a radius, a gesture class (TAP or DRAG), a priority and an enabled flag. The owner registers and unregisters its own targets and moves the centre when the thing moves. The resolver never knows what a target is.
+- **Trigger**: tap on an empty build slot (disc radius 36, TAP 200). Towers and slots share a tier; nearest centre wins.
+- **Feedback**: the Build Arc opens above the slot on the next frame (HUD Game Feel). Slot shows its selected outline at alpha 0.6 (AB §8 checklist).
+- **Failure**: release outside the disc does nothing (slide-off). A built slot is disabled and its tower takes the press (Input Edge Cases). A drag from a slot is never a pin unless the hero is under it (Input Rule 4).
+- **Accessibility**: 48 dp target. Free vs blocked slot is told by corner dots vs a diagonal hairline, not colour (AB §6).
+- **When to use**: the only way to start a build.
+- **When NOT to use**: never chain a build from a slot tap alone; a disc tap is always the second step.
 
-**Specification**:
-- Radius from the art bible table: hero drag 56 units; tower, slot and arc disc 36 units; burst button 48 units; chip 40 units.
-- A thing that answers both a tap and a drag registers twice, under two ids.
-- `set_enabled(false)` removes a target from hit tests without unregistering it (a built slot).
-- Ids start at 1 and are never reused; `NONE` is -1, so a stale id can never alias a live target.
-- The visible shape is larger than or equal to the disc's inner area and never smaller than the minimum text and target rules above.
-- Accessibility: the disc, not the drawing, is the hit area. A drawn element smaller than 48 dp must still have a 48 dp disc.
+### Build Arc
 
-**When to Use**: any tappable or draggable thing in the field, including things drawn by `_draw`.
-**When NOT to Use**: modal screens and the top band; those are Controls (P-11).
+**Category**: Input / Overlay
+**Status**: Draft
+**Used In**: Battle
+**Source**: HUD Rules 6 to 8, Formulas `arc_disc`; Tower Rule 7; AB §7 Build/upgrade affordance
 
-**Implementation**: The owner calls `register` on the injected resolver and keeps the id. HUD discs are registered by HudLogic; tower, slot and chip discs by TowerInput; hero and burst discs by HeroInput. Drawing is separate (HudField or the field views).
+- **Trigger**: opened by Slot Tap. Three discs (TAP 300, radius 36) at radius `R` 76 above the slot, always triangle, hexagon, square, left to right, both hands. Tap a disc to call `build`.
+- **Feedback**: each disc shows a tower-size polygon with a cyan contour and a 60 x 44 panel with its word and cost (Single, Splash, Slow). On `OK` the arc collapses in 120 ms (art only; it unregisters at once) and the tower appears with a white overlay, scale 1.15 to 1 in 120 ms (Tower Visual/Audio). One range ring per distinct level-1 range shows while open (Tower Visual/Audio).
+- **Failure**: a disc press within 200 ms of opening is ignored, so a double tap on the slot dismisses instead of buying (HUD Rule 6). Unaffordable discs are dimmed and struck through, and a tap on one follows Refused Purchase. `HALTED` closes the arc. Start/Call is disabled while the arc is open (HUD Rule 6).
+- **Accessibility**: fixed disc order builds motor memory. Role is shape plus word, never colour alone. Adjacent discs are only 4 units apart, under the proposed 8 dp gap (accessibility doc, Target spacing); first fallback is a larger `R` (HUD Open Questions). Under Reduce Motion the collapse and build scale are replaced by a cut, keeping the white overlay as a 120 ms fade (proposed static fallback; Tower UX flag asks for one).
+- **When to use**: choosing a tower for one slot.
+- **When NOT to use**: never place the arc below the slot (thumb side) (AB §7).
 
-### P-02 Tap vs Drag Classification
+### Arc Dismiss
 
 **Category**: Input
-**Used In**: all gestures
-**Source**: Input & Gesture Resolver, Rules 1 to 6
 **Status**: Draft
+**Used In**: Battle
+**Source**: HUD Rule 8; Input priority table (backdrop TAP 250 sink); Input Edge Cases (arc open)
 
-**Description**: A press is a tap or a drag, decided by distance moved from the press point. The two kinds never fall through to each other.
+- **Trigger**: any press while the arc is open whose best tap is not one of its discs: ground, another slot, a tower. Also `drag_started` (for example a drag to the hero), Paused, an outcome or Fatal.
+- **Feedback**: the arc closes on the press. Nothing else happens: a tap on another slot does not open its arc, so the thumb never acts on a target 10 dp from the one it meant.
+- **Failure**: none to the player; the next tap opens the new arc. A finger rolling off a disc leaves the arc open. A phase change among Build, Wave and Intermission leaves it open.
+- **Accessibility**: no rejection ring for a dismissal (HUD Rule 14), so the ring stays a cue only for empty taps. Zero mis-fires outranks one saved tap (Input Edge Cases).
 
-**Specification**:
-- Slops come from the Data `Input` record: `drag_slop` default 15 units (domain 8 to 30), `tap_slop` default 28 units (domain 16 to 34), with `tap_slop > drag_slop` checked at load and again by the resolver. Pillar 4 aims for a drag slop of about 10 to 12 dp on phones; the shipped values come from the phone test.
-- At press the resolver freezes the best TAP winner and the best DRAG winner. A press with a tap target uses the larger tap slop before it can become a drag.
-- A drag latches once started and never turns back into a tap.
-- One pointer at a time. A second finger is ignored.
-- Every exit ends with `became_idle`.
-- Accessibility: a tap never requires holding. A drag never requires a precise end point except the burst aim (P-10), whose cancel zone is generous (64 units).
+### Tower Tap and Cost Chip
 
-**When to Use**: automatic; all input goes through it.
-**When NOT to Use**: never bypass it. Headless bots call the commands directly instead (Input Rule 11).
+**Category**: Input / Feedback
+**Status**: Draft
+**Used In**: Battle
+**Source**: Tower Rule 8; HUD Rule 9, Formulas `chip_bar`; AB §7
 
-**Implementation**: Pure logic in `InputResolver` (ADR-0008); the adapter only forwards five calls. Tested headless with synthetic positions.
+- **Trigger**: tap on a tower below its last level (TAP 200).
+- **Feedback**: a 76 x 44 chip panel above the tower at (x, y − 76) with the cost (16 dp), a 20 px cyan level-2 polygon and a neutral bar draining over 1.5 s. Current range ring plus next range at alpha 0.25 (Tower Visual/Audio). The chip is its own disc (TAP 300, radius 40).
+- **Failure**: the window expires at 1.5 s and the chip closes; a later tap opens a new chip and never commits. A press on anything else closes it; a press on another tower opens that tower's chip. Paused, Won, Lost and Fatal close it (Tower Rule 8 table).
+- **Accessibility**: the bar gives the window a visible clock (HUD Rule 9). The chip sits above the thumb so it can be seen. Open points from the Tower UX flag: does the bar read under a thumb, and what does a chip that would leave the field do. The 1.5 s window is the only timed input; a timing multiplier is proposed for Alpha (accessibility doc).
 
-### P-03 Tap Priority Order
+### Chip Commit
 
 **Category**: Input
-**Used In**: any place where discs overlap
-**Source**: Input & Gesture Resolver, Suggested registrations; concept Pillar 4
 **Status**: Draft
+**Used In**: Battle
+**Source**: Tower Rule 8; Input Rule 8; Concept MVP item 6
 
-**Specification** (higher wins within a class; ties go to priority, then nearest centre, then id):
+- **Trigger**: a second tap on the same tower, or on its chip, released with `200 ≤ elapsed < 1500` ms.
+- **Feedback**: upgrade on the next frame. The tower gains its inset outline at 60% scale with the white overlay (Tower Visual/Audio). Range ring shows 400 ms then fades over 200 ms.
+- **Failure**: taps under 200 ms are ignored, a hard bounce guard. `NO_GOLD` keeps the chip open and dimmed; the window does not restart (Refused Purchase). A drag that starts on the tower (hero beneath) never commits, since the window counts taps only (Input Edge Cases).
+- **Accessibility**: the chip is the mis-spend safeguard instead of a modal (AB §7). Open: an armed look after the 200 ms guard (Tower UX flag). **Proposed:** the chip outline goes from 1 px to 2 px at 200 ms, a weight change with no motion, so it also works under Reduce Motion.
 
-| Priority | Target | Class |
-|---|---|---|
-| 400 | Burst button sink | TAP, sink |
-| 350 | Start/Call (Build and Intermission only) | TAP |
-| 300 | Build-arc disc; upgrade chip | TAP |
-| 250 | Arc backdrop | TAP, sink |
-| 200 | Tower; build slot (nearest centre wins) | TAP |
-| 200 | Hero | DRAG |
-| 100 | Burst button | DRAG |
+### Max-Level Inspect
 
-- Drag order: the hero's grab disc (56 units) beats the burst button, so a press inside both is the hero's. When `pressed` names Start/Call as `best_tap` and the hero as `best_drag`, the HUD ignores that gesture's tap.
-- Towers and slots share a tier so a tower cannot steal a touch aimed at the slot beside it.
-- No slot may sit close enough to the burst button for their discs to overlap at any supported inset (Enemy & Wave rule L3, enforced by a content test).
-- Walkable ground: a tap on nothing does nothing (P-16).
+**Category**: Feedback
+**Status**: Draft
+**Used In**: Battle
+**Source**: Tower Rule 8 (`tower_inspected`); HUD Rule 9; Tower UI Requirements
 
-**Accessibility**: the order is fixed and documented so the same press always means the same thing; that consistency is the accessibility property.
+- **Trigger**: tap on a level-2 tower.
+- **Feedback**: its range ring for 1.5 s. No chip opens.
+- **Failure**: none.
+- **Accessibility**: makes the tap not silent. Open: a maximum-level cue beside the ring (Tower UX flag). Level is already shown by shape (inset outline), not colour (AB §3 Accretion).
 
-**When to Use**: Whenever two targets can overlap. Assign a priority from this table before adding a target.
-**When NOT to Use**: Do not use priority to fix a layout problem; move the target. Do not give two different-meaning targets the same priority unless nearest-centre is the intended rule.
+### Refused Purchase
 
-**Implementation**: Priorities are constants in the owner's registration call. The content test checks layout rules L1 to L14 so overlaps the table does not resolve cannot ship.
+**Category**: Feedback
+**Status**: Draft
+**Used In**: Build Arc, Chip Commit
+**Source**: Tower UI Requirements; HUD Rule 7 (`NO_GOLD` nudge); AB §7 ("no magenta")
 
-### P-04 Sink Target
+- **Trigger**: tap on an unaffordable disc, or a chip commit that returns `NO_GOLD`.
+- **Feedback**: the item stays dimmed and struck through, updated live as gold changes. A ±2 px nudge once for 120 ms. No magenta (danger only).
+- **Failure**: nothing is bought; the arc or chip stays open. A disc that becomes affordable works at once (HUD Edge Cases).
+- **Accessibility**: under Reduce Motion the nudge is skipped (Tower UI Requirements), which would leave no cue. **Proposed static cue:** the struck cost and its line show at full alpha for 300 ms, then return to dim. One step up and one down, no movement, no repeat, so it is not a flash. Dimmed alpha proposed at 0.6 for 4.5:1 contrast (accessibility doc).
+
+### Hero Press (Leash Show)
+
+**Category**: Feedback
+**Status**: Draft
+**Used In**: Battle
+**Source**: Input Rule 2 (`pressed`, `became_idle`), Visual/Audio table; Hero Visual/Audio; AB §3 Line styles
+
+- **Trigger**: any press whose best drag is the hero (DRAG 200, radius 56), including a tap on the hero alone.
+- **Feedback**: dashed leash ring (2 px, 10 on 8 off, radius 90, alpha 0.5) on the first frame of the press. Hidden on `became_idle`.
+- **Failure**: a tap on the hero alone does nothing but show the leash (Concept Pillar 4). A tower or slot under the hero still wins the tap (Input Edge Cases).
+- **Accessibility**: answering on press tells the player "this is yours" before tap vs drag is known. Over the path the leash is two-tone or alpha 0.7 to clear 3:1 (AB §7). Unpinned hero shows a dashed ring at its grab radius instead, plus the "Drag the hero" prompt (Hero Visual/Audio).
+
+### Hero Pin Drag
 
 **Category**: Input
-**Used In**: burst button (tap), arc backdrop
-**Source**: Input & Gesture Resolver, `sink` field
 **Status**: Draft
+**Used In**: Battle
+**Source**: Hero Rules 1 to 3, 14, 15; Input Rules 3, 6; AB §5 Pose language
 
-**Description**: A TAP-only target that absorbs taps its owner ignores. It wins the tap class like any other target but does not raise the press's slop and does not hold the pointer against a replacing press.
+- **Trigger**: press inside the hero's 56-unit grab disc and move past slop (15 units on a clear hero; 28 if a tap target is also under the press). Release sets the pin.
+- **Feedback**: during the drag, leash plus a 2 px unfilled kite ghost at the clamped pin point; the leash carries it since the thumb hides the ghost. On release a 2 px ground ring (radius 30) lands at once and the leash snaps to the pin; the hero walks there at 240 units per second, tip locked on the pin. On arrival the hero shrinks 6% for 0.1 s (Hero Visual/Audio).
+- **Failure**: a pin off the field, in a button's exclusion zone or outside `pin_rect` is clamped, never refused, so the ghost always shows where it lands (Hero Rule 14). A cancel mid-drag keeps the old pin (Input Rule 7). Once a drag, always a drag; wobbling back does not make it a tap (Input Game Feel).
+- **Accessibility**: no re-pin cooldown (Hero Rule 3). The hero outranks both buttons inside its grab disc, because a wrong re-pin is cheap and a wasted burst or call is not (Hero Rule 15). `pin_offset` is 0 at MVP; a 105-unit offset waits for the phone test. Open: re-grabbing a hero pinned high on the screen with one thumb (Hero UX flag). Under Reduce Motion the arrival shrink is a cosmetic transform that should be skipped (proposed; Hero's Reduce Motion row does not list it).
 
-**Specification**:
-- Burst button: a tap does nothing and reaches nothing beneath, so a resting thumb cannot spend the cooldown and a slot below cannot receive the touch.
-- Arc backdrop: one disc covering the field while an arc is open, so a press outside the discs only dismisses the arc.
-- Accessibility: a tap that does nothing must not feel broken; for the burst button the cooldown display (P-15) is the explanation.
-
-**When to Use**: A target where a tap must do nothing and must not fall through (a drag-only control; a dismiss area).
-**When NOT to Use**: A target that should react to a tap; a sink there would swallow it silently.
-
-**Implementation**: `register(..., sink = true)`; TAP class only.
-
-### P-05 Edge and Safe-Area Rejection
+### Burst Aim Drag
 
 **Category**: Input
-**Used In**: every press
-**Source**: Input & Gesture Resolver, Rule 12
 **Status**: Draft
+**Used In**: Battle
+**Source**: Hero Rules 6, 7, 11 to 13; Input Visual/Audio table; AB §7 Burst button, Reticle
 
-**Specification**:
-- The adapter rejects a press inside `edge_reject_margin` (0 to 48 units) and inside the platform safe-area or gesture insets.
-- Burst button: hit box ends at least 24 dp from the side edge (Android back-swipe zone, unverified) and 16 dp above the OS gesture inset.
-- Start/Call may sit in the bottom band only in Build and Intermission, clear of the burst button and build slots.
-- The bottom 30% of the screen holds only the burst button and the field, so the pinned thumb never hides the lower lane.
-- Open: real inset values on Android and iOS (see Open Questions).
+- **Trigger**: press on the burst button (DRAG 100, radius 48) while Ready, pinned and not in Build, then drag past 64 units from the button's centre. Release fires at the aim point.
+- **Feedback**: on press, a thin ring at radius 64 (the cancel boundary) plus a cancelling reticle, as the drag affordance (Hero UI Requirements). While aiming: reticle (3 px ring, four ticks) 100 units above the finger, solid radius preview, neutral dotted reach ring around the hero, and kill preview on enemies that would die. At the reach limit the reticle stops and ±20° of the reach arc turns solid. On release: wind-up, the gold ring grows to meet the preview, spokes to each kill (Hero Visual/Audio).
+- **Failure**: a release under 64 units that never passed 64 cancels (Burst Cancel). The aim is clamped to reach, so a person never gets `OUT_OF_REACH` (Hero Edge Cases). Paused during an aim cancels it; nothing fires (Hero Edge Cases). A burst on nobody still spends the cooldown; the preview showed no victims first.
+- **Accessibility**: drag-only, so a resting thumb never spends the cooldown (Concept Core Mechanic 2). Reticle offset keeps the aim out from under the thumb. Kill preview uses a knocked-out body plus white contour, not colour. Under Reduce Motion: no field dip, wind-up, snap or Ready pop; a static ring from T+0.1 and 4 px at release; spokes stay (Hero Visual/Audio). The 0.4 s field dip never re-dips within 1 s (AB §7). Open: reticle far from the thumb when clamped, preview overhanging the reach ring, ring clipping at 540 wide, reach-dot contrast (Hero UX flag).
 
-**Accessibility**: prevents OS gestures (back, home) from firing by accident for players with less precise touch.
+### Burst Cancel
 
-**When to Use**: Always; it is part of the adapter.
-**When NOT to Use**: Never disable it per screen. Modal screens repeat it in their own press model (P-11).
-
-**Implementation**: `InputAdapter` (ADR-0003). Inset values come from the platform; verify on device.
-
-### P-06 Build Arc
-
-**Category**: Control
-**Used In**: Battle HUD
-**Source**: Battle HUD Rules 6 to 8; Tower Rule 8; art bible 7
+**Category**: Input
 **Status**: Draft
+**Used In**: Battle
+**Source**: Hero Rule 13; Input Rule 7; AB §7 Reticle
 
-**Description**: Tapping a free slot opens three tower discs in an arc above the slot. Tapping a disc builds that tower.
+- **Trigger**: during an aim, bring the finger back to 48 units or less from the button's centre and release there. Every aim starts in the cancelling state until it passes 64.
+- **Feedback**: while cancelling the reticle drops to alpha 0.3 with no ticks, and the preview and kill marks hide, so an aim that will cancel never looks live. On release everything clears; nothing fires.
+- **Failure**: none. A cancel is free; there is no cancel after release (Hero Rule 6).
+- **Accessibility**: hysteresis (stop at 64, resume at 48) stops a shaky thumb from flickering between states. The cancel state is shown by alpha plus missing ticks plus a hidden preview, not by colour.
 
-**Screen-level source**: `design/ux/arc-and-chip.md` holds the full behaviour, geometry, text fit and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
-
-**Specification**:
-- Order is always triangle (Single), hexagon (Splash), square (Slow), left to right, on every slot and for both hands, for motor memory.
-- Arc sits above the slot, never below, where the thumb is, at radius `R` = 96 units from the slot. Each disc is a 56 px role polygon with a radius-36 hit disc; a panel above holds the word and the cost on two lines. Slots sit at x 156 to 384 so every disc stays clear of the edge margin.
-- A disc press within 200 ms of opening counts as a press outside the discs: it closes the arc and buys nothing, so a double tap that drifts onto a disc dismisses rather than buys. There is no refund for a wrong disc.
-- A tap on a panel's word dismisses the arc, like any press off the discs (PQ-08).
-- The disc always calls `build`; the result decides: `OK` closes the arc at once (120 ms collapse is art only), `NO_GOLD` leaves it open with a refusal (P-12), `HALTED` closes it, anything else closes it and logs a development error.
-- Closing: a press outside the discs closes it (backdrop sink); `drag_started` closes it; Paused, an outcome and Fatal close it. A phase change among Build, Wave and Intermission leaves it open. A finger rolling off a disc leaves it open.
-- Start/Call is disabled while an arc is open.
-- Unaffordable discs use P-13.
-- Reduce Motion: the 120 ms collapse becomes a cut, and the build overlay loses its 1.15 to 1 scale and only fades from alpha 0.6 to 0 over 120 ms (accepted 2026-11-04; `design/ux/arc-and-chip.md`). The arc itself has no open animation. For its first 200 ms the discs and panels sit at alpha 0.5 and step to full (the guard look, accepted 2026-11-04).
-- Accessibility: choice is by shape and word, never colour alone (all three discs are cyan). No timer; the arc stays open until dismissed.
-
-**When to Use**: building on a free slot.
-**When NOT to Use**: upgrading (use P-07).
-
-**Implementation**: HudLogic registers the backdrop and three discs and calls `build`; HudField draws the arc and panels. Costs are read through the accessor on opening and on `gold_changed`, at level 1 only.
-
-### P-07 Upgrade Chip
-
-**Category**: Control
-**Used In**: Battle HUD
-**Source**: Battle HUD Rule 9; Tower Rule 8
-**Status**: Draft
-
-**Description**: Tapping a level-1 tower shows a cost chip for 1.5 s. A tap on the chip, or a second tap on the tower, commits the upgrade.
-
-**Screen-level source**: `design/ux/arc-and-chip.md` holds the full behaviour, geometry, text fit and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
-
-**Specification**:
-- The chip is its own tap target (priority 300, radius 40, at the tower's x and y minus 76 units) so a tap on what the player sees works. `tapped(chip)` is treated as a second `tapped(tower)`.
-- It shows the cost, the level-2 glyph and a 3-unit bar draining over the 1.5 s window, so the window has a visible clock.
-- A tap on a level-2 tower shows its range ring for 1.5 s and opens no chip, so the tap is not silent.
-- The chip closes on Paused, Won, Lost and Fatal, and is ignored while halted.
-- Below the affordable cost it uses P-13.
-- The chip-then-tap step is the mis-spend safeguard: there is no selling.
-- Window length runs on real time (the sim clock is stopped in Build). It must be adjustable (see accessibility requirements, input timing).
-- Accepted 2026-11-04 (from `design/ux/arc-and-chip.md`, now in the Battle HUD GDD): the chip sits at alpha 0.5 for the first 200 ms and steps to full (the guard look); it closes with a 120 ms fade on expiry or dismiss and cuts on a commit; a level-2 tower shows its range ring for 1.5 s and a "Max" label. A chip cannot leave the field or reach the band under layout rule L1 (its top is never above y 206).
-- Open: whether the draining bar (3 units) reads under a thumb (fallback 6 units); the window multiplier at Alpha.
-- Accessibility: the 1.5 s window is a timed input. See Accessibility Requirements, Motor, "Input timing adjustments".
-
-**When to Use**: upgrading a built level-1 tower.
-**When NOT to Use**: building (use P-06), or a tower at maximum level (show the range ring instead).
-
-**Implementation**: TowerInput registers the chip disc and owns `ChipWindow.advance(ms)`; HudField draws from `chip_state()`.
-
-### P-08 Armed Button
-
-**Category**: Control
-**Used In**: Start/Call (a registered disc); Retry and Play again (through the modal press model of P-11)
-**Source**: Battle HUD Rules 10 and 11; Game State Game Feel
-**Status**: Draft
-
-**Description**: A button for an irreversible or screen-changing action does not fire for 300 ms after it appears, so a thumb already on that spot cannot trigger it.
-
-**Specification**:
-- States: Hidden, Arming (300 ms of real time), Armed.
-- It registers with the resolver on appearing, not on arming, or an early press would land on what lies beneath.
-- A tap whose press began during Arming is dead, even if released once Armed. A press begun before the button appeared cannot win.
-- A Control fires only on a release whose press it saw while Armed, and clears that press on the lifecycle signal (focus loss) or a resize, so a thumb held across a screen change cannot fire it.
-- The clock is `advance(ms)` from the frame time, clamped to 100 ms per frame, frozen while Paused. Returning from Paused is not a new appearance.
-- Retry and Play again arm the same way, starting when their text shows, and lighten while a counting press is held, so a slide-off shows.
-- Start: "Start" in Build. Call: "Call +7" in Intermission (bare "Call" when the bonus is 0), with the seconds left and a small burst glyph under it. No pulse, warning or advice once armed.
-- Accessibility: Arming is a deliberate delay of 300 ms, not a demand. Arming is drawn at alpha 0.5 and steps to full at Armed; panel opacity never animates (art bible 7). Retry and Play again also lighten while a counting press is held, so a slide-off shows. Paused has no arming (user decision, 2026-11-04).
-
-**When to Use**: A button whose action is irreversible or changes the screen, and that can appear under a resting thumb.
-**When NOT to Use**: Ordinary taps on field targets (slots, towers, arc discs); they would feel sluggish.
-
-**Implementation**: HudLogic holds the Hidden, Arming, Armed model, fed by `advance(ms)` from the wrapper. Start/Call is a resolver disc; Retry and Play again go through the modal press model.
-
-### P-09 Pin Drag
-
-**Category**: Control
-**Used In**: Hero
-**Source**: Hero System; art bible 3 and 7; concept Pillar 2
-**Status**: Draft
-
-**Description**: Dragging the hero pins it to a spot. It fights only inside a leash around the pin.
-
-**Screen-level source**: `design/ux/pin-and-aim.md` holds the full behaviour, geometry, states and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
-
-**Specification**:
-- Grab disc is 56 units (drag priority 200). The hero is at least 44 px visible.
-- The leash is a 2 px dashed circle (10 on, 8 off) at 90 px radius, alpha 0.5, never filled. Where it crosses the lifted path it is drawn in two tones or raised to alpha 0.7 so it clears 3:1.
-- Invalid pins are clamped or refused (rejected zones, under the burst button). Refusal uses P-12.
-- Before a first pin, a one-line prompt "Drag the hero" (P-17).
-- The pin ghost is a 2 px unfilled kite. The ground ring is 2 px solid at radius 30.
-- Open: re-grabbing a hero pinned high on the screen with one thumb. Measured in `design/ux/pin-and-aim.md` (PAQ-03): a hero at y 174 needs a thumb about 183 dp from the top of the screen even to aim near it.
-- Accessibility: one finger, one drag, no hold. (The art bible's leash "in-zone vs out-of-zone" state is not defined by any GDD and is left out until it is; PAQ-17 in `design/ux/pin-and-aim.md`.)
-
-**When to Use**: Moving the hero.
-**When NOT to Use**: Any other object; only the hero is dragged to a place.
-
-**Implementation**: HeroInput turns resolver drag signals into `HeroSim.pin(pos)`; `PinGeometry` clamps. Field views draw leash, ghost and ring.
-
-### P-10 Aimed Burst Drag
-
-**Category**: Control
-**Used In**: Hero burst
-**Source**: Hero System; art bible 7; Input Rule 4
-**Status**: Draft
-
-**Description**: Dragging from the burst button aims the hero's burst; releasing fires it there, unless the release is in the cancel zone.
-
-**Screen-level source**: `design/ux/pin-and-aim.md` holds the full behaviour, geometry, states and open questions for this pattern; the lines below are a summary. If they differ, that spec (after the GDDs) is right.
-
-**Specification**:
-- Burst button: 84 px visible, 96 px hit, bottom corner on the dominant-hand side. Shown in Build, Wave and Intermission; Paused shows it as the phase it left; Won and Lost hide it. A tap does nothing (P-04). Locked in Build or before a first pin (P-14).
-- Ready press: a thin ring at radius 64 shows beyond the fingertip; this is the cancel boundary. Every aim starts cancelling; cancelling stops once the finger is over 64 from the button's centre and resumes at 48 or less (Hero Rule 13).
-- Reticle: a 3 px solid ring with four ticks, alpha 0.7, drawn offset 100 units above the finger so the thumb never hides it, clamped to the viewport and the burst's reach, with no flip.
-- While cancelling, the reticle dims and the radius preview hides, because releasing then cancels.
-- A radius preview is a solid unfilled outline. The reach ring is neutral, dotted (3 on, 13 off), 2 px, alpha 0.6.
-- Releasing in the cancel zone cancels. Pause cancels an aim in progress.
-- Cooling press: the digit shows above the thumb on a panel, the button is bare, and the press does nothing (P-15). On release the digit returns to the button.
-- Accessibility: aim is a held drag (no timing). Cancel is by direction (release near the button) and needs no precision. A drag-free alternative is not in scope at MVP (Known Intentional Limitations).
-
-- Also drawn (from the Hero GDD; details in `design/ux/pin-and-aim.md`): the kill preview (an enemy that would die has its body knocked out with a 2 px white contour, live aim only); the clamped-at-reach cue (the ±20° of the reach ring facing the finger turns solid at alpha 0.7); and, as a fallback proposal only, a dotted tether from a clamped reticle toward the finger (PAQ-01).
-
-**When to Use**: The burst.
-**When NOT to Use**: Any tap action; the burst is drag-only by design.
-
-**Implementation**: HeroInput holds the aim state machine (Idle, Cancelling, Live) and calls `HeroSim.burst(pos)` on release; HudField draws the button, Hero's view draws the reticle and preview.
-
-### P-11 Modal Screen
-
-**Category**: Control
-**Used In**: Result (Won, Lost), Paused, Fatal
-**Source**: Battle HUD Rules 1, 2, 4, 15 and 17; Game State Rules 15 to 18
-**Status**: Draft
-
-**Specification**:
-- A full-screen `Control` that stops presses before the Input adapter sees them, while moves and releases of a gesture already under way still reach it (Input adapter contract), so a tap cannot reach a tower or the hero. The Result and Paused Controls are built once and toggled visible on `modal_changed` (HudModals), which HudLogic emits synchronously with the phase change, and none on Fatal (HUD Rule 1); they forward presses, moves and releases to HudLogic.
-- **Modal press model** ([Battle HUD Rule 2](../gdd/battle-hud.md#core-rules)). Because presses skip the adapter, HudLogic repeats the adapter's rules. Rule 2 is the contract, under Translation, Rejected presses, Target, Tap under `tap_slop`, Second press, Cancel and Arming; they are not copied here.
-- Result: a transparent modal turns visible on the outcome, so input is dead at once. The first frame after it builds one snapshot (which also feeds the log) and starts the text timer: text appears after 400 ms for both Won and Lost. Plain text in fixed order, same weight. A lost stage reads "Broke on wave N of 6" (N is `wave_index()`). Both show damage by source (Towers, Hero, Burst, then Slowed if a slow tower was built) as whole numbers with no percentage. Lost also shows "Got through" by enemy type; Won omits it on screen (the log keeps it), because it does not fit Won's 198-unit column. Won is a compact panel low on the screen in two columns ("Stage clear" and "Lives N of M" left, damage rows right), so the finished build stays visible above it. Retry and Play again use P-08's arming.
-- Paused: instant. A 40% scrim and "Paused. Tap to resume" at centre; the whole screen is the Control. It resumes on a counted release with no countdown, and is hidden, never freed, inside its own handler. There is no pause button at MVP; Paused comes from focus loss or backgrounding. Paused has no arming: a counted release resumes at once (user decision, 2026-11-04; Battle HUD Rule 2). The accepted cost is that a brush can resume a live wave, which the phone test logs.
-- Fatal: a generic, catalogue-free screen that is guaranteed to load. Fatal overrides Won, Lost and Paused and hides the whole HUD (HUD Rule 4).
-- Modals add about 4 draw calls.
-- Accessibility: these are real `Control` nodes, so they are the screens that can carry accessibility labels for TalkBack and VoiceOver. Nothing auto-dismisses.
-
-**When to Use**: A full-screen state where nothing in the field may be touched: outcome, pause, fatal error.
-**When NOT to Use**: Anything inside a running battle; use a field disc. Never stack two modals.
-
-**Implementation**: HudModals (Controls) forward to HudLogic's modal press model. Control event order against the adapter is unverified on 4.7 (ADR-0003).
-
-### P-12 Refused Action
+### Burst Dead Press
 
 **Category**: Feedback
-**Used In**: arc disc (NO_GOLD), chip, burst button
-**Source**: Tower UI Requirements; Hero UI Requirements
 **Status**: Draft
+**Used In**: Battle
+**Source**: Hero Rule 11, UI Requirements; Input priority table (sink TAP 400); Input Edge Cases
 
-**Specification**:
-- A refused tap nudges the element 2 px once for 120 ms. No magenta (magenta is danger only).
-- Skipped under Reduce Motion, which leaves a refused tap with only the standing dim (P-13).
-- **Refusal cue (accepted 2026-11-04; in the Battle HUD GDD)**: the Tower GDD requires a cue that does not rely on motion. The refused cost steps to full alpha with a 3 px neutral outline for 120 ms, at most once per 400 ms per disc or chip (under 3 flashes per second). It is a brightness step, not motion, so it stays under Reduce Motion. Accepted 2026-11-04.
-- Accessibility: a cue must exist that is not motion alone.
+- **Trigger**: (a) a tap on the button, (b) a press while Cooling, (c) a press while Locked (Build, or before a first pin).
+- **Feedback**: (a) nothing; the sink takes the tap so nothing beneath is reached. (b) the seconds digit on a panel above the thumb. (c) the dotted outline nudges ±2 px once for 120 ms; before a first pin it also repeats the "Drag the hero" prompt.
+- **Failure**: the press stays dead even if cooling ends during it; press again (Input Edge Cases). There is no queue.
+- **Accessibility**: Ready, Cooling and Locked differ by fill, wedge, digit and dotted outline (AB §7). Under Reduce Motion the Locked nudge is skipped (Hero UI Requirements); the repeated prompt still tells the player why. **Proposed:** under Reduce Motion the Locked press shows the dotted outline at full alpha for 300 ms, the same static cue as Refused Purchase. The cooling digit is hidden under the thumb while pressed; accepted by AB §7 but to be device-tested.
 
-**When to Use**: A tap that was understood but could not be carried out.
-**When NOT to Use**: A tap on nothing (use P-16) or a locked control (use P-14).
+### Armed Button
 
-**Implementation**: Drawn by HudField from a short-lived view-model flag in HudLogic.
+**Category**: Input
+**Status**: Draft
+**Used In**: Start / Call, Retry, Play again
+**Source**: HUD Rule 11, States and Transitions; Flow Game Feel
 
-### P-13 Unaffordable
+- **Trigger**: a button goes Hidden, then Arming for 300 ms of real time, then Armed. It registers when it appears, not when it arms.
+- **Feedback**: alpha 0.5 while Arming, reaching full at 300 ms (HUD Visual/Audio).
+- **Failure**: a press that starts during Arming is dead, even if released once Armed. A press begun before the button appeared cannot win (Input Rule 2). The clock is clamped to 100 ms per frame, so a hitch cannot arm an unseen button. Paused freezes the clock; a return from Paused is not a new appearance.
+- **Accessibility**: stops a resting thumb from firing a button that appeared under it. Arming text at alpha 0.5 is a 300 ms transient and is exempt from the contrast target (proposed). Under Reduce Motion the fade stays, since fades are kept (HUD UI Requirements).
+
+### Start / Call
+
+**Category**: Input
+**Status**: Draft
+**Used In**: Battle (Build and Intermission)
+**Source**: HUD Rule 10, Layout; Tower Rule 16; Flow Rule 9
+
+- **Trigger**: tap the button at (186, 800), rect 88 x 72, hit radius 48, same place for both hands. Build: "Start". Intermission: "Call +N" (bare "Call" at bonus 0). Hidden in Wave. Follows Armed Button.
+- **Feedback**: the wave starts and the button hides. In Intermission the button shows the seconds left and a small burst glyph matching the burst state.
+- **Failure**: disabled while an arc is open (HUD Rule 6). A press inside the hero's grab disc belongs to the hero: its tap is ignored and its drag re-pins (HUD Rule 10). A late tap after the countdown ends is ignored (HUD Edge Cases).
+- **Accessibility**: once armed it has no pulse, warning or advice; it shows numbers only, so it never hurries the player (HUD Rule 10). Build has no timer at all, so the player can read the board as long as needed (Concept Mechanic 3). Two 14 dp lines in 88 units need a render test (HUD Manual).
+
+### Ground Tap Rejection
 
 **Category**: Feedback
-**Used In**: arc disc cost, chip cost
-**Source**: Tower UI Requirements; Battle HUD Rules 7 and 9
 **Status**: Draft
+**Used In**: Battle
+**Source**: HUD Rule 14; Input Rule 5; AB §7 Ground tap
 
-**Specification**:
-- Dimmed plus struck through, updated live as gold changes.
-- A dimmed cost must stay legible. Measured on panel `#141B30`: neutral text at alpha 0.6 gives 4.8:1 (passes 4.5:1); alpha 0.5 gives 3.8:1 and alpha 0.4 gives 2.8:1 (both fail). **The dimmed alpha floor is 0.6.**
-- The strike-through carries the meaning; the dim is secondary, so the state is not colour or brightness alone.
+- **Trigger**: a tap with no tap or drag winner (`ground_tapped`).
+- **Feedback**: for the first three in a battle only, a 2 px neutral ring, radius 16, alpha 0.35, fading in over 150 ms, unanimated otherwise. No sound. Resets on retry.
+- **Failure**: none; it is the failure cue.
+- **Accessibility**: tells new players the touch was seen but does nothing, without looking like a button. A fade, so it stays under Reduce Motion.
 
-
-**Accessibility**: the strike-through carries the meaning; dimmed text keeps at least alpha 0.6 (4.8:1).
-**When to Use**: A purchase the player cannot afford right now.
-**When NOT to Use**: A control that is unavailable for another reason (use P-14).
-
-**Implementation**: HudField draws the dim and strike from the live cost read and `gold`.
-
-### P-14 Locked Outline
+### Prompt Line
 
 **Category**: Feedback
-**Used In**: burst button (Build, or before a first pin)
-**Source**: Hero UI Requirements; art bible 7
 **Status**: Draft
+**Used In**: Battle (Build, Wave, Intermission)
+**Source**: HUD Rule 13, Layout; Hero UI Requirements
 
-**Specification**:
-- Dotted neutral outline, no fill, no digit. A press nudges the button 2 px once for 120 ms (skipped under Reduce Motion) and, before a first pin, repeats the prompt (P-17).
-- Shares the "owned filled, available outlined, locked dotted" grammar with tree nodes and wave pips.
+- **Trigger**: first match of: hero unpinned, "Drag the hero"; no tower in Build or Intermission, "Tap a slot to build"; in Wave with burst Ready and none fired, "Drag from the big button".
+- **Feedback**: one 14 dp line on a 300 x 34 panel below the top band.
+- **Failure**: hides on the act, never on a timer. No arrows, pauses or captured input. Not shown on an outcome.
+- **Accessibility**: no reading-time pressure. Teaches verbs only. Above `I_top` 68 units the panel may overlap the lane; Mobile Platform owns that (HUD Layout).
 
+### Modal Screen
 
-**Accessibility**: dotted vs solid outline, not colour; the nudge has no Reduce Motion fallback yet (P-12).
-**When to Use**: A control that exists but cannot be used in the current phase or before a prerequisite.
-**When NOT to Use**: Unaffordable items (use P-13).
-
-**Implementation**: HudField reads `in_build()` and `pin_state()`.
-
-### P-15 Cooldown Display
-
-**Category**: Feedback
-**Used In**: burst button; towers
-**Source**: Battle HUD Rule 12; Tower Visual; art bible 4
+**Category**: Modal
 **Status**: Draft
+**Used In**: Result, Paused
+**Source**: HUD Rule 2; Input UI Requirements; ADR-0003 Decision 2
 
-**Specification**:
-- Burst button: Ready is a gold fill with a complete outer ring. Cooling is a neutral outline with the gold fill returning behind it as a clockwise sweep, and a seconds digit in neutral. Telegraphing draws at fill 0. The fill is `burst_fill = 1 - clamp(cooldown_left / max(1, to_ticks(cooldown)), 0, 1)`: 0 when Cooling begins, 1 at Ready.
-- Towers: Ready is a complete ring; Cooling is a regrowing ring.
-- The sweep is linear (it is a clock). The digit swaps and never bounces.
-- Colour-blind safe: ready and cooling differ by shape (outline vs filled plus the returning fill; complete vs regrowing ring), never fill level alone.
-- With no press the digit sits on the button. During a cooling press it shows above the thumb only, on panel, and the button is bare (HUD Rule 12).
-- The burst button is hidden on Won and Lost (see P-10).
+- **Trigger**: mounted at an outcome or on Paused.
+- **Feedback**: a full-screen Control that consumes every event before the resolver, so a tap on it can never reach a tower or the hero.
+- **Failure**: a Control fires only on a release whose press it saw while Armed, and clears that press on a lifecycle signal, so a thumb held across a screen change cannot fire it. Whether the engine helps here is unverified in 4.7; the rule holds either way (HUD Rule 2).
+- **Accessibility**: these are the only Controls, so they are the only candidates for AccessKit names (accessibility doc, Platform table, NOT SOURCEABLE on mobile).
 
+### Result and Retry
 
-**Accessibility**: ready and cooling differ by shape; the digit gives the exact time.
-**When to Use**: Anything that recharges.
-**When NOT to Use**: One-off timers with no recharge, such as the chip window (that uses P-07's draining bar).
-
-**Implementation**: Burst: HudField computes `burst_fill` from `cooldown_left()` and Burst `cooldown` read through the accessor, and reads `cooldown_digit()` and `button_press()` from HeroInput, redrawing on a quantised key (HUD Rule 1). Towers: field view reads `slot_state().cooldown_left`.
-
-### P-16 Ground Tap Rejection
-
-**Category**: Feedback
-**Used In**: empty field
-**Source**: art bible 7; Input `ground_tapped`
+**Category**: Modal
 **Status**: Draft
+**Used In**: Result (Lost, Won)
+**Source**: HUD Rules 15, 16, 18, Layout; Flow Rule 16; AB §2 Defeat
 
-**Specification**:
-- A tap on nothing does nothing. For the first three taps of a battle, a tiny unanimated dim ring fades in over 150 ms as a rejection cue, so new players do not assume the touch was missed. It never reads as a button.
+- **Trigger**: an outcome. Text shows 400 ms after Lost, 1000 ms after Won. Retry (Lost) or Play again (Won), 128 x 72, follow Armed Button.
+- **Feedback**: plain 16 dp text, left-aligned, fixed order, same weight: what happened, a next-try line if any, what got through, damage by source as whole numbers. On Lost, Retry is the only filled shape. On Won, a compact panel at the bottom so the finished build stays visible.
+- **Failure**: Retry sets a latch; a second tap does nothing (HUD Rule 18). Retry rebuilds the battle in Build.
+- **Accessibility**: no auto-dismiss. No percentages, bars or ranking. Next-try lines avoid "you" and past tense (HUD Game Feel). Retry is one tap.
 
+### Resume Tap
 
-**Accessibility**: a fade, so it survives Reduce Motion; neutral, never colour-coded.
-**When to Use**: A tap that hits no target, in the first three of a battle.
-**When NOT to Use**: After the third tap, or on any registered target.
-
-**Implementation**: HudLogic counts `ground_tapped` signals per battle; HudField draws the ring.
-
-### P-17 First-Time Prompt
-
-**Category**: Feedback
-**Used In**: hero pin, others (three prompts in total, owned by the Battle HUD)
-**Source**: Hero UI Requirements; Battle HUD Rule 13
+**Category**: Modal
 **Status**: Draft
+**Used In**: Paused
+**Source**: HUD Rule 17; Flow Rule 17
 
-**Specification**:
-- One line on panel below the top band, first match, for this battle only, in Build, Wave and Intermission. Three prompts, each ended for the battle by its act: a first pin ("Drag the hero"), a first `tower_built`, a first `burst_started`. Never hidden on a timer. The build prompt also hides while an arc is open.
-- No onboarding system is needed at MVP.
-- Open: where a dismissed prompt can be read again (see Accessibility Requirements, Cognitive, "Tutorial persistence").
+- **Trigger**: release of a press the Paused screen saw, anywhere on screen.
+- **Feedback**: a static 40% scrim and "Paused. Tap to resume" on a 300 x 64 panel. Instant, no countdown.
+- **Failure**: the resume tap reaches nothing beneath. A finger held across the pause stays dead until lifted.
+- **Accessibility**: the whole screen is the target, so there is no precision needed. Static, so nothing changes under Reduce Motion. There is no manual way to enter Paused at MVP (accessibility doc, Known Intentional Limitations).
 
-**When to Use**: Teaching one verb the first time it is needed in a battle.
-**When NOT to Use**: Tactics, warnings or anything timed. Never more than one line at a time.
+### Lifecycle Cancel
 
-**Implementation**: HudLogic picks the first match from `hero_pinned`, `tower_built`, `burst_started` and `burst_state()`; HudField draws it.
-
-### P-18 Swap Counter
-
-**Category**: Display
-**Used In**: gold (top right)
-**Source**: art bible 7
+**Category**: Navigation
 **Status**: Draft
+**Used In**: All
+**Source**: Input Rule 7; ADR-0003 Decisions 2 and 6; Flow Rule 17
 
-**Specification**: tabular lining numerals so the width never shifts; digits swap, never bounce or count up. 16 dp.
+- **Trigger**: app pause, focus loss, Android back, a viewport resize, or an OS touch-cancel of the active finger.
+- **Feedback**: the gesture ends with no action. Focus loss enters Paused (Resume Tap). An aim or drag in progress is dropped; the hero keeps its old pin, the burst does not fire.
+- **Failure**: none to the player by design: a release is never made up from a cancel.
+- **Accessibility**: Android back does not quit (`quit_on_go_back=false`, ADR-0003 Decision 4). There is no back or escape navigation at MVP because there are no menus.
 
-**Accessibility**: 16 dp text on panel, 11.0:1 contrast; digits never animate.
+---
 
-**When to Use**: Any count the player compares over time (gold).
-**When NOT to Use**: Values that should not be compared or that would invite min-maxing (no damage numbers).
+## Animation Standards
 
-**Implementation**: Label in HudTopBand (a display-only Control that ignores input).
+Values from AB §7 and the GDDs. They replace the template's generic table.
 
-### P-19 Lives Dashes
+| Animation Type | Duration (ms) | Easing Function | Notes |
+|---------------|--------------|----------------|-------|
+| Press response, state change | 120 | ease-out in, ease-in out | AB §7 |
+| Arc collapse, build and upgrade overlay | 120 | ease-out | HUD Rule 7; Tower Visual/Audio |
+| Button arming fade | 300 | linear | HUD Rule 11 |
+| Panel in or out, 12-unit slide | 200 | ease-out in, ease-in out | AB §7; HUD UI Requirements |
+| Lost dash fade | 200 | linear | AB §7 |
+| Ground ring fade-in | 150 | ease-out | HUD Visual/Audio |
+| Refusal nudge ±2 px | 120 | once | Tower UI Requirements |
+| Chip bar drain, cooldown wedge, tower ring regrow | real time | linear (clock) | AB §7 |
+| Range ring after build | 400 hold, 200 fade | linear | Tower Visual/Audio |
+| Burst field dip | about 400 | n/a | Never re-dips within 1 s (AB §7) |
+| Danger pulse | 2 Hz | n/a | Alpha swing at most 25% (AB §7) |
 
-**Category**: Display
-**Used In**: lives (top left)
-**Source**: art bible 7
-**Status**: Draft
+Never animated: leash, panel opacity, counter values (digits swap) (AB §7).
+Nothing in screen space loops or glows.
 
-**Specification**: two rows of five dashes, 16x3 dp each. A lost dash fades to alpha 0.2 in 200 ms and stays countable. Urgency is carried by in-field chevrons, not by the dashes.
+**Motion reduction overrides**: with `reduce_motion` on, slides, nudges, the
+burst dip, wind-up, snap and Ready pop are removed and the danger pulse
+freezes; fades and clock bars stay (HUD UI Requirements; Hero Visual/Audio;
+AB §7). Where a removed motion was the only cue, the pattern names a static
+replacement (Refused Purchase, Burst Dead Press).
 
-**Accessibility**: read by count of dashes, not colour; a lost dash stays visible at alpha 0.2.
+---
 
-**When to Use**: Lives.
-**When NOT to Use**: Any resource that is not lost one at a time.
+## Sound Standards
 
-**Implementation**: HudTopBand, from `lives_changed`.
-
-### P-20 Wave Pips
-
-**Category**: Display
-**Used In**: wave progress (top centre)
-**Source**: art bible 7; Battle HUD pips row
-**Status**: Draft
-
-**Specification**: 20 by 10 pills, not discs, so they never match enemy glyphs. Filled is done, outlined is current, dotted is upcoming. With `wave_index()` W: Build has pip 1 current; Wave and Lost have W - 1 done and W current; Intermission has W done and W + 1 current; Won has all done; Paused shows the phase it left.
-
-**Accessibility**: state is carried by fill, outline and dots, never colour.
-
-**When to Use**: Wave progress.
-**When NOT to Use**: Anything that is not a fixed, short sequence (at most 6 waves).
-
-**Implementation**: HudTopBand, from `wave_index()` and the `phase_changed` signal.
+No audio at MVP (HUD, Hero, Tower, Input Visual/Audio). The ground tap is
+silent by design (Input Visual/Audio). When the Audio system arrives (Alpha),
+every sound must have a visual that already carries the same fact
+(accessibility doc, SFX audit). Sound categories are set by the Audio GDD, not
+here.
 
 ---
 
 ## Gaps & Patterns Needed
 
-| Gap | Needed by | Note |
-|---|---|---|
-| Refusal cue that survives Reduce Motion | P-12 | Closed 2026-11-04: accepted; in the Battle HUD GDD |
-| Static fallbacks for the build overlay and arc collapse under Reduce Motion | P-06 | Closed 2026-11-04: accepted; in the Tower and Battle HUD GDDs |
-| Expired or closed chip, armed look after the 200 ms guard, maximum-level cue, chip leaving the field | P-07 | Proposed in the arc and chip spec (the field flag cannot occur under L1); the "Max" label is a new string for the Tower and HUD GDDs (UQ-03) |
-| Unit-to-dp scale behind the 44 pt / 48 dp targets | P-01 | Settled in the arc and chip spec: dp per unit = device width in dp / 540, so 48 dp at 360 dp wide and larger on wider phones. The unmeasured part is real device widths |
-| Menu and list navigation, toggle, slider, tab | Menu & Screen Flow (Vertical Slice), Settings (Alpha) | Standard controls: not needed at MVP. Define with the first menu spec. Keyboard and gamepad focus is out of scope (touch only; technical preferences) |
-| Tree node (owned filled, available outlined, locked dotted) | Skill Tree (Vertical Slice) | Grammar exists in the art bible; pattern to be written with the Skill Tree spec |
-| Stage preview | Stage Progression (Vertical Slice) | Pillar 3 |
-| Tooltip or long-press help | none planned | Touch-first; no hover. Do not add without a decision |
-| Confirmation dialog | none planned | No destructive action exists. Skill respec is free and unlimited (concept) |
-| Drag-free alternative to pin and aim | accessibility | See Accessibility Requirements, Known Intentional Limitations |
-| Android system back (button or gesture) in battle and on modals | game-designer, Game State GDD | No GDD defines it. Candidate: back enters Paused in a live phase and does nothing on Result. PQ-10 |
-
-**Possible inconsistencies to resolve:** P-12 (nudge) and P-14 (nudge) share a motion cue that Reduce Motion removes; both need the same non-motion fallback. P-13 (strike plus dim) and P-14 (dotted outline) are two different "unavailable" looks; they differ on purpose (unaffordable now vs locked by phase) but the screen spec should say so.
+| Gap | Needed By | Notes |
+|-----|-----------|-------|
+| Menu buttons, focus order, back navigation | Menu & Screen Flow (Vertical Slice) | Template Button, Screen Push/Pop and Escape patterns return here. |
+| Settings controls (toggle, slider) for Reduce Motion, left hand, slop, hit scale, chip multiplier, volume | Settings & Accessibility (Alpha) | The two flags exist as data only (HUD UI Requirements). |
+| Skill tree node tap and respec | Skill Tree (Vertical Slice) | Node grammar exists in AB §3; available-node pulse must honour Reduce Motion. |
+| Stage preview and stage select | Stage Progression (Vertical Slice) | |
+| Pause button | Proposed for Vertical Slice | Accessibility doc, Known Intentional Limitations. |
+| Tap alternative to drag for burst and pin | Settings (Alpha) | HUD Dependencies: "an alternative path to discs". |
+| Static fallbacks for build overlay and arc collapse | Battle HUD stories | Tower UX flag. Proposed in Build Arc above. |
+| Chip leaving the field; armed chip look | Battle HUD UX spec | Tower UX flag. Armed look proposed in Chip Commit above. |
+| UX specs for arc, chip, Start/Call, result, pin and aim | Before epics | HUD and Hero UX flags. Each should reference patterns here by name. |
 
 ---
 
 ## Open Questions
 
-| ID | Question | Owner |
-|---|---|---|
-| PQ-01 | Drag slop and tap slop shipped values (Pillar 4 aims at about 10 to 12 dp). Needs a phone test with at least two non-developer testers | game-designer, Pillar 4 phone test |
-| PQ-02 | Real safe-area and gesture-inset values on Android and iOS; whether the 24 dp side margin for the burst button is enough | technical-director, ADR-0003 |
-| PQ-03 | Whether the chip's draining bar reads under a thumb, and its look when expired | ux-designer, arc and chip spec |
-| PQ-04 | Re-grabbing a hero pinned high on the screen with one thumb | Analysed in the pin and aim spec (PAQ-03): options and a phone-test plan; awaiting the phone test |
-| PQ-05 | Reticle far from the thumb when clamped; preview overhanging the reach ring; ring clipping at 540 wide; reach-dot contrast | Settled in the pin and aim spec: reticle distance table and a tether proposal (PAQ-01); overhang by design (PAQ-05); no clipping, ring edge at x 520 (PAQ-02); reach dots 4.98:1 on the field (computed) |
-| PQ-06 | Where a dismissed first-time prompt can be read again | ux-designer |
-| PQ-07 | Font choice (tabular numerals, licence). Affects the text draw-call budget | art-director |
-| PQ-08 | Should the arc panels (word and cost) become tap targets, or keep dismissing the arc (Battle HUD edge case)? | ux-designer, arc and chip spec |
-| PQ-09 | Closed 2026-11-04: Paused has no arming (Battle HUD Rule 2, user decision). Its cost, unintended resumes, is logged in the phone test | game-designer |
-| PQ-10 | What the Android back button or gesture does in battle and on each modal | game-designer, Game State GDD |
-| PQ-11 | Arc panels cover the lane in Wave at slot (270, 305), against art bible 7's "never under a panel" (Battle HUD Open Questions; HQ-16) | art-director, arc and chip spec |
+| Question | Owner | Deadline | Resolution |
+|----------|-------|----------|-----------|
+| Do adjacent arc discs 4 units apart cause wrong-disc mis-fires? Fallback: larger `R`. | ux-designer, Pillar 4 phone test | First phone build | Unresolved |
+| Accept the proposed static cues (300 ms full alpha) for Refused Purchase and Locked press under Reduce Motion? | art-director, ux-designer | Before HUD stories | Unresolved |
+| Accept the proposed armed chip look (outline 1 px to 2 px at 200 ms)? | art-director | Before Tower stories | Unresolved |
+| Should the hero's arrival shrink be skipped under Reduce Motion? Hero's row does not list it. | game-designer, ux-designer | Before Hero stories | Unresolved |
+| Does `pin_offset` 0 work on a phone, or is 105 needed? | Pillar 4 phone test | First phone build | Unresolved |
+| Does the cooling digit hidden under the thumb confuse players? | Pillar 4 phone test | First phone build | Unresolved |
+| Does a held press on a Control survive a screen change in Godot 4.7? NOT SOURCEABLE in `docs/engine-reference/godot/`; HUD ADR must check. | technical-director | Before HUD stories | Unresolved |

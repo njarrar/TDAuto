@@ -1,298 +1,471 @@
 # ADR-0001: App Lifecycle, Composition Root and Fatal Path
 
 ## Status
-Accepted (2026-11-05, on the owner's instruction to close the open items; the Verification Required items stay open and are tracked by the Boot story). Amended 2026-11-05 on the owner's sign-off after architecture-review-2026-11-05 (C3: `HALTED` is an ordinary result; C4: `setup(battle, dev_telemetry)`)
+
+Proposed
+
+> Who may move this to `Accepted`: the user, or `technical-director` on the
+> user's explicit confirmation. No other agent, and no skill on its own.
+> Acceptance preconditions are split, because stories that cite a `Proposed`
+> ADR are blocked and so cannot run checks that need them:
+>   Phone checks (user instruction, 2026-11-04): phone testing is set aside
+>   for now, and the future device is an iPhone. Every phone leg is after
+>   acceptance; desktop and headless checks stay before it.
+> - **Before acceptance:** V1, V2 and the V3 editor leg, each run as a standalone
+>   headless script or throwaway project under `prototypes/` (not as a story),
+>   with the result recorded in `docs/engine-reference/godot/`. Run on the Mac.
+> - **Verification progress, 2026-11-04** (macOS arm64, headless, Godot 4.7.2
+>   editor binary; `docs/engine-reference/godot/verification-results.md`): V1 is
+>   RECORDED and confirms the design (method Callables and connections hold an
+>   ID only; lambdas and `bind()` hold strongly; a lambda cycle leaks), so the
+>   no-lambda rule and the back-callables stand and the Rollback plan is not
+>   needed (Decision 5 and Risks note this). One V1 record, lambda-release,
+>   needs a second look (tests only). Still open before acceptance: V2 and
+>   the V3 editor leg (Mac).
+> - **After acceptance:** V5, checked by the first AppRoot story and by the CI
+>   `[autoload]` check. The V3 export leg and V4, from an iOS export of the
+>   ADR-0003 device spike project on the iPhone (no game code needed); V4 reads
+>   the Xcode console. A phone result that contradicts this ADR reopens it
+>   before the next story in its area closes. Reopen trigger: if V1 to V3 are re-run inside the real
+>   code and disagree with the spike result, this ADR is amended before the
+>   next story closes (the Rollback plan names the change).
+>
+> Amended 2026-11-05 after /architecture-review.
+> (Decision 7: Retry is a modal Result-screen tap, not a HUD button; teardown calls
+> `battle.cancel_input()`, not `resolver.cancel()`.)
 
 ## Date
-2026-11-05
+
+2026-11-04
 
 ## Last Verified
-2026-11-05
+
+2026-11-04. Checked against the pinned engine reference only. The live Godot 4.7 documentation was not reachable from the authoring session (`docs.godotengine.org` is outside the session's network policy), so every engine behaviour below that the pinned reference does not cover is marked NEEDS VERIFICATION and listed in V1 to V5.
 
 ## Decision Makers
-Najeeb Jarrar (owner). Drafted on 2026-11-04 from the Game State & Stage Flow GDD and `docs/architecture/architecture.md` v4. Reviewed once each on 2026-11-05 by `godot-specialist` (four blocking facts, ten minor notes, all applied) and `technical-director` under gate TD-ADR (CONCERNS: 26 findings, all applied in this revision). No second review pass was run; the findings and their fixes are listed under Risks and in the probe table. Fix round 2026-11-05 after architecture-review-2026-11-05 (items applied: C3, C4, Enables row).
+
+User (njarrar, project owner), technical-director (TD-ADR gate: CONCERNS on the first draft, findings 1 to 11 applied in this revision), godot-specialist (engine check: no blocking issues, minor notes applied). Authored with the `/architecture-decision` flow.
 
 ## Summary
-The game needs one place that boots, holds the catalogue, builds and tears down battles, and catches every unrecoverable failure, without autoloads and without a scene, so bots and tests can run a battle headless. This ADR fixes that shape: a minimal `AppRoot` main scene with three states, a static scene-free `BattleBuilder.build()` that returns a `Battle` holding every helper in a typed field, method-Callable-only injection with no back-references, a per-battle `FatalLatch` forwarding to the root, retry by `free()` and rebuild from the root's `_process`, and a script-free preloaded fatal screen.
+
+The game needs one place that owns the app's lifetime, the loaded catalogue and the single failure path, with no autoloads, so that every battle system runs headless and a retry leaves no old state behind. This ADR decides a minimal main-scene `AppRoot` (states Boot, InStage, Fatal), a scene-free `BattleBuilder` that creates and wires one `Battle` from `(catalogue, stage_id, rng_seed, fatal_handler)`, injection by `obj.method` Callables only (no lambdas, no `bind()`, no string names), a pure idempotent `FatalLatch` on the battle and on the root, release-safe checks that use `push_error` and never `assert`, and a retry that detaches and drops the old battle and builds a new one.
 
 ## Engine Compatibility
 
 | Field | Value |
 |-------|-------|
-| **Engine** | Godot 4.7.2 (pinned 4.7; installed 4.7.2.stable.official) |
+| **Engine** | Godot 4.7.2 (GDScript, Mobile renderer) |
 | **Domain** | Core |
 | **Layer** | Foundation |
-| **Knowledge Risk** | HIGH until the export and phone checks under Verification Required pass; LOW on the desktop evidence gathered so far. The APIs used (`Node`, `RefCounted`, `Callable`, `Signal.connect`, `WeakRef`, `Object.free`, `preload`, `load`, `push_error`) predate 4.3 and appear in neither `breaking-changes.md` nor `deprecated-apis.md`. The live 4.7 class reference was **not** consulted; every claim below rests on the local reference library and on probes run on the installed binary. The architecture table rates ADR-0001 HIGH because the Flow GDD marks every engine behaviour unverified until a phone run, and that rating stands. |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md` (lines 17, 69), `deprecated-apis.md`, `current-best-practices.md` (GDScript 4.5+, 4.7, Command Line), `modules/input.md` (section Verified on 4.7.2), `.claude/scripts/godot-parse-check.gd` (header) |
-| **Post-Cutoff APIs Used** | None. Code under this ADR must never override a method with a typed return without an explicit `return` (4.7 break) and uses no `@abstract` class (4.5). |
-| **Verification Required** | (1) Run `prototypes/adr-0003-spike/lifecycle_probe.gd` and `adr0001_checks/probe2.gd` on an Android **release** export template: Callable and signal lifetime as in the table below; `push_error` still prints; and record whether `.call()` on a dead Callable aborts the calling function or returns null (debug-only behaviour is expected). (2) A scene test instantiates `FATAL_SCENE` with a null catalogue on an Android export, which also proves the export filter kept the scene (shared with ADR-0002's manifest proof). (3) `free()` of the wrapper from `AppRoot._process` on a phone while a finger is down raises no error and the next gesture starts clean. (4) The `OBJECT_COUNT` retry check below holds on a device. |
+| **Knowledge Risk** | HIGH (post-cutoff version; app lifecycle is unreferenced in the pinned docs) |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`, `current-best-practices.md`. No `modules/` file covers Core, scripting or scene lifetime (modules present: animation, audio, input, navigation, networking, physics, rendering, ui). |
+| **Post-Cutoff APIs Used** | None by name. Two 4.7 changes bear on the decision: an override of a typed-return method inherits the return type and needs an explicit `return` (4.7); lambdas capture locals by value (all Godot 4). `@abstract` (4.5) is optional and not required here. |
+| **Verification Required** | V1 to V5 below. NOT SOURCEABLE in `docs/engine-reference/godot/**`: the reference-count behaviour of a method `Callable`; whether a lambda binds `self` strongly; `queue_free()` and `remove_child()` timing; whether `push_error` output survives a release export; `ResourceLoader.load()` and `PackedScene.instantiate()` failure behaviour. The engine check (godot-specialist) agrees with the expected results from pre-4.4 knowledge only; that is not a source. |
 
-Probe results on the installed 4.7.2 binary (a debug build; `lifecycle_probe.gd` on 2026-11-04, `adr0001_checks/probe2.gd` on 2026-11-05), which this decision relies on:
+Verification items (the gap is wired to acceptance: this ADR stays `Proposed` until each before-acceptance item has a recorded result; the Status note splits them):
 
-| Behaviour | Observed |
-|---|---|
-| Method Callable keeps its `RefCounted` target alive | No. `is_valid()` turns false once the target is released. |
-| Signal connection keeps the listener alive, in either direction between two `RefCounted` objects | No. The connection is removed when the listener dies; `emit()` then does nothing. |
-| `Callable.call()` on a dead method Callable | **Debug build:** script error, the function that made the call aborts there, its caller continues. Release behaviour unverified (Verification item 1); correctness never depends on it. |
-| Unset `Callable` | `is_valid()` false, `is_null()` true. A Callable on a freed `Node` is `is_valid()` false but `is_null()` false, so guards use `is_valid()`. |
-| `queue_free()` | Node still valid in the same frame. |
-| `free()` of a child `Node2D` from the parent's `_process`, with a touch and a drag queued in the same frame | Node invalid at once; a `Battle` held in a typed field on it is released; no error; the child's `_process` does not run again; the queued events go nowhere next frame. |
-| `RefCounted` back-reference (a sim holding `Battle`, or anything that holds the sim) | Cycle, never released. The weakref test catches only the objects it names. |
-| `Callable.bind()` | Holds its bound `RefCounted` arguments strongly; does not hold its target. |
-| Lambda connected to a sibling's signal, capturing only `self` | Does not leak. Flow Rule 2a's earlier probe reports a lambda capturing a local target does keep it alive. |
-| `static var` on a `RefCounted` class | Persists across instances, so it would outlive a retry. |
-| `preload` of a `.tscn` whose script has a parse error | The host script still loads; the instance is a bare `Control` with no script. Only a **missing** file fails the host script, which then runs with no script at all. |
-| `--check-only -s` on a file with a parse error | Exits 0 on this install (macOS). It is not a parse check and not an autoload lint. |
-| `push_error()` | Prints and execution continues. |
+- **V1. Callable reference semantics.** Does `obj.method` on a `RefCounted` object keep the object alive, or hold only its object ID? Does a signal connection keep its target alive? Does a lambda or `bind()` that captures a `RefCounted` hold a strong reference, and does a lambda written inside a method bind `self` strongly even when it captures no locals? Expected (unsourced): method Callables and connections hold an ID only; lambdas and `bind()` hold strong references. The Builder's own wiring relies on the first answer, because `halted`, `in_build` and `cancel_input` point back at `Battle` and `FatalRelay` and Flow point at each other. Method: a headless test that builds objects wired this way, drops every other reference and reads `weakref(...).get_ref()`. Owner: godot-specialist writes it as a standalone headless script outside `src/` (`prototypes/adr-checks/check_callables.gd`) and the user runs it before acceptance; the kept test (Validation 3b) is written by the ADR-0007 harness story, which builds the `battle_probe.alive()` helper first. This closes QQ-17.
+  - Result (2026-11-04, macOS arm64, headless): method Callables and connections hold an object ID only (targets and emitters freed, method-Callable cycles freed); lambdas and `bind()` hold strongly; a lambda that never uses `self` does not keep `self` alive, one that reads a member does; a lambda cycle leaks. The design holds; no `Battle.dispose()` is needed. lambda-release (captured object not freed after the lambda is dropped) needs a second look: the check may still hold a reference. It matters for tests only, since lambdas are banned in `src/`; see docs/engine-reference/godot/verification-results.md.
+- **V2. Teardown timing.** After `wrapper.detach()`, `remove_child(wrapper)` and `wrapper.queue_free()`, do `_process`, `_input` and `_unhandled_input` stop firing on the wrapper and its children at once, and are the old battle, each sim and the resolver released (weakrefs null) one frame later? Method: integration test over two frames, plus one manual run on the editor with a Control under the pointer.
+- **V3. Load and instantiate failure.** What do `ResourceLoader.load()` and `PackedScene.instantiate()` return, and what is logged, for a missing scene path, a scene with a broken script and a scene with a missing sub-resource, in the editor and in a phone export? Method: deliberately broken scenes in a throwaway project, run in the editor and from an export. Editor leg: before acceptance, on the Mac. Export leg: after acceptance, from an iOS export on the iPhone. Android export leg: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists.
+- **V4. Release error output.** Does `push_error` print or log in a release export, and does `OS.is_debug_build()` read false there? Method: first iOS export run on the iPhone (release build) reading the Xcode console. After acceptance. Android leg (`adb logcat`): Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists (Xcode console instead of logcat).
+- **V5. Main scene key.** `application/run/main_scene` is the key that names the main scene, and `project.godot` has no `[autoload]` section. Method: read the file after the first story sets it; fail CI if an `[autoload]` section appears (see Validation Criteria).
+
+Lifecycle notification names (`NOTIFICATION_APPLICATION_PAUSED`, `..._FOCUS_OUT`, `NOTIFICATION_WM_WINDOW_FOCUS_OUT`) and which fire on which platform are NOT decided here. ADR-0003 owns them (spike first).
 
 ## ADR Dependencies
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | None. This is the first ADR; it defines the composition root the others plug into. |
-| **Enables** | ADR-0002 (the catalogue the root loads and holds), ADR-0003 (the adapter the wrapper builds and the lifecycle events it forwards), ADR-0004 (the Clock lives in the wrapper this ADR places), ADR-0005 (the modifier and cost accessor the sims read through the root-built context), ADR-0006 (every battle-internal signal is connected in `build()`), ADR-0007 (the headless harness calls `build()` with fake callables), ADR-0008 (the resolver the wrapper creates per battle), ADR-0009 (the sims are built and injected in `build()`), ADR-0010 (HeroInput and TowerInput are wrapper objects), ADR-0011 (views live in the wrapper). |
-| **Delegates To** | ADR-0002: the load API and whether it is synchronous or threaded, and the validator's per-field error text (TR-data-006's "name each error"). ADR-0003: which lifecycle notifications reach the adapter, and Verification item 3. ADR-0004: the Clock, `stop_clock()`, and where the seed comes from. ADR-0007: the autoload lint, the parse check, the injected-callable and `static var` lint, the listener-count wiring test (TR-tower-013) and class-name prefixing (QQ-16). ADR-0008: `InputResolver.create`. ADR-0009: Enemy & Wave's Waiting/Active/Finished machine (TR-enemy-012's first clause). ADR-0010: the wrapper-built RunLog, and Tower's read-before-mutate rule (TR-tower-006's second clause) and the hit radii as constants on the input objects (TR-input-012's last clause). |
-| **Blocks** | Every Game State & Stage Flow story (Boot, Retry, Cancel wiring, Fatal), and the first story of every other system, since nothing can be instantiated without `build()`. No stories exist yet. |
-| **Ordering Note** | Write before any `.gd` file under `src/`. ADR-0002 must be Proposed before the Boot story starts, because boot step 2 calls its load API. If ADR-0007 prefixes class names (QQ-16), the names here are renamed without reopening this ADR. |
+| **Depends On** | None |
+| **Enables** | ADR-0002 (catalogue load is called by AppRoot), ADR-0003 (adapter lifecycle signal wires through the Builder), ADR-0004 (the clock lives in the wrapper), ADR-0005, ADR-0006 (wiring rule), ADR-0007 (headless harness uses `BattleBuilder`), ADR-0009, ADR-0010 |
+| **Blocks** | Every epic that builds a battle system (Data & Config, Game State & Stage Flow, Input, Combat, Enemy & Wave, Tower, Hero, Battle HUD): none may start until this ADR is Accepted |
+| **Ordering Note** | Write and accept first. ADR-0002 to ADR-0010 cite the injected-callable list (B9 in `architecture.md`), the no-lambda rule and the session-lifetime rule from here. ADR-0005 closes how the accessor receives the per-battle `fatal`: the accessor itself is per battle (Decision 5, session-lifetime rule). Accepting this ADR closes only the composition-root item of QQ-08 (scene-free builder); its other three items wait on ADR-0004 and ADR-0009. V1 closes QQ-17. |
 
 ## Context
 
 ### Problem Statement
-TowerRiot's two prototypes leaked state between attempts through hand-listed resets and reached gameplay through scene-owned roots that could not run without a window. The GDDs now require a battle that is a pure function of `(catalogue, stage_id, seed, command script)`, bots and tests that build one headless, a retry that rebuilds instead of resetting, and one fatal path with no fallbacks (Flow Rules 1, 2, 2a, 16, 18; Data Rules on load and failure). Every other ADR assumes a composition root with these properties, so it must be decided first.
+
+The GDDs for Data & Config, Game State, Enemy & Wave, Tower and Hero all assume the same shape and defer it to one ADR: a root that exists before the catalogue loads, a builder that wires one battle with explicit connections, injected failure and halt checks, and a retry that rebuilds. Without a decision, each system's first story picks its own wiring, and the first autoload or capturing lambda breaks both the headless test path and the weakref proof that a retry leaks nothing. The prototype's hand-listed reset of 22 fields is the failure this prevents.
+
+### Current State
+
+No code exists (`src/` holds only a CLAUDE.md; `project.godot` sets no main scene and no autoload). `docs/architecture/architecture.md` v2 gives working defaults for the root, the builder, the init order, the retry path and the fatal path. They are marked ADR-pending. This ADR ratifies or changes each.
 
 ### Constraints
-- Godot 4.7.2, GDScript, no exceptions: a failing function finishes on a garbage value, so the fatal path has to be a latch every caller checks, not a thrown error (Flow Rule 18).
-- `RefCounted` lifetime is reference-counted. A method Callable or a signal connection is not a reference; a back-reference, a `bind()` argument, a `static var` or a lambda capturing a local is (probe table).
-- `queue_free()` keeps a node, and anything it holds, alive to the end of the frame (probe), so a retry that must prove the old battle is gone cannot use it.
-- Solo developer, workflow `full`: the decision must be checkable by a lint and a code review, not by discipline alone.
-- Headless CI runs gdUnit4 with no window and no main scene; nothing gameplay may touch a node (TR-state-002, TR-data-012).
-- Android kills an app that blocks its main thread for about 5 s (ANR), against a catalogue load budget of at most 1000 ms median (QQ-11).
+
+- Godot 4.7.2, GDScript, Mobile renderer. Everything runs on the main thread (TR-state-003).
+- No autoloads or globals (TR-data-011, TR-state-001). Dependency injection over singletons is a project coding standard.
+- GDScript has no exceptions. After a failure the calling function still finishes, so every caller must check a flag (TR-state-011).
+- `assert` is stripped from export builds, so it cannot guard release behaviour.
+- GDScript has no cycle collector for `RefCounted`. A reference cycle leaks the battle, and the weakref proof then fails.
+- Solo, part-time developer. One extra framework (a container, an event bus) costs more than it saves.
+- 4.7 typed-return rule: any base-class method with a typed return that a subclass overrides needs an explicit `return` in the override.
 
 ### Requirements
-- One main scene, no autoload, that triggers the catalogue load once, holds the Ready catalogue for the session and owns the fatal screen (TR-state-001, TR-data-004, TR-data-011).
-- A scene-free `build(catalogue, stage_id, seed, fatal_handler)` that wires every system by explicit signal connections, runs headless, and on a stage that cannot be built calls the handler and returns null (TR-state-002).
-- Injected callables for `halted()`, `in_build()`, `targets()`, `cancel_input()`, `wave_index()`, `fatal()`, `dev_error()`, `to_ticks()` plus the hand flag and the Hero and Burst IDs (TR-enemy-005, TR-tower-006, TR-hero-004, TR-enemy-012, TR-data-009).
-- The battle holds a strong typed field for every helper; the builder holds nothing (TR-state-015).
-- One idempotent fatal handler that keeps the first cause, overrides Won, Lost and Paused, latches, halts the tick, discards a partial build, and is reached by load failure, bad accessor call, a stage scene that fails to load and a null resolver `create` (TR-state-011, TR-data-006).
-- Retry by latch on the root, acted on next frame, Fatal first; the whole battle destroyed and rebuilt between ticks; a `weakref` to the old battle null afterwards; no listener kept alive by a signal connection (TR-state-009, TR-hud-006, TR-tower-013).
-- `cancel_input()` a guarded public `Battle` method set by the wrapper; the wrapper builds the resolver and adapter per battle and injects the one resolver (TR-state-016, TR-input-012).
+
+- The root exists before the catalogue loads, so a load failure has a screen to show (TR-state-001, TR-data-006).
+- The battle builds without a scene, so tests and bots call it directly (TR-state-002).
+- Every battle system reads halt, hand, targets and errors through injected callables (TR-enemy-005, TR-tower-006, TR-hero-004, TR-data-009).
+- One fatal path, idempotent, first cause kept, partial build discarded, fatal screen guaranteed to load (TR-state-011).
+- A retry drops the whole battle, and a weakref to the old battle reads null (TR-state-009, TR-tower-013, TR-hud-006).
+- The catalogue survives a retry and is never reloaded (TR-data-004).
 
 ## Decision
 
-**1. Main scene and app states.** `res://src/app/app_root.tscn` is the project's `run/main_scene`. Its script `AppRoot extends Node` has exactly three states, `BOOT`, `IN_STAGE` and `FATAL`, in one private field `_state` (the read is `state()`, so the field cannot share the name), and no gameplay reference: it reads `Battle.is_over()` and nothing else about a battle. `project.godot` has no `[autoload]` section; ADR-0007's lint is `! grep -q '^\[autoload\]' project.godot`, since `--check-only` is neither a parse check nor an autoload detector on this install (probe table). `AppRoot` owns: the `Catalogue` once Ready, the app-level `FatalLatch`, the retry latch (a `bool`), the current `Battle` and `BattleWrapper` references, and a preloaded fatal scene.
+### 1. No autoloads, one main scene
 
-**2. Boot.** In `_ready()`, in order: (a) construct the app `FatalLatch` with no upstream; (b) `const FATAL_SCENE: PackedScene = preload("res://src/app/fatal_screen.tscn")` is a script-free scene (a `Control` with a `Label`; `AppRoot` sets the text), so a broken script in it is impossible, and a missing file fails the parse check in CI and the first run of each export, which is what "guaranteed to load" means here; (c) call the catalogue load (API in ADR-0002) once; `Failed` calls `fatal(cause)`; `AppRoot` enters `IN_STAGE` only on `Ready`, and whether the load is synchronous or threaded is ADR-0002's, bounded by the ANR constraint above; (d) on Ready, pick `stage_id` (MVP: the one stage) and take the seed from ADR-0004's seed source, record both through the wrapper-built RunLog (ADR-0010), then run step 4 below. No reload path exists; a failed load is Fatal.
+`project.godot` sets `application/run/main_scene="res://src/root/app_root.tscn"` and has no `[autoload]` section. A test in CI fails if an `[autoload]` section exists. Singletons are replaced by injection: whatever a system needs is a constructor argument or an injected `Callable`.
 
-**3. Builder and Battle.** `BattleBuilder.build(catalogue, stage_id, rng_seed, fatal_handler) -> Battle` is a `static` function on a `RefCounted` class with no instance state. In one function it: creates the per-battle `FatalLatch(fatal_handler)` first; validates the stage inputs (a null Stage record calls `latch.fatal()` and returns null); constructs the one `StatAccessor`, then Flow, Combat, EnemyWave, TowerSim and HeroSim; makes every connection between battle systems with `Signal.connect(obj.method)` and no flags; injects every callable of `architecture.md` B9 as a method Callable; and returns a `Battle extends RefCounted` whose typed fields hold every object it made. `build()` never touches a node, never reads `Engine`, `Time` or `OS`, and is never called from inside a signal handler. If `latch.is_set` after any step, `build()` returns null and the partial objects die with the function's locals. `Battle` exposes the reads the wrapper injects onward: `left_handed`, `hero_id`, `burst_id`, `dt`, `to_ticks`, `in_build`, plus `is_over()` for `AppRoot`. This reinterprets TR-hero-004's "the builder injects … into HeroInput and the HUD": the builder injects into the sims; the wrapper injects into HeroInput and HudLogic from `Battle`'s reads, as B4 and B9 already say. The registry text should be updated at `/architecture-review`.
+### 2. AppRoot
 
-**4. Wrapper.** `BattleWrapper` is a scene (`res://src/app/battle_wrapper.tscn`, root `Node2D`) that `AppRoot` loads at runtime with `load()` after `build()` returns non-null, null-checks (`null` calls `fatal("wrapper scene failed to load")`), instances, adds as a child, and gives the `Battle` through `setup(battle, dev_telemetry)`, where `AppRoot` passes `OS.is_debug_build()` (the only read of it) and the wrapper builds RunLog and GestureLog only when `dev_telemetry` is true. `setup` runs the assembly of `architecture.md` Data Flow 4 step 6, checking `battle.fatal_latch.is_set` after each step and stopping at the first set latch. It loads the Stage record's look-only scene the same way, with `load()` and a null check into `fatal()`. It creates `InputResolver.create(drag_slop, tap_slop)` from the Input record; a null result calls `battle.fatal_latch.fatal("resolver create returned null")` and builds no adapter. It injects that one resolver into HeroInput, TowerInput and HudLogic (no global; the hit radii are constants on those objects, ADR-0010), connects the HUD's listeners (`tower_built`, `tower_inspected`), injects `AppRoot.request_retry` into HudLogic, and calls `battle.set_input_cancel(resolver.cancel)`. The wrapper holds no gameplay logic, never references `AppRoot` as a type (no preload cycle), and is absent headless.
+`AppRoot` is a `Node` scene (`src/root/app_root.tscn`, script `app_root.gd`). It holds no gameplay logic and makes no gameplay decision. It owns:
 
-**5. Injection and ownership rules.** Every injected value is either a plain value fixed at build or a method Callable whose target has a named strong holder that outlives every call: `Battle` for battle objects, `BattleWrapper` for the resolver, adapter and input objects, `AppRoot` for itself. No lambda, no `Callable.bind()` or `bindv()`, no `static var` under `src/battle/`, and no `CONNECT_DEFERRED` or `CONNECT_ONE_SHOT` on gameplay signals. No object `Battle` holds may store a reference to `Battle` or to any object that holds it, and no two sims may hold each other; reads go through method Callables such as `battle.halted` (probe: a back-reference is a cycle the weakref test cannot see). Exactly two Callables may be unset and are guarded with `is_valid()`: `Battle.cancel_input()` (headless) and the `FatalLatch` upstream (tests). Every other injected Callable is set in `build()` or `setup()`, and a call on it that fails is a defect. The lint (ADR-0007) greps `src/battle/` for `func(`, `func (`, `.bind(`, `bindv(` and `static var`; this bans every lambda in gameplay code, including `sort_custom(func…)`, so ADR-0009's targeting helpers use method Callables, which is intended.
+- `_catalogue: Catalogue` (the Ready catalogue for the whole session; never reloaded; survives retry),
+- `_app_latch: FatalLatch`,
+- `_state: AppState` (`BOOT`, `IN_STAGE`, `FATAL`),
+- `_battle: Battle` and `_wrapper: BattleWrapper` (null outside `IN_STAGE`),
+- `_retry_requested: bool` (the retry latch),
+- `_rng_seed: int`.
 
-**6. Fatal path.** `FatalLatch extends RefCounted` has `is_set: bool`, `cause: String` and `fatal(p_cause: String) -> void`: if already set, return; else set both fields and call the upstream Callable if `is_valid()`. The per-battle latch's upstream is `AppRoot.fatal`, so one call latches both. `Battle.halted()` reads the battle latch and Flow's outcome. After the battle latch sets, Flow commits `FATAL` and emits `phase_changed(FATAL)` once (Flow Rule 15), the tick in progress halts at the next `halted()` check, and later ticks return at once. `AppRoot.fatal` sets the app latch and `_state = FATAL`; on its next `_process` it stops the clock, calls `battle.cancel_input()` if a battle exists, tears the wrapper down with step 7's call if one exists, drops the battle, instances `FATAL_SCENE` and shows it with `cause` when `OS.is_debug_build()`, otherwise a fixed string. The screen reads nothing from the catalogue. Fatal overrides Won, Lost and Paused (creative director's ruling, Flow Rule 18); the Flow GDD's open question on text fallback for the result reads is answered **no** for MVP: a bad read is a defect that must surface, and nothing is saved, so the cost is one retry. Revisit when saves arrive; the GDD row is updated when this ADR is Accepted.
+`AppRoot` preloads no scene. The fatal screen and the wrapper scene are loaded at run time with `ResourceLoader.load()` and checked for null, so a missing or broken scene file cannot stop `app_root.gd` itself from loading (a failed `preload` would fail the script that holds the fallback). This also avoids `preload` cycles between `AppRoot`, `Battle` and `BattleBuilder`.
 
-**7. Retry and teardown.** The HUD's Retry button calls `AppRoot.request_retry()`, which sets the retry latch and returns; it never frees its caller. On `AppRoot`'s next `_process`: if the app latch is set, run step 6's teardown and stop; if the latch is set but `battle.is_over()` is false, clear it and do nothing; otherwise stop the Clock, call `battle.cancel_input()`, `remove_child(wrapper)` then `wrapper.free()`, set `battle = null` and `wrapper = null`, then `build()` again with the same catalogue and the seed ADR-0004 supplies for a retry, and load and set up a new wrapper (a null `build()` instances no wrapper). `free()`, not `queue_free()`: the probe shows `queue_free()` leaves the node and everything it holds alive to the frame's end, and the Retry acceptance row demands that a `weakref` to the old battle, every system, the accessor and the resolver read null right after teardown. The row's "a retried battle's snapshot equals a fresh one" compares against a fresh `build()` given the retry's seed. The resolver and adapter die with the wrapper. The retry latch is idempotent: a second press in the same frame is one rebuild. The retry test also asserts `Performance.get_monitor(Performance.OBJECT_COUNT)` is equal before `build()` and after the drop, which catches cycles the weakref list does not name.
+States and transitions follow the Game State GDD: `BOOT` goes to `IN_STAGE` when the catalogue is Ready, and to `FATAL` on failure; `IN_STAGE` goes to `FATAL` through the fatal path; a retry stays in `IN_STAGE` with a new battle; `FATAL` is absorbing (no transition leaves it; relaunch is the only exit at MVP).
 
-**8. Errors that are not fatal.** `assert()` is banned in `src/`: it does not survive a release build, so a defect there runs on, and TR-data-009 requires a sink that survives release and that tests replace. A defect the design says must not halt the battle (Enemy & Wave's `start_next_wave()` in the wrong state, and a guarded command called re-entrantly, `REENTERED` in ADR-0010 Decision 2) goes to the injected `dev_error(msg)`, a method on a `DevErrorSink extends RefCounted` whose default `report()` calls `push_error(msg)` and whose test fake records; a class is needed because `push_error` is a global function, not a method Callable target. Tests always inject the recording fake, since gdUnit4 may count a `push_error` as a failure. `HALTED` is an ordinary command result that reports nothing: it is expected after Won or Lost and would flood the sink. The run log and gesture log are dev-only listeners and never on this path.
+Boot order (`_ready`):
 
-**9. Headless.** Tests and bots call `BattleBuilder.build()` directly with a `FatalLatch` whose upstream is a recording fake's method, never `AppRoot`. The Flow GDD's Boot row cases that need a scene (a wrapper given `drag_slop` 7 so `create` returns null; a wrapper or stage scene that fails to load; `FATAL_SCENE` instanced with a null catalogue) run as scene tests in the editor-driven suite, not headless.
+1. Create `_app_latch`. State is `BOOT`.
+2. `Catalogue.load_manifest(manifest_path)` (ADR-0002; static, returns a `LoadResult`). On `ok == false`, call `_fatal("catalogue load failed: ...")`. Nothing else runs (no fallbacks, no save access). During `BOOT` the catalogue reports failure through its `LoadResult`, never through a stored callable.
+3. (Vertical Slice) inject saved progression. Reserved; not built at MVP.
+4. Pick `stage_id` (the first stage the catalogue lists at MVP) and `_rng_seed`. The seed is chosen once per app session and reused on retry, so a retry with the same commands replays the same sim. ADR-0004 Decision 7 refines it: the seed is `int(Time.get_unix_time_from_system() * 1000.0) & 0x7FFFFFFF` (1 if 0), logged in development builds, and the sim's only generator is `SimRng`; cosmetic randomness never reads it. State becomes `IN_STAGE`.
+5. Build the first battle (section 5).
 
-**10. Directory layout.** `src/app/` holds `AppRoot`, the wrapper and the two scenes; `src/battle/` holds only `RefCounted` gameplay classes; `src/presentation/` holds views, HUD nodes, the Clock and the wrapper-side input objects (HeroInput, TowerInput, HudLogic, the adapter). ADR-0010 and ADR-0011 place their classes under these roots.
+`AppRoot` accepts an optional `configure(options: Dictionary)` call before `add_child`, with `manifest`, `stage_id`, `rng_seed`, `wrapper_scene_path` and `fatal_scene_path` keys, so an integration test can boot it with a fixture catalogue. Unset keys take production defaults.
+
+### 3. FatalLatch and the fatal path
+
+`FatalLatch` (`src/foundation/fatal_latch.gd`, `extends RefCounted`) is pure: no scene, no catalogue, no engine call except `push_error`.
+
+```gdscript
+class_name FatalLatch extends RefCounted
+
+## Records the first fatal cause. Later calls change nothing.
+func fatal(cause: String) -> void
+## True once fatal() has been called.
+func is_fatal() -> bool
+## The first cause, or "" if not fatal.
+func cause() -> String
+```
+
+There are two latches. The app latch lives on `AppRoot`. The battle latch is created by the Builder first, before any system exists, so a fatal during build has somewhere to land.
+
+The injected `fatal(cause: String) -> void` is the `fatal` method of a `FatalRelay` (`src/root/fatal_relay.gd`, `extends RefCounted`, one per battle, owned by `Battle`). Its steps, in this order:
+
+1. If the battle latch is already fatal, return. (Idempotent; first cause kept. This also stops re-entry from a listener of `phase_changed(FATAL)`.)
+2. Set the battle latch, call `push_error` with the cause.
+3. Call the app handler the Builder received as `fatal_handler` (`AppRoot.on_fatal`, which sets the app latch), after `is_valid()`.
+4. If a Flow hook is set (`flow.enter_fatal`, a method Callable set by the Builder right after Flow is built), call it after `is_valid()`. Flow commits FATAL, then emits `phase_changed(FATAL)`.
+
+Commit, then emit: latches are set before any listener runs.
+
+`Battle.halted()` is true when Flow is WON, LOST or FATAL, or the battle latch is set. It is false while PAUSED. Every system that makes a read or emits a signal checks the injected `halted()` after the call and returns at once if true.
+
+A fatal that `AppRoot` itself raises while `IN_STAGE` with a live battle (for example the wrapper fails to load, instantiate or attach) goes through `battle.report_fatal(cause)`, which calls the relay, so both latches are set and Flow enters FATAL. `AppRoot` sets only the app latch directly (`_fatal`) in `BOOT`, or when `build` returned null.
+
+`AppRoot` never frees the battle from inside the fatal call stack. `on_fatal` only sets the app latch. `AppRoot._process` reads the latch next frame, and if set: stops the wrapper's processing, detaches and frees the wrapper, drops the battle, instantiates the fatal screen, and sets state `FATAL`. During `BOOT` no battle exists, so `_fatal` may show the screen in the same call.
+
+The fatal screen (`src/root/fatal_screen.tscn`) uses only default-theme `Control`s and no imported asset (no font, texture or theme resource), takes no catalogue data and has no buttons. It shows a generic message; development builds (`OS.is_debug_build()`) also show the first cause. `AppRoot` loads it with `ResourceLoader.load(fatal_scene_path)`. If the path is missing, the load returns null, the resource is not a `PackedScene`, or `instantiate()` returns null, `AppRoot` builds a single `Label` in code as the last resort. The fallback lives in `app_root.gd`, which depends on no scene file, so the fatal path cannot itself fail to display unless `app_root.gd` fails to parse, which CI catches (Validation 9). The app never opens saves in `FATAL`.
+
+Causes that take this path: catalogue load failure, bad accessor call, wrapper scene that fails to instantiate or attach, bad stage input, and any release-relevant check that fails.
+
+### 4. Release-safe checks and the dev-error sink
+
+- `assert` is forbidden in `src/` (ADR-0007 C5, one flat rule). A check calls the injected `fatal`, or `dev_error` for a non-fatal contract breach, and then returns.
+- `dev_error(msg: String) -> void` is the injected development-error sink. The default (`DevErrorSink.report`) always calls `push_error` and also records the message in an in-memory list. Tests inject a recording fake. It never changes game state.
+- `print_debug` is stripped from release builds and must not carry any error report.
+- Every function that can call `fatal` returns a value the caller cannot confuse with success where the type allows it (null, an enum failure code, `false`), and every caller checks `halted()` before it uses its own results or mutates state (TR-state-011, TR-enemy-005, TR-tower-006).
+
+### 5. BattleBuilder
+
+`BattleBuilder` (`src/root/battle_builder.gd`) has one static entry point, no state, and is never instantiated:
+
+```gdscript
+## Builds one battle from its four inputs. Needs no scene. Returns the Battle,
+## or null if a fatal fired during the build (the partial battle is discarded).
+static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fatal_handler: Callable) -> Battle
+```
+
+The parameter is `rng_seed`, not `seed`, because `seed` is a global GDScript function and the name would shadow it (a warning; unsourced in the pinned reference, so the rename is a precaution).
+
+Steps, in order (matches Data Flow 4, step 5, in `architecture.md`):
+
+1. Create the battle `FatalLatch` and the `FatalRelay`, then the `StatAccessor(catalogue, relay.fatal)` (ADR-0005). Hand the relay's `fatal` and the accessor to every later step.
+2. Validate stage inputs. Create the `InputResolver` with `InputResolver.create(drag_slop, tap_slop, dev_error)` from the Input record's slops and the battle's `dev_error` (`create` returns null on bad slops: call `fatal`, return null), and store it as the read-only `Battle.resolver` (ADR-0008 Decision 2). The resolver reads the slops from the Input record directly, not through the accessor (TR-input-012).
+3. Construct Flow, Combat, EnemyWave, TowerSim, HeroSim.
+4. Make every signal connection and inject every callable in this one function, on statically typed locals, in the form `emitter.signal_name.connect(listener.method)` and `obj.method`. A misspelt signal or method is then a parse error, not a silent no-op. The signal wiring list is in ADR-0006 and Data Flow 3.
+5. Return the `Battle`. If the battle latch is set at any point, return null and let the caller discard everything. `Battle` holds strong references to every sim object, the resolver and the relay. Nothing else holds the sims.
+
+Rules for the Builder and for everything it builds:
+
+- **Wiring only.** A branch on a gameplay value inside the Builder or the wrapper is a defect.
+- **`obj.method` only.** Every injected or connected callable is `obj.method` on an object the Builder owns. The string forms `Callable(obj, "method")` and `connect("signal", ...)` are forbidden in `src/`, because the parser cannot check them. ADR-0007's lint rejects them.
+- **No lambdas, no `bind()`.** No lambda anywhere in `src/`, and no `bind()` for any injected or connected callable in `src/`, whether or not it captures locals (ADR-0007 C2; a `sort_custom` takes `obj.method` too). A lambda may bind `self` implicitly, and a captured `RefCounted` is a strong reference, so either can make a cycle. One flat rule is simpler to follow and to lint. (V1 checks the reference rules.)
+- **No reference fields back to `Battle`.** No sim stores `Battle` in a field. Systems reach each other only through injected callables and signals. Callables that point back at `Battle` (`halted`, `in_build`, `cancel_input`) and the mutual `FatalRelay` and Flow callables are allowed only because method Callables hold an object ID, not a reference (V1 confirmed this on 2026-11-04, macOS arm64). If a later run shows otherwise, the Rollback plan applies before any sim story starts.
+- **Session lifetime.** An object that lives for the session (`AppRoot`, `Catalogue`, any record) must never hold a per-battle callable or connect to a per-battle signal. The stat accessor is per battle (ADR-0005): the Builder creates it with the relay's `fatal`, and it is dropped with the battle. No sim connects to a catalogue signal. Otherwise a retry either leaks the old battle or sends a later fatal to a dead relay.
+- **No mutable `static var`** in any class under `src/`. Static state lives per script, survives a retry and defeats the rebuild.
+- **No deferred connections** on gameplay signals (TR-enemy-004, ADR-0006).
+- **Headless-safe.** The Builder touches no `Node`, `SceneTree` or `DisplayServer`.
+- `cancel_input() -> void` is a method on `Battle`. It calls a held `Callable` that defaults to a no-op and that the wrapper sets to `InputAdapter.cancel_all` after build (ADR-0003 Decision 9), which empties the adapter's input queue and forwarded presses and then calls the resolver's `cancel()`. Flow gets `battle.cancel_input`. Headless, it stays a no-op.
+
+The injected callable list is the one in `architecture.md` B9 (`halted`, `in_build`, `targets`, `cancel_input`, `left_handed`, `fatal`, `dev_error`, `to_ticks`). This ADR owns the injection mechanism; the signatures stay where B9 and the system GDDs define them.
+
+### 6. BattleWrapper and attach
+
+`BattleWrapper` is a scene that `AppRoot` loads at run time (`ResourceLoader.load(wrapper_scene_path)`) and instantiates. It adds the `InputAdapter`, the Clock, the HUD and the field views around the `Battle`, and holds no gameplay logic. In `attach` it reads `battle.input_record` (a read-only member the Builder sets, ADR-0003 Decision 1) and gives it, or the fields they need, to the adapter (`edge_reject_margin`), HeroInput and the HUD, and it calls `adapter.flush()` as frame step 0 (ADR-0003 Decision 2, ADR-0004). `AppRoot` calls `wrapper.attach(battle, reduce_motion) -> bool` after `add_child`. A failed load, a null instance or a `false` return is fatal, sent through `battle.report_fatal`. The wrapper exposes `detach() -> void`, which stops processing (`set_process(false)` and the input flags), calls `resolver.cancel()`, calls `detach()` on every child node that holds a sim or resolver reference (adapter, HUD, views; each such node must implement it), disconnects its own connections and sets its references to the `Battle` and the resolver to null. After `detach()` no node in the wrapper subtree holds a sim, the resolver or the Battle. The wrapper is absent in headless runs. The Clock, tick rate, clamp and frame order are ADR-0004's; pause entry through the adapter's lifecycle signal is ADR-0003's and Flow's.
+
+### 7. Retry and teardown
+
+`Retry` (a tap target on the modal Result screen inside the wrapper, read in its `_gui_input`; not a `Button` type, which ADR-0003 Decision 8 bans in battle code) calls `AppRoot.request_retry()`, which only sets `_retry_requested = true`. It never frees its caller and is idempotent. On `AppRoot`'s next `_process`:
+
+1. If `_app_latch.is_fatal()`: show the fatal screen and stop (fatal wins over retry).
+2. If `_retry_requested`: clear it. If `battle.is_over()` is false (phase not WON or LOST), ignore it (Game State edge case).
+3. Stop the Clock. `battle.cancel_input()`: the canceller set by `Battle.set_input_canceller` (`adapter.cancel_all`, which empties the adapter queue and calls `resolver.cancel()`; ADR-0003 Decision 9). Headless it is a no-op.
+4. `wrapper.detach()`, `remove_child(wrapper)`, `wrapper.queue_free()`. Never `free()`: the request began inside the wrapper's own signal chain, and `queue_free()` defers deletion to a safe point.
+5. `_battle = null`, `_wrapper = null`. Because `detach()` cleared every reference in the wrapper subtree, these were the last strong references, so the old `Battle`, its sims and the resolver are released at once, without waiting for the wrapper nodes to be deleted. Weakrefs to the old `Battle`, each sim and the resolver must read null (TR-state-009, TR-tower-013). A non-null weakref means a cycle or a missed `detach()` and is a defect.
+6. `BattleBuilder.build(_catalogue, stage_id, _rng_seed, on_fatal)` again with the same catalogue, then a new wrapper.
+
+Retry resets nothing in place. A retried battle opens in Build. A finger held across the retry is handled by the new adapter, which never saw the press (Game State edge case).
+
+### 8. Reduce Motion and left-handed location (QQ-09)
+
+`reduce_motion` and `left_handed` are fields of the Input record in the catalogue, as the Battle HUD GDD already states. `AppRoot` reads `reduce_motion` once per battle and passes it to `wrapper.attach`. The Battle never receives it (presentation only). When Settings exists (Alpha), `AppRoot`'s source for the value changes, and nothing else does. `left_handed` stays on the Battle path through the Builder, as B9 lists. The record accessor for these two fields belongs to ADR-0002 and ADR-0005.
 
 ### Architecture Diagram
 
 ```
-project.godot  run/main_scene ─► res://src/app/app_root.tscn
-┌─ AppRoot (Node) ───────────────────────────────────────────────────────────┐
-│ _state: BOOT | IN_STAGE | FATAL    catalogue: Catalogue (Ready, session)   │
-│ app_latch: FatalLatch(no upstream) _retry_requested: bool                  │
-│ const FATAL_SCENE = preload(...)   battle: Battle   wrapper: BattleWrapper │
-│                                                                           │
-│ _ready: load catalogue ─Failed─► fatal(cause)                             │
-│         ─Ready─► battle = BattleBuilder.build(cat, stage, seed, fatal)    │
-│                  wrapper = load(wrapper path).instantiate() (null ► fatal)│
-│                  add_child(wrapper); wrapper.setup(battle, dbg)           │
-│ _process: if app_latch.is_set ─► teardown, show FATAL_SCENE, stop        │
-│           elif _retry_requested and battle.is_over() ─► stop clock,      │
-│                  battle.cancel_input(), remove_child(wrapper);            │
-│                  wrapper.free(); battle = null; build again (same cat)    │
-└───────────────────────────────────────────────────────────────────────────┘
-          │ build()                                   │ setup(battle,dbg)
-          ▼                                           ▼
-┌─ Battle (RefCounted, strong typed fields) ─┐  ┌─ BattleWrapper (Node2D scene) ───┐
-│ fatal_latch: FatalLatch(upstream=AppRoot)  │  │ Clock · InputResolver · Adapter   │
-│ accessor · flow · combat · enemy_wave      │◄─┤ TowerInput · HudLogic · HeroInput │
-│ tower_sim · hero_sim · dev_sink            │  │ HudTopBand · HudField · HudModals │
-│ tick(dt) · halted() · is_over()            │  │ stage look scene · field views    │
-│ cancel_input()  (no back-references)       │  │ (never references AppRoot)        │
-└────────────────────────────────────────────┘  └───────────────────────────────────┘
+ Engine ─► main scene ─► AppRoot (Node; no autoload)
+                           │ owns: _catalogue, _app_latch, _state, _retry_requested, _rng_seed
+                           │
+      _ready: load ───────►│ Catalogue.load_manifest(path) ── !ok ──► fatal screen (absorbing)
+                           │
+                           │ BattleBuilder.build(catalogue, stage_id, rng_seed, on_fatal)
+                           ▼
+        Battle (RefCounted, scene-free)                   FatalRelay ──► battle FatalLatch
+        ├ Flow, Combat, EnemyWave, TowerSim, HeroSim            │
+        ├ InputResolver                                         ├──► AppRoot.on_fatal ──► app FatalLatch
+        └ FatalRelay, cancel_input Callable                     └──► Flow.enter_fatal ──► phase_changed(FATAL)
+                           ▲
+                           │ attach(battle, reduce_motion) / detach()
+        BattleWrapper (scene): InputAdapter, Clock, HUD, field views
+
+ Retry:  Retry tap    ─► AppRoot.request_retry() sets latch
+         next frame: fatal first; is_over()? stop clock, cancel, detach (whole subtree),
+                     remove_child, queue_free, drop refs, weakrefs(old battle, sims,
+                     resolver) == null, build again with the SAME catalogue
 ```
 
 ### Key Interfaces
 
 ```gdscript
-class_name AppRoot extends Node
-enum State { BOOT, IN_STAGE, FATAL }
-const FATAL_SCENE: PackedScene = preload("res://src/app/fatal_screen.tscn")   # script-free scene
-const WRAPPER_PATH := "res://src/app/battle_wrapper.tscn"                        # load()ed, null-checked
-func state() -> State
-func fatal(p_cause: String) -> void        ## App-level handler. Idempotent, first cause kept. Passed to build().
-func request_retry() -> void               ## Sets the retry latch. Acted on next _process, Fatal first. Never frees the caller.
-
+# src/foundation/fatal_latch.gd
 class_name FatalLatch extends RefCounted
-var is_set: bool
-var cause: String
-func _init(upstream: Callable = Callable()) -> void
-func fatal(p_cause: String) -> void        ## Idempotent. Sets fields, then upstream.call(p_cause) if upstream.is_valid().
+func fatal(cause: String) -> void
+func is_fatal() -> bool
+func cause() -> String
 
-class_name DevErrorSink extends RefCounted
-func report(msg: String) -> void           ## Default: push_error(msg). Tests subclass and record.
-
-class_name BattleBuilder extends RefCounted
+# src/root/battle_builder.gd
+class_name BattleBuilder extends RefCounted   # static only; never instantiated
 static func build(catalogue: Catalogue, stage_id: StringName, rng_seed: int, fatal_handler: Callable) -> Battle
-## Returns null after calling fatal_handler when the stage cannot be built. Touches no node.
 
-class_name Battle extends RefCounted       ## Every helper is a typed field (architecture.md B4).
-func tick(dt: float) -> void
+# src/root/battle.gd (plain object, no node)
+class_name Battle extends RefCounted
+func tick(dt: float) -> void            # gated inside; ADR-0004 owns the gate and order
 func halted() -> bool
-func is_over() -> bool                     ## Flow outcome WON or LOST, or the latch set. AppRoot's only battle read.
-func set_input_cancel(cancel: Callable) -> void
-func cancel_input() -> void                ## Guarded with is_valid(); Flow and AppRoot call it.
-# Reads the wrapper injects onward (set at build, never change):
-var left_handed: bool
-var hero_id: StringName
-var burst_id: StringName
-var dt: float
-func to_ticks(seconds: float) -> int
 func in_build() -> bool
+func is_over() -> bool                  # true when Flow is WON or LOST
+func report_fatal(cause: String) -> void  # calls the relay; for AppRoot's own InStage failures
+func cancel_input() -> void             # calls the wrapper-set Callable; no-op headless
+func set_input_canceller(c: Callable) -> void
+var input_record: InputRecord           # read-only by contract; set by BattleBuilder (ADR-0003, ADR-0005 Decision 8)
+var stage_record: StageRecord           # read-only by contract; set by BattleBuilder (ADR-0011)
+var visual_keys: VisualKeys             # read-only by contract; StringNames only; set by BattleBuilder (ADR-0011)
 
-class_name BattleWrapper extends Node2D
-func setup(battle: Battle, dev_telemetry: bool) -> void  ## Assembles Data Flow 4 step 6; checks battle.fatal_latch.is_set after each step.
-func stop_clock() -> void                  ## Clock internals are ADR-0004's.
+# src/root/app_root.gd
+class_name AppRoot extends Node
+func configure(options: Dictionary) -> void   # tests only; before add_child
+func request_retry() -> void                  # sets the latch; frees nothing
+func on_fatal(cause: String) -> void          # the fatal_handler; sets the app latch only
+
+# src/root/battle_wrapper.gd
+class_name BattleWrapper extends Node
+func attach(battle: Battle, reduce_motion: bool, dev_logs: DevLogs = null) -> bool   # dev_logs: ADR-0010 Decision 10
+func detach() -> void
 ```
 
+Names are the contract, signatures are the contract; internal fields may change. `Battle` fields other than these are ADR-0004, ADR-0006 and ADR-0010's to define. `class_name` collisions (QQ-16) are checked by ADR-0007 NAME-1 to NAME-4; these names stand unless ADR-0007 V6 reports a collision.
+
 ### Implementation Guidelines
-- `project.godot` **must** have no `[autoload]` section and **must** set `run/main_scene` to `res://src/app/app_root.tscn`.
-- `AppRoot` **must** have exactly three states and **must never** hold a gameplay reference beyond `Battle.is_over()`.
-- Gameplay classes (`src/battle/**`) **must** extend `RefCounted`, **must never** extend `Node`, **must never** declare a `static var`, and **must never** reference `Engine`, `Time`, `OS`, `SceneTree`, a `Timer` or `await`.
-- Connections and injections between battle systems **must** happen only inside `BattleBuilder.build()`; those involving a wrapper-built object (resolver, adapter, HeroInput, TowerInput, HudLogic, views, `set_input_cancel`, `request_retry`) **must** happen only inside `BattleWrapper.setup()`; nowhere else.
-- Gameplay signals **must never** be connected with `CONNECT_DEFERRED` or `CONNECT_ONE_SHOT`.
-- `build()` **must never** be called from inside a signal handler.
-- Injected callables **must** be method Callables whose target is held by `Battle`, `BattleWrapper` or `AppRoot`; code **must never** pass a lambda, `bind()` or `bindv()` result as an injected callable or signal target.
-- No object held by `Battle` **may ever** store a reference to `Battle` or to an object that holds it, and no two sims **may ever** hold each other.
-- Only `Battle.cancel_input()` and the `FatalLatch` upstream **may** be guarded with `is_valid()`; every other injected Callable **must** be unguarded, so a missing injection fails in the first test.
-- Teardown **must** use `remove_child()` then `free()` on the wrapper, from `AppRoot._process` only; `queue_free()` **must never** be used on the wrapper or anything that holds a `Battle`; retry and Fatal teardown **must never** run from a signal handler or an input callback.
-- The Retry button **must never** free its caller; it calls `request_retry()` and returns.
-- The wrapper scene and the Stage record's scene **must** be loaded with `load()` and null-checked into `fatal()`; the fatal scene **must** be a script-free `preload` constant on `AppRoot` and **must never** read the catalogue.
-- The wrapper and everything under `src/presentation/` **must never** reference `AppRoot` as a type.
-- `assert()` **must never** appear under `src/`. Unrecoverable conditions call the injected `fatal()`; recoverable defects call the injected `dev_error()`.
-- A call to the injected `fatal()` **must** be followed by `return` in the calling function, and every loop over systems **must** check `halted()` after each accessor read and each emit (TR-enemy-005, TR-tower-006).
-- The fatal screen **must** show `cause` only when `OS.is_debug_build()`.
-- No class under this ADR **must ever** override a method with a typed return without an explicit `return` (4.7 break).
+
+For `/create-control-manifest` and `/dev-story`:
+
+- Must set `application/run/main_scene` and must never add an `[autoload]` section.
+- Must create every sim object only in `BattleBuilder.build`, and must make every sim-to-sim signal connection only there.
+- Must inject every cross-system dependency as an `obj.method` Callable or a constructor argument.
+- Must never use the string forms `Callable(obj, "name")` or `connect("signal", ...)` in `src/`.
+- Must never use a lambda anywhere in `src/`, or `bind()` for an injected or connected callable in `src/` (ADR-0007 C2).
+- Must never store `Battle` in a field of a sim object. Must never create a `RefCounted` cycle.
+- Must never let a session-lived object (AppRoot, Catalogue, records) hold a per-battle callable or connect to a per-battle signal; no sim connects to a catalogue signal.
+- Must never declare a mutable `static var` under `src/`.
+- Must call `is_valid()` before calling a held Callable on the fatal path.
+- Must never `preload` a scene in `app_root.gd`; load the fatal and wrapper scenes at run time and null-check.
+- Every node in the wrapper subtree that holds a sim, the resolver or the Battle must implement `detach()` and clear those references in it.
+- Must check `halted()` after every accessor read and every signal emit that can end the battle, and return at once.
+- Must report a release-relevant failure through `fatal` or `dev_error`. Must never use `assert` in `src/` (ADR-0007 C5). One scoped exception: Combat's five guard codes (`ERR_REMOVED`, `ERR_BAD_AMOUNT`, `ERR_BAD_SLOW`, `ERR_BAD_MAX_HP`, `ERR_ALREADY_ATTACHED`) use `push_error` directly (ADR-0009 Decision 4).
+- Must never call `fatal` expecting the callee to stop the caller. The caller returns.
+- Must never free the wrapper, or drop the battle, from inside a signal handler or a `fatal` call. Only `AppRoot._process` tears down.
+- Must never call `free()` on any object in `src/` (ADR-0007 C5). Use `queue_free()` after `remove_child()` and `detach()` for nodes; `RefCounted` objects are released by dropping references.
+- Must never reload the catalogue after `Ready`.
+- The fatal screen must use no imported asset and no catalogue data.
+- An override of a method with a typed return must contain an explicit `return` (4.7).
+- Tests that prove teardown must hold no reference to the old battle, and must read the weakref in the same frame as the drop.
 
 ## Alternatives Considered
 
-### Alternative 1: Autoload singletons (GameManager, EventBus)
-- **Description**: A `GameManager` autoload owns the catalogue, the current battle and the retry; an `EventBus` autoload carries battle signals.
-- **Pros**: The idiomatic beginner shape; no injection; any node can reach anything.
-- **Cons**: Global state survives a retry, which is exactly the leak the prototypes had; a headless test has to load the autoloads or stub them; the view allowlist test cannot count listeners on a global bus; the framework parse check has to be told about every autoload.
-- **Rejection Reason**: Contradicts TR-data-011, TR-state-001 and the Flow GDD's "Deliberately not built" list (event-bus autoload, DI container).
+### Alternative 1: Autoload singletons (`Game`, `Catalogue`, `EventBus`)
 
-### Alternative 2: Scene-owned battle root (the technical director's original note)
-- **Description**: The battle scene's root script constructs and wires the systems in `_ready()`.
-- **Pros**: One file to read; the scene tree shows the structure.
-- **Cons**: Cannot run without a window, so bots and tests need the full scene; teardown becomes `queue_free()` by habit; views and sims share a lifetime.
-- **Rejection Reason**: Flow Rule 2 amends the note for this reason; the TD-ARCHITECTURE review accepted the amendment on technical merit (QQ-08). Accepting this ADR records it.
+- **Description**: Register the catalogue, an event bus and a game-state object as autoloads. Systems reach them by global name.
+- **Pros**: Least code to write. Familiar Godot pattern. Survives scene changes for free.
+- **Cons**: Hidden coupling; each system becomes untestable without the whole singleton set. Headless bots would need the autoload tree. A retry must reset the singletons by hand, which is the 22-field leak the GDD names as the failure. Violates the coding standard (dependency injection over singletons).
+- **Estimated Effort**: About 0.7x the chosen approach at first; higher after the first retry bug.
+- **Rejection Reason**: Breaks TR-data-011, TR-state-001 and the headless requirement.
 
-### Alternative 3: In-place reset on retry
-- **Description**: Each system exposes `reset()`; retry calls them in order.
-- **Pros**: Cheaper than a rebuild; no teardown timing question.
-- **Cons**: The hero-pin prototype reset 22 fields by hand and still leaked; every new field is a new leak; the pure-function-of-seed property is lost.
-- **Rejection Reason**: Flow Rule 16 forbids it; the rebuild cost is one `build()` call and is budgeted under QQ-11.
+### Alternative 2: A battle scene script as the root and wiring owner
 
-### Alternative 4: `queue_free()` teardown
-- **Description**: Retry calls `wrapper.queue_free()` and drops the battle; the engine frees at frame end.
-- **Pros**: The documented safe default; never frees a node mid-callback.
-- **Cons**: The probe shows the node, and so the old battle, is alive until the frame ends; the weakref acceptance row fails; two battles exist for part of a frame, and the old one still holds the resolver.
-- **Rejection Reason**: The acceptance row is the spec. `free()` from `AppRoot._process` on a child that is not the node being processed raised no error with input queued in the same frame (probe); the phone confirmation is Verification item 3.
+- **Description**: The stage scene's root script constructs systems, wires them and runs the tick loop. This is the technical director's earlier note.
+- **Pros**: One file; the scene tree gives lifetime management.
+- **Cons**: A scene-owned root cannot run headless without a display and scene tree, so bots and unit tests would need the full scene. Gameplay logic drifts into a node.
+- **Estimated Effort**: About 0.8x.
+- **Rejection Reason**: Fails TR-state-002. The GDD already amends the earlier note.
 
-### Alternative 5: `assert()` for defects
-- **Description**: Invariants are `assert()`ed; release builds strip them.
-- **Pros**: Zero release cost; reads as documentation.
-- **Cons**: Does not survive release, so a defect there runs on; in a debug build it behaves as a script error rather than latching; it cannot be replaced by a recording fake.
-- **Rejection Reason**: TR-data-009 and TR-enemy-012 require a sink that survives release and that tests replace.
+### Alternative 3: Retry by `change_scene_to_packed` (reload the main scene)
 
-### Alternative 6: Preload the wrapper scene on `AppRoot`
-- **Description**: `const BATTLE_WRAPPER := preload(...)` beside `FATAL_SCENE`.
-- **Pros**: One less runtime load; the dependency is visible.
-- **Cons**: A missing file anywhere under the wrapper's dependency tree fails `AppRoot`'s own script, and the app shows a blank main scene instead of the fatal screen; a broken script gives a script-less wrapper whose `setup()` fails outside the fatal path (probe).
-- **Rejection Reason**: The fatal screen must not depend on any presentation script loading. Runtime `load()` with a null check into `fatal()` keeps the dependency one-way.
+- **Description**: Retry swaps the whole scene. The engine frees the old tree.
+- **Pros**: Uses the engine's own teardown; no manual detach.
+- **Cons**: The catalogue and `AppRoot` die with the scene unless held by an autoload, which Alternative 1 rules out. Reloading the catalogue on retry breaks TR-data-004. Scene swap timing is the same deferred-free question, with less control.
+- **Estimated Effort**: About 0.9x.
+- **Rejection Reason**: Needs a global to hold the catalogue, or a reload that the GDD forbids.
+
+### Alternative 4: A dependency-injection container or service locator
+
+- **Description**: Systems register and resolve services by key.
+- **Pros**: Uniform lookup; late binding.
+- **Cons**: Another framework to write and test; resolve-by-name errors appear at run time. The GDD lists a container among the things deliberately not built.
+- **Estimated Effort**: 1.5x.
+- **Rejection Reason**: Explicit constructor and `obj.method` injection in one builder function already gives parser-checked wiring, with no new layer.
+
+### Alternative 5: In-place reset on retry
+
+- **Description**: Each system gets a `reset()` and retry calls them.
+- **Pros**: No rebuild cost; keeps node references.
+- **Cons**: Every new field needs a matching reset line; the prototype leaked state between attempts this way.
+- **Estimated Effort**: 0.8x, then growing.
+- **Rejection Reason**: GDD Rule 16 (rebuild, never reset).
 
 ## Consequences
 
 ### Positive
-- A battle is constructed by one function, so a misspelt signal is a parse error and every dependency is visible in one place.
-- Bots, balance tools and tests build battles with no window and no engine clock.
-- Retry is provably clean: the weakref test plus the object-count check, not a reset checklist.
-- Every failure, from a missing manifest to a bad stat key, reaches one screen through one latch, and nothing half-runs after it.
+
+- Every battle system runs headless from `BattleBuilder.build`, so unit, integration and bot tests share production wiring.
+- One fatal path, one latch type, one place that wires signals. A failure cannot be handled two ways.
+- A retry cannot leak state, and the weakref test proves it.
+- The catalogue loads once; a retry costs only a rebuild.
+- The fatal screen cannot fail to show: no assets, no catalogue, a code-built last resort.
 
 ### Negative
-- Every new helper needs a typed field on `Battle` and a line in `build()`; forgetting the field makes the helper die silently, which is why the lint and the weakref test exist.
-- Every lambda is banned in `src/battle/`, so sorting and filtering helpers use named methods.
-- `free()` during `_process` is less forgiving than `queue_free()`; the teardown must stay in `AppRoot._process` and nowhere else.
-- No reload: a transient disk failure at boot is a relaunch.
-- A bad read on the result screen replaces a Won with Fatal (accepted for MVP).
+
+- The Builder is one long function that grows with each system. Accepted for the MVP size (five systems); revisit if it passes about 150 lines.
+- The no-lambda rule costs a small named method for each callable that would otherwise be a lambda.
+- Every view and HUD node that reads a sim must implement `detach()`. A missed one shows up only as a non-null weakref in the retry test.
+- Fatal shows on the next frame, not inside the failing call. One frame of stale view is possible; the in-sim gate halts the sim at once, so state is correct.
+- A cycle leaks silently in GDScript. Only the weakref test catches it, so that test is mandatory and must stay green.
+
+### Neutral
+
+- `AppRoot` carries a retry latch and a polling `_process` rather than a signal-driven teardown.
+- `reduce_motion` lives in data until Settings exists; the source changes later, the call site does not.
 
 ## Risks
-- **The release export differs from the editor binary on Callable lifetime, dead-call behaviour or `push_error`.** Mitigation: Verification item 1 runs both probes on an Android release export before the Boot story closes; the design never relies on the dead-call abort, only on the latch and `halted()` checks.
-- **Someone adds an autoload for convenience.** Mitigation: ADR-0007's `[autoload]` grep in CI; `/create-control-manifest` carries the rule.
-- **A cycle sneaks in through a back-reference or a bound argument.** Mitigation: the no-back-reference guideline, the lint, the weakref test and the `OBJECT_COUNT` check; the engine's "ObjectDB instances were leaked at exit" line is a further cheap signal.
-- **The fatal scene file is dropped by an export filter or deleted.** Mitigation: the CI parse check fails on a missing `preload` path; Verification item 2 instantiates it on an export.
-- **`free()` while a touch is held.** Mitigation: the new adapter never saw the press and drops its moves until lift (Flow Edge Cases); phone confirmation under Verification item 3.
-- **Shadowing warnings.** `seed` shadows the global `seed()` and a `cause` parameter shadows the field, so the names are `rng_seed` and `p_cause`; the parse check does not print warnings headless, so code review watches for new shadows.
-- **Stale GDD rows.** The Flow GDD's deferred criterion "Lifecycle mapping, owner ADR-0001" and its open question on the pause mechanism now belong to ADR-0003 (TR-state-010); its result-read fallback question is answered here. Update both rows, and TR-hero-004's registry text, when this ADR is Accepted.
+
+- **A method Callable keeps an object alive (V1).** V1 (2026-11-04, macOS arm64) showed it does not: method-Callable cycles are freed. If a later run disagrees, then the Builder's own wiring (callables back to `Battle`, the relay and Flow pointing at each other) forms cycles by construction, and the weakref stays non-null. Mitigation: V1 test before any sim story; if it fails, add an explicit `Battle.dispose()` that disconnects every connection and clears every held Callable, called from teardown, and amend this ADR.
+- **`queue_free()` timing differs from the plan (V2).** Mitigation: the battle's release does not depend on node deletion, because `detach()` clears every reference in the wrapper subtree first.
+- **A string-form Callable or a lambda slips in.** Mitigation: the ADR-0007 lint rejects `Callable(`, string `connect(`, `func(` used as a value, and `.bind(` under `src/`.
+- **A per-battle callable leaks into a session-lived object.** Mitigation: the session-lifetime rule, and the retry weakref test run after a battle that made a bad accessor call.
+- **`push_error` is silent in release (V4).** Then release failures show only the generic fatal screen. Mitigation: the fatal path still latches and halts; add a write to the run log in dev builds; check on the first Android export.
+- **The fatal scene is missing or broken in an export (V3).** Mitigation: it is loaded at run time, not preloaded, so `app_root.gd` still loads and the code-built Label shows. Boot tests cover a missing path and a null instance. Accepted residual risk: if `app_root.gd` itself fails to parse, nothing can show; CI's headless boot test catches that before export.
+- **The Builder grows into a god object.** Mitigation: the "wiring only" rule, checked in code review (ADR-0007 Decision 9: "a gameplay field" is not crisp enough to lint).
+- **Seed policy is a working default.** ADR-0004 may change it; the interface (`rng_seed` as a Builder argument) does not change.
 
 ## GDD Requirements Addressed
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
-| game-state-stage-flow.md | TR-state-001: minimal main-scene root, no autoload, triggers load, holds catalogue, owns fatal screen, alone survives retry | Decision 1 and 2; `AppRoot` is the only node that survives teardown |
-| game-state-stage-flow.md | TR-state-002: scene-free `build()`, explicit connections, headless, null on failure, thin wrapper | Decision 3 and 4 |
-| game-state-stage-flow.md | TR-state-009: retry destroys and rebuilds between ticks, latch on root, weakref null | Decision 7; `remove_child()` + `free()`; `OBJECT_COUNT` check |
-| game-state-stage-flow.md | TR-state-011: one idempotent fatal handler, first cause, overrides outcomes, latches, halts, discards partial build, four entry points, screen guaranteed | Decision 6 (handler, overrides, halt), Decision 3 (partial build), Decision 4 (stage scene and null resolver), Decision 2 (script-free preloaded screen) |
-| game-state-stage-flow.md | TR-state-015: battle holds every helper in a typed field, builder holds nothing | Decision 3 and 5; probe table |
-| game-state-stage-flow.md | TR-state-016: guarded public `cancel_input()` set by the wrapper, called on Won, Lost, Paused, Fatal and retry | Decision 4, 5 and 7 |
-| data-config-pipeline.md | TR-data-004: load once, all-or-nothing, before the first gameplay scene, no reload | Decision 2; sync vs threaded delegated to ADR-0002 |
-| data-config-pipeline.md | TR-data-006: no fallbacks, catalogue-free fatal screen, no saves, dev runs name errors | Decision 6; the per-field error text is ADR-0002's validator |
-| data-config-pipeline.md | TR-data-009: bad accessor call goes to an injected, test-replaceable handler, not assert | Decision 8 (`fatal()` for accessor faults, `DevErrorSink` for recoverable defects) |
-| data-config-pipeline.md | TR-data-011: no autoload or global; root holds catalogue; builder injects it | Decision 1 and 3 |
-| input-gesture-resolver.md | TR-input-012: wrapper builds resolver and adapter per battle, injects the one resolver; hit radii are constants on the input objects | Decision 4 (create, inject into HeroInput, TowerInput, HudLogic); radii delegated to ADR-0010 |
-| enemy-wave.md | TR-enemy-005: injected `halted()` checked after every read and signal; never references Flow | Decision 5 and 6; Implementation Guidelines |
-| enemy-wave.md | TR-enemy-012: `start_next_wave()` logs to an injected dev-error sink, not assert | Decision 8 (sink); the Waiting/Active/Finished machine is ADR-0009's |
-| tower-system.md | TR-tower-006: injected `halted()` checked after every read and signal; reads before mutation | Decision 5 and 6; read-before-mutate delegated to ADR-0010 |
-| tower-system.md | TR-tower-013: retry leaves no old battle alive through a connection; wiring test names a missing one | Decision 7; probe (connections die with the listener); the listener-count test is ADR-0007's mechanism |
-| hero-system.md | TR-hero-004: `halted()`, `in_build()`, hand, Hero ID and Burst ID reach HeroSim, HeroInput and the HUD | Decision 3 (builder into HeroSim) and 4 (wrapper into HeroInput and HudLogic from `Battle`'s reads); registry text to be reworded |
-| battle-hud.md | TR-hud-006: Retry sets an idempotent latch and never frees its caller; the root's next frame checks Fatal, stops, cancels, frees, rebuilds | Decision 7 |
+| game-state-stage-flow.md | TR-state-001: minimal main-scene root, no autoload, triggers load, holds catalogue, owns fatal screen, survives retry | Decision 1, 2, 3 |
+| game-state-stage-flow.md | TR-state-002: scene-free `build(catalogue, stage_id, seed, fatal_handler)` with explicit connections; thin wrapper | Decision 5, 6 (parameter renamed `rng_seed`; parser-checked `obj.method` wiring) |
+| game-state-stage-flow.md | TR-state-009: retry destroys and rebuilds between ticks, driven by a root latch; weakref to old battle is null | Decision 7 |
+| game-state-stage-flow.md | TR-state-011: one idempotent fatal handler, first cause, halts tick, discards partial build, fatal screen loads | Decision 3, 4 |
+| data-config-pipeline.md | TR-data-004: load once, all-or-nothing, started by the app root, no reload | Decision 2 (boot order, never reload) |
+| data-config-pipeline.md | TR-data-006: no fallbacks; load failure shows a catalogue-free fatal screen; dev names each error | Decision 3 |
+| data-config-pipeline.md | TR-data-009: bad accessor call goes to an injected, test-replaceable handler that survives release | Decision 3, 4 (`fatal`, `dev_error`, no `assert`) |
+| data-config-pipeline.md | TR-data-011: no autoload; the root holds the catalogue and the builder injects it | Decision 1, 2, 5 |
+| input-gesture-resolver.md | TR-input-012: Game State builds the resolver and adapter per battle and injects the one resolver | Decision 5 (resolver in the Builder), 6 (adapter in the wrapper) |
+| enemy-wave.md | TR-enemy-005: injected `halted()` checked after every read and signal; no Flow reference | Decision 5 (`halted`), 4 |
+| enemy-wave.md | TR-enemy-012: wave control logs to an injected dev-error sink, not `assert` | Decision 4 |
+| tower-system.md | TR-tower-006: injected `halted()`; stats read before mutation | Decision 5, 4 (check rule; read-before-mutate is ADR-0005 and ADR-0010) |
+| tower-system.md | TR-tower-013: retry leaves no old battle alive through a connection | Decision 5 (no back-refs, method Callables), 7 |
+| hero-system.md | TR-hero-004: builder injects `halted()`, `in_build()`, the hand flag, the Hero record ID and `burst_id` | Decision 5 (injection mechanism; the list is B9) |
+| battle-hud.md | TR-hud-006: retry sets an idempotent root latch and never frees its caller | Decision 7 |
 
 ## Performance Implications
-- **CPU**: Boot is one catalogue load (ADR-0002 budgets it, QQ-11, under the 5 s ANR limit). A retry is one `build()` plus one wrapper `load()` and instance, between ticks, in a frame where nothing else runs; unmeasured until the first phone build.
-- **Memory**: One catalogue for the session; one battle at a time. The old battle is released on the retry frame, so peak is one battle plus the wrapper scene.
-- **Load Time**: The fatal scene is `preload`ed with the main scene and is a single Control; the wrapper is `load()`ed once per battle.
+
+- **CPU**: Boot and each retry run one `build` call: object construction and a fixed set of connections (tens, not thousands). Expected well under one frame. Not measured; confirm at the first device run. No per-frame cost beyond one boolean read of the retry and fatal latches in `AppRoot._process`.
+- **Memory**: One `Battle` plus its sims. Retry drops the old one before the new one is used, so no two live battles overlap beyond one frame. The catalogue stays resident for the session.
+- **Load Time**: Catalogue load happens once at boot, synchronously at MVP. The 1000 ms median budget on an Adreno 5xx-class device is QQ-11 and is measured under ADR-0002.
 - **Network**: None.
 
 ## Migration Plan
-Greenfield: `src/` holds no `.gd` file. Create `src/app/app_root.tscn`, `app_root.gd`, `fatal_screen.tscn` (no script), `battle_wrapper.tscn`, `battle_wrapper.gd`; `src/battle/battle.gd`, `battle_builder.gd`, `fatal_latch.gd`, `dev_error_sink.gd`; `src/presentation/` as ADR-0010 and ADR-0011 fill it. Set `run/main_scene` in `project.godot`. Add a note to `docs/engine-reference/godot/current-best-practices.md` that `--check-only` exits 0 on parse errors on macOS 4.7.2 (done with this ADR). The prototypes under `prototypes/` are not migrated.
+
+No code exists, so nothing migrates. First stories, in order: `FatalLatch` and tests; `AppRoot` skeleton with `main_scene` and the CI `[autoload]` check; `BattleBuilder` with an empty `Battle` and the weakref test (this also runs V1 and V2); fatal screen and the headless force-fail test (V3); the first sim wiring arrives with each system's own story.
+
+**Rollback plan**: If V1 shows method Callables keep objects alive, keep the structure and add `Battle.dispose()` as in Risks. If the Builder proves unmanageable, split it into per-system `wire_*` functions called from `build`, with no change to the public signature. Superseding this ADR would require every system ADR to be re-read, so prefer amendment.
 
 ## Validation Criteria
-- Flow GDD acceptance rows Boot, Retry, Cancel wiring and criterion 13 pass in `tests/` (ADR-0007 harness), with the scene-only cases in the editor-driven suite.
-- The weakref test: after retry, `weakref` to the old `Battle`, each system, the accessor and the resolver returns null in the same frame (`var w: WeakRef = weakref(x)`; the untyped form does not parse). `OBJECT_COUNT` is equal before `build()` and after the drop.
-- `godot --headless --path . -s res://.claude/scripts/godot-parse-check.gd -- <files>` passes on every file under `src/`; `grep -q '^\[autoload\]' project.godot` finds nothing.
-- ADR-0007's lint finds no `func(`, `func (`, `.bind(`, `bindv(` or `static var` under `src/battle/`.
-- `lifecycle_probe.gd` and `probe2.gd` give the same results on an Android release export, with the dead-call row recorded either way.
+
+Automated, headless (gdUnit4 under `tests/unit/root/` and `tests/integration/root/`):
+
+1. `FatalLatch`: first cause kept on a second call; `is_fatal()` true after one call; idempotent.
+2. `BattleBuilder.build` with a fixture catalogue returns a `Battle` with no node, no `SceneTree` and no `await`.
+3. Weakref proof, headless: build, hold only weakrefs to the `Battle`, each sim and the resolver, drop the `Battle`, assert every `get_ref() == null` in the same frame. Repeat after a full scripted micro-battle (kill, leak, win) and after a battle that made a bad accessor call.
+3a. Weakref proof, with the wrapper: retry through `AppRoot`, then one frame after `queue_free()` assert the same weakrefs and a weakref to the old wrapper are null.
+3b. V1 probe: an object connected through `obj.method`, and one held by a lambda written inside a method, report their weakref result; the test records which holds a strong reference.
+4. Fatal during build: a bad slop fixture returns null, the app latch is set, no tick runs.
+5. Fatal twice: the first cause survives in both latches.
+6. Fatal path: after `fatal`, `halted()` is true and a scripted `tick` changes nothing.
+7. Listener-count wiring test (ADR-0006) passes on a built battle.
+8. CI check: `project.godot` has `application/run/main_scene` and no `[autoload]` section.
+9. Boot test with a failing catalogue fixture ends in `FATAL` with the fatal scene shown. With `fatal_scene_path` set to a path that does not exist, and again with a scene whose instance is null, the code-built Label appears. A headless boot of the real `app_root.tscn` runs in CI, so a parse error in `app_root.gd` fails the build.
+10. Retry twice in one frame sets one rebuild. Retry while `is_over()` is false is ignored.
+11. Wrapper load failure while `IN_STAGE` sets both latches and Flow reads FATAL.
+12. Lint (ADR-0007): no `Callable(` string form, no string `connect(`, no lambda or `.bind(` used as a connected or injected callable, no mutable `static var`, under `src/`.
+
+Manual evidence in `production/qa/evidence/` (cannot run headless): V2 teardown with a Control under the pointer; V3 export leg and V4 from the first iOS export on the iPhone (Android export: Android-only: deferred until an Android device is available; iPhone run covers the iOS equivalent where one exists); fatal screen screenshot (dev and release builds).
+
+The decision is wrong if: the weakref test cannot pass without a `dispose()` in every sim, or the Builder needs a gameplay branch, or a retry shows state from the old battle.
 
 ## Related
-- `docs/architecture/architecture.md` v4: Composition Root, Data Flow 4 to 7, B4, B9, QQ-08, QQ-16, QQ-17, QQ-21 (save/load seams are ADR-0002's to decide).
-- `design/gdd/game-state-stage-flow.md` Rules 1, 2, 2a, 3, 15, 16, 18; Open Question on result-read fallback (answered no); deferred criterion "Lifecycle mapping" (now ADR-0003's).
-- `design/gdd/data-config-pipeline.md` load and failure rules; `design/gdd/input-gesture-resolver.md` Rule 7 (cancel).
-- Enables ADR-0002 to ADR-0011 as tabled above; delegations in the ADR Dependencies table.
-- Probes: `prototypes/adr-0003-spike/lifecycle_probe.gd`, `prototypes/adr-0003-spike/adr0001_checks/probe2.gd` (with its `k_*.gd` parse fixtures); engine notes: `docs/engine-reference/godot/modules/input.md`, section Verified on 4.7.2.
+
+- Depends on none. Enables ADR-0002 to ADR-0010 (see Dependencies).
+- `docs/architecture/architecture.md`: Module Ownership (Composition Root), Data Flow 4 to 7, API Boundaries B9, Principles 1, 2 and 5, QQ-08 (composition-root item), QQ-09 (answered in Decision 8), QQ-16, QQ-17 (closed by V1).
+- `design/gdd/game-state-stage-flow.md` Core Rules 1 to 3, 15 to 18, Edge Cases.
+- `design/gdd/data-config-pipeline.md`, `enemy-wave.md`, `tower-system.md`, `hero-system.md`, `input-gesture-resolver.md`, `battle-hud.md`.
+- `docs/architecture/tr-registry.yaml` (the 15 TR IDs above).
+- Not covered here, owned elsewhere: lifecycle notification names (ADR-0003); tick rate, clamp and frame order (ADR-0004); signal list and ID types (ADR-0006); test harness and `class_name` lint (ADR-0007).

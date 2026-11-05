@@ -23,7 +23,7 @@
 | Aspect | Detail |
 | ---- | ---- |
 | **Genre** | Tower defense (lane-based) with a controllable hero unit |
-| **Platform** | Mobile (iOS / Android), portrait, one thumb. Desktop build used for development and testing with mouse-as-touch. |
+| **Platform** | Mobile, portrait, one thumb: iPhone (iOS) first; Android deferred until a reopen trigger (ADR-0012 Decision 7). Desktop build used for development and testing with mouse-as-touch. |
 | **Target Audience** | See Target Player Profile |
 | **Player Count** | Single-player |
 | **Session Length** | 10–25 min (2–3 stages of 5–8 min each) |
@@ -213,7 +213,7 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 | Consideration | Assessment |
 | ---- | ---- |
 | **Engine** | **Godot 4.7.2, GDScript, Mobile renderer** (pinned by `/setup-engine` 2026-11-01; `docs/engine-reference/godot/VERSION.md`). Chosen on TD-FEASIBILITY criteria: mobile export maturity, 2D tooling, beginner learning curve, time-to-phone-build. iOS still needs a Mac + Xcode + Apple developer account. Budgets in `project.yaml` → performance (60 fps, 60 draw calls, 256 MB; verify on device). |
-| **Key Technical Challenges** | Tap/drag disambiguation at fingertip size (priority order in Pillar 4, hit-target registry); no pathfinding needed (the hero pins); cross-tree modifier stacking (fixed order, pure function, stat-source tags reserved from MVP); projectile pooling and particle caps on low-end Android; save versioning (version field + node IDs from day one); mobile signing pipeline. |
+| **Key Technical Challenges** | Tap/drag disambiguation at fingertip size (priority order in Pillar 4, hit-target registry); no pathfinding needed (the hero pins); cross-tree modifier stacking (fixed order, pure function, stat-source tags reserved from MVP); projectile pooling and particle caps on the first phone (an iPhone; low-end Android when Android reopens, ADR-0012); save versioning (version field + node IDs from day one); mobile signing pipeline. |
 | **Art Style** | 2D, flat geometric primitives (Signal Board) |
 | **Art Pipeline Complexity** | Low |
 | **Audio Needs** | Minimal in MVP; moderate at Small Ship (SFX per tower/hero action, one loop per stage family) |
@@ -233,8 +233,8 @@ Pillars 1 and 4 pull against each other (visible complexity vs one-thumb simplic
 
 ### Technical Risks
 - First-time developer learning an engine and shipping the MVP loop (HIGH per TD-FEASIBILITY) — mitigated by narrowing days 1–2 to one map, one tower, hero pin + leash, one wave.
-- Low-end Android performance under heavy projectile load — pooling, caps, real-device test at vertical slice.
-- iOS toolchain cost and friction — Android debug build first; one iOS test build early in the vertical slice.
+- Low-end Android performance under heavy projectile load: deferred with Android (ADR-0012 Decision 7); budgets are measured first on the iPhone, which does not prove the Adreno 5xx class.
+- iOS toolchain cost and friction (Mac, Xcode, signing): the first phone build is an iOS debug build on the user's iPhone at MVP+ (ADR-0012 Decision 7). Android is deferred.
 
 ### Market Risks
 - Mobile TD is crowded (Kingdom Rush, Bloons). The hook must be visible in a store screenshot: a hero mid-burst beside geometrically upgraded towers.
@@ -275,8 +275,8 @@ Days 1–2: one map, one tower, hero pin + leash, one wave. Towers 2–3, the sk
 | Tier | Content | Features | Timeline (solo, part-time) |
 | ---- | ---- | ---- | ---- |
 | **MVP** | 1 map, 3 towers + lvl 2 upgrade, hero (pin + leash + aimed burst), 6 waves | core loop on desktop; damage log | 6–7 days |
-| **MVP+** | + phone build (Android debug first), safe-area UI | full core loop on a device; exit = Pillar 4 phone test passed | +1 week |
-| **Vertical Slice** | 3 stages with different paths, **1** tree (Hero, ~5 nodes incl. a leash-radius or burst node and **one cross-buff**: a Hero node that buffs nearby towers), 2 hero weapons, save/load, phone build | core + progression; the hook's first test; real-device perf check; one iOS test build | +4–6 weeks |
+| **MVP+** | + phone build (iOS debug on the iPhone; ADR-0012), safe-area UI | full core loop on a device; exit = Pillar 4 phone test passed | +1 week |
+| **Vertical Slice** | 3 stages with different paths, **1** tree (Hero, ~5 nodes incl. a leash-radius or burst node and **one cross-buff**: a Hero node that buffs nearby towers), 2 hero weapons, save/load, phone build | core + progression; the hook's first test; real-device perf check on the iPhone; platform decision on Android (ADR-0012 reopen trigger) | +4–6 weeks |
 | **Small Ship** | 8 stages, 3 trees ~5 nodes each **with the cross-tree lattice** (first buff proven at VS), 4 towers, 2 weapons, locked Signal Board art, basic SFX/music | shippable, polished | +3–4 months |
 | **Full Vision** | 20 stages, trees 12–15 nodes, 6–8 towers, 4+ weapons | content expansion / post-launch updates | +6–9 months more (12–18 months total) |
 

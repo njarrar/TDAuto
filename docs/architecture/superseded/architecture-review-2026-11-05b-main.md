@@ -1,4 +1,8 @@
 ## Architecture Review Report
+
+> **Not in force.** This report reviews the ADR set that was on `main` at 5aea8df (ADR-0001 to ADR-0011, PRs 22 to 24). While the review ran, PR 25 replaced that set with the one now in `docs/architecture/` and moved the reviewed files into this folder (`superseded/`). The verdict below applies to the superseded set only and gates nothing. It is kept, like the other reviews here, so its points can be checked against the same topics in the live ADRs.
+>
+> How to read the citations: `adr-NNNN:line` means the file of that number in this folder (ADR-0001 is `adr-0001-...-main.md`); all eleven are byte-identical to what was reviewed. `architecture.md`, the registries and `requirements-traceability.md` were replaced by PR 25, so line numbers into them refer to commit 5aea8df. The receipt lines below record the old paths and will not match the live tree.
 Date: 2026-11-05 (second report of the day: independent re-review of the ADR fix round, commit 50da8eb, merged as 5aea8df)
 Mode: full
 Workflow: full (project tier); all 8 reviewed GDDs carry a `standard` system override
@@ -70,18 +74,13 @@ What moves the verdict to CONCERNS: break the cycle (N1). What moves it to PASS 
 
 ### What this run changed
 
-| File | Change |
-|---|---|
-| `architecture.md` | QQ-18 marked resolved (row, Flow module row, B5 comment). B5 gains `StartResult` and `CallResult` and the `pause()`/`resume()` rule. B4 gains `BattleWrapper.setup(battle, dev_telemetry)`; B9 gains the `dev_telemetry` row; Data Flow 4 step 6 names the call. Module Ownership names `src/presentation/field/`, `hud/`, `input/` and `telemetry/` (code-root paragraph, HudLogic row, Field views row, RunLog row). The ADR-0010 paragraph and the status block follow. The Depends on column for ADR-0007, ADR-0010 and ADR-0011 matches their new rows. Data Flow 9 was already correct from the fix round. |
-| `architecture-review-2026-11-05b.md` | This report. |
-
-Not changed: no ADR, no ADR Status line, no GDD, `tr-registry.yaml` (no new requirement), `requirements-traceability.md` (no requirement-table row gained or lost an ID in the fix round, so the matrix of 2026-11-05 stands), `docs/registry/architecture.yaml` (two stale stances are listed below for the fix round).
+Only this report. The review also prepared `architecture.md` edits for the fix round (QQ-18 resolved, Flow's enums in B5, `setup(battle, dev_telemetry)` in B4, B9 and Data Flow 4, the `src/presentation/` sub-folders, the Depends on column). They were not merged, because PR 25 replaced `architecture.md` with the live set's version. No ADR, no ADR Status line, no GDD and no registry was edited.
 
 ---
 
 ### Closure of the prior findings
 
-Checked against the ADR text on `main` at 5aea8df. Line numbers are in the ADR files as they stand.
+Checked against the ADR text on `main` at 5aea8df, now the files in this folder.
 
 | Prior item | State | Evidence |
 |---|---|---|
@@ -230,7 +229,7 @@ Not verified: device or release-export behaviour, the Linux CI runner, and the d
 ---
 
 ### Architecture Document Coverage
-`docs/architecture/architecture.md` exists (v4). All 22 systems of `systems-index.md` appear in its system-to-layer table; the 8 MVP systems have modules, data flows and API blocks; no module lacks a GDD. The edits this run applied are listed at the top.
+`docs/architecture/architecture.md` exists (v4). All 22 systems of `systems-index.md` appear in its system-to-layer table; the 8 MVP systems have modules, data flows and API blocks; no module lacks a GDD. This describes `architecture.md` at 5aea8df; the edits this run prepared for it were not merged (see the top).
 
 Left as they are:
 - B9 has no row for the Combat counter reads that ADR-0006 says the builder injects into Flow, because no ADR names those reads yet (StageResult row above).
@@ -264,7 +263,6 @@ None new. The eleven written ADRs cover all 128 requirements.
 ### Handoff
 Pre-gate checklist: ✅ `tests/unit/` and `tests/integration/`; ✅ `.github/workflows/tests.yml`; ✅ `design/accessibility-requirements.md`; ✅ `design/ux/interaction-patterns.md`.
 
-Next steps, in order:
-1. A short fix round in an authoring session: N1, N2, N3 and the table above.
-2. Re-run `/architecture-review` in a fresh session. With N1 gone the expected verdict is CONCERNS, held there only by the Proposed ADRs.
-3. `/architecture-decision accept` per ADR in dependency order; it applies the GDD and registry wording edits.
+Next steps: none for this set, which is not in force. If it is ever revived, start with N1, N2 and N3 and the fix table above, then re-run `/architecture-review`.
+
+Worth carrying to the live ADR set (not checked there by this review): whether its ADR-0007 and ADR-0011 depend on each other (N1), whether its run-log lint scopes the folder the run log is placed in (N2), whether its frame-order lists agree call for call (N3), and whether a wrapper scene whose script fails to load is guarded before `setup()` is called (the open engine finding on ADR-0001 Decision 4).

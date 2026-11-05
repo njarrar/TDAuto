@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[node name="Good" type="Control"]
+
+[node name="Label" type="Label" parent="."]
+text = "good scene"

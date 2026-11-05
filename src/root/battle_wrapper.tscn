@@ -1,0 +1,43 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://src/root/battle_wrapper.gd" id="1_wrapper"]
+[ext_resource type="Script" path="res://src/presentation/field/field_backdrop.gd" id="2_backdrop"]
+[ext_resource type="Script" path="res://src/presentation/tower/tower_view.gd" id="3_tower"]
+[ext_resource type="Script" path="res://src/presentation/enemy/enemy_view.gd" id="4_enemy"]
+[ext_resource type="Script" path="res://src/presentation/combat/combat_view.gd" id="5_combat"]
+[ext_resource type="Script" path="res://src/presentation/hero/hero_view.gd" id="6_hero"]
+[ext_resource type="Script" path="res://src/presentation/hud/hud_field.gd" id="7_hud_field"]
+[ext_resource type="Script" path="res://src/presentation/hud/hud_top_band.gd" id="8_hud_top"]
+[ext_resource type="PackedScene" path="res://src/presentation/hud/result_screen.tscn" id="9_result"]
+[ext_resource type="PackedScene" path="res://src/presentation/hud/paused_screen.tscn" id="10_paused"]
+
+[node name="BattleWrapper" type="Node"]
+process_mode = 3
+script = ExtResource("1_wrapper")
+
+[node name="FieldBackdrop" type="Node2D" parent="."]
+script = ExtResource("2_backdrop")
+
+[node name="TowerView" type="Node2D" parent="."]
+script = ExtResource("3_tower")
+
+[node name="EnemyView" type="Node2D" parent="."]
+script = ExtResource("4_enemy")
+
+[node name="CombatView" type="Node2D" parent="."]
+script = ExtResource("5_combat")
+
+[node name="HeroView" type="Node2D" parent="."]
+script = ExtResource("6_hero")
+
+[node name="HudField" type="Node2D" parent="."]
+script = ExtResource("7_hud_field")
+
+[node name="HudTopBand" type="Control" parent="."]
+mouse_filter = 2
+focus_mode = 0
+script = ExtResource("8_hud_top")
+
+[node name="ResultScreen" parent="." instance=ExtResource("9_result")]
+
+[node name="PausedScreen" parent="." instance=ExtResource("10_paused")]

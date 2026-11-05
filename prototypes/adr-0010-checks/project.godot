@@ -1,0 +1,13 @@
+; PROTOTYPE - NOT FOR PRODUCTION. ADR-0010 V3 desktop: where user:// lands.
+; application/config/use_custom_user_dir is left at its default on purpose.
+config_version=5
+
+[application]
+
+config/name="adr-0010-checks"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[rendering]
+
+renderer/rendering_method="mobile"

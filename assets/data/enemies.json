@@ -1,0 +1,34 @@
+{
+  "enemy": [
+    {
+      "id": "normal",
+      "rationale": "Prototype starter values; not balance. Rebalanced after first playable (user, 2026-11-05): start too poor, kills paid too little, enemies too tough.",
+      "max_hp": 90.0,
+      "move_speed": 60.0,
+      "bounty": 7,
+      "lives_cost": 1,
+      "visual_key": "enemy_normal",
+      "tags": []
+    },
+    {
+      "id": "fast",
+      "rationale": "Prototype starter values; not balance. Rebalanced after first playable (user, 2026-11-05): start too poor, kills paid too little, enemies too tough.",
+      "max_hp": 45.0,
+      "move_speed": 110.0,
+      "bounty": 4,
+      "lives_cost": 1,
+      "visual_key": "enemy_fast",
+      "tags": []
+    },
+    {
+      "id": "heavy",
+      "rationale": "Prototype starter values; not balance. Rebalanced after first playable (user, 2026-11-05): start too poor, kills paid too little, enemies too tough.",
+      "max_hp": 540.0,
+      "move_speed": 38.0,
+      "bounty": 24,
+      "lives_cost": 3,
+      "visual_key": "enemy_heavy",
+      "tags": []
+    }
+  ]
+}

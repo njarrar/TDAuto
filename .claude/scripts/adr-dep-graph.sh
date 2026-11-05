@@ -81,6 +81,9 @@ SOH=$(printf '\001')
 n=0; edges=""; nodes=""; no_deps=""; unfilled=""
 while IFS= read -r f; do
     [ -n "$f" ] || continue
+    # Skip companion files (e.g. adr-0007-lint-rules.md): an ADR's first line is
+    # its `# ADR-NNNN:` title. A file sharing the prefix without one is not an ADR.
+    head -1 "$f" | tr -d '\r' | grep -qE '^# ADR-[0-9]+:' || continue
     n=$((n + 1))
     from=$(adr_id "$f")
     [ -n "$from" ] && nodes="$nodes$from"$'\n'

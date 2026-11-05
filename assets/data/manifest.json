@@ -1,0 +1,10 @@
+{
+  "files": [
+    "towers.json",
+    "enemies.json",
+    "waves.json",
+    "stages.json",
+    "hero.json",
+    "input.json"
+  ]
+}
