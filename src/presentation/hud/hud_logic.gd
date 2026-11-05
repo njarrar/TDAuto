@@ -354,6 +354,12 @@ func _on_ground_tapped(p: Vector2) -> void:
 	_ground_ages.append(0.0)
 
 
+## G8: InputResolver.became_idle, the last signal of every gesture. Drops what the press
+## named, so the next press starts clean. Issues no command (ADR-0006).
+func _on_became_idle() -> void:
+	clear_press()
+
+
 ## G4: a drag closes the arc.
 func _on_drag_started(_best_drag: int, _press_pos: Vector2, _p: Vector2) -> void:
 	_close_arc()

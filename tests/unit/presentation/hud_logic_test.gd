@@ -165,3 +165,14 @@ func test_snapshot_built_on_first_advance_after_outcome() -> void:
 	for i: int in range(11):
 		_hud.advance(100.0)
 	assert_bool(_hud.result_text_visible()).is_true()
+
+
+func test_became_idle_drops_what_the_press_named() -> void:
+	# Regression: BattleWrapper connects resolver.became_idle to this; it was missing (Mac run 1).
+	_hud._press_start_armed = true
+	_hud._press_hero = true
+
+	_hud._on_became_idle()
+
+	assert_bool(_hud._press_start_armed).is_false()
+	assert_bool(_hud._press_hero).is_false()

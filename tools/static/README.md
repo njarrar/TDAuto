@@ -28,3 +28,11 @@ mismatches only. Types, engine APIs and behaviour need Godot.
    classes. Both scripts print observations and exit 1 if there are any.
 
 Both were seen to fail on seeded bad input on 2026-11-05.
+
+## check_callables.py
+
+`python3 tools/static/check_callables.py` reports method Callables (`obj.method` passed
+to `connect` or as an argument) whose method the typed object's class does not declare.
+It found `HudLogic._on_became_idle` missing after Mac run 1. Members inherited from an
+engine class (a Control's `visible`) print as UNKNOWN, since the script cannot see engine
+classes. Exit 1 on any MISSING line.
