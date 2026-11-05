@@ -230,6 +230,60 @@ interfaces:
       - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
     added: 2026-11-05
     revised: ""
+  - contract: tick_entry
+    status: active
+    pattern: direct_call
+    producer: battle-wrapper
+    consumers:
+      - battle
+      - tests-and-bots
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    signal_signature: "Clock.advance(frame_delta) runs 0..MAX_TICKS_PER_FRAME calls of Battle.tick(DT) from BattleWrapper._process only; Battle.tick returns at once unless halted() is false and phase is WAVE or INTERMISSION; one order: Flow.tick, EnemyWave.advance, Combat.tick_status, TowerSim.tick by slot, HeroSim.tick, EnemyWave.reap, halted() checked between slots"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - contract: commands_between_ticks
+    status: active
+    pattern: direct_call
+    producer: input-and-hud
+    consumers:
+      - game-state-stage-flow
+      - tower-system
+      - hero-system
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    signal_signature: "Commands are applied synchronously from the input call stack, never queued and never from inside a tick; Battle.in_tick() makes command methods refuse and dev_error; ticks run only inside Clock.advance in the wrapper's _process after the frame's input"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - contract: view_clock
+    status: active
+    pattern: direct_call
+    producer: battle-wrapper
+    consumers:
+      - battle-hud
+      - combat-view
+      - hero-view
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    signal_signature: "Every frame-clock consumer gets view_dt = 0.0 while Paused else minf(delta, 0.1), via advance(ms) or advance(frame_dt); never driven by a sim tick; keeps running at Won, Lost and Fatal; the Call button bonus and seconds-left are read in the view step after the ticks, never cached in HudLogic.advance"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - contract: flow_phase_fatal
+    status: active
+    pattern: direct_call
+    producer: battle
+    consumers:
+      - game-state-stage-flow
+      - battle-hud
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    signal_signature: "Flow.phase() returns FATAL whenever the battle FatalLatch is set, read through the injected method Callable Battle.is_fatal(); the once-only phase_changed(FATAL) emit is ADR-0006's"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -266,6 +320,39 @@ performance_budgets:
     notes: "Median Loading to Ready over 5 cold launches on one Adreno 5xx-class device (TR-data-015); fallback to a worker if the median exceeds 1000 ms or any launch exceeds 2500 ms; unmeasured until a phone build"
     referenced_by:
       - docs/architecture/adr-0002-catalogue-storage-format-manifest-and-validation.md
+    added: 2026-11-05
+    revised: ""
+  - target_fps: 60
+    total_frame_budget_ms: 16.6
+    platform: Mobile
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - system: input_resolver_commands
+    status: active
+    budget_ms: 0.5
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    notes: "Unmeasured proposal (QQ-11)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - system: simulation_ticks
+    status: active
+    budget_ms: 4.0
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    notes: "Tick slice. Normal frame one tick; Clock.MAX_TICKS_PER_FRAME 3 (provisional, floor 2); unmeasured; cap set from per-tick cost measured in a release export at the first phone build"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - system: views_and_hud
+    status: active
+    budget_ms: 3.0
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    notes: "Unmeasured proposal (QQ-11)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
     added: 2026-11-05
     revised: ""
 
@@ -429,6 +516,66 @@ api_decisions:
       - docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
     added: 2026-11-05
     revised: ""
+  - purpose: tick_driver
+    status: active
+    api: "custom accumulator Clock (RefCounted, src/presentation/) called from BattleWrapper._process; TickRate.DT 1/60, Clock.MAX_TICKS_PER_FRAME 3 provisional, floor 2, owed time beyond the cap dropped"
+    not: "_physics_process, Engine.time_scale, Engine.physics_ticks_per_second, Engine.max_physics_steps_per_frame, Engine.physics_jitter_fix"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "Physics-step behaviour is not in the engine reference and the project uses no physics; input is flushed before _process (ADR-0003 spike)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: authored_time_to_ticks
+    status: active
+    api: "TickRate.to_ticks(seconds, dt) = roundi(seconds / dt), halves away from zero; countdowns are integer tick counters"
+    not: "ceil, floor or repeated float subtraction"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "3 * 0.1 / dt is 18.00000000000000355: ceil gives 19 (4.7.2 probe, 2026-11-05)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: gameplay_rng
+    status: active
+    api: "one RandomNumberGenerator owned by Battle, seeded from the build seed, reached by method Callable; cosmetic RNG held by the wrapper"
+    not: "global randi, randf, randomize, shuffle under src/, randfn or transcendental calls under src/battle/, or injecting the generator into a sim"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "One reproducible stream whose draw order is the tick order; the sim never sees the cosmetic stream"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: float_policy
+    status: active
+    api: "GDScript float (64-bit) scalars read from .x/.y for PinGeometry and range checks; bot baselines per host (os_arch_engine version)"
+    not: "Vector2 methods or operators in PinGeometry or range math; cross-host baseline reuse; arm32 exports at MVP"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "Vector2 components are 32-bit (4.7.2 probes); cross-architecture float equality is not sourceable"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: retry_seed
+    status: active
+    api: "SeedSource: first = int(Time.get_unix_time_from_system()) read once in AppRoot, retry n = base + n, recorded through RunLog"
+    not: "reusing the seed on retry, or reading Time under src/battle/"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "Fresh recorded seed per retry; the retry snapshot test builds with the retry's seed"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: baseline_storage
+    status: active
+    api: "var_to_str / str_to_var for snapshots and bot baselines, file tests/baselines/<stage_id>_<bot_id>_<os>_<arch>_<major.minor.patch>.txt"
+    not: "JSON for snapshots or baselines, or a .json extension"
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    reason: "JSON turns rng.state 2343518260280137770 into a float and 0.1 + 0.2 into 0.3, and the damaged int compares equal (4.7.2 review probe, 2026-11-05)"
+    referenced_by:
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+    revised: ""
 
 # Example:
 #
@@ -556,6 +703,30 @@ forbidden_patterns:
     description: "A built tower's ReadContext.level is written only inside the build or upgrade commit, after the gold debit and before any emit; command-time cost reads use TowerSim's separate command context."
     why: "Setting the tower's own level to L+1 to read a cost corrupts damage and range reads when the command is then refused (TR-tower-003)."
     adr: docs/architecture/adr-0005-stat-accessor-and-read-context-contract.md
+    added: 2026-11-05
+  - pattern: physics_process_anywhere
+    status: active
+    description: "No node defines _physics_process and no project code reads or sets Engine.time_scale, physics_ticks_per_second, max_physics_steps_per_frame or physics_jitter_fix."
+    why: "Their behaviour is not in the engine reference and the sim needs one clock and one callback order."
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+  - pattern: sim_time_outside_tick
+    status: active
+    description: "No _process, Timer, await or wall-clock read in src/battle/; sim time enters only as the dt argument of Battle.tick."
+    why: "Pure function of (catalogue, stage_id, seed, command script) (TR-state-003)."
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+  - pattern: command_inside_tick
+    status: active
+    description: "No command is issued or queued from inside a tick; no sim calls another sim's command method."
+    why: "Commands apply only between ticks (TR-state-004)."
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
+    added: 2026-11-05
+  - pattern: view_clock_on_sim_tick
+    status: active
+    description: "No view or HUD duration is driven by a sim tick or sim signal; each is advance(view_dt) on the frame clock."
+    why: "The clearance tail, Won's beat and view effects must run after the battle clock stops and freeze under Pause."
+    adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-and-determinism.md
     added: 2026-11-05
 
 # Example:
