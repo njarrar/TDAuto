@@ -579,7 +579,7 @@ performance_budgets:
     budget_ms: 3.0
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     # was: fixed caps field 36, modals 4, spare 4; F1 per shape (before godot-specialist and TD-ADR review)
-    notes: "CPU: frame step 3 refresh plus every _draw body (draw commands), p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst). GPU: 60 draw calls a frame, provisional until M9a: HUD at most 12 (about 8, text batches at most 3), engine 4, spare 8 (a modal's about 4 come from spare), field views what is left (36), no per-node cap. Desktop bench P-V1 trigger 0.2 ms p95 in a release export; debug runs about 0.5 to 0.8 ms, so fallback F1 (one MultiMeshInstance2D per enemy pass with rim-keyline disc mesh, plus flashes) is the likely path. Measured M9a desktop windowed and M9b phone. ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "CPU: frame step 3 refresh plus every _draw body (draw commands), p95 on an Adreno 5xx-class phone at the design point (48 enemies, 6 towers, 16 flashes, burst). GPU: 60 draw calls a frame, provisional until M9a: HUD at most 12 (about 8, text batches at most 3), engine 4, spare 8 (a modal's about 4 come from spare), field views what is left (36), no per-node cap. Desktop bench P-V1 trigger 0.2 ms p95 in a release export; debug runs about 0.5 to 0.8 ms, so fallback F1 (one MultiMeshInstance2D per enemy pass with rim-keyline disc mesh, plus flashes) is the likely path. Measured M9a desktop windowed and M9b phone. ADR-0011 Accepted 2026-11-05; binding"
     referenced_by:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-frame-order-determinism.md
@@ -829,7 +829,7 @@ api_decisions:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0011 Accepted 2026-11-05; binding"
   - purpose: path_geometry
     status: active
     # was: triangulate check only (before godot-specialist review)
@@ -841,7 +841,7 @@ api_decisions:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0011 Accepted 2026-11-05; binding"
   - purpose: battle_hud_text
     status: active
     # was: no gold-record, AccessKit or tnum conditions (before godot-specialist and TD-ADR review)
@@ -853,7 +853,7 @@ api_decisions:
       - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
     revised: "2026-11-05"
-    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0011 Accepted 2026-11-05; binding"
 
 # Example:
 #
@@ -1095,14 +1095,14 @@ forbidden_patterns:
     why: "A material breaks batching; a TIME-driven shader runs through Pause and ignores Reduce Motion"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
-    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0011 Accepted 2026-11-05; binding"
   - pattern: tween_or_engine_time_in_battle_views
     status: active
     description: "Field views and battle HUD primitives animate only from the wrapper's ViewClock (advanced in frame step 3, frozen while PAUSED) and read Reduce Motion only through MotionPolicy; no Tween, create_tween, SceneTree timer, await or Time call there, the debug RenderBudgetProbe apart (lint L-VIEW-2, ADR-0007 amendment owed)"
     why: "One clock makes pause, retry and Reduce Motion hold in one place"
     adr: docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-05
-    notes: "ADR-0011 Proposed 2026-11-05; not binding until Accepted"
+    notes: "ADR-0011 Accepted 2026-11-05; binding"
 
 # Example:
 #

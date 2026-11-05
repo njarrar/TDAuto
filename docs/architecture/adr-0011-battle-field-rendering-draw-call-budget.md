@@ -1,7 +1,7 @@
 # ADR-0011: Battle Field Rendering and Draw-Call Budget
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-11-05
@@ -10,6 +10,7 @@ Proposed
 2026-11-05, against `architecture.md` v7, `tr-registry.yaml` (123 entries), ADR-0001 to ADR-0010 (all Accepted) with their amendments, and probes R1 to R20 run on 4.7.2 headless (below).
 
 ## Decision Makers
+- Accepted: 2026-11-05 by the user (njarrar), with the dated ADR-0009 and ADR-0010 amendments and the HUD, Enemy and art bible syncs
 Author: `/architecture-decision`, autonomous mode (decisions in `production/session-logs/decision-log.md`). Reviews: godot-specialist CONCERNS, TD-ADR CONCERNS, resolved below. User decision 2026-11-05: Reduce Motion follows AR-V-10. Acceptance: the user.
 
 ## Summary
@@ -177,7 +178,7 @@ class_name PathMesh extends RefCounted         # src/presentation/field/path_mes
 static func bake(points: PackedVector2Array, width: float, dev_error: Callable) -> PathMesh
 var edge: Array[PackedVector2Array]; var body: Array[PackedVector2Array]; var fallback: bool
 
-# Amendments of 2026-11-05, pending confirmation at this ADR's acceptance:
+# Amendments of 2026-11-05, confirmed by the user 2026-11-05 at this ADR's acceptance:
 # Combat.hp_ratio(enemy: Targetable) -> float  (ADR-0009)
 # SlotState.cooldown_full: int                  (ADR-0010)
 ```
@@ -288,6 +289,6 @@ No code exists. At acceptance:
 GDD sync (5 GDDs checked): no renamed names; content sync items in Migration 4 to 7.
 
 ## Related
-- Depends on ADR-0001, 0003, 0004, 0005, 0006, 0009, 0010; amends ADR-0009 and ADR-0010 (pending), ADR-0007 at acceptance.
+- Depends on ADR-0001, 0003, 0004, 0005, 0006, 0009, 0010; amends ADR-0009 and ADR-0010 (confirmed 2026-11-05), ADR-0007 at acceptance.
 - GDDs above; art bible §5 to §8; accessibility AR-V-03, 04, 08, 10, 13; interaction patterns IP-26 and Animation Standards.
 - Open items for the user: none beyond confirming the two amendments.
