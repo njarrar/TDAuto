@@ -1,6 +1,6 @@
 # Battle HUD & Build UI
 
-> **Status**: Designed (pending independent review)
+> **Status**: In Review (first design review 2026-11-05 NEEDS REVISION; four wording blockers against ADR-0001, ADR-0006, ADR-0010 and ADR-0011 fixed in the same pass; recommended items await the user; re-review pending)
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-02 — CONCERNS applied (compact Won panel, hint removal condition, wrong-disc fallback, Rule 10 overclaim, Flow's brighten row).
 > **Author**: njarrar + agents
 > **Last Updated**: 2026-11-05
@@ -32,9 +32,9 @@ The Battle HUD is how the player sees the battle's bookkeeping and spends gold. 
 | HudField | One `_draw` above the field for arc, chip, Start/Call, burst button art, prompt panel, ground-tap ring and refusal cues, then all HUD text in one last pass by size (gold too, at HudTopBand's layout). Its hit targets are Input discs |
 | RangeRingView | A second HUD `_draw` node, drawn under the field entities, for HudLogic's range rings |
 
-ADR-0011 Decision 1 sets this split and the draw order; none of these pieces uses a `Label` (modal screens may). TR-hud-001's wording ("display-only Controls", "one _draw") reads as one HudTopBand `Control` and one HudField `_draw` above the field, with `RangeRingView` as the second HUD node.
+ADR-0011 Decision 1 sets this split and the draw order; none of these pieces uses a `Label` (modal screens may). The wrapper builds HudTopBand and HudField under one `HudLayer` (a `CanvasLayer` at layer 1, beside `FieldViews`), since a `Control` under a `Node2D` gets no parent area; RangeRingView stays in `FieldViews`. TR-hud-001's wording ("display-only Controls", "one _draw") reads as one HudTopBand `Control` and one HudField `_draw` above the field, with `RangeRingView` as the second HUD node.
 
-2. **Modal screens are Controls.** The result and Paused screens are full-screen `TapScreen` Controls that consume every press before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. The endings (move, release, cancel) of a drag the adapter had already forwarded still reach it, so a drag begun before the screen showed ends once. While a modal shows, the wrapper also closes the adapter's press gate, so presses drop there too (ADR-0003 2.4 and Decision 4). So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. The result screen's TapScreen uses `arm_ms` 300, counted from when its text shows, so a press begun before then never fires Retry or Play again (IP-21, IP-23). Paused has no timer (`arm_ms` 0) but follows the same rule. Whether the engine helps here is unverified in 4.7, so the ADR must check, and this rule holds either way.
+2. **Modal screens are Controls.** The result and Paused screens are full-screen `TapScreen` Controls that consume every press before the adapter sees it (Input, UI Requirements), so a tap on them cannot reach a tower or the hero. The endings (move, release, cancel) of a drag the adapter had already forwarded still reach it, so a drag begun before the screen showed ends once. While a modal shows, the wrapper also closes the adapter's press gate, so presses drop there too (ADR-0003 2.4 and Decision 4). So Input needs no second resolver and no gate in each owner. Everything else that can be tapped is an Input disc. A Control fires only on a release whose press it saw while Armed, and it clears that press on the lifecycle signal, so a thumb held across a screen change or a focus loss cannot fire it. The result screen's TapScreen uses `arm_ms` 300, counted from when its text shows, so a press begun before then never fires Retry or Play again (IP-21, IP-23). Paused has no timer (`arm_ms` 0) but follows the same rule. ADR-0003's S0 spike (checks S3 and TapScreen) tests the engine side on 4.7, and this rule holds either way.
 3. **No gameplay state, no reset.** The HUD keeps only presentation state. Retry rebuilds it (Flow Rule 16).
 
 **What is on screen, and when.**
@@ -76,7 +76,7 @@ ADR-0011 Decision 1 sets this split and the draw order; none of these pieces use
 
 **Result.**
 
-15. **Plain text, fixed order, same weight.** A transparent modal Control mounts at the outcome, so input is dead at once. The text appears 400 ms after a Lost and 1,000 ms after a Won. N is `wave_index()`. All values come from one `ResultSnapshot`, which `Battle.take_result_snapshot()` builds once on the first frame (frame step 3) after a win or loss, so every leak is counted. The same snapshot feeds the log, so screen and log cannot disagree. Flow's `StageResult` keeps only the outcome, the last wave started and lives left; per-source damage lives in the snapshot (ADR-0006 Decision 9).
+15. **Plain text, fixed order, same weight.** A transparent modal Control mounts at the outcome, so input is dead at once. The text appears 400 ms after a Lost and 1,000 ms after a Won. N is the snapshot's `last_wave_started` (Flow's injected `wave_index()`); the stage size and lives come from its `wave_count`, `lives_left` and `starting_lives`. All values come from one `ResultSnapshot`, which `Battle.take_result_snapshot()` builds once on the first frame (frame step 3) after a win or loss, so every leak is counted. The same snapshot feeds the log, so screen and log cannot disagree. Flow's `StageResult` keeps only the outcome, the last wave started and lives left; per-source damage lives in the snapshot (ADR-0006 Decision 9).
 
 | Order | Lost | Won |
 |---|---|---|
@@ -100,11 +100,11 @@ Percentages, bars and highlights are not shown, because hero share is a balance 
 
 **Commands.**
 
-18. **Between ticks.** All commands run from the input call stack, before the frame's ticks. ADR-0004 Decision 4 fixes that order: no tick runs between a frame's view step and the next frame's ticks. Retry's handler runs inside input and would destroy its own caller, so it only sets a latch on the app root, and the root's frame then checks for Fatal first, and otherwise stops the clock, cancels input, frees the battle and builds a new one. It is idempotent, so a second tap does nothing.
+18. **Between ticks.** All commands run from the input call stack, before the frame's ticks. ADR-0004 Decision 4 fixes that order: no tick runs between a frame's view step and the next frame's ticks. Retry's handler runs inside input and would destroy its own caller, so it only sets a latch on the app root, and the root's frame then checks for Fatal first, and otherwise stops the clock, cancels input, tears the battle down and builds a new one (ADR-0001: `queue_free()` on the wrapper, never `free()`). It is idempotent, so a second tap does nothing.
 
 **The human log.**
 
-19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Two dev objects share the work (ADR-0010 Decision 8). **RunMeasures** listens to the sims and keeps only what the result snapshot lacks: the real seconds to first pin, build and burst; per call, `seconds_left`, burst state and lives at the call; and `best_victims` per burst. It closes each call record at the next `wave_cleared` or outcome, with the lives lost. **RunLog** names no sim: it writes each closed call record, and on Won or Lost one attempt record from the result snapshot plus RunMeasures' values. Each record holds a launch ID and the build version. AppRoot makes the launch ID once per launch from the clock and four random bytes, never from a battle or cosmetic RNG. The build version is the project's version setting, or the engine version when that is empty. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied()`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. RunMeasures reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
+19. **Debug builds append one record per finished attempt and one per call.** Three GDDs need human numbers at first playable, and none owned writing them down. Two dev objects share the work (ADR-0010 Decision 8). **RunMeasures** listens to the sims and keeps only what the result snapshot lacks: the real seconds to first pin, build and burst; per call, `seconds_left`, burst state and lives at the call; and `best_victims` per burst. It closes each call record at the next `wave_cleared` or outcome, with the lives lost. **RunLog** names no sim: it writes each closed call record, and on Won or Lost one attempt record from the result snapshot plus RunMeasures' values. Each record holds a launch ID and the build version. AppRoot makes the launch ID once per launch from the clock and four random bytes, never from a battle or cosmetic RNG. The build version is the project's version setting, or the engine version when that is empty. Attempt: towers built, lives, last wave, damage by source and kind, `slows_applied`, `repins`, burst counters, `kills_per_burst[]`, `best_victims`, got through by type, and the real seconds to first pin, build and burst. Per call: `seconds_left`, burst readiness, lives lost in the called wave. The file is `user://run_log.jsonl`, and a tester sends it by hand. A quit attempt leaves no record, which is accepted. RunMeasures reads burst state itself and never through Tower (Flow Rule 9). It is not a save, and release builds do not write it.
 
 **Layout.** In field units, on the 540 × 960 reference, with `I` the safe-area inset in field units. `I_top` and `I_bottom` are read once per battle, at build, and never change mid-battle. They are 0 on desktop and usually 0 on a phone, because ADR-0003's letterbox puts the notch and gesture bar in the bars outside the field. 1.5 units is 1 dp at a 360 dp width.
 
@@ -146,7 +146,7 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 
 **Deliberately not built for MVP.** A pause button, settings UI, wave number digit, gold icon, percentages, bars, per-tower damage, arc flip code, path draw-in, Won's brighten sequence, stage select, onboarding beyond three lines, and any keyboard, gamepad or screen-reader path, since every game action is a disc.
 
-→ Becomes an ADR: Control event order against the adapter, input before ticks in a frame, `free()` timing on retry, safe-area and stretch. ADR-0001 settles retry teardown; ADR-0003 settles event order, the modal gate, safe area and stretch, pending its S0 spike. Input before ticks stays with ADR-0004.
+→ Settled by ADRs: Control event order against the adapter, input before ticks in a frame, teardown on retry, safe area and stretch. ADR-0001 settles retry teardown (`queue_free()`, never `free()`); ADR-0003 settles event order, the modal gate, safe area and stretch, pending its S0 spike; ADR-0004 Decision 4 settles input before ticks.
 
 ### States and Transitions
 
@@ -182,9 +182,9 @@ This confirms the burst line that L3, L7 and `pin_exclusion` assumed, so nothing
 
 | System | Direction | Interface | Owner |
 |---|---|---|---|
-| Input & Gesture Resolver | registers, listens | Arc, backdrop, chip, Start/Call discs; `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` | Input (API); HUD (meaning) |
-| Tower System | calls, listens | `build`; `slot_tapped`; `chip_state()`; `tower_inspected` | Tower |
-| Hero System | reads, serves | State and timers; HeroInput reads `burst_button_centre()` and registers the button | Hero |
+| Input & Gesture Resolver | registers, listens | Arc, backdrop and Start/Call discs (the chip's disc is TowerInput's, Rule 9); `pressed`, `tapped`, `drag_started`, `became_idle`, `ground_tapped` | Input (API); HUD (meaning) |
+| Tower System | calls, listens | `build` on TowerSim; `slot_tapped`, `chip_state()` and `tower_inspected` on TowerInput (ADR-0010 Decision 1) | Tower |
+| Hero System | reads, serves | State and timers; the wrapper passes `burst_button_centre()` to HeroInput once at setup, and HeroInput registers the button (ADR-0010 Decision 1) | Hero |
 | Game State & Stage Flow | calls, listens | Start/Call, Retry, resume, `phase_changed` | Flow |
 
 Headless wiring tests are unaffected, since the HUD is absent, and `phase_changed` and `lives_changed` join Flow's view allowlist.
@@ -253,7 +253,7 @@ The **chip_bar** formula is defined as:
 - **If an arc is open when Wave ends**: Start/Call registers disabled, and enables when the arc closes.
 - **If the countdown ends during a press on Call**: Flow ignores the late tap. The wave has started and the button is hidden.
 - **If the bonus falls to 0 while shown**: the label becomes "Call", and a call still starts the wave.
-- **If a call's displayed bonus and paid bonus could differ**: they do not, under the frame order in Rule 10, since both use Tower's formula on the same tick count. The ADR verifies that order.
+- **If a call's displayed bonus and paid bonus could differ**: they do not, under the frame order in Rule 10, since both use Tower's formula on the same tick count. ADR-0004 Decision 4 fixes that order, and AC 31 checks it.
 - **If Retry is tapped twice**: the latch is idempotent, so there is one rebuild.
 - **If a press is down when the result appears, or the app loses focus with one down**: the Control never saw it, or clears it on the lifecycle signal, so it cannot fire.
 - **If a chip's press is held past 1,500 ms**: the window has expired, so the tap does nothing (Tower Rule 8).
@@ -331,7 +331,7 @@ A purchase, a tap and a press all answer on the next frame, and nothing bounces.
 This whole document is UI. Tower's and Hero's UI Requirements stand, and are drawn here.
 
 - 120 ms: arc, presses, arming. 200 ms: dash, 12-unit panel slides, with opacity fixed. Paused is instant.
-- Reduce Motion: AR-V-10 in `design/accessibility-requirements.md` is the one list of what it cuts, freezes and keeps, and this GDD does not restate it. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record.
+- Reduce Motion: AR-V-10 in `design/accessibility-requirements.md` is the one list of what it cuts, freezes and keeps, and this GDD does not restate it. It is the `reduce_motion` data flag until Settings exists, as the hand is `left_handed`, both on Data's Input record. AppRoot reads both once into `PresentationSettings` (ADR-0001), and views ask the wrapper's `MotionPolicy`, never the flag (ADR-0011 Decision 8).
 - Refusal under Reduce Motion: the nudge is skipped and HudField draws a static cue instead. The refused item (arc polygon, chip or locked burst button) shows a dotted outline and one short line of text naming the reason, "Need N gold" or "Locked", 14 dp on panel, for 1 s of real time, with no motion. N is the cost minus gold at the refusal. Tower and Hero report `NO_GOLD` and Locked; the arc-and-chip and pin-and-aim UX specs place the line (AR-V-11, IP-24).
 - Budget: expected 8, at most 12 of 60 draw calls, and text at most 3, one per size, all drawn by HudField's last pass (ADR-0011 Decisions 6 and 10). Modals add about 4. Unverified until M9a.
 - Font: one medium-weight geometric humanist sans with tabular numerals, not yet chosen.
@@ -400,7 +400,7 @@ Fakes: resolver, reads, commands, log sink; a spy accessor; `advance(ms)`. Each 
 |---|---|---|
 | First run | User, first playable | Hero's First run row passes |
 | Human log | Battle HUD stories | A record is written per attempt and call on a debug build |
-| Rules 2, 10, 18 | HUD ADR | A held press cannot fire a Control; input precedes ticks; `free()` timing is safe |
+| Rules 2, 10, 18 | ADR-0003 S0, ADR-0004 V14, ADR-0001 | A held press cannot fire a Control (S0 TapScreen check); input precedes ticks (S1 result recorded in V14); teardown uses `queue_free()`, never `free()` |
 | Phone targets | Mobile Platform | Hit discs measure 48 dp at a 360 dp width |
 
 **Manual** (retained in `production/qa/evidence/`, blocking for UI): Build; Wave; Intermission; arc open with one unaffordable disc; chip open; Won, with the full board visible; Lost; Paused; each prompt; left hand; ground ring; burst press response; cancelling state. Render tests: three glyphs in grey at quarter scale; fast's notch at 16; pills against dashes; the level-2 inset at 20 px; "Call +7" in 88 at 14 dp; "Splash" in a 60-wide panel; cost text at alpha 0.6; hero outline beside the Lost panel; measured draw calls.
