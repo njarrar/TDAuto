@@ -360,3 +360,44 @@ Reviewed-Content-Hash: docs/architecture/architecture.md 1bc205b5b722ffc015d1444
 Applied in autonomous mode: all 3 blocking items (max(1, to_ticks(...)) in Tick steps 4 and 7 with new criterion 40; AC30 split, with the Build pin as new criteria 34 to 39; AC33 asserts the slot tap at 27 away and names tap_slop) and recommended: Rule 2's state after a Build pin, the States table sentence and Unpinned row, the burst-line distance, walk_ticks at speed 240, the leash row.
 Not done: the remaining recommended items, the repins user call, and every routed item.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, ux-designer, creative-director
+Blocking items: 7 | Recommended: 22
+Summary: Every number held at 60 per second and every restated value agreed. Seven local faults remained: the aim was re-clamped every frame but not on release, so a tick before the release could make burst() refuse it; the hero's hit disc moved only while walking, so a Build pin left it behind; the repins and build_pins definitions left an own-position pin and the first Build pin unclear, and no criterion showed repins after a Build pin; criterion 33 named no phase; criterion 29, which Data cites, could not fail; criterion 39 duplicated 34; and a Locked press gave Reduce Motion players nothing. The creative director upheld the stale-aim finding the previous review had dismissed against a sentence Rule 12 did not contain, and prescribed a spot-check.
+Prior verdict resolved: Yes (all 3 prior blocking items; the user's build_pins call applied)
+Findings:
+- [BLOCKING] Rule 12: aim recomputed on drag_ended from the release point and current position() before burst(); criterion 42.
+- [BLOCKING] Rule 15: set_centre on every update() where position() changed, and at once after a Build pin; criterion 43.
+- [BLOCKING] Rule 16: repins counts OK pins outside Build after any earlier OK pin; build_pins counts every OK Build pin, the first included; criteria 16 and 41.
+- [BLOCKING] Acceptance Criteria 33: names Wave.
+- [BLOCKING] Acceptance Criteria 29: table-driven, one pass and one fail per content row, with a row count.
+- [BLOCKING] Acceptance Criteria 39: Integration with real Flow.
+- [BLOCKING] UI Requirements: a Locked press flashes the outline, which Reduce Motion keeps.
+- [RECOMMENDED] User call taken (recommended option): the 25% to 30% band and 40% cap bind the mid-skill bot only; the ceiling bot and skilled humans are reported, not gated.
+- [RECOMMENDED] Battle HUD Rule 19 logs build_pins (applied).
+- [RECOMMENDED] UX: cues for a clamped pin and a cancelled release; a full Reduce Motion row; P-10 wording against Rule 13; P-12 to list the hero pin; a left-hand case for the cancel ring and digit; owners for the /ux-design flags.
+- [RECOMMENDED] The stale "110 re-pins a stage" figure; a counter table for Rule 16.
+- [RECOMMENDED] Systems: tick rate stated on 60-per-second examples; the intermission rule in ticks; burst_safe_distance unbounded below over full ranges; hero_share_bound with tick-rounded intervals; enemy IDs in the burst-damage rule from data.
+- [RECOMMENDED] QA: boundary edges in criteria 2 to 8, 11 to 13, 16, 17, 21 to 26, 30, 32, 34, 36, 38 and 40; HERO source_id and def_id in 21 and 24; a test factory seam; N for human rows; handlers issue no commands; Deferred owner IDs.
+- [RECOMMENDED] Routed: button centre read once while burst_y depends on the inset (Battle HUD); Rule 15 against HUD Rule 10 wording; share gate fragile, rerun at 30 and 60 per second (balance).
+- [RECOMMENDED] Disagreements: ux-designer's pin refusal and clamp blocker downgraded (Rule 14 says the ghost never refuses a person, and the ghost shows a clamped landing); qa-lead's HERO source_id blocker held as recommended; game-designer's two blockers merged into the counter and criterion 33 fixes.
+Reviewed-Content-Hash: design/gdd/hero-system.md 7f15d198f2c8161e279ffff9e45d4644a8b8f718
+Reviewed-Content-Hash: design/gdd/battle-hud.md e52026c011d79492e33d65282890b03b5cff1bbf
+Reviewed-Content-Hash: design/ux/interaction-patterns.md a7e53d8b72c20506717566ca4dc1f5ae1e2adb79
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/tower-system.md c21461c32025d4d3786f5d4297eab83d3095856b
+Reviewed-Content-Hash: design/gdd/enemy-wave.md 2b84b18638e6e2330d40b4e731351ebd7b7cdec1
+Reviewed-Content-Hash: design/gdd/combat-damage.md 419744f670fbcc60bd061e151e86446f2ff53d1f
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md 0b9123b5896138cd1318d895d8d6a6eb69c0e1c9
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 9d6ec8138446d49ffa36df14ddb9b3c9d9fa1ce7
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+Reviewed-Content-Hash: tools/balance-sim/hero_bots.py bc1cc2b938adb3c90b5ed02c6d569f4ad30f6fd3
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+Applied in autonomous mode: all 7 blocking items and the recommended Battle HUD log field and share-cap note. A godot-specialist spot-check closed its two blockers and asked for criterion 42 to rule out an update() before the release, criterion 43 to assert what a fake can show, and an immediate set_centre after a Build pin inside drag_ended; all applied. A qa-lead spot-check closed four blockers and found that "has ever been Pinned" would have stopped a re-pin during the first walk from counting, a change the rule never made; Rule 16 now counts pins after any earlier OK pin, which keeps it. It also corrected criterion 29's hero_start bound to 76 and added pin_rect bounds, made criterion 42's aim Live, named a legal pin point in 43, and noted 39 in its section heading; all applied.
+Verdict: APPROVED, on the creative director's ruling that a spot-check decides approval. The share is unchanged: the simulator's pin counting was not touched. Not done: every remaining recommended and routed item above.
