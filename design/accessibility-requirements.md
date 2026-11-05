@@ -1,34 +1,40 @@
 # Accessibility Requirements
 
-> **Status**: Committed (tier chosen in autonomous mode on 2026-11-04 and confirmed by the user the same day, AQ-01)
-> **Author**: ux-designer (autonomous mode; user to review)
-> **Last Updated**: 2026-11-04 (result timing corrected after `/ux-review`)
-> **Accessibility Tier Target**: Standard, phased (MVP ships the Basic subset the design already meets; the Standard items arrive with Settings & Accessibility at Alpha)
-> **Platform(s)**: iOS, Android (touch only). A desktop build exists for development and testing only, with the mouse standing in for touch.
+> Authoring guidance: .claude/docs/templates/guidance/accessibility-requirements-guide.md (load per-section as you author, do not read entirely).
+
+> **Status**: In Design (draft, autonomous mode; tier committed below)
+> **Author**: user + ux-designer
+> **Last Updated**: 2026-11-05
+> **Accessibility Tier Target**: Basic, plus the elevated items listed under This Project's Commitment
+> **Platform(s)**: iPhone (iOS) first, Android deferred (ADR-0012 Decision 7); portrait, one thumb. MVP runs on desktop with mouse-as-touch (`design/gdd/game-concept.md`, Core Identity, MVP Definition)
 > **External Standards Targeted**:
-> - WCAG 2.1 Level AA: Yes, for text contrast (1.4.3), non-text contrast (1.4.11) and the colour rule (1.4.1). Target-size and motion rules are met through the platform guidelines below.
-> - AbleGamers CVAA Guidelines: N/A (no chat, voice or messaging)
-> - Xbox Accessibility Guidelines (XAG): N/A (not a target platform)
-> - PlayStation Accessibility (Sony Guidelines): N/A (not a target platform)
-> - Apple / Google Accessibility Guidelines: Yes (44 pt / 48 dp targets, VoiceOver and TalkBack on `Control` screens)
+> - WCAG 2.1 Level AA, for text contrast, non-text contrast and flash limits only (proposed)
+> - AbleGamers CVAA Guidelines: N/A (no voice chat or messaging)
+> - Xbox Accessibility Guidelines (XAG): No (no Xbox release)
+> - PlayStation Accessibility (Sony Guidelines): No (no PlayStation release)
+> - Apple / Google Accessibility Guidelines: Partial (touch target size only at MVP; see Platform Accessibility API Integration)
 > **Accessibility Consultant**: None engaged
-> **Linked Documents**: `design/gdd/systems-index.md`, `design/ux/interaction-patterns.md`, `design/art/art-bible.md`
+> **Linked Documents**: `design/gdd/systems-index.md`, `design/ux/interaction-patterns.md`
 > **Template**: Accessibility Requirements
 
 > **Why this document exists**: Per-screen accessibility notes belong in UX
-> specs. This file holds the project-wide commitments, the feature matrix across
-> all systems, the test plan and the audit history. If a feature conflicts with
-> a commitment here, this document wins: change the feature, not the commitment,
-> unless the producer approves a formal revision.
+> specs. This document holds the project-wide commitments, the feature matrix
+> across all systems, the test plan and the audit history. If a feature
+> conflicts with a commitment here, this document wins: change the feature, not
+> the commitment, unless the producer approves a formal revision.
 >
-> **How it was written**: no UX spec exists yet, so every row is drawn from the
-> GDDs and the art bible, and contrast figures were computed from the art bible's
-> hex values (the art bible itself calls its own figures hand-calculated). Status
-> `Designed` means the design already specifies it; `Not Started` means no
-> implementation; nothing here has been tested on a device.
->
-> **When to update**: after each `/gate-check` pass, after any audit, and
-> whenever a system is added to `systems-index.md` (add a row to the matrix).
+> **When to update**: after each `/gate-check` pass, after any accessibility
+> audit, and whenever a system is added to `systems-index.md`.
+
+**Source key.** "Concept" is `design/gdd/game-concept.md`. "HUD", "Input",
+"Hero", "Tower" and "Flow" are the GDDs `battle-hud.md`,
+`input-gesture-resolver.md`, `hero-system.md`, `tower-system.md` and
+`game-state-stage-flow.md` in `design/gdd/`. "AB" is `design/art/art-bible.md`.
+ADRs are in `docs/architecture/`; ADR-0003, 0008, 0010 and 0011 are all
+**Proposed**, not Accepted, so any value cited from them may still move.
+**Proposed** in this document means no source sets the value and this draft
+suggests one. Units: field units on the 540 x 960 reference; 1.5 units = 1 dp
+at the 360 dp minimum width (AB §3, Input Core Rules).
 
 ---
 
@@ -38,90 +44,119 @@
 
 | Tier | Core Commitment | Typical Effort |
 |------|----------------|----------------|
-| **Basic** | Critical player-facing text is readable at standard resolution. No feature requires colour discrimination alone. Volume controls exist for music, SFX and voice independently. The game is completable without photosensitivity risk. | Low: primarily design constraints |
-| **Standard** | All of Basic, plus: full input remapping on all platforms, subtitle support with speaker identification, adjustable text size, at least one colourblind mode, and no timed input that cannot be extended or toggled. | Medium: dedicated implementation work |
-| **Comprehensive** | All of Standard, plus: screen reader support for menus, mono audio option, difficulty assist modes, HUD element repositioning, reduced motion mode, and visual indicators for all gameplay-critical audio. | High: platform API integration and significant UI architecture |
-| **Exemplary** | All of Comprehensive, plus: full subtitle customisation, high contrast mode, cognitive load assist tools, tactile or haptic alternatives for all audio-only cues, and an external third-party accessibility audit. | Very high: dedicated budget and specialist consultation |
+| **Basic** | Critical player-facing text is readable at standard resolution. No feature requires color discrimination alone. Volume controls exist for music, SFX, and voice independently. The game is completable without photosensitivity risk. | Low: primarily design constraints |
+| **Standard** | All of Basic, plus: full input remapping on all platforms, subtitle support with speaker identification, adjustable text size, at least one colorblind mode, and no timed input that cannot be extended or toggled. | Medium: requires dedicated implementation work |
+| **Comprehensive** | All of Standard, plus: screen reader support for menus, mono audio option, difficulty assist modes, HUD element repositioning, reduced motion mode, and visual indicators for all gameplay-critical audio. | High: requires platform API integration and significant UI architecture |
+| **Exemplary** | All of Comprehensive, plus: full subtitle customization (font, size, color, background, position), high contrast mode, cognitive load assist tools, tactile/haptic alternatives for all audio-only cues, and external third-party accessibility audit. | Very High: requires dedicated accessibility budget and specialist consultation |
 
 ### This Project's Commitment
 
-**Target Tier**: Standard, phased.
+**Target Tier**: Basic (MVP through Vertical Slice). Re-decide at the Small Ship gate, when Settings & Accessibility (Alpha, systems-index #21) exists.
 
-**Rationale**: TowerRiot is a touch-only, one-thumb game (Pillar 4), so the barriers that dominate other genres do not apply: there is no speech, no subtitle need, no audio-only cue, no rebindable control scheme and no sustained button mashing. The barriers that do apply are small targets, colour, motion and one timed input (the 1.5 s upgrade chip). The art bible already makes colour a secondary cue everywhere and caps the flash and pulse rates, and the 48 dp minimum is a pillar, so most Basic rows are met by design and cost nothing. Comprehensive would need screen-reader support for a field drawn in a single `_draw` node, which does not fit a solo part-time project. Standard is the tier that matches the real risks and the real budget. Basic would leave the timed chip and the motion effects without a setting, and both are cheap to fix.
+**How the tier was picked.** The skill and its guide name no default tier;
+they leave the pick to the user and give a reasoning checklist (genre
+barriers, audience, platform rules, team capacity, cost of dropping a tier).
+The project runs in autonomous mode, so this draft takes the option that
+checklist points to for this project, and the user can overrule it.
 
-**Phasing**:
-- **MVP and Vertical Slice**: the design-time commitments (text floor, contrast, colour independence, target size, photosensitivity caps, left-handed mirror, the `reduce_motion` data flag). No settings screen exists yet; the two data flags live on the Data `Input` record.
-- **Alpha**, with Settings & Accessibility (system 21): Reduce Motion toggle, chip-window length, colourblind palette, text size, independent music and SFX volume.
+**Rationale**: TowerRiot is built by one part-time, first-time developer, and
+the MVP is a 6 to 7 day desktop build (Concept, Estimated Scope, Technical
+Risks). Basic is the tier whose cost is "design constraints", which the GDDs
+already carry: colour never carries state alone (AB §2 State set, §4), every
+target is at least 48 dp (Concept Pillar 4), and there is no audio or dialogue
+at MVP. The genre's motor load is lower than an action game (tactical calm,
+no wait timer before wave 1, no long press or two-finger gesture), but the
+one-thumb drag model and small glyphs at phone scale are the real barriers,
+so those get elevated items below. Standard does not map well yet: remapping
+has no meaning for a two-gesture touch game, there is no dialogue to subtitle,
+and text scaling and timing extension need a settings screen that does not
+exist until Alpha. Dropping below Basic would mean colour-only state or
+sub-48 dp targets, which would break Pillar 4 for every player, not only
+disabled ones.
 
-**Features explicitly in scope (beyond the tier baseline)**:
-- Left-handed mirror of the burst button (already designed; `left_handed` on the Input record). One-handed use is the whole control model, so this is a core feature, not an add-on.
-- Photosensitivity caps in the art bible (danger pulse capped at a 25% alpha swing, no chained burst dip). Needed at Basic.
-- A phone test that includes a left-handed tester and a tester who plays one-handed (the Input GDD's Pillar 4 gate already asks for one left-handed tester "if available"; this makes it required).
+**Features explicitly in scope (beyond tier baseline)**:
+- Minimum touch target 48 dp (44 pt iOS) for every target. Source: Concept Pillar 4; Input Formulas `target_ok`; HUD AC 28. Basic does not require it; Pillar 4 does.
+- Text floor 14 dp, cooldown digit 24 dp with an 18 dp floor. Source: AB §7 Typography; HUD UI Requirements; ADR-0011 Decision 9 (sizes 21, 24 and 36 units).
+- Reduce Motion, as the `reduce_motion` data flag on the Input record until Settings exists. Source: HUD UI Requirements; Hero GDD Rule handoffs; ADR-0011 Decision 8. Elevated from Comprehensive because the burst dip, the danger pulse and the hero snap are the game's main motion.
+- Left-handed mirror, as the `left_handed` data flag, fixed per battle. Source: Concept Pillar 4; Hero Rule 2; HUD Edge Cases; ADR-0010 Decision 8 (`HeroInput.attach(..., left_handed, ...)`).
+- No hold, long press, double tap, rapid input or multi-touch anywhere. A press held any length and released in place is a tap. Source: Input Rule 3 ("the accessibility floor"), Rule 1, Game Feel.
+- No auto-dismiss of actionable text. Prompts hide on the act, never on a timer; the result screen waits for a tap. Source: HUD Rules 13 and 15.
 
-**Features explicitly out of scope** (each is also in Known Intentional Limitations):
-- Screen-reader support for the battle field.
-- A drag-free alternative for pin and aim.
-- Mono audio, subtitles, closed captions and haptic alternatives (no speech and no audio-only cue exists).
-- High contrast mode and HUD repositioning (Comprehensive).
+**Features explicitly out of scope**:
+- Screen reader for the battle field, adjustable text size, input timing multiplier, manual pause button, colourblind palette modes, volume sliders, haptics. Each is in Known Intentional Limitations with its reason.
 
 ---
 
 ## Visual Accessibility
 
+The field is a dark plane where colour is reserved for meaning and shape
+carries role (AB §1 "Shape is role, colour is state", §4). Visual work at MVP
+is mostly holding to that rule and measuring it on a device.
+
 | Feature | Target Tier | Scope | Status | Implementation Notes |
 |---------|-------------|-------|--------|---------------------|
-| Minimum text size, HUD and panels | Basic | All text | Designed (MVP) | 14 dp (21 units at 360 dp) is the floor for any body text; 16 dp for gold, lives, labels and costs; 24 dp burst digit (floor 18 dp). Art bible section 7 rejected a 12 dp draft. Font not yet chosen; it needs tabular numerals (PQ-07). |
-| Text contrast, UI text | Basic | All text | Designed (MVP); verify on device | Neutral `#C8D0E0` on panel `#141B30` is 11.0:1 (on the 85% panel over the field, 11.2:1). Pass criterion 4.5:1. Text never sits on the raw field at small sizes. |
-| Dimmed text contrast | Basic | Unaffordable costs | Not Started | Alpha 0.6 on panel gives 4.8:1 and passes; 0.5 gives 3.8:1 and 0.4 gives 2.8:1 and fail. **The dimmed alpha floor is 0.6.** The strike-through carries the meaning (pattern P-13). |
-| Gameplay colour contrast on the field | Basic | Hero, towers, enemies, danger, status | Designed (MVP); verify on device | Against the field `#0B1020`: hero 15.8:1, tower 9.0:1, enemy 7.3:1, danger 5.5:1, status 5.8:1. Against panel `#141B30`: hero 14.2, tower 8.1, enemy 6.6, danger 4.9, status 5.3. All pass 4.5:1. Per-stage field hues (170 to 280, V at most 14%) can change these; the content test should recheck contrast per stage. |
-| Non-text contrast, thin lines | Basic | Leash, reach ring, range ring | Designed; verify | Needs 3:1 (WCAG 1.4.11). Reach ring dots are neutral at alpha 0.6, which is 5.0:1 on the field. The leash is required to clear 3:1 where it crosses the lifted path (two tones, or alpha 0.7). 4.7 draws lines with no antialiasing feather, so lines are widened by about 1 px; recheck contrast after that change. |
-| Colour never the sole indicator | Basic | All UI and gameplay | Designed (MVP) | See the audit below. Every colour-coded fact has a shape, pattern or text backup. |
-| Colourblind palette option | Standard | Danger vs enemy, status vs enemy | Not Started (Alpha) | The design does not depend on colour, so this is a safety net. Scope is one alternate palette that moves the danger and enemy hues apart for protan and deutan players. Ships at Alpha; test with Coblis first and widen it only if the simulator or the phone test shows confusion. See AQ-04. |
-| Text size option | Standard | Result, Paused, menus, HUD labels | Not Started (Alpha) | Required at Standard. The HUD is built to a fixed budget (three text sizes, a 48 dp top band, at most 3 text draws), so scaling the HUD may break layout. See AQ-03. Control screens (Result, Paused, menus) can scale freely. |
-| Screen flash and strobe | Basic | Burst, hit flash, danger pulse | Designed; audit needed | Danger pulse is 2 Hz with at most a 25% alpha swing (or travelling chevrons). The 0.4 s burst field dip never chains: no re-dip within 1 s. Hit flash is an 80 ms white disc. **Open:** many simultaneous hits could add up to more than 3 flashes per second on screen (AQ-09). Run the Harding-style audit on the burst and a crowded wave. |
-| First-launch photosensitivity notice | Basic | First launch | Not Started | A one-screen notice before the first battle. Owner: Menu & Screen Flow (Vertical Slice). |
-| Reduce Motion | Standard | Nudges, slides, pulse, dip | Designed (flag); toggle Not Started (Alpha) | Cuts the 2 px nudges and the panel slides, freezes the 2 Hz pulse and skips the burst dip. Fades and clock bars stay. A `reduce_motion` bool on the Input record serves until Settings exists. Gap: a refusal cue that survives Reduce Motion (P-12), and static fallbacks for the arc collapse. |
-| Subtitles | n/a | | n/a | No speech. |
-| Brightness and gamma | n/a | | n/a | The OS owns display brightness on iOS and Android. |
-| High contrast mode | Comprehensive | | Out of scope | The palette is already high contrast. See Known Intentional Limitations. |
+| Minimum text size, HUD and modal screens | Basic (elevated) | All text | Not Started | 14 dp floor (21 units), 16 dp for gold, lives, labels and costs, 24 dp cooldown digit with an 18 dp floor. Source: AB §7; HUD UI Requirements and Visual/Audio table. No text on the raw field at small sizes; text sits on panel #141B30 (AB §7). |
+| Minimum text size, subtitles | Basic | N/A at MVP | N/A | No dialogue or voice exists (Concept Aesthetics: Narrative N/A). |
+| Text contrast, UI text on panel | Basic | All UI text | Not Started | Proposed target: 4.5:1 for text below 18 pt, 3:1 for larger (WCAG 2.1 SC 1.4.3). Neutral #C8D0E0 on panel #141B30 is about 11:1, hand-calculated here against an opaque panel; AB §4 gives 12.2:1 against the field. Verify on device. |
+| Text contrast, dimmed (unaffordable) costs | Basic | Arc panels, chip | Not Started | HUD sets alpha 0.55. Hand-calculated here, 0.55 gives about 4.2:1 on panel, under the proposed 4.5:1. **Proposed: alpha 0.6 (about 4.8:1).** The strike-through still carries "cannot afford" on its own (HUD Visual/Audio). Tower UX flag asks that a dimmed cost stay legible. |
+| Non-text contrast, zones and rings | Basic | Leash, reach ring, range ring, reticle | Not Started | Proposed target: 3:1 against what lies beneath (WCAG 2.1 SC 1.4.11). AB §7 already sets 3:1 for the leash over the path (two-tone or alpha 0.7). Reach dots (Hero UX flag) and range ring over the path (Tower UX flag) are open and must be measured. |
+| Colourblind modes (palette swaps) | Standard | All colour-coded gameplay | Out of scope | Not needed if the audit below holds: every colour signal has a shape, fill or line backup (AB §2 State set, §4 Colour-blind safety). See Known Intentional Limitations. |
+| Colour-as-only-indicator audit | Basic | All UI and gameplay | In Progress (designed, not rendered) | See table below. Every known row has a backup in the sources. |
+| UI scaling | Standard | All UI | Out of scope | HUD layout is fixed in field units and checked by content rules (HUD Layout). ADR-0011 Decision 9 limits text to three sizes; a fourth is a budget change. |
+| High contrast mode | Comprehensive | Menus, HUD | Out of scope | The base palette is already high contrast: every entity at 5:1 or better against anything beneath (AB §6 Legibility rule). |
+| Brightness / gamma | Basic | Global | Out of scope | Phones expose system brightness. See Known Intentional Limitations. |
+| Screen flash / strobe | Basic | All VFX | Not Started | Sources: the 2 Hz danger pulse is capped at a 25% alpha swing or drawn as travelling chevrons; the 0.4 s burst field dip never re-dips within 1 s (AB §7 Animation). Hit flash is an 80 ms white disc on one enemy body, at most 16 at once (AB §8; ADR-0011 Decision 4). **Proposed:** no element flashes more than 3 times in any 1 s at full-screen scale, and the combined area of simultaneous hit flashes stays under the WCAG 2.3.1 small-area limit; checked at ADR-0011's synthetic worst case (48 alive, 16 flashes). **Proposed:** a one-line photosensitivity notice at first launch once Menu & Screen Flow exists (Vertical Slice). |
+| Motion reduction | Comprehensive (elevated) | HUD, hero, towers, field | Not Started | `reduce_motion` flag on the Input record until Settings (HUD UI Requirements; Hero GDD handoffs). Each model takes it in `attach` and each Reduce Motion row is a unit test both ways (ADR-0011 Decision 8). Rows from sources: HUD cuts slides, keeps fades and clock bars; Hero drops the dip, wind-up, snap and Ready pop, shows a static ring from T+0.1 and 4 px at release, keeps spokes; the locked-button nudge and the refused-tap nudge are skipped (Hero UI Requirements, Tower UI Requirements); the danger pulse freezes and the burst dip is skipped (AB §7). **Gap:** Tower asks for a refusal cue that does not use motion, plus static fallbacks for the build overlay and arc collapse (Tower UX flag). Proposed cue in `design/ux/interaction-patterns.md`, Refused Purchase. |
+| Subtitles (on/off, speaker, style, SFX captions) | Basic to Comprehensive | N/A at MVP | N/A | No dialogue and no audio at MVP (HUD, Hero, Tower Visual/Audio: "Audio: none at MVP"). |
 
 ### Color-as-Only-Indicator Audit
 
-All rows come from art bible section 4 ("Colour-blind safety") or from the GDDs. Each has a non-colour backup.
+Each row names a colour signal and the non-colour backup the sources already
+give it. Status stays "Designed" until a grey quarter-scale render test passes
+(HUD Manual criteria; AB §1 desaturate test).
 
-| Location | Colour Signal | What It Communicates | Non-Colour Backup | Status |
-|----------|--------------|---------------------|-------------------|--------|
-| Danger vs enemy | Magenta `#FF2E93` vs orange `#FF7A2F` | A leak threat vs an enemy | Chevron shape plus a 2 Hz pulse (frozen under Reduce Motion, so the chevron shape alone must carry it) | Designed |
-| Slowed enemy | Violet tint | Enemy is slowed | Drag lines plus a size wobble | Designed |
-| Armoured vs damaged enemy | Both read darker | Armour vs damage | Outer ring vs inner core | Designed |
-| Burst button Ready vs Cooling | Fill level | Can fire or not | Outline vs filled plus sweep wedge plus a digit | Designed |
-| Tower Ready vs Cooling | Fill level | Can fire or not | Complete ring vs regrowing ring | Designed |
-| Stage A vs stage B | Hue | Which stage | Path curve and grid tilt | Designed |
-| Leash in-zone vs out-of-zone | Tint | Listed by the art bible, but no GDD defines the state | Dash density, up to solid (art bible) | Undefined (PAQ-17) |
-| Tower role | Cyan for all three | Single, Splash or Slow | Triangle, hexagon, square, plus the word on the arc panel | Designed |
-| Unaffordable cost | Dim | Cannot afford | Strike-through | Designed |
-| Wave pips | Fill | Done, current, upcoming | Filled, outlined, dotted | Designed |
-| Lives row | Fade to alpha 0.2 | Lives left | A lost dash fades to alpha 0.2 but stays countable (dash count) | Designed |
-| Hero vs supporting shapes | White-gold | The hero | Asymmetric shape and the only glow | Designed |
+| Location | Color Signal | What It Communicates | Non-Color Backup | Status |
+|----------|-------------|---------------------|-----------------|--------|
+| Field entities | Gold hero, cyan towers, orange enemies | Who is who | Shape: asymmetric kite, regular polygons, circles (AB §1, §3) | Designed |
+| Tower role | All towers cyan | Single, splash, slow | Triangle, hexagon, square (Tower Rule 1). Hexagon vs square at quarter scale is the weakest pair and needs a render test (Tower Visual/Audio) | Designed |
+| Enemy type | All orange | Fast, normal, heavy | Size 16, 22, 30 px plus the fast's forward notch (AB §3; HUD Visual/Audio) | Designed |
+| Danger at the exit | Magenta vs enemy orange | Leak happening | Chevron shape plus double outline on the exit strip; pulse is extra, and freezes under Reduce Motion (AB §2, §4) | Designed |
+| Slowed enemy | Violet tint | Enemy is slowed | Two drag lines plus size wobble (AB §2). Drag lines stay under Reduce Motion | Designed |
+| Tower ready vs cooling | Fill only, if done by colour | Can fire now | Complete ring vs regrowing ring (AB §2, §4) | Designed |
+| Burst button ready / cooling / locked | Gold fill vs neutral | Can I burst | Fill plus full ring; outline plus clockwise wedge plus digit; dotted outline (AB §7; HUD Rule 12) | Designed |
+| Unaffordable disc or chip | Dimmed | Cannot afford | Cost struck through (HUD Visual/Audio; Tower UI Requirements) | Designed |
+| Wave pips | None needed | Done, current, upcoming | Filled, outlined, dotted (AB §7; HUD Visual/Audio) | Designed |
+| Lives | Alpha 0.2 on a lost dash | Lives left | Dash count stays countable (AB §7) | Designed |
+| Free vs blocked slot | Alpha | Can build here | 4-dot corner mark vs diagonal hairline (AB §6) | Designed |
+| Leash in vs out of zone | Tint | Inside the leash | Dash density (AB §4) | Designed |
+| Aim cancelling vs live | Alpha | Release will cancel | Reticle at alpha 0.3 with no ticks, preview and kill marks hidden (Hero Visual/Audio; AB §7) | Designed |
+| Kill preview during aim | White contour | This enemy dies to the burst | Body knocked out to field colour plus steady contour (Hero Visual/Audio) | Designed |
+| Stage A vs stage B | Field hue | Different stage | Path curve and grid tilt; hue alone never separates stages (AB §4, §6) | Designed |
 
 ---
 
 ## Motor Accessibility
 
+Every game action is one tap or one drag with one thumb (Concept Pillar 4).
+The resolver is built so that a slow, shaky or resting thumb causes a miss,
+never a wrong action (Input Rules 1 to 5, Game Feel).
+
 | Feature | Target Tier | Scope | Status | Implementation Notes |
 |---------|-------------|-------|--------|---------------------|
-| Touch target size | Basic | Every tappable or draggable target | Designed (MVP); verify on device | 48 dp (72 units at 360 dp) with **no margin** at that width, and the unit-to-dp scale is not yet fixed (Tower UX flag). Hero grab is 56 units; burst hit 96 px. A device check at 360 dp is required before Pillar 4 is claimed. |
-| One-handed play | Basic | Whole game | Designed (MVP) | The core model. One finger, one pointer; a second finger is ignored. No multi-touch gesture, no pinch, no two-finger action exists. |
-| Left-handed mirror | Basic (elevated) | Burst button and digit | Designed (flag); toggle Not Started (Alpha) | `left_handed` on the Input record. Mirrors the button and digit only, never the leash kite or the aim offset. Phone test must include a left-handed tester. |
-| Input remapping | n/a | | n/a | Touch has no bindings. |
-| Hold-to-press alternatives | Standard | All hold inputs | Not applicable | No input is a timed hold. The two drags (pin, aim) are held only while moving; neither needs a duration. |
-| Rapid input alternatives | Standard | | Not applicable | No input needs repeated presses. |
-| Input timing adjustments | Standard | Upgrade chip window (1.5 s) | Not Started (Alpha) | The chip's 1.5 s commit window is the one timed input. Provide a window multiplier of 1x (1.5 s), 2x (3 s), 3x (4.5 s). The window is a safeguard, not a threat: an expired chip loses nothing. The tower range ring (1.5 s) is information and also follows the setting. The 300 ms arming delay (P-08) protects the player and needs no setting. |
-| Edge and gesture conflicts | Basic | Screen edges | Designed; verify on device | Presses inside `edge_reject_margin` (0 to 48 units) and platform insets are rejected. Burst hit box ends at least 24 dp from the side (Android back-swipe, unverified) and 16 dp above the gesture inset. |
-| Aim assist | n/a | | n/a | The burst is aimed on a preview with a generous cancel zone. No aim assist exists or is planned. |
-| Platforming assists | n/a | | n/a | No platforming. |
-| HUD repositioning | Comprehensive | | Out of scope | See Known Intentional Limitations. Handedness covers the one control that moves. |
-| Drag-free alternative | Comprehensive | Pin and aim | Out of scope | Pillar 4 defines every action as one tap or one drag. See AQ-07. |
+| Minimum touch target | Basic (elevated) | Every target | Not Started | 48 dp (72 units) at 360 dp; 44 pt on iOS. Radii: tower, slot, arc disc 36; chip 40; burst button and Start/Call 48; hero drag 56 (Input Hit targets; Tower Rule 8; HUD Layout; Hero Rule 15). Enforced by `target_ok` (Input Formulas; HUD AC 28; ADR-0008 Decision 10). |
+| Target spacing | Basic | Tap targets with different actions | Not Started | Sources: Start/Call at least 16 units clear of any slot and arc disc; arc disc at least 84 from the burst line (HUD Content rules). **Proposed:** at least 8 dp (12 units) clear between adjacent tap targets that do different things. Known failure: adjacent arc discs are 4 units apart (HUD Open Questions); first fallback is a larger arc radius `R`. |
+| Minimum width guard | Basic | Device support | Not Started | Under 360 dp targets fall below 48 dp, so it is unsupported. Runtime guard logs it; store device filter excludes it (Input Edge Cases; ADR-0003 Decision 5 `width_supported`, true at 360, false at 359). |
+| Safe area and edge rejection | Basic | All presses | Not Started | Presses inside `edge_reject_margin` (36 units) of a side edge or inside safe-area insets never reach the resolver (Input Rule 12; ADR-0003 Decision 5). Burst button at least 24 dp from the side edge and 16 dp above the gesture inset (AB §7). Margin value is from memory of Android's back-swipe zone and must be checked on device (Input Tuning Knobs). |
+| One-hand play | Basic (elevated) | Whole game | Not Started | Designed for one thumb; a feature needing two thumbs is cut (Concept Pillar 4). Left-handed mirror moves only the burst button and its digit; Start/Call stays put for both hands (HUD Edge Cases; Hero UI Requirements). Flag fixed per battle (Hero Rule 2). |
+| Input remapping | Standard | N/A | N/A | Touch only, two gesture classes; nothing to rebind. |
+| Hold-to-press alternatives | Standard | Hold inputs | N/A | No hold input exists. No long press; no tap duration limit (Input Rule 3). |
+| Rapid input alternatives | Standard | Mashing | N/A | No rapid input. Burst is a 10 s cooldown (Hero Rule 10). |
+| Drag-only actions | Basic | Pin, burst aim | Not Started | Pin and burst are drags by design, so a resting thumb never spends the burst (Concept Core Mechanic 2). Drag start needs only 15 units (10 dp) of travel (`drag_slop`). Cancel by dragging back onto the button, with hysteresis 64 out, 48 back (Hero Rule 13). A tap-based alternative is reserved for Settings at Alpha ("an alternative path to discs", HUD Dependencies). |
+| Tremor and resting palm | Basic | All gestures | Not Started | One active pointer; a second finger is dropped; a resting palm with no real tap target is replaced by the next press (Input Rule 1). Slide-off-to-abort on taps (Input Rule 3). Sticky drag, so hesitation cannot cancel a pin (Input Game Feel). |
+| Mis-spend guards | Basic | Build, upgrade | Not Started | Arc disc press ignored for 200 ms after opening (HUD Rule 6). Upgrade needs a second tap 200 to 1500 ms after the chip opens (Tower Rule 8). Buttons ignore presses for 300 ms after appearing (HUD Rule 11). |
+| Input timing adjustments | Standard | Chip window | Out of scope at MVP | The 1.5 s chip window is the only timed input (Tower Rule 8). **Proposed for Alpha Settings:** chip window multiplier 1.0x to 3.0x (1.5 s to 4.5 s). Runtime slop setter and hit-area scale are reserved for Alpha (Input Deliberately not built). |
+| Aim assist | Standard | Burst aim | Partial by design | Reticle is offset 100 units (about 67 dp) above the thumb so the thumb never hides it (Hero Rule 12); aim clamps to reach so a person is never refused (Hero Rule 12); kill preview shows victims before release (Hero Visual/Audio). No snap (Hero Deliberately not built). |
+| HUD repositioning | Comprehensive | HUD | Out of scope | Layout is fixed by content rules; only handedness moves the button. |
 
 ---
 
@@ -129,39 +164,45 @@ All rows come from art bible section 4 ("Colour-blind safety") or from the GDDs.
 
 | Feature | Target Tier | Scope | Status | Implementation Notes |
 |---------|-------------|-------|--------|---------------------|
-| Pause anywhere | Basic | All gameplay states | **Gap** | Game State Rule 17 says **no pause button exists at MVP**; Paused comes only from focus loss or backgrounding. Build already stops the clock, but Wave and Intermission cannot be paused by choice. This conflicts with the Basic row. See AQ-02. |
-| Difficulty options | Standard | Whole game | **Gap** | The GDDs define none. Waves are tuned assuming the hero's contribution, and bots calibrate the balance. See AQ-06. |
-| Tutorial persistence | Standard | Three HUD prompts | Not Started | The prompts stay until the action is done (no auto-dismiss), so they cannot be lost by reflex. Once done, they cannot be read again. Add a Help entry when the Menu exists (PQ-06). |
-| Reading time for UI | Standard | Auto-dismissing elements | Designed with one exception | Nothing auto-dismisses except the upgrade chip and the range ring, both 1.5 s. The chip shows an actionable cost; the Standard rule asks for at least 5 s on actionable text. The window multiplier (Motor, above) is the mitigation, and the chip loses nothing when it expires. Result text appears after a 400 ms delay (Won and Lost alike) and stays. |
-| Objective clarity | Standard | Stage goal | Designed | Pips and a next-wave line are always visible in Build and Intermission. Lives are always visible. |
-| Cognitive load | Comprehensive | Per system | Reviewed below | See the matrix. The HUD deliberately shows no damage numbers, HP bars, tower stats or spawn timings. The next-wave line is capped at 3 enemy types. |
-| Visual indicators for audio-only information | Standard | All gameplay SFX | Designed | No gameplay information is audio-only (see the SFX audit). Rule for the Audio GDD: **a cue may not be the only carrier of any state**. |
-| Navigation assists | n/a | | n/a | Single-screen battles. |
+| Difficulty options | Standard | Gameplay | Out of scope at MVP | One stage, fixed values. Wave 1 cannot be lost (Concept Flow State Design); retry is instant (Flow Rule 16). |
+| Pause anywhere | Basic | All gameplay states | Partial | No pause button at MVP (Flow Rule 17; HUD Rule 4). Focus loss or backgrounding enters Paused on every platform, and a tap resumes with no countdown (Flow Rule 17; HUD Rule 17). Build has no timer at all. This is a risk; see Known Intentional Limitations. |
+| Tutorial persistence | Standard | Prompts | Partial | Three one-line prompts teach verbs, show until the act is done, never on a timer (HUD Rule 13). After a loss the next-try line repeats a missed verb (HUD Rule 16). No Help screen at MVP. |
+| Objective clarity | Standard | Battle | Designed | The objective is always on the field: lives as dashes, wave pips, next-wave line (HUD Rules 4 and 5). |
+| Visual indicators for audio-only information | Standard | All SFX | Met by default | No audio at MVP; every event is visual and reads with sound off (Hero Game Feel: "spokes count kills with sound off"; AB §2 Danger). |
+| Reading time | Standard | Auto-dismissing text | Designed | Nothing actionable auto-dismisses. Result text appears 400 ms after Lost and 1000 ms after Won and stays until Retry (HUD Rule 15). The chip auto-closes after 1.5 s, but it holds no information that is lost: tap the tower again to reopen (Tower Rule 8). |
+| Cognitive load | Comprehensive | Per system | Noted | See Per-Feature Accessibility Matrix. Peak load is in Wave: lanes, burst state, gold. Result shows raw counts only, no ranking or percentage (HUD Rule 15). |
+| Plain wording | Basic (proposed) | All strings | Designed | Strings are fixed in HUD Rules 13, 15, 16. Next-try lines avoid "you" and past tense so they read as advice, not blame (HUD Game Feel). |
 
 ---
 
 ## Auditory Accessibility
 
+There is no audio at MVP (HUD, Hero, Tower, Input: "Audio: none at MVP"). The
+target player often plays with sound off (Concept Target Player Profile), so
+every rule here is about keeping that true when audio arrives.
+
 | Feature | Target Tier | Scope | Status | Implementation Notes |
 |---------|-------------|-------|--------|---------------------|
-| Subtitles and captions for speech | n/a | | n/a | The game has no speech. |
-| Independent volume controls | Basic | Music, SFX | Not Started (Alpha) | Two sliders (no voice bus). Persist with Save/Load. Expose in Settings and on the Paused screen. Audio is an Alpha system. |
-| Mono audio | Comprehensive | | Out of scope | See Known Intentional Limitations. |
-| Visual representation of directional audio | Comprehensive | | Not applicable | No audio carries direction; the field is fully visible. |
-| Hearing aid compatibility | Standard | High-frequency cues | Not applicable now | Revisit when the Audio GDD exists. No cue may rely only on content above 4 kHz. |
+| Subtitles for dialogue | Basic | Voiced content | N/A | No dialogue. |
+| Captions for gameplay SFX | Comprehensive | SFX | N/A at MVP | Rule from now on: any SFX added later must have a visual that already carries the fact (table below). |
+| Mono audio | Comprehensive | Output | Out of scope | No spatial audio planned. |
+| Independent volume controls | Basic | Music, SFX, UI | Deferred | Required by Basic once audio exists. **Proposed:** Music and SFX sliders, 0 to 100%, in Settings & Accessibility (Alpha), shipped with the Audio system (systems-index #20). Until then the OS volume and mute switch apply. |
+| Directional audio indicators | Comprehensive | Off-screen threats | N/A | Whole field is on screen; nothing is off-screen. |
+| High-frequency cues | Standard | Audio cues | N/A at MVP | Revisit with the Audio GDD. |
 
 ### Gameplay-Critical SFX Audit
 
-Audio is an Alpha system, so these are the cues that will exist and the visual that already carries each one.
+No SFX exist at MVP. These rows are the events most likely to get sound at
+Small Ship (Concept Technical Considerations: "SFX per tower/hero action"),
+with the visual each already has.
 
 | Sound Effect | What It Communicates | Visual Backup | Caption Required | Status |
 |-------------|---------------------|--------------|-----------------|--------|
-| Tower and hero attack | An attack landed | Tracer, hit flash, damage applied to the enemy | No | Designed |
-| Burst telegraph and release | Burst is firing | Empty wedge on the button; burst ring and preview | No | Designed |
-| Burst ready | The cooldown ended | Gold fill and complete ring on the button | No | Designed |
-| Enemy leak | A life was lost | Dash fades on the lives row; danger chevrons in the field | No | Designed |
-| Wave start and clear | Phase changed | Pips change; Start/Call appears | No | Designed |
-| Stage Won and Lost | Outcome | Modal Result screen | No | Designed |
+| Enemy leaks (future) | Life lost | Magenta chevrons at the exit plus a dash fading to alpha 0.2 (AB §2, §7) | No | Not Started |
+| Burst ready (future) | Burst can fire | Four Ready ticks around the hero plus a gold-filled button (Hero Visual/Audio; AB §7) | No | Not Started |
+| Burst release (future) | Burst landed, kills | Gold ring meets preview; spokes per kill (Hero Visual/Audio) | No | Not Started |
+| Wave start or call (future) | Next wave coming | Pips update; Start/Call hides (HUD Rule 10; Visual/Audio) | No | Not Started |
+| Refused tap (future) | Cannot afford | Strike-through plus nudge, or the static cue under Reduce Motion (Tower UI Requirements) | No | Not Started |
 
 ---
 
@@ -169,27 +210,49 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | Platform | API / Standard | Features Planned | Status | Notes |
 |----------|---------------|-----------------|--------|-------|
-| iOS | UIAccessibility / VoiceOver | Labels and order on `Control` screens (Result, Paused, Fatal, later menus) | Not Started | Through Godot's AccessKit support for `Control` nodes (4.5+). The engine reference says `Control` nodes integrate with AccessKit; **whether that works on iOS and Android in 4.7 is NEEDS VERIFICATION** (AQ-05). Field gameplay is not covered. |
-| Android | AccessibilityService / TalkBack | Same as iOS | Not Started | Same note. 4.7 moved `Control.accessibility_live` to `AccessibilityServer.AccessibilityLiveMode`; use the new type. |
-| iOS and Android | OS reduce-motion and font-scale settings | Read the OS setting as the default for Reduce Motion and text size | Not Started | Whether Godot exposes these is unverified (AQ-05). The in-game setting is the fallback. |
-| Display | Safe area and gesture insets | See Motor, "Edge and gesture conflicts" | Not Started | `DisplayServer.get_display_safe_area()` is unverified; ADR-0003 verifies it. |
-| Xbox, PlayStation, Steam (PC) | n/a | | n/a | Not target platforms. |
+| iOS | UIAccessibility / VoiceOver | None at MVP | Not Started | The battle is custom-drawn discs, not Controls (HUD Rule 2; Input UI Requirements), so VoiceOver has nothing to read there. How Godot 4.7 behaves on iOS with VoiceOver on (touch routing) is **NOT SOURCEABLE**: `docs/engine-reference/godot/` does not cover it. |
+| Android | AccessibilityService / TalkBack | None at MVP | Not Started | Same as iOS. TalkBack touch exploration behaviour under Godot is **NOT SOURCEABLE** from `docs/engine-reference/godot/`. |
+| Modal screens (all) | Godot AccessKit on Controls | Accessible names for Retry, Play again, Paused (proposed, Vertical Slice) | Not Started | Engine reference says Control nodes work with AccessKit (`docs/engine-reference/godot/modules/ui.md`, `current-best-practices.md`). Whether that reaches VoiceOver or TalkBack in a mobile export is **NOT SOURCEABLE** there. The result and Paused screens are Controls (HUD Rule 2), so they are the only candidates. |
+| OS Reduce Motion setting | iOS / Android system flag | Seed `reduce_motion` from the OS (proposed) | Not Started | Whether Godot 4.7 exposes the OS flag is **NOT SOURCEABLE** in `docs/engine-reference/godot/`. Until checked, the flag is data only (HUD UI Requirements). |
+| Safe area | `DisplayServer.get_display_safe_area()` | Insets for HUD and press rejection | Designed | ADR-0003 Decision 5. Marked NEEDS VERIFICATION there (SP8). |
+| PC (dev build only) | N/A | None | N/A | Desktop is the dev and test build with mouse-as-touch (Concept Core Identity). Not a release target. |
+
+**Verdict effect.** Because three rows are NOT SOURCEABLE, this section is
+**NOT ASSESSED** for screen reader and OS-flag support until an ADR checks live
+4.7 docs and a phone run. That does not block the Basic tier, which needs
+neither.
 
 ---
 
 ## Per-Feature Accessibility Matrix
 
+One row per system in `design/gdd/systems-index.md`. Systems with no GDD yet
+carry the concerns their dependencies already imply.
+
 | System | Visual Concerns | Motor Concerns | Cognitive Concerns | Auditory Concerns | Addressed | Notes |
 |--------|----------------|---------------|-------------------|------------------|-----------|-------|
-| 1 Data & Config | None (owns no screen); owns the `reduce_motion` and `left_handed` flags | None | None | None | Yes | The fatal screen belongs to Game State. |
-| 2 Input & Gesture | None | Slops and edge rejection set the tap and drag feel; 48 dp targets with no margin | One pointer only | None | Partly | Slop values and edge margins need the phone test (PQ-01, PQ-02). |
-| 3 Game State & Stage Flow | Result, Paused and Fatal screens: plain text, no auto-dismiss | Resume uses the modal press model (P-11) with no arming, so a brush can resume a live wave (logged in the phone test) | **No user pause button** | None | **Gap** | AQ-02. |
-| 4 Combat & Damage | Hit flash is an 80 ms white disc | None | Result shows damage by source as plain numbers, no percentage | None | Partly | Flash rate audit (AQ-09). |
-| 5 Enemy & Wave | Enemy types by size, notch and ring, not colour; danger needs chevron shape | None | Next-wave line is capped at 3 types | None | Yes | Danger pulse freezes under Reduce Motion. |
-| 6 Tower | Role by polygon, ready by ring shape | Chip is a 1.5 s timed commit | Mis-spend safeguard (chip, no selling) | None | Partly | Chip window setting (Alpha). Refusal cue without motion (P-12). |
-| 7 Hero | Burst Ready vs Cooling by shape; leash by dash density | One-thumb pin and aim; cancel zone; left-handed mirror | Prompt "Drag the hero" persists | None | Partly | No drag-free alternative (limitation). |
-| 8 Battle HUD | 14 dp text floor; fixed layout budget; contrast computed | 48 dp targets; Armed Buttons | Shows only lives, pips, gold, burst, next wave | None | Partly | Text size option conflicts with the fixed layout (AQ-03). |
-| 9 to 22 (Vertical Slice and Alpha systems) | To be addressed in each system's GDD | | | | Pending | A row is added here when the system's GDD is written. Skill Tree: nodes must state owned, available and locked by fill, outline and dots (the art bible grammar), never colour alone. Audio: no audio-only cue. Settings: owns the Alpha toggles in this document. |
+| 1 Data & Config | None (no screen) | None | None | None | Yes | Holds `left_handed` and `reduce_motion` on the Input record (HUD UI Requirements). |
+| 2 Input & Gesture Resolver | None | Drag precision; resting palm; second finger; edge zones | Few verbs; no long press or double tap | None | Partial | Rules 1 to 5, 12. Slop setter and hit-area scale reserved for Alpha. Pillar 4 phone test unpassed. |
+| 3 Game State & Flow | Paused scrim | No pause button | Timer in Intermission; Build untimed | None | Partial | Flow Rule 17. See Known Intentional Limitations (pause). |
+| 4 Combat & Damage | Hit flashes; burst dip | None | Damage by source shown raw | None | Partial | Flash checks in Visual table. |
+| 5 Enemy & Wave | Type by size and notch at 16 px | None | Next-wave line, one wave ahead | None | Partial | Grey quarter-scale render test pending (HUD Manual). |
+| 6 Tower System | Hexagon vs square at quarter scale; dimmed cost contrast | Chip second tap within 1.5 s | Cost chip, range ring | None | Partial | Refusal cue without motion open (Tower UX flag). |
+| 7 Hero System | Reach dots contrast; reticle far from thumb when clamped | Pin and burst are drags; re-grab a hero pinned high up | Burst state, reach, cancel zone | None | Partial | Hero UX flag open points. |
+| 8 Battle HUD | 14 dp text; dimmed alpha 0.55 | 48 dp targets; arc discs 4 units apart | Three prompts; result text | None | Partial | Dimmed alpha proposed 0.6. |
+| 9 Stat & Modifier | None | None | None | None | Not Started | No UI. |
+| 10 Skill Point Economy | Point counter | None | Spend decisions | None | Not Started | |
+| 11 Skill Tree | Node states: filled, outlined, dotted (AB §3) | Node tap targets 48 dp | Tree reading load; free respec | None | Not Started | AB §2 has a slow pulse on available nodes; must honour Reduce Motion. |
+| 12 Hero Weapons | Weapon by added element, not colour (AB §5) | None | None | None | Not Started | |
+| 13 Stage Progression | Stars, preview thumbnails | None | Report screen | None | Not Started | Preview must hold the stage-by-shape rule (AB §6). |
+| 14 Save/Load | None | None | None | None | Not Started | |
+| 15 Menu & Screen Flow | Menu text | Menu targets | Navigation depth | None | Not Started | First place for the photosensitivity notice (proposed). |
+| 16 Mobile Platform | Safe area, letterbox | Edge zones, gesture insets | None | None | Not Started | Owns large insets (HUD Layout). |
+| 17 Onboarding Prompts | Prompt text | None | Teaching pace | None | Not Started | Replaces HUD Rule 13; must keep "hide on act, never on timer". |
+| 18 Synergy Hook | Aura visibility | None | One more rule to track | None | Not Started | |
+| 19 Visual Feedback & VFX | Flash and motion | None | None | None | Not Started | Inherits Reduce Motion and flash rules. |
+| 20 Audio | None | None | None | Volume control; visual backup for every SFX | Not Started | See SFX audit. |
+| 21 Settings & Accessibility | Settings text | Settings targets | Settings wording | None | Not Started | Home for flags, slop, hit scale, chip multiplier, volumes. |
+| 22 Cross-Tree Synergies | Lattice reading | None | High load (full lattice) | None | Not Started | |
 
 ---
 
@@ -197,16 +260,17 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | Feature | Test Method | Test Cases | Pass Criteria | Responsible | Status |
 |---------|------------|------------|--------------|-------------|--------|
-| Text and line contrast | Automated contrast check on screenshots at final colours | Every text and background pair; leash over the path; dimmed cost; per-stage field hues | Body text at least 4.5:1; thin lines at least 3:1; dimmed cost at alpha 0.6 or higher | ux-designer | Not Started |
-| Colour independence | Manual, Coblis simulator (protanopia, deuteranopia, tritanopia) on battle screenshots | Danger vs enemy, slowed, armoured, ready vs cooling, stage identity | Every row of the audit is distinguishable without colour | ux-designer | Not Started |
-| Touch target size | Manual on a 360 dp device and a wider one | Every target in P-01 | Each target measures at least 48 dp with the real unit-to-dp scale | qa-tester | Not Started |
-| One-handed and left-handed play | Pillar 4 phone test (Input GDD gate P1) with at least two non-developer testers, one left-handed, one who plays with one hand | Slot tap, arc disc, tower tap, Start/Call, pin drag, burst drag, 20 attempts each | Misses at most 5% and mis-fires zero per gesture, for each tester group | producer | Not Started |
-| Edge and gesture conflicts | Manual on Android with gesture navigation and on iOS | Burst button in each corner; presses near the edges | No press triggers the OS back or home gesture by accident | qa-tester | Not Started |
-| Reduce Motion | Manual, flag on | Refused tap, arc open and close, panel slides, danger, burst dip | No nudge, slide, pulse or dip; every refusal still has a visible cue | ux-designer | Not Started |
-| Photosensitivity | Manual plus a flash analysis tool on recorded video | A burst into a crowded wave; many simultaneous hit flashes; danger pulse | No more than 3 flashes per second over the luminance threshold | qa-tester | Not Started |
-| Chip window setting | Manual (Alpha) | 1x, 2x, 3x | The window length matches; an expired chip loses nothing | qa-tester | Not Started |
-| Screen reader on Control screens | Manual with TalkBack and VoiceOver | Result, Paused, Fatal, first menu | Each interactive element has a name and role; order is logical | ux-designer | Not Started |
-| Text size | Manual (Alpha) | Smallest and largest setting on every Control screen and the HUD | No clipped or overlapping text | ux-designer | Not Started |
+| Touch target size | Automated unit test | Every radius through `target_ok` at 360 dp | 36, 40, 48, 56 pass; 35 fails (HUD AC 28; Input AC 33) | gameplay-programmer | Not Started |
+| 360 dp guard | Automated unit test | `width_supported` | True at 360, false at 359 (ADR-0003 Decision 5) | gameplay-programmer | Not Started |
+| Text contrast | Manual: contrast checker on device screenshots | Every text and panel pair, dimmed costs, Arming text | Body text at least 4.5:1, large at least 3:1 (proposed) | ux-designer | Not Started |
+| Non-text contrast | Manual: screenshots over the path | Leash, reach dots, range ring, reticle | At least 3:1 (proposed; leash 3:1 per AB §7) | ux-designer | Not Started |
+| Colour-only audit | Manual: Coblis on screenshots, plus grey quarter-scale render | Every row of the audit table | Each state still named without colour (HUD Manual render tests) | ux-designer | Not Started |
+| Reduce Motion | Automated per row, both ways (ADR-0011 Decision 8), plus screenshots | Every Reduce Motion row in HUD, Hero, Tower, AB §7 | No slide, dip, snap, nudge or pulse with the flag on; clocks and fades stay | gameplay-programmer, ux-designer | Not Started |
+| Left-handed | Manual screenshots (HUD Manual "left hand") plus unit tests (HUD AC 15) | Button at x 84; Start/Call unchanged; pins refused on the left line only | Matches HUD Layout and Hero Rule 2 | qa-tester | Not Started |
+| Photosensitivity | Manual: frame capture at worst case | Danger pulse, burst dip, 16 hit flashes | No more than 3 flashes per second at large area; pulse swing at most 25% (proposed, AB §7) | ux-designer | Not Started |
+| One-thumb gestures | Pillar 4 phone test P1 (Input Acceptance Criteria) | 20 attempts each of six gestures, two testers, one left-handed if available | Misses at most 5%, mis-fires zero, per gesture | producer, qa-tester | Not Started |
+| Sound-off play | Manual playthrough with audio muted | Full stage | Every event readable (Concept Target Player Profile) | qa-tester | Not Started |
+| Screen reader (modal Controls) | Manual, VoiceOver and TalkBack | Retry, Play again, Paused | NOT ASSESSED until the engine behaviour is sourced | ux-designer | Not Started |
 
 ---
 
@@ -214,21 +278,29 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | Feature | Tier Required | Why Not Included | Risk / Impact | Mitigation |
 |---------|--------------|-----------------|--------------|------------|
-| Screen-reader support for the battle field | Comprehensive | The field is drawn in a few `_draw` nodes and is real-time and spatial. A screen reader cannot describe it usefully. | Blind players cannot play the battle | Control screens (Result, Paused, menus) are labelled. State this in the store text. |
-| Drag-free alternative for pin and aim | Comprehensive | Pillar 4 makes the drag the core verb. A tap-based alternative would change the design. | Players who cannot drag cannot pin or aim | Revisit only if the phone test shows drag failures. AQ-07. |
-| Difficulty assist | Comprehensive | None designed; the balance is tuned to the hero and to bots | Some players cannot finish later stages | AQ-06 proposes a cheap data-driven option. |
-| High contrast mode | Comprehensive | The palette is already high contrast | Low | Revisit after the contrast test. |
-| HUD repositioning | Comprehensive | The HUD is a fixed budget; only the burst button moves, by handedness | Low | Handedness covers the one control most affected. |
-| Mono audio, subtitles, captions, haptic alternatives | Comprehensive and Exemplary | No speech and no audio-only cue exists | None, while the "no audio-only cue" rule holds | Enforce that rule in the Audio GDD. |
-| Pause button at MVP | Basic | Game State Rule 17 | Players cannot pause by choice | **Disputed.** AQ-02. |
+| Screen reader for the battle | Comprehensive | Every battle action is a custom-drawn disc, not a Control (HUD Rule 2, Deliberately not built) | Blind players cannot play | None at MVP. Modal screens are Controls and may get names (Platform table). |
+| Keyboard and gamepad paths | Standard (persona checklist) | Touch-only game; HUD says no keyboard, gamepad or screen-reader path at MVP (HUD Deliberately not built) | Players who cannot touch the screen | iOS Switch Control and Voice Control may emulate taps and drags; untested (Open Questions). |
+| Manual pause button | Basic ("pause anywhere") | Not built at MVP (Flow Rule 17; HUD Rule 4) | A player who must stop mid-wave has to switch apps | Focus loss pauses, with tap to resume (Flow Rule 17). **Proposed:** a pause button by Vertical Slice, once Menu & Screen Flow exists. |
+| Timing extension for the chip | Standard | No Settings screen until Alpha | Slow tappers may miss the 1.5 s window | A miss never spends gold; tap again to reopen (Tower Rule 8). Proposed Alpha multiplier 1.0x to 3.0x. |
+| Adjustable text size | Standard | Three fixed sizes in the draw budget (ADR-0011 Decision 9) | Low-vision players | 14 dp floor; OS zoom. |
+| Colourblind palette modes | Standard | Not needed if every colour has a backup (audit table) | Low, if the render tests pass | Audit table; Coblis test. |
+| Brightness / gamma | Basic | Phones have system brightness; field contrast fixed by AB §6 | Players in bright light | Every entity at 5:1 or better (AB §6). |
+| Volume controls | Basic | No audio at MVP | None until audio ships | Proposed sliders ship with the Audio system. |
+| Haptics | Exemplary | Not built (Hero Deliberately not built) | Players who rely on touch feedback | All feedback is visual. |
+| Tap alternative to drag | Comprehensive | Drag-only burst protects the cooldown from a resting thumb (Concept Core Mechanic 2) | Players who cannot drag | Reserved for Settings at Alpha (HUD Dependencies). |
+| Settings screen for the two flags | Basic (to reach the features) | Settings is Alpha (systems-index #21) | Reduce Motion and left hand exist but players cannot turn them on at MVP | MVP is a desktop dev build; flags are data. Must ship before any public build. |
 
 ---
 
 ## Audit History
 
+No audits yet. This draft is a desk review against the GDDs and ADRs, not an
+audit.
+
 | Date | Auditor | Type | Scope | Findings Summary | Status |
 |------|---------|------|-------|-----------------|--------|
-| 2026-11-04 | ux-designer (document review, no device) | Desk review | GDDs and art bible | Contrast computed for all gameplay and UI colours; dimmed-text floor found (alpha 0.6); pause and difficulty gaps found; no device test | Open |
+| (planned) first phone build | Internal, ux-designer + non-developer testers | Pillar 4 phone test | Six gestures, one-thumb play | Not run | Planned |
+| (planned) Small Ship gate | Internal, accessibility-specialist | Tier review | Re-decide tier with Settings in scope | Not run | Planned |
 
 ---
 
@@ -236,27 +308,26 @@ Audio is an Alpha system, so these are the cues that will exist and the visual t
 
 | Resource | URL | Relevance |
 |----------|-----|-----------|
-| WCAG 2.1 | https://www.w3.org/TR/WCAG21/ | Contrast (1.4.3, 1.4.11), colour (1.4.1), flashing (2.3.1) |
-| Game Accessibility Guidelines | https://gameaccessibilityguidelines.com | Game-specific checklist by category and cost |
+| WCAG 2.1 | https://www.w3.org/TR/WCAG21/ | Contrast (1.4.3, 1.4.11), flashes (2.3.1) |
+| Game Accessibility Guidelines | https://gameaccessibilityguidelines.com | Game checklist by cost |
 | AbleGamers Player Panel | https://ablegamers.org/player-panel/ | User testing with disabled players |
-| Colour Blindness Simulator (Coblis) | https://www.color-blindness.com/coblis-color-blindness-simulator/ | Colour independence test |
-| Apple Human Interface Guidelines, Accessibility | https://developer.apple.com/design/human-interface-guidelines/accessibility | 44 pt targets, VoiceOver |
-| Android accessibility guidance | https://developer.android.com/guide/topics/ui/accessibility | 48 dp targets, TalkBack |
-| Godot docs, accessibility | https://docs.godotengine.org/en/stable/ | AccessKit and `Control` accessibility on 4.7 (verify) |
+| Apple Human Interface Guidelines: Accessibility | https://developer.apple.com/design/human-interface-guidelines/accessibility | 44 pt targets, VoiceOver, Reduce Motion |
+| Android accessibility | https://developer.android.com/guide/topics/ui/accessibility | 48 dp targets, TalkBack |
+| Coblis colour blindness simulator | https://www.color-blindness.com/coblis-color-blindness-simulator/ | Colour audit test |
+
+Xbox, PlayStation and CVAA rows from the template are dropped: no console
+release and no communication features.
 
 ---
 
 ## Open Questions
 
-| ID | Question | Owner | Deadline | Resolution |
-|----|----------|-------|----------|-----------|
-| AQ-01 | Confirm or change the Standard (phased) tier. It was chosen in autonomous mode. | user | Before `/gate-check pre-production` | Closed 2026-11-04: confirmed (user accepted recommended settings) |
-| AQ-02 | Game State Rule 17 has no pause button, but the Basic tier requires "pause anywhere". Add a user pause control (for example at Alpha with Settings), or record a formal exception with the producer. | game-designer, producer | Before the Game State GDD is Approved | Open, **High** |
-| AQ-03 | Standard requires adjustable text size, but the HUD is built to three text sizes, a 48 dp band and at most 3 text draws. Decide how the HUD scales, or limit the option to the Control screens. | ux-designer, art-director | HUD UX spec | Open |
-| AQ-04 | Is a colourblind palette needed, given colour independence by design? Run Coblis on the first battle screenshots before building it. | ux-designer | Vertical Slice | Open |
-| AQ-05 | Verify on 4.7: AccessKit on iOS and Android `Control` nodes; whether Godot exposes the OS reduce-motion and font-scale settings; `DisplayServer.get_display_safe_area()` units. | godot-specialist, ADR-0003 | Before the Settings GDD | Open |
-| AQ-06 | Difficulty assist. Gameplay values are data-driven, so an option such as extra starting lives is cheap, but the waves are tuned assuming the hero. Does the game want one? | game-designer | Alpha | Open |
-| AQ-07 | If the phone test shows drag failures, what is the alternative to pin and aim? | game-designer, ux-designer | After the Pillar 4 test | Open |
-| AQ-08 | Who owns the first-launch photosensitivity notice (Menu & Screen Flow, Vertical Slice)? | ux-designer | Menu GDD | Open |
-| AQ-09 | Aggregate hit-flash rate: many 80 ms flashes in one second could pass 3 per second on screen. Define a cap or a merge rule. | technical-artist, qa-tester | Vertical Slice | Open |
-| AQ-10 | Refusal cue that survives Reduce Motion (pattern P-12). | ux-designer | Arc and chip spec | Closed 2026-11-04: accepted and in the Battle HUD GDD |
+| Question | Owner | Deadline | Resolution |
+|----------|-------|----------|-----------|
+| Is Basic the right tier? This draft took it in autonomous mode; the user picks. | user | Pre-Production gate | Unresolved |
+| Which phone comes first? Resolved: the iPhone (ADR-0012 Decision 7, user instruction 2026-11-04); Android deferred. Targets are 44 pt and 48 dp either way. | user, producer | MVP+ | Resolved (ADR-0012, Proposed) |
+| Does Godot 4.7 expose the OS Reduce Motion flag, and do AccessKit names reach VoiceOver and TalkBack in a mobile export? NOT SOURCEABLE in `docs/engine-reference/godot/`. | technical-director | Before the Settings GDD | Unresolved |
+| Dimmed cost alpha: accept the proposed 0.6? | art-director, ux-designer | Before HUD stories | Unresolved |
+| Adjacent arc discs are 4 units apart, under the proposed 8 dp gap. Larger `R` first (HUD Open Questions). | ux-designer | First phone build | Unresolved |
+| Do iOS Switch Control or Voice Control drive pin and burst drags? | qa-tester | Vertical Slice | Unresolved |
+| No `design/player-journey.md` exists. Author it from `.claude/docs/templates/player-journey.md`. | ux-designer | Before the first UX spec | Unresolved |

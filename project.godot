@@ -12,7 +12,30 @@ config_version=5
 
 config/name="TowerRiot"
 config/features=PackedStringArray("4.7", "Mobile")
+config/quit_on_go_back=false
+run/main_scene="res://src/root/app_root.tscn"
+run/delta_smoothing=false
 
 [rendering]
 
 renderer/rendering_method="mobile"
+
+[display]
+
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/size/mode.mobile=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
+
+[gdunit4]
+
+report/godot/push_error=true
+report/godot/script_error=true
+report/verbose_orphans=true
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+pointing/emulate_mouse_from_touch=true

@@ -1,0 +1,161 @@
+# prototypes/adr-checks/run_all.sh output, pasted by the user (njarrar) from their Mac
+# Machine: Mac16,10, macOS, arm64; Godot 4.7.2 editor binary, headless; date 2026-11-04
+# 186 RESULT lines: 2 FAIL (ADR-0009-V7-no-super, ADR-0009-V7-combat-no-forward), 0 NOT_RUN
+# The first two lines below are the FAIL summary the runner prints before the full list.
+# One edit: the 36 identical ADR-0007-V6-classdb-<name> PASS lines (AppRoot to X) are folded into one line.
+RESULT ADR-0009-V7-no-super FAIL loads; new([1, &"x"]) -> instance spawn_id=0; errors=+0  (silent) | expected: an error (parse or run time), not a silent default
+RESULT ADR-0009-V7-combat-no-forward FAIL loads; new([]) -> instance spawn_id=<null>; errors=+0  (silent) | expected: an error (parse or run time), not a silent default
+RESULT ADR-0001-V1-method-callable PASS target freed=true; callable still valid=false | expected: freed (a method Callable holds the object ID only)
+RESULT ADR-0001-V1-connection-target PASS target freed=true; connections left=0 | expected: freed (a connection does not keep its target)
+RESULT ADR-0001-V1-connection-emitter RECORD emitter freed=true while its target lives | expected: record (expected freed)
+RESULT ADR-0001-V1-connected-lambda RECORD captured object alive=true while the lambda is connected | expected: record (expected alive: the lambda holds it)
+RESULT ADR-0001-V1-lambda-capture PASS captured object alive=true | expected: alive (a lambda holds a captured RefCounted strongly)
+RESULT ADR-0001-V1-lambda-release RECORD freed after the lambda is dropped=false | expected: record (expected freed)
+RESULT ADR-0001-V1-bind-arg PASS bound argument alive=true | expected: alive (bind() holds its arguments strongly)
+RESULT ADR-0001-V1-bind-target RECORD method target freed while the bound Callable lives=true (valid=false) | expected: record (expected freed: the inner method Callable holds an ID)
+RESULT ADR-0001-V1-lambda-self-nocapture RECORD object alive=false after a lambda made in its method (no self use) outlives it | expected: record (the question: does it bind self strongly)
+RESULT ADR-0001-V1-lambda-self-use PASS object alive=true after a lambda that reads a member outlives it | expected: alive (lambdas hold strong references)
+RESULT ADR-0001-V1-cycle-method PASS both freed=true | expected: both freed (method Callables and connections hold IDs)
+RESULT ADR-0001-V1-cycle-lambda RECORD lambda cycle leaked=true | expected: record (expected leaked; reason for the lambda ban)
+RESULT ADR-0009-V5-reap PASS enemy, Health, Status, ReadContext freed=[true, true, true, true]; roster=2 died=1 read=1.0 | expected: all four freed after reap() and the test drops its references
+RESULT ADR-0009-V5-retry PASS objects left=0 of 8; wave freed=true combat freed=true | expected: all freed when the battle is dropped (retry)
+RESULT ADR-0008-V7a PASS is_debug_build=true | expected: true in an editor run
+RESULT ADR-0010-V2 PASS is_debug_build=true (headless editor binary) | expected: true in an editor run; release half from ADR-0001 V4
+RESULT ADR-0008-V7b PASS get_model_name="Mac16,10" os=macOS | expected: non-empty
+RESULT ADR-0008-V8-write-truncates PASS "x" | expected: "x" (WRITE truncates)
+RESULT ADR-0010-V1-write-truncates PASS "x" | expected: "x"
+RESULT ADR-0008-V8-read-write-missing PASS open null=true file created=false | expected: fails on a missing file
+RESULT ADR-0010-V1-read-write-missing PASS open null=true file created=false | expected: fails on a missing file
+RESULT ADR-0010-V1-get_open_error RECORD 7 (File not found) | expected: record (likely ERR_FILE_NOT_FOUND)
+RESULT ADR-0008-V8-append PASS READ_WRITE open and close: "abc"; after seek_end + store_string: "abcdef" | expected: "abc" (no truncate) then "abcdef"
+RESULT ADR-0010-V1-append PASS "abc" then "abcdef" | expected: "abc" then "abcdef"
+RESULT ADR-0008-V8-flush PASS read while open after flush: "abcghi" | expected: "abcghi" (flush writes through)
+RESULT ADR-0010-V1-flush PASS "abcghi" | expected: "abcghi"
+RESULT ADR-0008-V8-store-bool PASS store_string:bool=true, store_line:bool=true, store_8:bool=true, store_32:bool=true, store_double:bool=true, store_buffer:bool=true | expected: bool from every store_*
+RESULT ADR-0010-V1-store-bool PASS store_string returns store_string:bool=true | expected: bool
+RESULT ADR-0010-V3-info RECORD user data dir: /Users/najeeb/Library/Application Support/Godot/app_userdata/adr-checks | expected: record only (V3 itself is a windowed run)
+RESULT ADR-0007-V6-regex PASS valid=true matches for floor(x), math.floor(x), .floor(, floorf(x), floor (x): [true, false, false, false, true] | expected: [true, false, false, false, true]
+RESULT ADR-0007-V6-dir-access PASS 97 files under res://types, nested probe found=true | expected: nested res:// tree listed headless
+RESULT ADR-0007-V6-classdb-scan RECORD 39 names from 12 ADR files | expected: record
+RESULT ADR-0007-V6-classdb-<36 project names: AppRoot ... X> PASS class_exists=false (all 36) | expected: false (no engine class of that name)
+RESULT ADR-0007-V6-classdb-control-Node PASS class_exists=true | expected: true (control)
+RESULT ADR-0007-V6-classdb-control-Input PASS class_exists=true | expected: true (control)
+RESULT ADR-0007-V6-classdb-control-Engine PASS class_exists=true | expected: true (control)
+RESULT ADR-0007-V6-connection-token PASS pack=OK save=OK token found=true | expected: a line starting [connection signal= (ResourceSaver headless; editor save not run)
+RESULT ADR-0002-W1-numbers PASS parse=OK types of 3, 3.0, 160: ["float", "float", "float"] | expected: float for all three
+RESULT ADR-0002-W1-token-NaN RECORD parse=Parse error data=<null> msg=Expected 'true', 'false', or 'null', got 'NaN' | expected: record whether it parses or fails (strict JSON fails)
+RESULT ADR-0002-W1-token-Infinity RECORD parse=Parse error data=<null> msg=Expected 'true', 'false', or 'null', got 'Infinity' | expected: record whether it parses or fails (strict JSON fails)
+RESULT ADR-0002-W1-token--Infinity RECORD parse=Parse error data=<null> msg=Expected ',' | expected: record whether it parses or fails (strict JSON fails)
+RESULT ADR-0002-W1-duplicate-key RECORD parse=OK data={ "a": 2.0 } msg= | expected: record which value survives, or whether it fails
+RESULT ADR-0002-W1-bom-string RECORD parse=Parse error data=<null> msg=Unexpected character | expected: record whether a leading U+FEFF is a parse error
+RESULT ADR-0002-W1-bom-file RECORD get_file_as_string keeps BOM=false; parse=OK data={ "a": 1.0 } | expected: record (Decision reads with get_file_as_string)
+RESULT ADR-0002-W1-null-document PASS parse=OK data=<null> | expected: OK with data null (the Error code decides)
+RESULT ADR-0002-W1-make_read_only RECORD is_read_only=true value after write=1 write finished=false errors=+1 | expected: record (optional guard: an in-place write is an error, value stays 1)
+RESULT ADR-0002-W3-sort-every-level PASS {"a":{"c":[{"y":2,"z":1}],"d":2},"b":1} | expected: {"a":{"c":[{"y":2,"z":1}],"d":2},"b":1}
+RESULT ADR-0002-W3-equal-snapshots PASS insertion orders differ; strings equal=true | expected: equal strings
+RESULT ADR-0002-W3-full-precision PASS value/next-ulp: 0.1/0.10000000000000002, 0.3333333333333333/0.33333333333333337, 2.5/2.5000000000000004, 1e-07/1.0000000000000001e-07, 123456.789/123456.78900000002, 3.0/3.0000000000000004, 16777217.0/16777217.000000004; round trip=true one-ulp differs=true | expected: every value parses back equal; a one-ulp change gives a different string
+RESULT ADR-0004-V4-0.1+0.2 PASS 0.30000000000000004 | expected: 0.30000000000000004 (binary64)
+RESULT ADR-0004-V4-16777217+1 PASS 16777218.00000000000000000 | expected: 16777218.0 (binary64)
+RESULT ADR-0004-V4-mask PASS 4294967295 | expected: 4294967295
+RESULT ADR-0004-V4-shift PASS 35184372080640 | expected: 35184372080640 (no overflow, 64-bit int)
+RESULT ADR-0004-V4-typed-math PASS floori(-0.5), floori(2.5), ceili(-0.5), ceili(2.1), absf(-2.5), sqrt(2), isnan(sqrt(-1)), is_finite(1e308*10) = [-1, 2, 0, 3, 2.5, "1.41421356237309515", true, false] | expected: [-1, 2, 0, 3, 2.5, 1.41421356237309515, true, false] (IEEE)
+RESULT ADR-0004-V4-to_ticks PASS [54, 300, 1, 0, 0, 8, 15, 23, 18, 18, 2, -2, 1, 0, 0, 0] | expected: [54, 300, 1, 0, 0, 8, 15, 23, 18, 18, 2, -2, 1, 0, 0, 0] (0.9, 5.0, 1/60, 0; 0.125 steps; 0.1*3 and 0.1+0.1+0.1; 0.025, -0.025; at 4: 0.125; NAN, INF, -INF)
+RESULT ADR-0004-V4-float-countdown PASS 301 | expected: 301 ticks (5.0 s by repeated subtraction of dt)
+RESULT ADR-0004-V4-SimRng(1) PASS [270369, 67634689, 2647435461] draws=3 | expected: [270369, 67634689, 2647435461], draw_count 3
+RESULT ADR-0004-V4-SimRng(0) PASS [1085196063, 2447379481, 2618286376] draws=3 | expected: [1085196063, 2447379481, 2618286376], draw_count 3
+RESULT ADR-0004-V4-SimRng(-1) PASS [253983, 4228382207, 1958451267] draws=3 | expected: [253983, 4228382207, 1958451267], draw_count 3
+RESULT ADR-0004-V4-clock-basic PASS 1/60->1 1/30->2 0.2->3 carry=1.5 ticks 0.6->0 reset=0.5 | expected: 1, 2, 3 with 1.5 ticks carry, 0 with reset to 0.5 tick
+RESULT ADR-0004-V4-clock-bad-delta PASS [0, 0, 0, 0] acc unchanged=true | expected: [0, 0, 0, 0], nothing changed
+RESULT ADR-0004-V4-clock-1800 PASS 3600 | expected: 3600 ticks from 1800 calls of 1/30
+RESULT ADR-0004-V4-clock-drop_backlog PASS 1 | expected: 1 (drop_backlog then advance(0.01))
+RESULT ADR-0004-V4-jitter-half-phase PASS frames with 0/1/2/3 ticks: [0, 600, 0, 0] | expected: 600 one-tick frames of 600
+RESULT ADR-0004-V4-jitter-zero-phase PASS frames with 0/1/2/3 ticks: [300, 0, 300, 0] | expected: some 0- and 2-tick frames (control: clock started at 0)
+RESULT ADR-0004-V4-round RECORD round(0.5)=1.0 round(2.5)=3.0 round(-0.5)=-1.0 | expected: record only
+RESULT ADR-0004-V4-arch RECORD x86_64=false arm64=true x86_32=false arm32=false 64=true get_architecture_name=arm64 | expected: record the call naming the CPU architecture
+RESULT ADR-0004-V4-unwind-debug RECORD caller continued=true callee continued=false (debug run; release leg is SP15) | expected: record (release export leg on the phone)
+RESULT ADR-0004-V9 PASS has_setting=true value=true | expected: key exists (believed default true)
+RESULT ADR-0009-V1 PASS Vector2(0.1,0).x==0.1 false (0.10000000149011612); Vector2(16777217,0).x==16777217 false (16777216.00000000000000000); single=true double=false | expected: both false (32-bit components)
+RESULT ADR-0008-V2 PASS 29.00000000000000000 | expected: 29.0 (Vector2(299, 500).x - 270 == 29)
+RESULT ADR-0009-V3 PASS is_finite NAN/INF/-INF [false, false, false]; NAN > 0, < 1, >= 0 [false, false, false] | expected: all false (IEEE)
+RESULT ADR-0008-V3 PASS is_finite(Vector2(NAN,0).x), is_finite(Vector2(INF,0).x) = [false, false] | expected: both false
+RESULT ADR-0008-V1d-nohold RECORD no crash; finished after emit=true freed after=true errors=+0  | expected: record (ADR asks what happens; a crash is also a result)
+RESULT ADR-0006-V1-emit-continues PASS emit["x", "y"]: A not called, B got [2], errors +1; emit[1.5, &"y"]: A [["int", "StringName", 1, &"y"]], B got [2], errors +0; emit[1, "y"]: A [["int", "StringName", 1, &"y"]], B got [2], errors +0; emit[1]: A not called, B got [1], errors +1 | expected: no type check at emit; a listener error is logged and the emit goes on to the next listener
+RESULT ADR-0006-V1-parse-time RECORD s.emit(1) reload=OK; s.emit("x", "y") reload=OK | expected: record (OK means the analyzer does not check emit())
+RESULT ADR-0006-V2 PASS names=["base_sig", "own_sig"] dict_with_name=true | expected: [base_sig, own_sig] only, Dictionary entries with a name key
+RESULT ADR-0006-V2-branch RECORD get_signal_list minus RefCounted: ["base_sig", "own_sig"] | expected: record (fallback form)
+RESULT ADR-0007-V3-counts PASS argument counts [0, 1, 6, 6] | expected: [0, 1, 6, 6]
+RESULT ADR-0007-V3-stringname PASS StringName | expected: TYPE_STRING_NAME for &"a"
+RESULT ADR-0007-V3-string-into-stringname PASS String | expected: TYPE_STRING for "a" into a StringName parameter (no conversion)
+RESULT ADR-0007-V3-declared-types PASS args[i].type [2, 3, 4, 21, 5, 1] | expected: [2, 3, 4, 21, 5, 1] (int, float, String, StringName, Vector2, bool)
+RESULT ADR-0006-V3-connection-list PASS connect=OK keys=["signal", "callable", "flags"] object_is_target=true method_type=StringName flags=0 | expected: signal, callable, flags keys; object is the target; method StringName; flags 0
+RESULT ADR-0006-V3-get_connections PASS size=1 keys=["signal", "callable", "flags"] | expected: same shape as get_signal_connection_list
+RESULT ADR-0006-V3-double-connect PASS second connect=Invalid parameter connections=1 errors=+1 | expected: ERR_INVALID_PARAMETER, an error pushed, nothing added
+RESULT ADR-0006-V3-deferred-flag PASS flags=1 (CONNECT_DEFERRED=1) | expected: non-zero
+RESULT ADR-0006-V3-tscn-persist PASS flags=34 | expected: includes CONNECT_PERSIST (2)
+RESULT ADR-0006-V3-freed-listener PASS connections before free=1 after=0 | expected: dropped automatically (0 after free)
+RESULT ADR-0006-V4-order PASS first ABC, after disconnect(B)+connect(B) ACB | expected: ABC then ACB
+RESULT ADR-0006-V4-connect-during-emit RECORD emit with M connecting D: MB; next emit: BD | expected: record ("MB" means the running emit used a snapshot)
+RESULT ADR-0006-V4-disconnect-during-emit RECORD emit with M disconnecting C: MBC | expected: record ("MBC" means a snapshot)
+RESULT ADR-0008-V1c PASS listener disconnected during the emit: log MBC | expected: yes, it still receives that emit (MBC)
+RESULT ADR-0006-V5-nested PASS A,T1,T2,B | expected: A,T1,T2,B (depth-first)
+RESULT ADR-0006-V5-re-emit RECORD R1,R2,B,B | expected: record (R1,R2,B,B means the re-emit is delivered in full)
+RESULT ADR-0008-V1a PASS A7,poke1,B7,returned errors=+0 | expected: A7,poke1,B7,returned with no error
+RESULT ADR-0008-V1b PASS visited=3 size=3 | expected: the loop sees the appended elements (3 and 3)
+RESULT ADR-0008-V1d-hold PASS finished after emit=true freed after=true | expected: finishes, then frees
+RESULT ADR-0008-V1e RECORD { "caller_started": 3, "caller_after": 3, "callee_entered": 3, "callee_after": 0 } errors=+3 | expected: ADR expects the caller to abort with its flags left set (debug run). caller_after 0 = caller aborted; 3 = only the callee stopped
+RESULT ADR-0009-V6-load-health PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0009-V6-load-status PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0009-V6-load-targetable PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0009-V6-load-enemy PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0009-V6-load-combat PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0009-V6-load-damage_event PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0006-V6-load-flow PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0006-V6-load-stage_result PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0010-V4-load-hero_sim PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0010-V4-load-pin_geometry PASS loads | expected: loads, no cyclic-reference error
+RESULT ADR-0008-V5-load-input_resolver PASS loads | expected: loads (Callable() defaults on _init and create)
+RESULT ADR-0008-V6-load-fake_resolver PASS loads | expected: loads (FakeResolver extends InputResolver)
+RESULT ADR-0009-V2g-load-read_context PASS loads | expected: loads
+RESULT ADR-0009-V6-run PASS damage_applied got [[2, 5]] | expected: [[2, 5]], no cyclic-reference error
+RESULT ADR-0006-V6-damage_applied PASS got [[2, 5]] | expected: enum SourceKind signal parameter delivers 2 (BURST)
+RESULT ADR-0009-V6-targetable PASS Enemy is Targetable=true health=true status=true spawn_id=3 | expected: Enemy extends Targetable; Health and Status fields set
+RESULT ADR-0006-V6-phase_changed PASS received [4] | expected: one value 4 (WON), TYPE_INT
+RESULT ADR-0006-V6-StageResult PASS outcome=4 | expected: 4 (WON); Flow returns StageResult typed Flow.Phase
+RESULT ADR-0006-V6-EMITTER_KEYS PASS size=3 typeof0=StringName typed=true read_only=true | expected: parses; 3 StringName values
+RESULT ADR-0009-V6-int-to-enum-var RECORD warning (int_as_enum, raised to error) | expected: record whether a bare int to Combat.SourceKind warns
+RESULT ADR-0009-V2a-static RECORD does not load (analyzer rejects) | expected: record; V2a-runtime decides if it loads
+RESULT ADR-0009-V2a-runtime PASS finished=false size=-1 errors=+1 | expected: an error
+RESULT ADR-0009-V2b PASS size=1 | expected: append of Enemy to Array[Targetable] succeeds
+RESULT ADR-0009-V2c PASS as Enemy -> instance def_id=b | expected: the instance
+RESULT ADR-0009-V2d PASS size=1 typed=true script_is_Targetable=true same_buffer=true | expected: assigns without error, keeps the element type
+RESULT ADR-0009-V2e PASS remove_at(1) -> [10, 30, 40]; erase(30) -> [10, 40] | expected: [10, 30, 40] then [10, 40]
+RESULT ADR-0009-V2f RECORD not observable from GDScript (no capacity read) | expected: recorded, not required
+RESULT ADR-0009-V2g PASS parses; wrong value stored=false finished=false errors=+3 | expected: parses and rejects a wrong value type
+RESULT ADR-0009-V7-no-super FAIL loads; new([1, &"x"]) -> instance spawn_id=0; errors=+0  (silent) | expected: an error (parse or run time), not a silent default
+RESULT ADR-0009-V7-no-init-noargs PASS loads; new([]) -> null; errors=+3 Error calling method from 'callv': 'GDScript::new': Method expected 1 argument(s), but called with 0. | expected: an error (parse or run time), not a silent default
+RESULT ADR-0009-V7-no-init-onearg PASS loads; new([5]) -> instance spawn_id=5; errors=+0  | expected: loads and builds with no error
+RESULT ADR-0009-V7-combat-no-forward FAIL loads; new([]) -> instance spawn_id=<null>; errors=+0  (silent) | expected: an error (parse or run time), not a silent default
+RESULT ADR-0009-V7-combat-forward PASS loads; new([null::null]) -> instance spawn_id=<null>; errors=+0  | expected: loads and builds with no error
+RESULT ADR-0010-V4-typeof PASS int | expected: TYPE_INT
+RESULT ADR-0010-V4-find_key PASS B (String) | expected: "B"
+RESULT ADR-0010-V4-keys RECORD ["OK", "A", "C", "B"] values [0, 1, 3, 2] | expected: record only
+RESULT ADR-0010-V4-override-explicit PASS loads; pick() -> 2 | expected: loads; pick() returns 2 (B)
+RESULT ADR-0010-V4-override-inferred RECORD loads; pick() -> 2 | expected: record (untyped override returning E.B)
+RESULT ADR-0010-V4-override-no-return PASS does not load | expected: does not load (4.7: typed return inherited, return needed)
+RESULT ADR-0010-V4-override-null PASS does not load | expected: does not load (return null fails for an enum return)
+RESULT ADR-0010-V4-cycle PASS try_pin(-1)=1 try_pin(1)=0 | expected: 1 (OFF_PATH) and 0 (OK); cyclic class_name reference parses and runs
+RESULT ADR-0008-V4-int-literal RECORD warning (int_as_enum, raised to error) | expected: possibly INT_AS_ENUM_WITHOUT_CAST
+RESULT ADR-0008-V4-cast-nomatch RECORD warning (int_as_enum, raised to error) | expected: possibly INT_AS_ENUM_WITHOUT_MATCH
+RESULT ADR-0008-V4-other-enum RECORD hard error (fails with the warning ignored too) | expected: record (another enum's value)
+RESULT ADR-0008-V4-runtime PASS received 5->5 -1->-1 other(7)->7 Variant 5->5 errors=+0 | expected: no runtime check: values arrive unchanged, no error
+RESULT ADR-0008-V5 PASS create().cb valid=false new().cb valid=false Callable().is_valid()=false | expected: defaults parse; is_valid() false
+RESULT ADR-0008-V5-resolver PASS create() ok=true dev_error valid=false | expected: create() through InputResolver.new(a, b, c); default Callable() invalid
+RESULT ADR-0008-V6-remove_at PASS ids after remove_at(1): [1, 3, 4] | expected: [1, 3, 4] (order kept)
+RESULT ADR-0008-V6-inner-typed PASS is_typed=true typed_script_is_Target=true | expected: Array[Target] with inner class element type
+RESULT ADR-0008-V6-fake-super PASS min=15.0 max=28.0 | expected: 15.0 and 28.0 (super(a, b) forwarded)
+RESULT ADR-0008-V6-fake-override PASS hit_test=7 calls=1 | expected: 7 and 1 (typed override with explicit return)
+RESULT ADR-0008-V6-fake-as-base PASS through base type: 7 | expected: 7 (override called through the base type)
+RESULT ADR-0008-V6-fake-create PASS is FakeResolver=false script is InputResolver=true | expected: plain InputResolver (statics are not virtual)
+RESULT ADR-0008-V6-override-no-return PASS does not load | expected: does not load (4.7: typed int return inherited)
+RESULT ADR-0011-V6 PASS [21, 24, 36] (PackedInt32Array) | expected: parses and reads [21, 24, 36] as PackedInt32Array
+RESULT ADR-0011-V6-fallback RECORD [21, 24, 36] typed=true | expected: fallback form also parses (record only)

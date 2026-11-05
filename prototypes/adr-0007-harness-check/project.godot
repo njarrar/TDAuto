@@ -1,0 +1,17 @@
+; PROTOTYPE - NOT FOR PRODUCTION. ADR-0007 V1 throwaway project.
+; run_v1.sh copies addons/gdUnit4 (6.2.0) from the repo root and one case
+; folder into tests/ per run.
+config_version=5
+
+[application]
+
+config/name="adr-0007-harness-check"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[gdunit4]
+
+report/verbose_orphans=true
+
+[rendering]
+
+renderer/rendering_method="mobile"

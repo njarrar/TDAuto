@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/integration/root/fixtures/fake_wrapper.gd" id="1_fake"]
+
+[node name="FakeWrapperFail" type="Node"]
+script = ExtResource("1_fake")
+attach_ok = false

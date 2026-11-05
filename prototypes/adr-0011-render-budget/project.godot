@@ -1,0 +1,25 @@
+; PROTOTYPE - NOT FOR PRODUCTION. ADR-0011 render budget (V1 to V5).
+; Mobile renderer, 540x960 canvas_items / keep, as ADR-0003 sets.
+; Run windowed, never headless: headless draws nothing.
+config_version=5
+
+[application]
+
+config/name="adr-0011-render-budget"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+run/flush_stdout_on_print=true
+
+[display]
+
+window/size/viewport_width=540
+window/size/viewport_height=960
+window/size/window_width_override=450
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
+
+[rendering]
+
+renderer/rendering_method="mobile"

@@ -1,0 +1,127 @@
+{
+  "stage": [
+    {
+      "id": "stage_1",
+      "rationale": "Prototype starter values; not balance. Rebalanced after first playable (user, 2026-11-05): start too poor, kills paid too little, enemies too tough.",
+      "scene_ref": "res://assets/stages/stage_1.tscn",
+      "wave_ids": [
+        "wave_1",
+        "wave_2",
+        "wave_3",
+        "wave_4",
+        "wave_5",
+        "wave_6"
+      ],
+      "starting_gold": 160,
+      "starting_lives": 10,
+      "early_call_seconds_per_gold": 1.8,
+      "path_points": [
+        [
+          -40,
+          210
+        ],
+        [
+          430,
+          210
+        ],
+        [
+          430,
+          400
+        ],
+        [
+          110,
+          400
+        ],
+        [
+          110,
+          570
+        ],
+        [
+          270,
+          570
+        ],
+        [
+          270,
+          980
+        ]
+      ],
+      "slot_positions": [
+        [
+          270,
+          305
+        ],
+        [
+          190,
+          485
+        ],
+        [
+          350,
+          485
+        ],
+        [
+          170,
+          700
+        ],
+        [
+          370,
+          700
+        ]
+      ],
+      "path_width": 72.0,
+      "requires_bend": true,
+      "hero_start": [
+        350,
+        800
+      ],
+      "pin_rect": {
+        "min": [
+          48,
+          174
+        ],
+        "max": [
+          492,
+          888
+        ]
+      },
+      "pin_exclusion": [
+        {
+          "a": [
+            456,
+            816
+          ],
+          "b": [
+            456,
+            888
+          ],
+          "radius": 60.0,
+          "hand": "right"
+        },
+        {
+          "a": [
+            84,
+            816
+          ],
+          "b": [
+            84,
+            888
+          ],
+          "radius": 60.0,
+          "hand": "left"
+        },
+        {
+          "a": [
+            186,
+            800
+          ],
+          "b": [
+            186,
+            800
+          ],
+          "radius": 60.0,
+          "hand": "both"
+        }
+      ],
+      "sell_refund_percent": 70
+    }
+  ]
+}

@@ -58,9 +58,11 @@ naming:
 commands:
   # TODO: build needs an export preset name; none exists until the Godot project has one.
   build: "[TO BE CONFIGURED]"
-  test: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
+  # E9: import first; a fresh clone has no class cache. `;` not `&&`: the first import can crash (exit 139) yet still write the cache.
+  test: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --import; "/Applications/Godot.app/Contents/MacOS/Godot" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
   run: '"/Applications/Godot.app/Contents/MacOS/Godot" --path . --windowed --resolution 540x960'
-  smoke: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless --quit-after 5'
+  # E8: --quit-after alone exits 0 on a parse error. Parse-check every src script first (exit 1 on any failure), then run 300 frames.
+  smoke: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --import; "/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . -s res://.claude/scripts/godot-parse-check.gd -- $(find src -name "*.gd" | sed "s|^|res://|") && "/Applications/Godot.app/Contents/MacOS/Godot" --headless --path . --quit-after 300'
 
 # MVP GDDs run at standard (PR-SCOPE 2026-11-01, user choice "Defer, merge, standard");
 # Vertical Slice and later systems inherit the project tier (full).
@@ -78,5 +80,5 @@ workflow_overrides:
 performance:
   target_framerate: 60
   frame_budget_ms: 16.6
-  draw_call_limit: 60        # art bible §8 proposal, Adreno 5xx class; verify on device
+  draw_call_limit: 60        # art bible §8 proposal, Adreno 5xx class; verify on the iPhone first (ADR-0012), Adreno at Android reopen
   memory_ceiling_mb: 256     # textures <= 16 MB

@@ -1,0 +1,10 @@
+{
+  "files": [
+    "../../../../../assets/data/towers.json",
+    "../../../../../assets/data/enemies.json",
+    "../../../../../assets/data/waves.json",
+    "../../../../../assets/data/stages.json",
+    "../../../../../assets/data/hero.json",
+    "../../../../../assets/data/input.json"
+  ]
+}
