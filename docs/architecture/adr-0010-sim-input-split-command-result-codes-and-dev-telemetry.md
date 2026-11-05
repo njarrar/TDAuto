@@ -1,7 +1,7 @@
 # ADR-0010: Sim/Input Split, Command Result Codes and Dev Telemetry
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -42,7 +42,7 @@ Tower and Hero each split into a headless `RefCounted` sim (`TowerSim`, `HeroSim
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: builder, method-Callable injection, `halted()`, `dev_error`, roots); ADR-0003 (the adapter's lifecycle and field units); ADR-0004 (Proposed: slots, `in_tick`, `to_ticks`, `SeedSource`, snapshot); ADR-0005 (Proposed: `ReadContext`, command context); ADR-0006 (Proposed: `in_dispatch`, observer rules, commit-then-emit); ADR-0008 (Proposed: resolver); ADR-0009 (Proposed: `Combat`, `targets()`). The Proposed ones must be Accepted before any story that implements this ADR |
+| **Depends On** | ADR-0001 (Accepted: builder, method-Callable injection, `halted()`, `dev_error`, roots); ADR-0003 (the adapter's lifecycle and field units); ADR-0004 (Accepted: slots, `in_tick`, `to_ticks`, `SeedSource`, snapshot); ADR-0005 (Accepted: `ReadContext`, command context); ADR-0006 (Accepted: `in_dispatch`, observer rules, commit-then-emit); ADR-0008 (Accepted: resolver); ADR-0009 (Accepted: `Combat`, `targets()`). All are Accepted (2026-11-05), so stories may start that implements this ADR |
 | **Delegates To** | ADR-0007: the lint rows named in Decision 12 and the baseline runner using `bot_id`; ADR-0011: rendering of arc, chip, ring, field tint and the view clock; nothing for Flow's command result codes: they are decided here (Decision 2, `Flow.StartResult`, `Flow.CallResult`) |
 | **Enables** | ADR-0007 lint L16 (named files), baseline file names, ADR-0011 views reading `chip_state()`, `aim_state()`, `tower_at()` |
 | **Blocks** | Every TowerSim, HeroSim, TowerInput, HeroInput and RunLog story; the bot baselines |

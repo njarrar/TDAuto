@@ -1,7 +1,7 @@
 # ADR-0009: Enemy Entity, Roster and Combat API
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -48,7 +48,7 @@ Combat & Damage and Enemy & Wave both leave open what an enemy is, how Health an
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: builder constructs the sims, method-Callable injection, no back-references, `halted()`, `DevErrorSink`); ADR-0002 (Proposed: Enemy, Wave and Stage records, `StringName` IDs, `path_points`); ADR-0004 (Proposed: the six-slot tick order, `to_ticks`, float policy); ADR-0005 (Proposed: `StatAccessor`, `ReadContext`, the `max_hp` exception). The Proposed ones must be Accepted before any story that implements this ADR |
+| **Depends On** | ADR-0001 (Accepted: builder constructs the sims, method-Callable injection, no back-references, `halted()`, `DevErrorSink`); ADR-0002 (Accepted: Enemy, Wave and Stage records, `StringName` IDs, `path_points`); ADR-0004 (Accepted: the six-slot tick order, `to_ticks`, float policy); ADR-0005 (Accepted: `StatAccessor`, `ReadContext`, the `max_hp` exception). All are Accepted (2026-11-05), so stories may start that implements this ADR |
 | **Delegates To** | ADR-0006 (signal names and payloads for `enemy_leaked`, `enemy_killed`, `wave_cleared`, `waves_completed`, `attack_fired`, `damage_applied`; commit-before-emit; the final name `waves_completed`; Flow's copy of the counters into the stage result; `wave_called_early`); ADR-0004 (the tick slots; this ADR fills slots 2, 3 and 6 internally); ADR-0010 (command result codes, gold on kill, RunLog, the Tower and Hero objects passed as `live_entity`, `hero_share` use in telemetry, the sims' tick bodies and step order); ADR-0011 (the enemy view and the combat view); ADR-0007 (test harness, fixture factories, and these lints: the writer-ownership lint for `removed`, `spawn_id`, `distance`, `position`, `segment`, `health`, `status` (ADR-0007 L22; L16, the float lint, also lists this ADR's `combat.gd` and `path_track.gd`); no stored `roster()` / `targets()` result; Combat files never name `Enemy`, `EnemyWave`, `TowerSim` or `HeroSim`; no `CONNECT_DEFERRED` under `src/battle/`; no `sort_custom` on the schedule, already covered by the lambda ban) |
 | **Enables** | ADR-0010 (Tower and Hero call this API), ADR-0011 (views read `roster()` and the Combat signals) |
 | **Blocks** | Every Combat & Damage story and every Enemy & Wave story (architecture.md Required ADRs: "ADR-0009 before any Combat or Enemy & Wave story"); the Tower and Hero targeting and damage stories |

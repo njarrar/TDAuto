@@ -6,7 +6,7 @@
 - Engine: Godot 4.7.2 (GDScript, Mobile renderer, Godot Physics 2D). Pinned in `docs/engine-reference/godot/VERSION.md`.
 - GDDs Covered (8 MVP systems): `data-config-pipeline`, `input-gesture-resolver`, `game-state-stage-flow`, `combat-damage`, `enemy-wave`, `tower-system`, `hero-system`, `battle-hud`. Context only: `game-concept`, `systems-index`.
 - Vertical Slice and Alpha systems (14 of 22) have no GDD yet. They appear in the layer map as reserved slots with the seams MVP code must leave for them. This document is revised when those GDDs exist.
-- ADRs Referenced: all 11 written (2026-11-05). ADR-0001 Accepted; ADR-0002 to ADR-0011 Proposed, each reviewed once by godot-specialist and technical-director with one fix round. Each ADR carries a "GDD and Registry Sync at Acceptance" list (ADR-0006 renames already applied, QQ-07 resolved); `/architecture-review` on 2026-11-05 (`architecture-review-2026-11-05.md`) registered TR-hero-016, TR-combat-015 and TR-hud-018 and applied the architecture.md edits the ADRs list; GDD and TR-registry wording edits wait for `/architecture-decision accept`. Numbers were assigned as proposed. Version 1 proposed 15; four pairs were folded together to cut scope for a solo developer. Every contract below that a GDD defers to an ADR is marked **ADR-pending**: it is a working default until the named ADR is Accepted; where an ADR has decided it, the text below carries the ADR's wording.
+- ADRs Referenced: all 11 written (2026-11-05). All 11 Accepted (ADR-0001 first; ADR-0002 to ADR-0011 on 2026-11-05 after `architecture-review-2026-11-05b.md` and a second fix round), each reviewed once by godot-specialist and technical-director with one fix round. Each ADR carries a "GDD and Registry Sync at Acceptance" list (ADR-0006 renames already applied, QQ-07 resolved); `/architecture-review` on 2026-11-05 (`architecture-review-2026-11-05.md`) registered TR-hero-016, TR-combat-015 and TR-hud-018 and applied the architecture.md edits the ADRs list; GDD and TR-registry wording edits wait for `/architecture-decision accept`. Numbers were assigned as proposed. Version 1 proposed 15; four pairs were folded together to cut scope for a solo developer. Every contract below that a GDD defers to an ADR is marked **ADR-pending**: it is a working default until the named ADR is Accepted; where an ADR has decided it, the text below carries the ADR's wording.
 - Technical Requirements: 128, all registered in `docs/architecture/tr-registry.yaml` (TR-data, TR-input, TR-state, TR-combat, TR-enemy, TR-tower, TR-hero, TR-hud); TR-hero-016, TR-combat-015 and TR-hud-018 were registered on 2026-11-05. Coverage by ADRs: 128 of 128 addressed, 10 by the Accepted ADR-0001 alone and 118 resting on at least one Proposed ADR (`requirements-traceability.md`).
 - TD-ARCHITECTURE: 2026-11-03, REVISED after CONCERNS (v1 findings B1 to B4 and A3 blocking, A1, A2, A4 to A10 advisory, applied in v2; A11 waits for the ADRs, QQ-08). **2026-11-04, v4: CONCERNS, no blocking findings.** Coverage 128 of 128, every HIGH engine domain owned. Advisory 1 to 8 applied in this revision: the chip's `phase_changed` listener is TowerInput (Data Flow 3), ADR-0011 is no longer deferrable (Priority), TR-hero-016's view clause is cited by ADR-0011, Rule 4 reworded, risk tally refreshed, RunLog placement named under ADR-0010, this header, and the TR-hud-017 registry reword.
 - LP-FEASIBILITY: 2026-11-03, REVISED after CONCERNS (v1 findings 1 to 7 blocking applied in v2, except finding 1's `sink` note: the Input GDD defines it as a TAP-only `bool`; advisory 8 to 15 applied or carried into the named ADRs). **2026-11-04, v4: CONCERNS.** Nothing infeasible or untestable; three interface decisions carried into ADR text before stories: the redraw key's type and pure merge function (ADR-0011), a dev-build wiring test for the log listeners (ADR-0007), and how view clocks freeze under Pause (ADR-0004). Non-blocking: Fatal-after-Won run-log question (ADR-0010); TR-hero-016 ordering confirmed; schedule still unestimated (QQ-11, producer).
@@ -457,7 +457,7 @@ signal viewport_resized()                   # a resize cancels input without pau
 # index, and the first closes it, even when a Control with mouse_filter = STOP lies under the drag.
 # Calls resolver.cancel() on pause, focus loss and viewport resize.
 ```
-Decided by ADR-0003 (Proposed; verified on desktop 4.7.2 by the spike and the echo-off probe, device runs D1 to D10 owed):
+Decided by ADR-0003 (Accepted; verified on desktop 4.7.2 by the spike and the echo-off probe, device runs D1 to D10 owed):
 1. Classes under `src/presentation/input/`: `InputAdapter` (the engine-facing shell, with the static `read_pointer(event) -> PointerSample`), `PointerGate` (`RefCounted`, the forwarded-index rules), the value types `PointerSample` and `FieldInsets`, and the pure static `DisplayContract.accepts(pos, margin, insets)` shared with HudLogic.
 2. Callback split: presses in `_unhandled_input`; moves, releases and cancels of forwarded pointers in `_input`.
 3. Every accepted press is forwarded with its own index; the resolver alone decides which pointer is active. `canceled` goes to `cancel_pointer`.
@@ -620,7 +620,7 @@ These run only in the editor or on a device. ADR-0007 Decision 11 lists them as 
 
 ### ADR Quality Check
 
-Eleven ADRs exist (`adr-dep-graph.sh` reports `ADRS: 11`, no cycle): ADR-0001 Accepted, ADR-0002 to ADR-0011 Proposed. `architecture-review-2026-11-05.md` performed the check for engine compatibility, version, post-cutoff flags, GDD linkage and cross-ADR conflict; its findings and the owed device and release-export runs are listed there.
+Eleven ADRs exist (`adr-dep-graph.sh` reports `ADRS: 11`, no cycle): all 11 Accepted. `architecture-review-2026-11-05.md` performed the check for engine compatibility, version, post-cutoff flags, GDD linkage and cross-ADR conflict; its findings and the owed device and release-export runs are listed there.
 
 ### Traceability Coverage Check
 
@@ -637,8 +637,8 @@ Added or reworded by the v4 pass, from the GDD text fixed on 2026-11-04 (the thr
 
 | Status | Count |
 |---|---|
-| Covered by an Accepted ADR | 10 |
-| Covered, resting on at least one Proposed ADR | 118 |
+| Covered by an Accepted ADR | 128 |
+| Covered, resting on at least one Proposed ADR | 0 |
 | Partial | 0 |
 | **Gap** | **0** |
 
@@ -653,16 +653,16 @@ Eleven ADRs address all 128 requirements, and all eleven are written (2026-11-05
 | ID (status) | Title | Layer | Depends on | Review label | TRs | Engine risk |
 |---|---|---|---|---|---|---|
 | ADR-0001 (Accepted) | App Lifecycle, Composition Root and Fatal Path | Foundation | none | P01, P06 | 17 | HIGH |
-| ADR-0002 (Proposed) | Catalogue Storage Format, Manifest and Validation | Foundation | ADR-0001 | P03 | 10 | HIGH |
-| ADR-0003 (Proposed) | Input Adapter, Display Stretch and Platform Lifecycle | Foundation | ADR-0001 | P05 | 11 | HIGH |
-| ADR-0004 (Proposed) | Fixed-Tick Clock, Tick Order, Frame Order and Determinism | Foundation | ADR-0001, ADR-0003 | P02, P07 | 21 | HIGH |
-| ADR-0005 (Proposed) | Stat Accessor and Read-Context Contract | Foundation | ADR-0001, ADR-0002 | P04 | 6 | LOW |
-| ADR-0006 (Proposed) | Battle Signal Contracts and View Allowlist | Foundation | ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0009 | P10 | 10 | MEDIUM |
-| ADR-0007 (Proposed) | Headless Test Harness, gdUnit4 and Layer Lint | Foundation | ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0009 | P08 | 6 | MEDIUM |
-| ADR-0008 (Proposed) | Input Resolver Core and Signal Contract | Foundation | ADR-0001, ADR-0002, ADR-0003, ADR-0006 | P09, part of P15 | 11 | MEDIUM |
-| ADR-0009 (Proposed) | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0002, ADR-0004, ADR-0005 | P11, P12 | 18 | MEDIUM |
-| ADR-0010 (Proposed) | Sim/Input Split, Command Result Codes and Dev Telemetry | Core | ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0008, ADR-0009 | P13, part of P15 | 11 | LOW |
-| ADR-0011 (Proposed) | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0003, ADR-0004, ADR-0006, ADR-0009, ADR-0010 | P14 | 7 | MEDIUM |
+| ADR-0002 (Accepted) | Catalogue Storage Format, Manifest and Validation | Foundation | ADR-0001 | P03 | 10 | HIGH |
+| ADR-0003 (Accepted) | Input Adapter, Display Stretch and Platform Lifecycle | Foundation | ADR-0001 | P05 | 11 | HIGH |
+| ADR-0004 (Accepted) | Fixed-Tick Clock, Tick Order, Frame Order and Determinism | Foundation | ADR-0001, ADR-0003 | P02, P07 | 21 | HIGH |
+| ADR-0005 (Accepted) | Stat Accessor and Read-Context Contract | Foundation | ADR-0001, ADR-0002 | P04 | 6 | LOW |
+| ADR-0006 (Accepted) | Battle Signal Contracts and View Allowlist | Foundation | ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0009 | P10 | 10 | MEDIUM |
+| ADR-0007 (Accepted) | Headless Test Harness, gdUnit4 and Layer Lint | Foundation | ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0008, ADR-0009, ADR-0010, ADR-0011 | P08 | 6 | MEDIUM |
+| ADR-0008 (Accepted) | Input Resolver Core and Signal Contract | Foundation | ADR-0001, ADR-0002, ADR-0003, ADR-0006 | P09, part of P15 | 11 | MEDIUM |
+| ADR-0009 (Accepted) | Enemy Entity, Roster and Combat API | Core | ADR-0001, ADR-0002, ADR-0004, ADR-0005 | P11, P12 | 18 | MEDIUM |
+| ADR-0010 (Accepted) | Sim/Input Split, Command Result Codes and Dev Telemetry | Core | ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0008, ADR-0009 | P13, part of P15 | 11 | LOW |
+| ADR-0011 (Accepted) | Battle Field Rendering and Draw-Call Budget | Presentation | ADR-0001, ADR-0003, ADR-0004, ADR-0006, ADR-0009, ADR-0010 | P14 | 7 | MEDIUM |
 
 ### What each ADR decides and which requirements it covers
 
@@ -697,7 +697,7 @@ Covers (18): TR-combat-001, TR-combat-002, TR-combat-003, TR-combat-004, TR-comb
 **ADR-0010 Sim/Input Split, Command Result Codes and Dev Telemetry** (Core). Decides: HeroSim/TowerSim vs HeroInput/TowerInput, result enums with OK = 0, gold ownership, bot equivalence, run counters and the run log's schema and flush order. RunLog is wrapper-built (absent headless, and only in a debug build); the wrapper calls `RunLog.advance(view_dt)` and `RunLog.flush()` once per frame and HudLogic has no RunLog duty; its schema and flush-order tests run headless against a fake sink (a method Callable on a fake class, since ADR-0001 bans capturing lambdas) and a fake `advance`. Settled (Decision 13): a Fatal that overrides a Won (Flow Rule 18) drops both records, including a Won record buffered in the same tick; the test case is "Won committed, then Fatal before the first `advance`".
 Covers (11): TR-tower-001, TR-tower-002, TR-tower-008, TR-tower-009, TR-hero-001, TR-hero-002, TR-hero-009, TR-hero-012, TR-hero-015, TR-hud-013, TR-hud-018.
 
-**ADR-0011 Battle Field Rendering and Draw-Call Budget** (Presentation). Decided; Status Proposed. The HUD Controls sit in the one `CanvasLayer` ADR-0003 Decision 9 places. Covers: single _draw nodes, pools, draw order, path polygon, HUD draw budget, the redraw key and where it is computed: its type (a `PackedInt32Array` or one integer from the quantiser, not a per-frame `Dictionary`), a pure merge function (static or a small `RefCounted`) that takes HudLogic's part and HeroInput's reads and returns the key so gdUnit4 can test it with fakes, HudField only comparing the key to the last one and calling `queue_redraw()`, one shared quantiser (1/60 fill steps, seconds to digits) tested directly, and a table-driven test that changes each input one at a time and asserts the key changes, because "holds every value `_draw` reads" is a completeness claim a single key test cannot prove (criterion 6 covers HudLogic's part only; screenshots keep the rest); the view clocks that keep running after an outcome (including TR-hero-016's view clause); no hit-flash shader, polygon markers (Decision 5; QQ-10 closed).
+**ADR-0011 Battle Field Rendering and Draw-Call Budget** (Presentation). Decided; Status Accepted. The HUD Controls sit in the one `CanvasLayer` ADR-0003 Decision 9 places. Covers: single _draw nodes, pools, draw order, path polygon, HUD draw budget, the redraw key and where it is computed: its type (a `PackedInt32Array` or one integer from the quantiser, not a per-frame `Dictionary`), a pure merge function (static or a small `RefCounted`) that takes HudLogic's part and HeroInput's reads and returns the key so gdUnit4 can test it with fakes, HudField only comparing the key to the last one and calling `queue_redraw()`, one shared quantiser (1/60 fill steps, seconds to digits) tested directly, and a table-driven test that changes each input one at a time and asserts the key changes, because "holds every value `_draw` reads" is a completeness claim a single key test cannot prove (criterion 6 covers HudLogic's part only; screenshots keep the rest); the view clocks that keep running after an outcome (including TR-hero-016's view clause); no hit-flash shader, polygon markers (Decision 5; QQ-10 closed).
 Covers (7): TR-combat-011, TR-combat-015, TR-enemy-015, TR-tower-015, TR-hud-001, TR-hud-015, TR-hud-017.
 
 ### Priority

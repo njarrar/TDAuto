@@ -1,7 +1,7 @@
 # ADR-0002: Catalogue Storage Format, Manifest and Validation
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05

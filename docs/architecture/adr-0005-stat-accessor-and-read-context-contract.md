@@ -1,7 +1,7 @@
 # ADR-0005: Stat Accessor and Read-Context Contract
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -49,7 +49,7 @@ Probe results on the installed 4.7.2 binary (headless, debug build, 2026-11-05; 
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted): `build()` constructs the one accessor and `Battle` holds it; the fatal route and the `halted()` rule. ADR-0002 (Proposed; must be Accepted before this ADR is Accepted): the record classes, `StringName` IDs, the schema as the single source of int/float types, `Catalogue` lookups, `is_tower()` and `level_count()`. |
+| **Depends On** | ADR-0001 (Accepted): `build()` constructs the one accessor and `Battle` holds it; the fatal route and the `halted()` rule. ADR-0002 (Accepted; must be Accepted before this ADR is Accepted): the record classes, `StringName` IDs, the schema as the single source of int/float types, `Catalogue` lookups, `is_tower()` and `level_count()`. |
 | **Enables** | ADR-0009 (Enemy & Wave read enemy stats through this contract and hold a `ReadContext` per enemy), ADR-0010 (TowerSim, HeroSim and HudLogic read through it), ADR-0007 (the spy accessor and spy failure handler are test doubles of this contract). |
 | **Delegates To** | ADR-0001: where `Battle` holds the accessor and which `fatal` Callable `build()` injects (already decided there; restated). ADR-0002: the record classes, the schema and the field-type lookup the tie test calls. ADR-0006: ratifies in the Flow signal contract that `Flow.phase()` returns `FATAL` whenever the battle's `FatalLatch.is_set` is true (Decision 3), and owns commit-before-emit. ADR-0007: the test harness, where the fixture factory and the spy classes live, and the string-literal-key lint (the accessor under `src/battle/` is already covered by ADR-0001's lint set). ADR-0009: `Targetable` and the `Enemy` type (this ADR types `live_entity` loosely; ADR-0009 may narrow the documentation, not the weakness), when an enemy's context is created and the one `max_hp` seeding call. ADR-0010: the `HALTED` command results, and whether Tower and Hero instances are objects a context can reference. A future Stat GDD and ADR (Vertical Slice): the modifier resolver behind the same two methods. |
 | **Blocks** | The stat accessor story (Data & Config) and every consumer story that reads a stat: Tower, Hero, Enemy & Wave, Battle HUD. No stories exist yet. |

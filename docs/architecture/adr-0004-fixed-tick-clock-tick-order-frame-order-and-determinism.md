@@ -1,7 +1,7 @@
 # ADR-0004: Fixed-Tick Clock, Tick Order, Frame Order and Determinism
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -48,7 +48,7 @@ Probe results on the installed 4.7.2 binary (debug build, macOS arm64 host; `pro
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: the wrapper that holds the Clock, `Battle`, `build()`, `stop_clock()`, teardown), ADR-0003 (Proposed; **provisional premise**: input is flushed before `_process` on desktop; the device confirmation, D1 and D3, is owed and a failure reopens Decision 3). |
+| **Depends On** | ADR-0001 (Accepted: the wrapper that holds the Clock, `Battle`, `build()`, `stop_clock()`, teardown), ADR-0003 (Accepted; **provisional premise**: input is flushed before `_process` on desktop; the device confirmation, D1 and D3, is owed and a failure reopens Decision 3). |
 | **Enables** | ADR-0005 (a bad accessor read is a `fatal()`, which the tick slots check), ADR-0006 (signals are emitted synchronously inside the slots of Decision 2), ADR-0007 (the harness drives `tick` and the baselines), ADR-0009 (EnemyWave `advance` and `reap` slots), ADR-0010 (commands run between ticks; RunLog flush is driven by `advance`), ADR-0011 (frame-clock rule for views). |
 | **Delegates To** | ADR-0006: signal names and payloads, including the type of `phase_changed`'s value that the wrapper reads to detect Paused, and the once-only `phase_changed(FATAL)` emit and its timing (this ADR fixes only that `Flow.phase()` reads FATAL from the moment the latch is set, Decision 5). ADR-0007: the harness, the baseline test runner, the snapshot-equality runner and the lints named below (no `_physics_process`; no read or set of `Engine.time_scale`, `physics_ticks_per_second`, `max_physics_steps_per_frame` or `physics_jitter_fix`; no `Vector2` method or operator in PinGeometry or the range-check helpers; no `randi`/`randf`/`randomize`/`shuffle` global call under `src/`; no `randfn` or transcendental call (`sin`, `cos`, `atan2`, `pow`, `exp`, `log`) under `src/battle/`), and a runner mode that writes a missing baseline as a CI artifact for review and commit. ADR-0009: the enemy reap internals, the roster ordering `advance` and `reap` use, and its range-check files (`src/battle/combat.gd`, `src/battle/path_track.gd`), which ADR-0007 L16 lists with ADR-0010's `src/battle/hero/pin_geometry.gd` and `src/battle/hero_sim.gd`. ADR-0010: command result codes, the RunLog schema (it records the seed and the attempt index) and RunLog's flush on `advance`. ADR-0011: the hero view's outcome rows on the frame clock (TR-hero-016's last clause), the Combat view's `ClearanceWindow` class design, the redraw key (which must read the Call button's bonus and seconds-left in the view step after the ticks, Decision 7), and whether to interpolate or accept judder between ticks and frames. |
 | **Blocks** | Every Game State & Stage Flow story that touches the tick (Clock, Pause, Fatal), the first Enemy & Wave, Tower and Hero stories (they need the tick order), the bot baselines. |

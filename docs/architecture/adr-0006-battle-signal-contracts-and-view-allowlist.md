@@ -1,7 +1,7 @@
 # ADR-0006: Battle Signal Contracts and View Allowlist
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -31,7 +31,7 @@ Battle systems talk through signals, and the GDDs, ADR-0004, ADR-0005 and ADR-00
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: Decisions 3, 5 and 6, the connection site and the no-flags rule); ADR-0004 (Proposed: Decision 5 `Flow.phase()` reads FATAL from the latch, Decision 6 the slot order, Decision 7 commands between ticks, Decision 9 `view_dt`); ADR-0005 (Proposed: Decision 3 the FATAL read, the tower-level commit); ADR-0009 (Proposed: roster, reap, `deliver`, and its delegations to this ADR); ADR-0002 (`StringName` record IDs) |
+| **Depends On** | ADR-0001 (Accepted: Decisions 3, 5 and 6, the connection site and the no-flags rule); ADR-0004 (Accepted: Decision 5 `Flow.phase()` reads FATAL from the latch, Decision 6 the slot order, Decision 7 commands between ticks, Decision 9 `view_dt`); ADR-0005 (Accepted: Decision 3 the FATAL read, the tower-level commit); ADR-0009 (Accepted: roster, reap, `deliver`, and its delegations to this ADR); ADR-0002 (`StringName` record IDs) |
 | **Enables** | ADR-0007 (recording fakes, listener-count test runner), ADR-0008 (resolver signal names), ADR-0009 (final `waves_completed` name), ADR-0010 (command guard, RunLog listeners), ADR-0011 (view registration) |
 | **Blocks** | Every Flow, EnemyWave, Combat, TowerSim and HeroSim story that declares, emits or connects a signal; every HudLogic, TowerInput and view story that connects one |
 | **Delegates To** | ADR-0007: the recording-fake classes, the payload type assertions, the listener-count test runner and the per-build-configuration wiring test mechanism. ADR-0008: the resolver's signal payloads (names fixed here). ADR-0010: command result codes including the re-entrancy refusal code (Flow's own enums, `Flow.StartResult` and `Flow.CallResult`, are decided in ADR-0010 Decision 2), RunLog schema and flush order, TowerInput's `slot_tapped` and `tower_inspected` payload details. ADR-0011: view classes, their `on_*` handlers, the redraw key, view-clock rules, and their rows in the Observer table. ADR-0009: `DamageEvent` fields and `Combat.SourceKind` values (this ADR fixes only the signal signature that carries them). ADR-0010 inherits TowerSim as the gold owner and the `gold_changed` emitter (architecture Module Ownership and Data Flow 3; the brief grouped it under Flow and the architecture wins) and the two TowerSim reactor edges; moving gold is a revision of this ADR; the refusal code for a guarded command called while `in_dispatch()` is true is also ADR-0010's. ADR-0011 inherits the view polling contract of Decision 5 (roster diff, `attack_fired`, `damage_applied(killed)`) and its two limits. ADR-0007 also owns the lints named in Decisions 1, 3 and 10: no `connect(func` under `src/presentation/` or `src/app/`, no `.deliver(` outside `src/battle/`, no `get_connections()` or `get_signal_connection_list()` under `src/`. |

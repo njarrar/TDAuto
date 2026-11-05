@@ -1,7 +1,7 @@
 # ADR-0008: Input Resolver Core and Signal Contract
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -31,7 +31,7 @@ The Input & Gesture Resolver GDD fixes the behaviour (two frozen winners, one po
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: Decision 4 wrapper builds the resolver and a null `create` is a fatal; Decision 5 method-Callable injection, no flags; Decision 8 `dev_error`); ADR-0002 (`InputRecord` supplies `drag_slop`, `tap_slop`; Decision for `tap_not_above_drag` says the resolver repeats it in `validate()`); ADR-0003 (Proposed, a **provisional premise** until its device runs D1 and D3 pass: the adapter and `PointerGate` call the five resolver methods; `src/presentation/input/`); ADR-0006 (Proposed: Decision 5 fixed the signal names, Decision 6 and 7 the payload and ID types, Decision 14 the pitfalls) |
+| **Depends On** | ADR-0001 (Accepted: Decision 4 wrapper builds the resolver and a null `create` is a fatal; Decision 5 method-Callable injection, no flags; Decision 8 `dev_error`); ADR-0002 (`InputRecord` supplies `drag_slop`, `tap_slop`; Decision for `tap_not_above_drag` says the resolver repeats it in `validate()`); ADR-0003 (Accepted, a **provisional premise** until its device runs D1 and D3 pass: the adapter and `PointerGate` call the five resolver methods; `src/presentation/input/`); ADR-0006 (Accepted: Decision 5 fixed the signal names, Decision 6 and 7 the payload and ID types, Decision 14 the pitfalls) |
 | **Enables** | ADR-0007 (resolver unit-test seam, recording fake, signal-set test), ADR-0010 (TowerInput, HeroInput and HudLogic register against this API; the RunLog/GestureLog consume the ring), ADR-0011 (ring and chip visuals read resolver-driven state through HudLogic's redraw key, ADR-0011 Decision 8, rather than reacting to `pressed`, `tapped`, `ground_tapped`; HudLogic is the listener) |
 | **Blocks** | Every InputResolver, TowerInput, HeroInput and HudLogic story that registers a target or connects a gesture signal; the Pillar 4 phone test (P1) |
 | **Delegates To** | ADR-0010: hit-radius and priority constants on each input object (the resolver has none), the registrations list (authoritative; Decision 11's table and registrations are informative), the GestureLog harness (Rule 13) and the RunLog schema. ADR-0003: adapter, `PointerGate`, `DisplayContract.accepts`, lifecycle and the `cancel()` callers. ADR-0006: the signal emit model. ADR-0007: the runner, the recording-fake classes, the lints (including L31 for `InputEvent` and `Time` reads in `input_resolver.gd`) and the per-build wiring test, including one listener per id-bearing signal per owner class. ADR-0011: ring and chip visuals. Tower System: the 1.5 s cost-chip window and the 200 ms bounce guard (never the resolver's). |

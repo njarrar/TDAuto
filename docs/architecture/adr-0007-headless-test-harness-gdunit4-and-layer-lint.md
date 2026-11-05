@@ -1,7 +1,7 @@
 # ADR-0007: Headless Test Harness, gdUnit4 and Layer Lint
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -31,7 +31,7 @@ Nine earlier ADRs delegate tests, lints and CI checks to this one, and no harnes
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (Accepted: composition root, roots, `build()` callable from tests); ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0008, ADR-0009, ADR-0010, ADR-0011 (Proposed: each delegates checks collected in Decision 7; ADR-0003 and ADR-0008 also supply lints and fixtures, ADR-0010 and ADR-0011 supply rules L16, L32 to L34, L36 and L37). Ordering: this ADR depends on every other ADR and is accepted last; ADR-0010 and ADR-0011 delegate to it without depending on it, which keeps the graph acyclic |
+| **Depends On** | ADR-0001 (Accepted: composition root, roots, `build()` callable from tests); ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0008, ADR-0009, ADR-0010, ADR-0011 (Accepted: each delegates checks collected in Decision 7; ADR-0003 and ADR-0008 also supply lints and fixtures, ADR-0010 and ADR-0011 supply rules L16, L32 to L34, L36 and L37). Ordering: this ADR depends on every other ADR and is accepted last; ADR-0010 and ADR-0011 delegate to it without depending on it, which keeps the graph acyclic |
 | **Enables** | Every Logic and Integration story (a place to put tests), `/test-setup`, `/create-control-manifest` |
 | **Blocks** | First story that writes a test; first `.gd` under `src/` (the lint and parse check must exist before it, per ADR-0001's Ordering Note) |
 | **Delegates To** | `/test-setup`: scaffolding the directories, `tests.yml`, the stub scripts of Decision 12. ADR-0010 (taken up): the RunLog fake sink class (`FakeRunLogSink`, `tests/support/`), the command-script format, the bot roster (five ids, Decision 6) and the pin-geometry files of L16 (no `owed:` entry). ADR-0011 owns evidence file naming and screenshot capture. ADR-0011: the screenshot capture method and file naming under `production/qa/evidence/`. |

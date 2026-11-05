@@ -1,7 +1,7 @@
 # ADR-0011: Battle Field Rendering and Draw-Call Budget
 
 ## Status
-Proposed
+Accepted (2026-11-05, on the owner's instruction after architecture-review-2026-11-05b and fix round 2; the Verification Required items and device runs stay open and are tracked by their stories)
 
 ## Date
 2026-11-05
@@ -44,7 +44,7 @@ Presentation leaves open how the battle field is drawn, how many draw calls it m
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (composition root, wrapper `setup(battle, dev_telemetry)`); ADR-0003 (Accepted or Proposed per its file: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
+| **Depends On** | ADR-0001 (composition root, wrapper `setup(battle, dev_telemetry)`); ADR-0003 (Accepted: Decision 9, one `CanvasLayer` for every HUD Control, only `HudModals` STOP; field units); ADR-0004 (Decision 8 `view_dt`, `VIEW_DT_MAX`; the frame steps); ADR-0006 (view allowlist, polling contract, `modal_changed`); ADR-0009 (`roster()`, `targets()`, `removed`, reused buffers); ADR-0010 (`slot_tapped`, `tower_inspected`, HeroInput reads, `ChipWindow`, `early_call_bonus`). Proposed ones must be Accepted before any story that implements this ADR |
 | **Delegates To** | ADR-0007 (lints named in Decision 13; test runner for the pure units); ADR-0010 (the sims' read methods exist as named; input; commands); ADR-0004 (clock, ticks); `technical-artist` / `art-director` (the ring width bias, glyph shapes, tint wording, V3 and V7); `ui-programmer` (HudTopBand Controls) |
 | **Enables** | Every Presentation story: HudField, field views, Combat view, hero view, outcome presentation; ADR-0007's evidence items |
 | **Blocks** | The first HudField or Combat-view story (architecture.md Required ADRs). Only Decision 11's numbers stay provisional |
