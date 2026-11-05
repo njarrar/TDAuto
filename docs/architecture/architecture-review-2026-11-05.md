@@ -215,8 +215,8 @@ Verification state: `verification-results.md` Run 1 (2026-11-04, macOS arm64) ha
 | E4 | Which lifecycle notifications fire on iOS, and in what order, is unsourced; the design (any trigger pauses, never auto-resume) tolerates it. | 0003 D6, SP10 | HIGH | judgment |
 | E5 | Whether `_gui_input` receives touch events directly is unsourced; branches are specified. | 0003 D2, D3, D8 | HIGH | judgment |
 | E7 | A 60 Hz sim without interpolation judders on 120 Hz iPhones. Pull ADR-0004 V3 forward or cap at 60 fps. | 0004 | MEDIUM | judgment |
-| E8 | `commands.smoke` uses `--quit-after`, which exits 0 on a parse error, so it is not a smoke check. | project.yaml | MEDIUM | verified |
-| E9 | `commands.test` fails on a fresh clone unless the project is imported first; first import can crash (exit 139). | project.yaml, 0007 | MEDIUM | verified |
+| E8 | `commands.smoke` uses `--quit-after`, which exits 0 on a parse error, so it is not a smoke check. | project.yaml | MEDIUM | verified; fixed 2026-11-05 (user yes): smoke now parse-checks src first |
+| E9 | `commands.test` fails on a fresh clone unless the project is imported first; first import can crash (exit 139). | project.yaml, 0007 | MEDIUM | verified; fixed 2026-11-05 (user yes): test imports first |
 | E16 | Mobile renderer compiles canvas pipelines on first draw; consider Shader Baker for the iOS export. | 0011 | LOW | judgment |
 
 Confirmed sound: ticking in `_process` with an accumulator (ADR-0004), explicit stretch keys (ADR-0003), method Callables only (ADR-0001, ADR-0006; verified in Run 1), gdUnit4 headless command and exit codes (ADR-0007).
