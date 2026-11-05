@@ -15,7 +15,7 @@ signal tower_inspected(slot_index: int)
 const SLOT_RADIUS: float = 36.0
 const SLOT_PRIORITY: int = 200
 ## Radius of each panel button.
-const CHIP_RADIUS: float = 34.0
+const CHIP_RADIUS: float = 36.0
 const CHIP_PRIORITY: int = 300
 ## Panel buttons sit this far above the tower's centre.
 const CHIP_OFFSET_Y: float = 76.0
