@@ -180,7 +180,7 @@ accessibility notes match each pattern's accessibility line.
 **Status**: Draft
 
 **Specification**:
-- The adapter rejects a press inside `edge_reject_margin` (0 to 48 units) and inside the platform safe-area or gesture insets.
+- The adapter rejects a press inside `edge_reject_margin` (0 to 36 units) and inside the platform safe-area or gesture insets.
 - Burst button: hit box ends at least 24 dp from the side edge (Android back-swipe zone, unverified) and 16 dp above the OS gesture inset.
 - Start/Call may sit in the bottom band only in Build and Intermission, clear of the burst button and build slots.
 - The bottom 30% of the screen holds only the burst button and the field, so the pinned thumb never hides the lower lane.

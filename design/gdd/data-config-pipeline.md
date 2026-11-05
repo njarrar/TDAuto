@@ -51,7 +51,7 @@ The Data & Config Pipeline is the read-only catalogue of every authored gameplay
 | `intermission_duration` | float, seconds | 0 | 600 | Enemy & Wave |
 | `drag_slop` | float, field units | 8 | 30 | Input |
 | `tap_slop` | float, field units | 16 | 34 | Input; must also exceed `drag_slop` (Rule 7's cross-field check) |
-| `edge_reject_margin` | float, field units | 0 | 48 | Input; a Battle HUD content rule keeps it within the burst button's clearance |
+| `edge_reject_margin` | float, field units | 0 | 36 | Input; the Battle HUD burst rule requires m ≤ 36 (Input Formulas, Input record domains) |
 | `count` | int | 1 | 500 | Enemy & Wave |
 | `starting_lives` | int | 1 | 1,000 | Enemy & Wave |
 | `path_width` | float, field units | above 0 | 2,000 | Enemy & Wave |

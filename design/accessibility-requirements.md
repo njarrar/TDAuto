@@ -117,7 +117,7 @@ All rows come from art bible section 4 ("Colour-blind safety") or from the GDDs.
 | Hold-to-press alternatives | Standard | All hold inputs | Not applicable | No input is a timed hold. The two drags (pin, aim) are held only while moving; neither needs a duration. |
 | Rapid input alternatives | Standard | | Not applicable | No input needs repeated presses. |
 | Input timing adjustments | Standard | Upgrade chip window (1.5 s) | Not Started (Alpha) | The chip's 1.5 s commit window is the one timed input. Provide a window multiplier of 1x (1.5 s), 2x (3 s), 3x (4.5 s). The window is a safeguard, not a threat: an expired chip loses nothing. The tower range ring (1.5 s) is information and also follows the setting. The 300 ms arming delay (P-08) protects the player and needs no setting. |
-| Edge and gesture conflicts | Basic | Screen edges | Designed; verify on device | Presses inside `edge_reject_margin` (0 to 48 units) and platform insets are rejected. Burst hit box ends at least 24 dp from the side (Android back-swipe, unverified) and 16 dp above the gesture inset. |
+| Edge and gesture conflicts | Basic | Screen edges | Designed; verify on device | Presses inside `edge_reject_margin` (0 to 36 units) and platform insets are rejected. Burst hit box ends at least 24 dp from the side (Android back-swipe, unverified) and 16 dp above the gesture inset. |
 | Aim assist | n/a | | n/a | The burst is aimed on a preview with a generous cancel zone. No aim assist exists or is planned. |
 | Platforming assists | n/a | | n/a | No platforming. |
 | HUD repositioning | Comprehensive | | Out of scope | See Known Intentional Limitations. Handedness covers the one control that moves. |

@@ -1,10 +1,10 @@
 # Input & Gesture Resolver
 
-> **Status**: In Review (full design review 2026-11-04, NEEDS REVISION; its 5 blocking items applied the same day, re-review pending; see the review log)
+> **Status**: Approved 2026-11-05 (fifth design review, full, NEEDS REVISION on 4 contradictions; fixed and spot-checked the same day; see the review log)
 > **Design Review**: NEEDS REVISION 2026-11-01 three times (the third, lean and not independent, found one blocker: Dead sink-only press replaceable, applied) (9, then 8 blocking), revised each time the same day. Second pass: tap_slop whenever a real tap winner exists, palm replacement extended, burst TAP sink, phone test moved to the Pillar 4 milestone gate and counted per gesture (all user decisions); queue, snapshot, validation and adapter fixes.
 > **Creative Director Review (CD-GDD-ALIGN)**: REVISED 2026-11-01 — CONCERNS applied (unprompted fires count, visible cancel state, reticle on `drag_started` and press response, verb claim corrected; burst tap later removed by the drag-only decision)
 > **Author**: njarrar + agents
-> **Last Updated**: 2026-11-04
+> **Last Updated**: 2026-11-05
 > **Last Verified**: 2026-11-01
 > **Implements Pillar**: Pillar 4 (Thumb-First) directly; enabling system for Pillar 2 (the hero's pin and aimed burst are its two drags)
 
@@ -75,7 +75,7 @@ Towers and slots share a tier so a tower cannot steal a touch aimed at the slot 
 
 **Deliberately not built for MVP.** Rectangular targets, long press, a resolver-level cancel gesture, display-density handling, a polled drag position, per-frame drag signals, two-touch gestures, a tap duration limit, a runtime slop setter and a hit-area scale multiplier (both reserved in prose for Settings & Accessibility at Alpha: the first changes a constructor argument into a setter, the second multiplies `radius` in the hit test; neither changes a signal).
 
-→ Becomes an ADR: the adapter node and which Godot path feeds it (presses may take `_unhandled_input`, but moves and releases of the active index must be read where a `mouse_filter = STOP` Control cannot swallow them mid-drag, or the adapter must synthesise the matching `cancel_pointer`); the adapter runs with `PROCESS_MODE_ALWAYS` so a pause menu cannot strand a gesture; the adapter, not Game State stories, owns the lifecycle notifications that call `cancel()` and the `size_changed` hook; a mouse pointer index that cannot collide with touch index 0; `InputEventScreenTouch`/`ScreenDrag` field names and the `canceled` flag; the mouse-from-touch and touch-from-mouse emulation settings (one event family only, or every press arrives twice); whether event positions are already in the stretched 540×960 space (field units are viewport space only with no Camera2D; a `keep` stretch delivers letterbox positions outside the field), which stretch mode applies (the root `project.godot` has none yet) and that `DisplayServer.get_display_safe_area()` returns window pixels; which lifecycle notifications fire on each platform; that Controls with `mouse_filter = STOP` consume events before the adapter sees them. **None of these is in the pinned engine reference (`modules/input.md` does not cover touch), so the ADR verifies each against live 4.7 docs before relying on it.**
+→ Becomes an ADR: the adapter node and which Godot path feeds it (presses take `_unhandled_input`, which Battle HUD Rule 2 depends on, but moves and releases of the active index must be read where a `mouse_filter = STOP` Control cannot swallow them mid-drag, or the adapter must synthesise the matching `cancel_pointer`); the adapter runs with `PROCESS_MODE_ALWAYS` so a pause menu cannot strand a gesture; the adapter, not Game State stories, owns the lifecycle notifications that call `cancel()` and the `size_changed` hook; a mouse pointer index that cannot collide with touch index 0; `InputEventScreenTouch`/`ScreenDrag` field names and the `canceled` flag; the mouse-from-touch and touch-from-mouse emulation settings (one event family only, or every press arrives twice); whether event positions are already in the stretched 540×960 space (field units are viewport space only with no Camera2D; a `keep` stretch delivers letterbox positions outside the field), which stretch mode applies (the root `project.godot` has none yet) and that `DisplayServer.get_display_safe_area()` returns window pixels; which lifecycle notifications fire on each platform; that Controls with `mouse_filter = STOP` consume events before the adapter sees them. **None of these is in the pinned engine reference (`modules/input.md` does not cover touch), so the ADR verifies each against live 4.7 docs before relying on it.**
 
 ### States and Transitions
 
@@ -164,12 +164,12 @@ and **is_dead** as `crossed AND best_drag = NONE`. A tap is a release while not 
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `drag_slop` | float, field units | invariant 8–30, balance 12–18, default 15 | data file (Input record) | Slop of a press with a drag winner and no real tap winner: a clear hero, or the burst button. The floor of 8 (5.3 dp at 360 dp) is below Android's own touch slop and is a validation limit, not a value to ship; see Open Questions |
-| `tap_slop` | float, field units | invariant 16–34 and above `drag_slop`, balance 24–30, default 28 | data file (Input record) | Slop of a press with a real tap winner or no winner at all; kept below the smallest hit radius of 36 so a centred press cannot leave its target and still tap, and well above `drag_slop` so a thumb roll on a tower is a tap, not a silent miss |
+| `tap_slop` | float, field units | invariant 16–34 and above `drag_slop`, balance 24–30, default 28 | data file (Input record) | Slop of a press with a real tap winner or no winner at all; kept below the smallest hit radius of 36, so a tap's release lands within one radius of its press, and a tap is judged by its press, never its release; and well above `drag_slop` so a thumb roll on a tower is a tap, not a silent miss |
 | `p₀` | Vector2, field units | inside the field | calculated | Press position |
 | `p` | Vector2, field units | inside the field | calculated | Current position |
 
 **Output Range:** true or false, inclusive, latching for the gesture. Tested on every move, so a frame hitch cannot skip it. Both ends of the balance range are first-build hypotheses: no phone data exists (CD-PLAYTEST).
-**Example:** press (100, 100) on a clear hero. Move (114, 100): 196 < 225, still Pressed. Move (115, 100): 225 ≥ 225, Dragging. An 18-unit roll on a tower, with or without a hero parked on it: 324 < 784 (`tap_slop` 28), still a tap if the release is inside the disc. A 28-unit move on that tower with a hero parked on it is a re-pin; with no hero it is dead, a miss and never a mis-fire.
+**Example:** press (100, 100) on a clear hero. Move (114, 100): 196 < 225, still Pressed. Move (115, 100): 225 ≥ 225, Dragging. An 18-unit roll on a tower, with or without a hero parked on it: 324 < 784 (`tap_slop` 28), still a tap, wherever it lifts. A 28-unit move on that tower with a hero parked on it is a re-pin; with no hero it is dead, a miss and never a mis-fire.
 
 The **field_scale** formula is defined as:
 
@@ -179,23 +179,24 @@ The **field_scale** formula is defined as:
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `width_dp` | float | 360–800 | calculated | Device width in dp |
-| `field_scale` | float | 0.667–1.481 | calculated | dp per field unit |
+| `field_scale` | float | 2/3 to 1.481 | calculated | dp per field unit |
 
-**Output Range:** 0.667 at the minimum supported width. Below 360 dp is unsupported. A height-limited tablet may scale by height instead; stretch mode is unverified and belongs to the ADR.
-**Example:** 360 / 540 = 0.667.
+**Output Range:** 2/3 at the minimum supported width. Below 360 dp is unsupported. A height-limited tablet may scale by height instead; stretch mode is unverified and belongs to the ADR.
+**Example:** 360 / 540 = 2/3.
 
 The **target_ok** formula is defined as:
 
-`target_ok = 2 × r × field_scale ≥ 48`, evaluated without division as `2 × r × width_dp ≥ 25920` (48 × 540), with `r` and `width_dp` rounded to the nearest integer first, so the exact boundary at 360 dp does not depend on float rounding and a device reporting 359.99 dp counts as 360
+`target_ok = 2 × r × field_scale ≥ 48`, evaluated without division as `2 × r × width_dp ≥ 25920` (48 × 540), with only `width_dp` rounded to the nearest integer first (radii are authored integers), so the exact boundary at 360 dp does not depend on float rounding: 359.99 counts as 360 and passes, and at `r` 36, 359.49 rounds to 359 and fails
 
 **Variables:**
 | Variable | Type | Range | Source | Description |
 |----------|------|-------|--------|-------------|
 | `r` | float, field units | 36–56 at MVP | registered by owner | Target hit radius |
-| `field_scale` | float | 0.667–1.481 | calculated | From field_scale |
+| `field_scale` | float | 2/3 to 1.481 | calculated | From field_scale |
+| `width_dp` | float, dp | 360 to 800 supported; any value reported | platform; ADR-0003 names the density source, since Godot has no dp read and DPI is unverified on Android | Screen width in dp. 360 is a supported-device floor, not a runtime guard |
 
 **Output Range:** true at every supported width for a radius of at least 36.
-**Example:** 2 × 36 × 0.667 = 48.0, passes. At 320 dp it would be 42.7 and fail, which is why 360 dp is the minimum.
+**Example:** 2 × 36 × 2/3 = 48.0, passes. At 320 dp it would be 42.7 and fail, which is why 360 dp is the minimum.
 
 | Width (dp) | 72-unit target | 96-unit target | `drag_slop` 15 | `tap_slop` 28 | `edge_reject_margin` 36 |
 |---|---|---|---|---|---|
@@ -205,7 +206,7 @@ The **target_ok** formula is defined as:
 
 **Tie-break within a class:** higher `priority`, then smaller squared distance to centre, then lower `id`.
 
-**Input record domains.** `drag_slop` default 15, hard domain 8–30. `tap_slop` default 28, hard domain 16–34; the cross-field rule `tap_slop > drag_slop` is checked by the catalogue's validator at load (Data Rule 7) and again by the resolver's `validate()`. `edge_reject_margin` default 36, hard domain 0–48; its value comes from memory of Android's back-swipe zone and must be checked on devices.
+**Input record domains.** `drag_slop` default 15, hard domain 8–30. `tap_slop` default 28, hard domain 16–34; the cross-field rule `tap_slop > drag_slop` is checked by the catalogue's validator at load (Data Rule 7) and again by the resolver's `validate()`. `edge_reject_margin` default 36, hard domain 0–36, since Battle HUD's burst button needs `m + 48` to a side edge and sits 84 from it, and moving it out collides with Start/Call. Its value comes from memory of Android's back-swipe zone and must be checked on devices; if phones need more, the HUD layout changes first, then this domain.
 
 ## Edge Cases
 
@@ -334,10 +335,10 @@ None owned. This system has no screen, panel or widget; it supplies gestures to 
 
 ## Acceptance Criteria
 
-A recording fake connects to every signal and appends `name(args)` to one Array; each THEN is the entire log in order, and anything unlisted fails. Arguments are compared only where written; `NONE` is −1. Fixtures are factory functions in field units, and a criterion registers only the targets it names: tower `T` centre (270, 480) r 36 TAP 200; slot `S` (270, 600) r 36 TAP 200; hero `H` (100, 100) r 36 DRAG 200 unless placed; burst button `B` (440, 880) r 48 DRAG 100 with sink `Z` (440, 880) r 48 TAP 400 sink; arc disc `A` (270, 540) r 36 TAP 300; arc backdrop `K` (270, 480) r 1200 TAP 250 sink. Presses are at the named target's centre unless stated, empty ground is (500, 100), pointer 0 unless stated, `drag_slop` 15 and `tap_slop` 28 unless stated; "move n" means n units along +x from the press point. No engine input events, no scene, no random seeds, no time assertions. Tests live in `tests/unit/input_gesture_resolver/`, the fake and factories in `tests/unit/input_gesture_resolver/helpers/`; the fake records signals into an Array rather than using gdUnit4 `assert_signal`, which awaits and is timing-dependent.
+A recording fake connects to every signal and appends `name(args)` to one Array; each THEN is the entire log in order, and anything unlisted fails. Arguments are compared only where written; `NONE` is −1. Fixtures are factory functions in field units, and a criterion registers only the targets it names: tower `T` centre (270, 480) r 36 TAP 200; slot `S` (270, 600) r 36 TAP 200; hero `H` (100, 100) r 36 DRAG 200 unless placed, a deliberate smallest case, with `H56` the same at the real radius 56 where a criterion names it; burst button `B` (456, 888) r 48 DRAG 100 with sink `Z` (456, 888) r 48 TAP 400 sink, Battle HUD's right-hand default; arc disc `A` (270, 540) r 36 TAP 300; arc backdrop `K` (270, 480) r 1200 TAP 250 sink. Presses are at the named target's centre unless stated, empty ground is (500, 100), pointer 0 unless stated, `drag_slop` 15 and `tap_slop` 28 unless stated; "move n" means n units along +x from the press point. No engine input events, no scene, no random seeds, no time assertions. Tests live in `tests/unit/input_gesture_resolver/`, the fake and factories in `tests/unit/input_gesture_resolver/helpers/`; the fake records signals into an Array rather than using gdUnit4 `assert_signal`, which awaits and is timing-dependent.
 
 **CI: Logic**
-1. (Rule 1, second pointer) **GIVEN** pointer 0 pressed on `T`, **WHEN** pointer 1 presses on `S` and releases, pointer 0 releases in place, then pointer 1 moves, **THEN** `pressed(T, NONE), tap(T), idle`.
+1. (Rule 1, second pointer) **GIVEN** pointer 0 pressed on `T`, **WHEN** pointer 1 presses on `S` and stays down, pointer 0 releases in place, then pointer 1 releases in place, **THEN** `pressed(T, NONE), tap(T), idle`, with no `tap(S)`. **WHEN** pointer 1 then presses on `S` again and releases in place, **THEN** `pressed(S, NONE), tap(S), idle` is appended, so a new press edge makes it active. **GIVEN** a fresh log, **WHEN** pointer 0 presses on `H` and moves 15, `cancel()` runs (Flow Rule 16's retry with a finger held), pointer 0 moves 10 more and releases, then a fresh `press(0)` lands on `T`, **THEN** `pressed(NONE, H), drag_started(H), drag_cancelled(H), idle, pressed(T, NONE)`.
 2. (Rule 1, palm replaced while Pressed) **GIVEN** pointer 0 pressed on empty ground, **WHEN** pointer 1 presses on `T` and releases in place, **THEN** `pressed(NONE, NONE), idle, pressed(T, NONE), tap(T), idle`, and a later release of pointer 0 adds nothing.
 3. (Rule 1, palm replaced while Dead) **GIVEN** pointer 0 pressed on empty ground and moved 30, **WHEN** pointer 1 presses on `T` and releases in place, **THEN** `pressed(NONE, NONE), idle, pressed(T, NONE), tap(T), idle`.
 4. (Rule 1, a live gesture is not replaced) **GIVEN** pointer 0 pressed on `H` and moved 20, **WHEN** pointer 1 presses on `T` and releases, then pointer 0 releases, **THEN** `pressed(NONE, H), drag_started(H), drag_ended(H), idle`.
@@ -355,7 +356,9 @@ A recording fake connects to every signal and appends `name(args)` to one Array;
 16. (Rule 7, cancel per state) **GIVEN** Dragging `H`, **WHEN** `cancel()` then release, **THEN** `pressed(NONE, H), drag_started(H), drag_cancelled(H), idle`. **GIVEN** Pressed on `T`, **THEN** `pressed(T, NONE), idle`. **GIVEN** Dead (ground, moved 30), **THEN** `pressed(NONE, NONE), idle`. **GIVEN** Idle, **WHEN** `cancel()`, **THEN** an empty log.
 17. (Rule 7, per-pointer cancel) **GIVEN** pointer 0 dragging `H`, **WHEN** `cancel_pointer(1)`, move, release, **THEN** `pressed(NONE, H), drag_started(H), drag_moved(H), drag_ended(H), idle`; **WHEN** instead `cancel_pointer(0)` then release, **THEN** `pressed(NONE, H), drag_started(H), drag_cancelled(H), idle`.
 18. (Rule 8) **GIVEN** `T`, **WHEN** two press-and-release pairs in place, **THEN** `pressed(T, NONE), tap(T), idle, pressed(T, NONE), tap(T), idle`.
-19. (Rule 9, validation) **GIVEN** `validate(8, 28)`, `validate(30, 34)` and `validate(15, 16)`, **THEN** true; **GIVEN** `validate(7, 28)`, `validate(31, 34)`, `validate(15, 15)`, `validate(15, 15.99)`, `validate(15, 35)` and `validate(NAN, 28)`, **THEN** false each time, and `create` returns null for each. `validate(20, 18)` and `validate(20, 20)` are false though both values lie in their domains, and `create(15, 28)` returns a resolver. **GIVEN** `register` with radius 0, −1, NAN or INF or a non-finite centre, **THEN** it returns `NONE` and a press at that position is `pressed(NONE, NONE)`.
+19. (Rule 9, validation) **GIVEN** `validate(8, 28)`, `validate(30, 34)` and `validate(15, 16)`, **THEN** true; **GIVEN** `validate(7, 28)`, `validate(31, 34)`, `validate(15, 15)`, `validate(15, 15.99)`, `validate(15, 35)` and `validate(NAN, 28)`, **THEN** false each time. `validate(20, 18)` and `validate(20, 20)` are false though both values lie in their domains.
+19b. (Rule 9, `create`) `create` returns null for each false `validate` case above, and `create(15, 28)` returns a resolver.
+19c. (Rule 9, `register`) **GIVEN** `register` with radius 0, −1, NAN or INF, each in its own test, **THEN** it returns `NONE`. **GIVEN** `register` with centre (NAN, 100) or (INF, 100) and radius 36, **THEN** it returns `NONE`, and a press at (100, 100) gives `pressed(NONE, NONE), ground_tap((100, 100)), idle` on release in place, since nothing was registered.
 20. (Rule 9, unknown id) **GIVEN** `T` registered, **WHEN** `set_centre`, `set_enabled` and `unregister` are called with an id never issued, then `T` is pressed and released, **THEN** `pressed(T, NONE), tap(T), idle`.
 21. (Rule 9, non-finite) **GIVEN** `H`, **WHEN** `press` at (NAN, 100), **THEN** an empty log; **WHEN** `H` is pressed, moved to (INF, 100) and released in place, **THEN** `pressed(NONE, H), idle`; **WHEN** `set_centre(H, (NAN, 0))` then `H` is pressed at (100, 100), **THEN** `pressed(NONE, H)`.
 22. (Rule 10) **GIVEN** Idle, **WHEN** move then release, **THEN** an empty log.
@@ -364,7 +367,7 @@ A recording fake connects to every signal and appends `name(args)` to one Array;
 25. (Registry, enabled) **GIVEN** `S` disabled, **WHEN** pressed and released, **THEN** `pressed(NONE, NONE), ground_tap, idle`; re-enabled, `pressed(S, NONE), tap(S), idle`.
 26. (Registry, mid-gesture) **GIVEN** `S` pressed, **WHEN** `set_enabled(S, false)` then release in place, **THEN** `pressed(S, NONE), tap(S), idle`. **GIVEN** `S` pressed, **WHEN** `set_centre(S, (0, 0))` then release in place, **THEN** `pressed(S, NONE), tap(S), idle` (frozen winner). **GIVEN** `H` dragging, **WHEN** `unregister(H)` then move and release, **THEN** the log continues `drag_moved(H), drag_ended(H), idle`. **GIVEN** `T` pressed, **WHEN** a new target registers under the finger, then release, **THEN** `pressed(T, NONE), tap(T), idle` and the new id appears nowhere.
 27. (Re-entrancy) **GIVEN** two listeners connected in order, the first calling `cancel()` inside its `pressed` handler, **WHEN** `T` is pressed, **THEN** both listeners log `pressed(T, NONE), idle` in that order, and a later release adds nothing. **GIVEN** a listener calling `press` on `S` inside its `tap` handler, **WHEN** `T` is pressed and released, **THEN** `pressed(T, NONE), tap(T), idle, pressed(S, NONE)`. **GIVEN** a listener calling `register` inside its `tap` handler, **WHEN** `T` is tapped, **THEN** the call returns a valid id at once, the log is `pressed(T, NONE), tap(T), idle`, and the next press on that disc names it.
-28. (Burst, drag-only and sink) **GIVEN** `B` and `Z` with `S` centred beneath them, **WHEN** pressed and released in place, **THEN** `pressed(Z, B), tap(Z), idle`; **WHEN** pressed, moved 15 and released, **THEN** `pressed(Z, B), drag_started(B), drag_ended(B), idle`; `S` is named nowhere, and the sink did not raise the slop. **GIVEN** `B`, `Z` and `H` at (440, 820), **WHEN** pressed at (440, 840), inside all three, moved 15 and released, **THEN** `pressed(Z, H), drag_started(H), drag_ended(H), idle`: the hero outranks the button.
+28. (Burst, drag-only and sink) **GIVEN** `B` and `Z` with `S` centred beneath them, **WHEN** pressed and released in place, **THEN** `pressed(Z, B), tap(Z), idle`; **WHEN** pressed, moved 15 and released, **THEN** `pressed(Z, B), drag_started(B), drag_ended(B), idle`; `S` is named nowhere, and the sink did not raise the slop. **GIVEN** `B`, `Z` and `H` at (456, 828), **WHEN** pressed at (456, 848), inside all three (40 from the button's centre, 20 from the hero's), moved 15 and released, **THEN** `pressed(Z, H), drag_started(H), drag_ended(H), idle`: the hero outranks the button.
 29. (Arc) **GIVEN** `A`, `K` and `T` registered (arc open) with `H` centred on `T`, **WHEN** pressed on `A` at (270, 560) and released, **THEN** `pressed(A, NONE), tap(A), idle`; **WHEN** pressed on `T` at (270, 470) and released, **THEN** `pressed(K, H), tap(K), idle`; **WHEN** pressed on empty ground and released, **THEN** `pressed(K, NONE), tap(K), idle`; **WHEN** pressed at (270, 505) (inside `A` and `T`) and moved 28, **THEN** `pressed(A, H), drag_started(H)`.
 30. (Formula: hit) **GIVEN** `T`, **WHEN** pressed and released in place at (306, 480), (307, 480), (299, 500) and (300, 500) in turn, **THEN** `pressed(T, NONE), tap(T), idle`; `pressed(NONE, NONE), ground_tap, idle`; `pressed(T, NONE), tap(T), idle`; `pressed(NONE, NONE), ground_tap, idle`.
 31. (Formula: is_drag) **GIVEN** `H` at (100, 100) pressed at its centre, **WHEN** moved to (109, 111), **THEN** the log is `pressed(NONE, H)`; **WHEN** then moved to (109, 112), **THEN** `drag_started(H)` is appended (distances squared 202 and 225).

@@ -145,3 +145,44 @@ Applied in autonomous mode: all 5 blocking items (criterion 37 moved 30; Rule 13
 Follow-on edits outside this GDD: Battle HUD Rule 8 and criterion 7, and design/ux/interaction-patterns.md, which said a finger rolling off a disc leaves the arc open; under the new rule it taps.
 Not done: the remaining criteria additions and splits, and every routed item.
 Re-review pending: the GDD hash above is of the reviewed text, not this revision.
+
+## Review — 2026-11-05 — Verdict: NEEDS REVISION
+Review mode: full · Workflow: standard
+Scope signal: L
+Specialists: game-designer, systems-designer, godot-specialist, qa-lead, ux-designer, creative-director
+Blocking items: 4 | Recommended: 30
+Summary: The five prior fixes held. Four contradictions remained: a Formulas example still tested the release inside the disc; the edge_reject_margin domain 0 to 48 broke the shipped burst layout, which needs 36 or less; criterion 19 pressed at a non-finite position that Rule 9 drops; and criterion 1 did not test that a finger already down never becomes active. The creative director held the HUD Rule 2 citation, width_dp, ignored-tap feedback, P1 pooling, edge-rejection logging and target_ok edge clearance as recommended or routed, and judged that a check of the four fixes, not a sixth full review, should decide approval.
+Prior verdict resolved: Yes (all 5 prior blocking items)
+Findings:
+- [BLOCKING] Formulas, is_drag example: "still a tap if the release is inside the disc" contradicts Rules 3 and 5.
+- [BLOCKING] Input record domains: edge_reject_margin 0 to 48 breaks the burst button's m + 48 clearance; cut to 0 to 36 here, in Data, accessibility and the pattern library.
+- [BLOCKING] Acceptance Criteria 19: a press at a non-finite centre's position contradicts Rule 9; split into validate, create and register.
+- [BLOCKING] Acceptance Criteria 1: does not test that a held finger never becomes active; add a retry variant.
+- [RECOMMENDED] Formulas, tap_slop rationale: a tap is judged by its press, never its release.
+- [RECOMMENDED] Battle HUD Rule 2: engine behaviour stated as fact and cited to Input; made conditional on ADR-0003 (game-designer and godot-specialist rated it blocking).
+- [RECOMMENDED] Formulas, target_ok: width_dp has no Godot source (ADR-0003); round width only; 2/3 not 0.667; cases at 359.49, 359.99 and 360 (godot-specialist rated it blocking).
+- [RECOMMENDED] Fixtures: hero radius 36 against the real 56, third review running; burst fixture at (440, 880) against HUD's (456, 888).
+- [RECOMMENDED] Interactions and registration table: Start/Call disabled while an arc is open; the HUD's ignored taps.
+- [RECOMMENDED] P1: gate per tester group and device width class, per accessibility-requirements.md (ux-designer rated it blocking); timeout, device rotation, attribution of unprompted flags, palm and grip prompts, parked-hero re-pin, log-based mis-fire flags, release far from the disc centre, palm brush on resume.
+- [RECOMMENDED] Rule 12: a pure edge_rejected function with boundary tests; the adapter logs rejected downs with a reason (ux-designer rated it blocking); every disc centre at least m + r from the side edges (ux-designer rated it blocking).
+- [RECOMMENDED] Slops scale with screen width (tap_slop 41.5 dp at 800 dp); cap in dp or accept at MVP.
+- [RECOMMENDED] Criteria splits (10, 13 with tap position, 14, 16, 26, 27, 28, 29, 35, 36), cancel_pointer cases, dropped release, ground release at slop, fixture coordinates for 15, criterion 18 retitled, Rule 3 clock-free claim.
+- [RECOMMENDED] Boundary wording "under tap_slop" and "less than m" in Battle HUD and Hero.
+- [RECOMMENDED] Routed to ADR-0003: Callable lifetime and strong references, queued-gesture drain flag and error reset, no await in handlers, ScreenDrag index drop, OS claims marked unverified, HudModals event type and pointer mapping.
+- [RECOMMENDED] Routed: ignored-tap feedback and press_ignored (/ux-design, P1 watch list); P-02, P-05 and P-11 wording (pattern library); a motor-accessibility tester or stated limitation (accessibility-requirements.md); arc-guard log (Battle HUD).
+Reviewed-Content-Hash: design/gdd/input-gesture-resolver.md 23d2a60fac1632b52fa5c9a35394466973c672ba
+Reviewed-Content-Hash: design/gdd/battle-hud.md af260ad19ba4ec5043c270ce3e4caca22c9bdd53
+Reviewed-Content-Hash: design/gdd/data-config-pipeline.md b58a9270cca3749146c6a2291b7324583865c6c6
+Reviewed-Content-Hash: design/accessibility-requirements.md e525e1253b9112f6a74c671bb6d0e1f02f96bb0f
+Reviewed-Content-Hash: design/ux/interaction-patterns.md 9c69bf6f284bb8d687b1613fecd03d1481eb4847
+Reviewed-Content-Hash: design/registry/entities.yaml dfeacb02917f751cb1dfd88cf490c7ec3d8d2d0f
+Reviewed-Content-Hash: .claude/skills/design-review/SKILL.md a63d8fba9b7142eeb43791f061e2e1533c429b43
+Reviewed-Content-Hash: design/gdd/game-concept.md b17a450b756471e44e54fb3b565a8e5e3defea1b
+Reviewed-Content-Hash: design/gdd/hero-system.md 22b23c09a786eb7b142e7e998c12cf1b7ff090ce
+Reviewed-Content-Hash: design/gdd/tower-system.md 2c025196c3039eee362885ab82138a8999c3dd01
+Reviewed-Content-Hash: design/gdd/game-state-stage-flow.md 318de9b091a58161cab40b290a44203ff8486f99
+
+## Revision and spot-check — 2026-11-05 — APPROVED
+Applied in autonomous mode: all 4 blocking items (is_drag example ends "wherever it lifts"; tap_slop rationale; edge_reject_margin hard domain 0 to 36 in Input, Data row 54, accessibility-requirements.md and interaction-patterns.md, with Battle HUD's burst row updated; criterion 19 split into 19, 19b and 19c with a finite press; criterion 1 rewritten with a held second finger, a new press edge and a retry with a finger held) and recommended: Battle HUD Rule 2 made conditional on ADR-0003 with Input's ADR note naming _unhandled_input for presses; target_ok rounds width only, 2/3, width_dp row sourced to ADR-0003 as a device floor; burst fixture at (456, 888) and criterion 28 coordinates; H56 fixture named.
+A qa-lead spot-check found all four blockers closed and no new rule contradiction. It flagged criterion 1's retry clause, which did not list the whole log, a weak release in its first part, and 0.667 left in field_scale; all three were fixed before approval.
+Verdict: APPROVED, on the creative director's ruling that a check of the four fixes decides approval. Not done: every remaining recommended and routed item above, carried to ADR-0003, stories, the P1 plan and the backlog.
