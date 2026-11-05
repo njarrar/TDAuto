@@ -40,7 +40,7 @@
 #   unsupported layout, with its number.
 
 version: 1
-last_updated: "2026-11-04"
+last_updated: "2026-11-05"
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -123,12 +123,14 @@ state_ownership:
     status: active
     owner_system: combat
     adr: docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
-    interface: "Combat.attach(t, max_hp) creates Health and Status on the Targetable; read through is_dead, hp_left, speed_factor; written only by deliver, apply_slow, tick_status"
+    # Revised 2026-11-05 (/architecture-review, 0009 vs 0011). Old interface: "Combat.attach(t, max_hp) creates Health and Status on the Targetable; read through is_dead, hp_left, speed_factor; written only by deliver, apply_slow, tick_status"
+    interface: "Combat.attach(t, max_hp) creates Health and Status on the Targetable; read through is_dead, hp_left, max_hp_of, speed_factor; written only by deliver, apply_slow, tick_status"
     write_access: combat-only
     referenced_by:
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
+      - docs/architecture/adr-0011-battle-field-rendering-draw-call-budget.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - state: damage_counters
     status: active
     owner_system: combat
@@ -149,11 +151,22 @@ state_ownership:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
     revised: ""
+  - state: battle_wave_records
+    status: active
+    owner_system: battle-builder
+    adr: docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    interface: "Battle.wave_records: Array[WaveRecord], the stage's Wave records in wave_ids order, read-only by contract, set by BattleBuilder; the wrapper builds HudLogic's next-wave preview from it in attach (TR-hud-017)"
+    write_access: battle-builder-only
+    referenced_by:
+      - docs/architecture/adr-0005-stat-accessor-read-context-contract.md
+    added: 2026-11-05
+    revised: ""
   - state: battle_input_record
     status: active
     owner_system: battle-builder
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
-    interface: "Battle.input_record: InputRecord, read-only by contract, set by BattleBuilder; the BattleWrapper reads it in attach() for InputAdapter, HeroInput and the HUD"
+    # Revised 2026-11-05 (/architecture-review, ADR-0005 Decision 8). Old interface: "Battle.input_record: InputRecord, read-only by contract, set by BattleBuilder; the BattleWrapper reads it in attach() for InputAdapter, HeroInput and the HUD"
+    interface: "Battle.input_record: InputRecord, read-only by contract, set by BattleBuilder; the BattleWrapper reads it in attach() for InputAdapter, HeroInput and the HUD. The resolver and HeroSim get plain values (drag_slop, tap_slop, left_handed), not the record"
     write_access: battle-builder-only
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
@@ -161,7 +174,7 @@ state_ownership:
       - docs/architecture/adr-0001-app-lifecycle-composition-root-fatal-path.md
       - docs/architecture/adr-0008-input-resolver-core-signal-contract.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - state: sim_time
     status: active
     owner_system: battle
@@ -690,12 +703,12 @@ performance_budgets:
     status: active
     budget_ms: 1.33
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
-    notes: "One worst-case battle.tick (48 alive, five towers, hero and burst), p99 on Adreno 5xx class = 4.0 / MAX_TICKS_PER_FRAME (3, provisional). Contains stat-reads (0.5 ms) and ADR-0009 targeting (GDD ceiling 2.0 ms, TR-combat-013, so a GDD-compliant tick can still miss this). Reopen: p99 > 1.33 ms sets N = 2 (2.0 ms) in place; > 2.0 ms escalates. Measured by ADR-0004 V6 / ADR-0009 V4 after acceptance"
+    notes: "One worst-case battle.tick (48 alive, five towers, hero and burst), p99 on Adreno 5xx class = 4.0 / MAX_TICKS_PER_FRAME (3, provisional). Contains stat-reads (0.5 ms) and ADR-0009 targeting. This whole-tick budget replaces TR-combat-013's 2 ms targeting figure (ADR-0004 Decision 10, ADR-0009 Decision 9; revised 2026-11-05, old text: ADR-0009 targeting with a GDD ceiling of 2.0 ms, TR-combat-013, so a GDD-compliant tick can still miss this). Reopen: p99 > 1.33 ms sets N = 2 (2.0 ms) in place; > 2.0 ms escalates. Measured by ADR-0004 V6 / ADR-0009 V4 after acceptance"
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - system: input-and-realtime-models
     status: active
     budget_ms: 0.5
@@ -911,14 +924,15 @@ api_decisions:
     revised: ""
   - purpose: min_width_guard
     status: active
-    api: "FieldMapping.width_supported(floori(field_width_dp(...))) against MIN_FIELD_WIDTH_DP 360, push_error once, play continues"
+    # Revised 2026-11-05 (/architecture-review, 0003 vs 0001). Old api: "FieldMapping.width_supported(floori(field_width_dp(...))) against MIN_FIELD_WIDTH_DP 360, push_error once, play continues"
+    api: "FieldMapping.width_supported(floori(field_width_dp(...))) against MIN_FIELD_WIDTH_DP 360, the injected dev_error once (InputAdapter.attach takes it), play continues"
     not: "a float comparison at the boundary, blocking play"
     adr: docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     reason: "Input GDD Formulas floor to integers first so 360 dp does not depend on rounding; the store filter enforces the floor"
     referenced_by:
       - docs/architecture/adr-0003-input-adapter-display-stretch-platform-lifecycle.md
     added: 2026-11-04
-    revised: ""
+    revised: 2026-11-05
   - purpose: tick_driver
     status: active
     api: "BattleWrapper._process(delta) with a pure BattleClock accumulator at 60 Hz"
@@ -1030,6 +1044,27 @@ api_decisions:
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
       - docs/architecture/adr-0009-enemy-entity-roster-combat-api.md
     added: 2026-11-04
+    revised: ""
+  - purpose: tick_slot_recording_fakes
+    status: active
+    api: "tests/helpers/test_battles.gd with_recording(battle, keys, log): build with BattleBuilder.build, assign recording subclasses (super(...) forwarded, INIT-1) to the Battle members before the first tick, remake their Builder connections, assert wiring_check is empty"
+    not: "a new Battle API, a Builder option for tests, a change to the six tick steps"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    reason: "TR-state-013, Game State Acceptance 9 and 13; same member-swap pattern as InertHeroSim (ADR-0010 Decision 9)"
+    referenced_by:
+      - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    added: 2026-11-05
+    revised: ""
+  - purpose: wrong_phase_wave_events
+    status: active
+    api: "Flow.on_wave_cleared, on_waves_completed and on_enemy_leaked check the phase first; wrong phase calls the injected dev_error and changes nothing; enemy_leaked in INTERMISSION calls dev_error and is still applied"
+    not: "EnemyWave checking Flow's phase, fatal for a wrong-phase event, a silent drop"
+    adr: docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    reason: "TR-state-018; Flow owns the phase, so it owns the check"
+    referenced_by:
+      - docs/architecture/adr-0006-battle-signal-contracts-view-allowlist.md
+    added: 2026-11-05
     revised: ""
   - purpose: signal_test_recording
     status: active
@@ -1350,14 +1385,16 @@ forbidden_patterns:
     # Note (ADR-0008): the development-only GestureLog under src/presentation/dev/ stamps Time.get_ticks_msec(); it is neither sim code nor a real-time model, and the lint must not flag that folder.
     status: active
     # Revised 2026-11-04 (ADR-0007 C4, confirmed by the user). Old description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* in sim code or in real-time models; _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
-    description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* anywhere in src/ (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers and src/presentation/dev/ (ADR-0008 GestureLog); _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
+    description: "No _process, _physics_process, Timer, create_timer, await, Engine.time_scale, Engine.get_frames_drawn, Engine.get_process_frames, Engine.get_physics_frames, Time.* or OS.get_ticks_* anywhere in src/ (ADR-0007 C4; views animate from the frame clock), except AppRoot's seed read, the wrapper's dev timers, src/presentation/dev/ (ADR-0008 GestureLog, ADR-0010 RunLog) and src/root/dev_logs.gd (launch id, ADR-0010 Decision 10); _process only in BattleWrapper, AppRoot and InputAdapter (SP12 poll); no get_tree().paused; no low_processor_mode; delta_smoothing off."
     why: "Sim time must enter only through Battle.tick, and the frame order must be one function"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
+    # Revised 2026-11-05 (/architecture-review, 0004 vs 0010): src/root/dev_logs.gd added to the exceptions.
     referenced_by:
       - docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
       - docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+      - docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
-    revised: 2026-11-04
+    revised: 2026-11-05
   - pattern: float_duration_countdown
     status: active
     description: "No sim countdown is a float; no code subtracts dt from a duration; every authored duration goes through to_ticks once."
@@ -1378,10 +1415,12 @@ forbidden_patterns:
     added: 2026-11-04
   - pattern: engine_rng_in_sim
     status: active
-    description: "No RandomNumberGenerator or global random function in sim code; Presentation randomness never reads rng_seed or sim_rng."
+    # Revised 2026-11-05 (/architecture-review, 0004 vs lint MATH-4). Old description: "No RandomNumberGenerator or global random function in sim code; Presentation randomness never reads rng_seed or sim_rng."
+    description: "No RandomNumberGenerator or global random function in sim code or in src/presentation/ (lint MATH-3, MATH-4); cosmetic offsets come from spawn_id and the view clock and never read sim_rng or seed from rng_seed."
     why: "Same seed and script must give the same result; cosmetic jitter must not touch the sim (TR-enemy-007)"
     adr: docs/architecture/adr-0004-fixed-tick-clock-tick-order-determinism.md
     added: 2026-11-04
+    revised: 2026-11-05
   - pattern: hero_input_sync_before_ticks
     status: active
     description: "HeroInput.update() never runs before the frame's ticks; it runs first in frame step 4, so the hit-disc centre and aim_point() match the drawn frame."
@@ -1531,10 +1570,18 @@ forbidden_patterns:
     added: 2026-11-04
   - pattern: dev_log_in_release
     status: active
-    description: "RunLog, GestureLog, JsonlFileSink or DevLogs created when OS.is_debug_build() is false, or a dev-log failure that calls fatal."
+    # Revised 2026-11-05 (/architecture-review, 0008 vs 0010, 0010 vs 0011). Old description: "RunLog, GestureLog, JsonlFileSink or DevLogs created when OS.is_debug_build() is false, or a dev-log failure that calls fatal."
+    description: "RunLog, GestureLog, JsonlFileSink or DevLogs created when OS.is_debug_build() is false; RunLog, GestureLog or the dev overlay created when BattleWrapper.attach got a null dev_logs, or by anything but attach; or a dev-log failure that calls fatal."
     why: "TR-hud-013, TR-input-015: release never writes; a log failure is never fatal"
     adr: docs/architecture/adr-0010-sim-input-split-command-result-codes-dev-telemetry.md
     added: 2026-11-04
+    revised: 2026-11-05
+  - pattern: physics_area_in_src
+    status: active
+    description: "No Area2D, CollisionShape2D, CollisionPolygon2D, physics body, RayCast2D, ShapeCast2D, PhysicsServer2D, direct_space_state or intersect_point/ray/shape query anywhere in src/ (lint PHYS-1)."
+    why: "TR-state-003: the sim uses no physics areas; hit tests are resolver discs and Combat's scalar range checks"
+    adr: docs/architecture/adr-0007-headless-test-harness-gdunit4-layer-lint.md
+    added: 2026-11-05
   - pattern: absent_branch_in_production
     status: active
     description: "A Builder option, null check or factory in src/ that exists only so a test can run without HeroSim (or another system); tests swap in a tests/helpers subclass instead."
