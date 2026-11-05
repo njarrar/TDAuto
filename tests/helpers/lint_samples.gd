@@ -315,6 +315,15 @@ static func all() -> Dictionary:
 	_src(s, "REND-3", pres, "func build() -> void:\n\tvar n: Node = scene.instantiate()\n", 2, [
 		[pres, "func attach() -> void:\n\tvar n: Node = scene.instantiate()\n"],
 	])
+	_src(s, "REND-4", core, "var m: ShaderMaterial = null\n", 1, [
+		[core, "func f() -> void:\n\tvar e: Variant = Shader\n"],
+		[core, 'var s: String = "use a shader"\n'],
+		[unit, "var m: ShaderMaterial = null\n"],
+	], {}, [
+		[core, "func f() -> void:\n\tvar e := Environment.new()\n", 2],
+		[core, 'const S := preload("res://assets/x.gdshader")\n', 1],
+		["res://src/presentation/hud.tscn", '[gd_scene format=3]\n\n[sub_resource type="Environment" id="a"]\n', 3],
+	])
 
 	# ERR and INIT
 	_src(s, "ERR-1", core, "func f(x: int) -> void:\n\tassert(x > 0)\n", 2, [
@@ -397,6 +406,9 @@ static func all() -> Dictionary:
 	var bad_exclude: String = GOOD_PRESET.replace('exclude_filter="tests/*, tools/*, addons/gdUnit4/*, prototypes/*"', 'exclude_filter="tests/*"')
 	s["PROJ-6"] = _preset_sample(bad_include, "include_filter", GOOD_PRESET)
 	s["PROJ-7"] = _preset_sample(bad_exclude, "exclude_filter", GOOD_PRESET)
+	var good_render: String = GOOD_PROJECT.replace("run/delta_smoothing=false\n", "run/delta_smoothing=false\nrun/max_fps=60\n") + (
+		'\n[rendering]\n\nrenderer/rendering_method="mobile"\nrendering_device/fallback_to_opengl3=false\n')
+	_proj(s, "PROJ-8", good_render.replace("run/max_fps=60", "run/max_fps=0"), "run/max_fps", [good_render], {})
 	return s
 
 
@@ -449,7 +461,8 @@ static func _source_findings(rule: String, path: String, text: String, others: D
 
 
 static func _project_findings(rule: String, files: Dictionary) -> Array[Dictionary]:
-	return _only_rule(rule, LintEngine.check_project(files))
+	# Pending project rules run here too (PROJ-8), as pending source rules do above.
+	return _only_rule(rule, LintEngine.check_project(files, {"include_pending": true}))
 
 
 static func _only_rule(rule: String, all_findings: Array[Dictionary]) -> Array[Dictionary]:

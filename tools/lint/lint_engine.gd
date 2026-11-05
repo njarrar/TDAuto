@@ -98,6 +98,8 @@ static func check_project(files: Dictionary, options: Dictionary = {}) -> Array[
 	if files.has("res://project.godot"):
 		var ini: Dictionary = parse_ini(str(files["res://project.godot"]))
 		_check_project_godot(ini, files, findings)
+		if _active("PROJ-8", options):
+			_check_renderer(ini, findings)
 	if files.has("res://export_presets.cfg"):
 		_check_presets(parse_ini(str(files["res://export_presets.cfg"])), findings)
 	return findings
@@ -149,6 +151,29 @@ static func _check_project_godot(ini: Dictionary, files: Dictionary, findings: A
 			_pfind(findings, "PROJ-5", path, _key_line(ini, "gdunit4", key), "[gdunit4] %s must be true" % key)
 	if _value(ini, "gdunit4", "report/godot/script_error") == "false":
 		_pfind(findings, "PROJ-5", path, _key_line(ini, "gdunit4", "report/godot/script_error"), "[gdunit4] report/godot/script_error must not be false")
+
+
+## True if the rule runs: it is not pending, or options asks for pending rules too.
+static func _active(rule: String, options: Dictionary) -> bool:
+	return str(Rules.RULES[rule]["pending"]) == "" or bool(options.get("include_pending", false))
+
+
+## PROJ-8 (ADR-0012 Decisions 1, 5): Mobile renderer with no other override, the
+## auto-fallback off, and the 60 fps cap. The fallback key is ADR-0012's believed name
+## (NEEDS VERIFICATION, R2). The export-preset leg waits for R5 to name the baker key.
+static func _check_renderer(ini: Dictionary, findings: Array[Dictionary]) -> void:
+	var path: String = "res://project.godot"
+	if _value(ini, "rendering", "renderer/rendering_method") != "\"mobile\"":
+		_pfind(findings, "PROJ-8", path, _key_line(ini, "rendering", "renderer/rendering_method"), "[rendering] renderer/rendering_method must be \"mobile\"")
+	if ini.has("rendering"):
+		var table: Dictionary = ini["rendering"]
+		for key in table:
+			if str(key).begins_with("renderer/rendering_method.") and str(table[key]["value"]) != "\"mobile\"":
+				_pfind(findings, "PROJ-8", path, int(table[key]["line"]), "[rendering] %s must be \"mobile\" (found %s)" % [key, table[key]["value"]])
+	if _value(ini, "rendering", "rendering_device/fallback_to_opengl3") != "false":
+		_pfind(findings, "PROJ-8", path, _key_line(ini, "rendering", "rendering_device/fallback_to_opengl3"), "[rendering] rendering_device/fallback_to_opengl3 must be false")
+	if _value(ini, "application", "run/max_fps") != "60":
+		_pfind(findings, "PROJ-8", path, _key_line(ini, "application", "run/max_fps"), "[application] run/max_fps must be 60")
 
 
 static func _check_presets(ini: Dictionary, findings: Array[Dictionary]) -> void:

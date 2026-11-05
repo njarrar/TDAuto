@@ -170,12 +170,18 @@ func _owner_reads_once(owner_table: Dictionary) -> Array[WeakRef]:
 func test_entity_and_context_are_freed_when_the_owner_drops_the_context() -> void:
 	var owner_table: Dictionary = {}
 	var refs: Array[WeakRef] = _owner_reads_once(owner_table)
-	assert_object(refs[0].get_ref()).is_not_null()
+	assert_bool(_alive(refs[0])).is_true()
 
 	owner_table.erase(1)
 
-	assert_object(refs[1].get_ref()).is_null()
-	assert_object(refs[0].get_ref()).is_null()
+	assert_bool(_alive(refs[1])).is_false()
+	assert_bool(_alive(refs[0])).is_false()
+
+
+## True if the weakref's object lives. Returns a bool so the object never sits in the
+## caller's temporaries (a get_ref() in the test body would keep it alive).
+func _alive(ref: WeakRef) -> bool:
+	return ref.get_ref() != null
 
 
 # GDD Acceptance 8, ADR-0005 Validation 8

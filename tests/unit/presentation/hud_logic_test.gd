@@ -132,7 +132,8 @@ func test_phase_closes_arc_and_unregisters_discs() -> void:
 	_hud._on_slot_tapped(0)
 	_hud._on_phase_changed(Flow.Phase.PAUSED)
 	assert_bool(_hud.arc_open()).is_false()
-	assert_bool(_hud.paused_open()).is_false()
+	# Paused shows the Paused screen (Battle HUD Rule 17); the arc closes (Rule 8).
+	assert_bool(_hud.paused_open()).is_true()
 
 
 func test_prompt_first_match() -> void:

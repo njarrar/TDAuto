@@ -184,6 +184,7 @@ const RULES: Dictionary = {
 	"REND-1": {"adr": "ADR-0011 Decision 7", "pending": "", "scope": "src_presentation", "also": ["battle_wrapper.tscn"], "ext": "gd,tscn", "msg": "material, light or particles", "re": [r"\bmaterial\s*=(?!=)", r"\b(?:ShaderMaterial|CanvasItemMaterial|Light2D|PointLight2D|CanvasModulate|GPUParticles2D|CPUParticles2D)\b"], "string_re": [r"\.gdshader"], "tscn_re": [r"^material\s*=", r"\b(?:ShaderMaterial|CanvasItemMaterial|Light2D|PointLight2D|CanvasModulate|GPUParticles2D|CPUParticles2D)\b", r"\.gdshader"]},
 	"REND-2": {"adr": "ADR-0011 Decision 1", "pending": "", "scope": "src_presentation", "also": ["battle_wrapper.tscn"], "ext": "gd,tscn", "exclude": ["res://src/presentation/dev/"], "msg": "layering or drawing node"},
 	"REND-3": {"adr": "ADR-0011 Decisions 4, 6", "pending": "", "scope": "src_presentation", "ext": "gd", "msg": "instantiate outside attach"},
+	"REND-4": {"adr": "ADR-0012 Decision 2", "pending": "ADR-0012", "scope": "src", "ext": "gd,tscn", "msg": "shader or renderer-specific feature", "re": [r"\b(?:ShaderMaterial|WorldEnvironment|RenderingDevice|DrawableTexture2D)\b", r"\bShader\.new\(", r"\bEnvironment\.new\(", r"\buse_hdr_2d\b"], "string_re": [r"\.gdshader"], "tscn_re": [r"\b(?:ShaderMaterial|WorldEnvironment|Environment)\b", r"\.gdshader", r"\buse_hdr_2d\b"]},
 	"ERR-1": {"adr": "C5", "pending": "", "scope": "src", "ext": "gd", "msg": "assert", "re": [r"(?<![\w.])assert\s*\("]},
 	"ERR-3": {"adr": "ADR-0007 Decision 7", "pending": "", "scope": "src", "ext": "gd", "msg": "push_warning", "re": [r"\bpush_warning\s*\("]},
 	"ERR-4": {"adr": "C5", "pending": "", "scope": "src", "ext": "gd", "skip_def": true, "msg": "free", "re": [r"(?<!\w)free\s*\("]},
@@ -203,4 +204,5 @@ const RULES: Dictionary = {
 	"PROJ-5": {"adr": "ADR-0007 Decision 7", "pending": "", "scope": "project", "ext": "project", "msg": "gdunit4 report settings"},
 	"PROJ-6": {"adr": "ADR-0002 Validation 10", "pending": "", "scope": "project", "ext": "project", "named": ["res://export_presets.cfg"], "msg": "include_filter"},
 	"PROJ-7": {"adr": "ADR-0007 Decision 1", "pending": "", "scope": "project", "ext": "project", "named": ["res://export_presets.cfg"], "msg": "exclude_filter"},
+	"PROJ-8": {"adr": "ADR-0012 Decisions 1, 5, 6", "pending": "ADR-0012", "scope": "project", "ext": "project", "msg": "renderer, fallback or fps cap"},
 }

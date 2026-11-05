@@ -74,11 +74,21 @@ func test_enemy_bob_off_under_reduce_motion_and_frozen_at_zero_ms() -> void:
 	assert_float(m.positions[0].y).is_equal(y0)
 
 
+## Holds each model's Roster for the test: a method Callable (rec.roster) does not keep its
+## object alive, and refresh() returns early once the roster Callable is invalid.
+var _keep: Array[RefCounted] = []
+
+
+func after_test() -> void:
+	_keep.clear()
+
+
 func _combat_model() -> CombatViewModel:
 	var b: Battle = TestBattles.build()
 	var m: CombatViewModel = CombatViewModel.new()
 	var rec: Roster = Roster.new()
-	m._roster = rec.roster
+	_keep.append(rec)
+	_keep.append(b)
 	m.attach(b.combat, b.enemy_wave, b.accessor, b.halted, _keys(), false, Callable())
 	m._roster = rec.roster
 	return m
