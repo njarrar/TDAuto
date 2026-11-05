@@ -58,7 +58,9 @@ naming:
 commands:
   # TODO: build needs an export preset name; none exists until the Godot project has one.
   build: "[TO BE CONFIGURED]"
-  test: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless -s -d --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode'
+  # 4.7.2 rejects --remote-debug tcp://127.0.0.1:0; -c keeps fail-fast off; stdin closed so -d cannot block.
+  # Switch to bash tools/ci/run_tests.sh when the CI story writes it (ADR-0007 Migration item 4).
+  test: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests --ignoreHeadlessMode -c </dev/null'
   run: '"/Applications/Godot.app/Contents/MacOS/Godot" --path . --windowed --resolution 540x960'
   smoke: '"/Applications/Godot.app/Contents/MacOS/Godot" --headless --quit-after 5'
 
