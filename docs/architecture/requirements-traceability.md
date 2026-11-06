@@ -24,7 +24,9 @@ Re-checked on 2026-11-05 by `architecture-review-2026-11-05b.md` after the
 ADR fix round: C1 to C4 closed, coverage unchanged (128 IDs, all cited). Two
 new blocking findings sit on rows that cite ADR-0007 or ADR-0011: a
 dependency cycle between those two ADRs (CY1) and conflict C5 (lint L34's
-path). Notes below name C5 where it applies.
+path). The second fix round the same day closed both (ADR-0011 no longer
+depends on ADR-0007; L34 points at `src/presentation/telemetry/`); a re-run
+of `/architecture-review` confirms it.
 
 Changes in this run: TR-combat-015, TR-hero-016 and TR-hud-018 registered (they
 were provisional in `architecture.md` v4). No requirement was reworded,
@@ -159,7 +161,7 @@ By ADR (a requirement shared by several ADRs counts under each): ADR-0001 17, AD
 | TR-hud-010 | battle-hud.md | Battle HUD | Presentation | The HUD reads Flow, Tower, Hero, Enemy & Wave and Combat via signals and view-only queries (wave_index(), got_through_by_type(), chip_state(), early_call_bonus(), tower_inspected, hero_pinned, tower_built); the burst wedge is the float burst_wedge formula over cooldown_left() and Burst cooldown, read through the accessor with the injected Burst ID when Cooling begins; phase and lives_changed join the view allowlist | ADR-0006 | 🟡 Covered (Proposed) |
 | TR-hud-011 | battle-hud.md | Battle HUD | Presentation | Costs are read through the accessor on arc open and gold_changed; a read or snapshot that finds phase() Fatal is abandoned for the Fatal screen (halted() is not the test, since it is also true on Won and Lost) | ADR-0005 | 🟡 Covered (Proposed) |
 | TR-hud-012 | battle-hud.md | Battle HUD | Presentation | The result screen and log come from one snapshot built on the first advance(ms) after the outcome, never inside the tick's signal stack; no snapshot is built if phase() is Fatal | ADR-0006 | 🟡 Covered (Proposed) |
-| TR-hud-013 | battle-hud.md | Battle HUD | Foundation | Debug builds append JSON lines to user://run_log.jsonl through an injectable sink; a write failure is non-fatal and release builds never write | ADR-0010 (C4 closed 2026-11-05). conflict C5: ADR-0007 L34 scans src/battle/run_log.gd, ADR-0010 places RunLog in src/presentation/telemetry/ | 🟡 Covered (Proposed) |
+| TR-hud-013 | battle-hud.md | Battle HUD | Foundation | Debug builds append JSON lines to user://run_log.jsonl through an injectable sink; a write failure is non-fatal and release builds never write | ADR-0010 (C4 closed 2026-11-05; C5 closed in the second fix round: ADR-0007 L34 scans src/presentation/telemetry/) | 🟡 Covered (Proposed) |
 | TR-hud-014 | battle-hud.md | Battle HUD | Presentation | Layout is in 540x960 field units with safe-area insets converted to field units; burst_y = clamp(888 - I_bottom, 816, 888) | ADR-0003 | 🟡 Covered (Proposed) |
 | TR-hud-015 | battle-hud.md | Battle HUD | Presentation | HUD budget about 8 (max 12) of 60 draw calls and at most 3 text draws; hit targets at least 72 units (48 dp), text at least 21 units | ADR-0011. Android draw-call count unmeasured (ADR-0011 V1) | 🟡 Covered (Proposed) |
 | TR-hud-016 | battle-hud.md | Battle HUD | Foundation | Content tests enforce HUD layout rules (slot bounds, clearances including the burst line at least edge_reject_margin + 48 from a side edge, at most 3 next-wave types, a next-try line per enemy type, an early-call bonus of at most 2 digits, 6 waves, 10 lives) | ADR-0002 | 🟡 Covered (Proposed) |
